@@ -98,8 +98,10 @@
   --radius-chip: var(--ow-radius-chip);
   --radius-full: var(--ow-radius-full);
 
+  /* Media queries cannot read custom properties, so this is the one literal in the theme. It
+     must equal --ow-breakpoint-mobile in tokens.css; tokens.test.ts enforces that. */
   --breakpoint-*: initial;
-  --breakpoint-desktop: var(--ow-breakpoint-mobile);
+  --breakpoint-desktop: 720px;
 
   --ease-*: initial;
   --ease-standard: var(--ow-ease-standard);

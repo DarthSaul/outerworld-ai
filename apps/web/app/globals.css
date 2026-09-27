@@ -1,0 +1,10 @@
+@import "tailwindcss";
+@import "@darthsaul/outerworld-ai-ui/styles.css";
+@source "../../../packages/ui/src";
+
+body {
+  background: var(--ow-surface-map);
+  color: var(--ow-ink-1);
+  font-family: var(--ow-font-sans);
+  -webkit-font-smoothing: antialiased;
+}

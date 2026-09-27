@@ -72,6 +72,26 @@ describe("tokens.css contract", () => {
   });
 });
 
+describe("theme.css contract", () => {
+  const theme = readFileSync(join(here, "theme.css"), "utf8");
+
+  it("keeps the literal desktop breakpoint equal to the mobile breakpoint token", () => {
+    const token = /--ow-breakpoint-mobile:\s*([^;]+);/.exec(css)?.[1]?.trim();
+    const literal = /--breakpoint-desktop:\s*([^;]+);/.exec(theme)?.[1]?.trim();
+    expect(token).toBeDefined();
+    expect(literal).toBe(token);
+  });
+
+  it("maps every namespaced value to an --ow-* variable except the breakpoint", () => {
+    const literals = [
+      ...theme.matchAll(/^\s*--(color|text|radius|font|ease|spacing)-[a-z0-9-]+:\s*([^;]+);/gm),
+    ]
+      .map((m) => m[2] ?? "")
+      .filter((v) => !v.startsWith("var(--ow-") && v !== "initial");
+    expect(literals).toEqual([]);
+  });
+});
+
 describe("token helpers", () => {
   it("builds a var() reference", () => {
     expect(tokenVar("ink-1")).toBe("var(--ow-ink-1)");
