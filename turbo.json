@@ -17,5 +17,6 @@
       "cache": false,
       "persistent": true
     }
-  }
+  },
+  "globalEnv": ["CI", "GITHUB_ACTIONS", "OUTERWORLD_LEDGER_PATH"]
 }
