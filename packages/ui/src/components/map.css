@@ -81,6 +81,21 @@
   background: var(--ow-health-stalled);
 }
 
+/* Dimmed (unconnected to the selection): text drops to ink.3, which still meets AA, and only the
+   non-text parts take the opacity. Dimming by whole-panel opacity would fail contrast. */
+.ow-team[data-dimmed],
+.ow-agent-card[data-dimmed] {
+  --ow-ink-1: var(--ow-ink-3);
+  --ow-ink-2: var(--ow-ink-3);
+}
+.ow-team[data-dimmed] .ow-character,
+.ow-team[data-dimmed] .ow-emblem,
+.ow-team[data-dimmed] .ow-chip,
+.ow-team[data-dimmed] .ow-health-dot,
+.ow-agent-card[data-dimmed] .ow-character {
+  opacity: var(--ow-opacity-dimmed);
+}
+
 /* Overseer core: an octagon with a chamfer from the token, a 2px frame, attention ring on the core. */
 .ow-overseer-core {
   --ow-chamfer: var(--ow-size-overseer-core-chamfer);

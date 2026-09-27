@@ -148,7 +148,7 @@
   --ow-border-strong: oklch(0.72 0.012 80);
   --ow-ink-1: oklch(0.22 0.014 265);
   --ow-ink-2: oklch(0.45 0.014 265);
-  --ow-ink-3: oklch(0.58 0.012 265);
+  --ow-ink-3: oklch(0.46 0.012 265); /* design: .58; raised for WCAG AA at 11-13px (A18) */
 
   /* One hue = one meaning, never reused. Accents share L/C per theme and vary hue only. */
   --ow-grant-read: oklch(var(--ow-accent-l) var(--ow-accent-c) 230);
@@ -246,7 +246,7 @@
     --ow-border-strong: oklch(0.45 0.014 265);
     --ow-ink-1: oklch(0.93 0.008 80);
     --ow-ink-2: oklch(0.72 0.01 265);
-    --ow-ink-3: oklch(0.55 0.012 265);
+    --ow-ink-3: oklch(0.68 0.012 265); /* design: .55; raised for WCAG AA at 11-13px (A18) */
     --ow-health-attention: oklch(var(--ow-accent-l) var(--ow-accent-c) 85);
     --ow-health-stalled: oklch(0.7 var(--ow-accent-c) 25);
     --ow-selection-halo: color-mix(in oklch, var(--ow-ink-1) 25%, transparent);
@@ -269,7 +269,7 @@
   --ow-border-strong: oklch(0.45 0.014 265);
   --ow-ink-1: oklch(0.93 0.008 80);
   --ow-ink-2: oklch(0.72 0.01 265);
-  --ow-ink-3: oklch(0.55 0.012 265);
+  --ow-ink-3: oklch(0.68 0.012 265); /* design: .55; raised for WCAG AA at 11-13px (A18) */
   --ow-health-attention: oklch(var(--ow-accent-l) var(--ow-accent-c) 85);
   --ow-health-stalled: oklch(0.7 var(--ow-accent-c) 25);
   --ow-selection-halo: color-mix(in oklch, var(--ow-ink-1) 25%, transparent);

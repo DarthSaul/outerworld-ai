@@ -15,6 +15,10 @@ Decisions taken 2026-09-27 by the owner:
 - Core step (A17): the design's settlement mark `relay` collides with the themed word for handoff, so the
   schema value is `beacon` (category `coordination`). The design doc's mark set still reads `relay`;
   the glossary maps `emblem.mark.beacon` to whatever the design chooses.
+- Web step (A18): axe (WCAG 2.1 AA) fails `ink.3` for 11–13px text in both themes (spec values
+  oklch(.58 …) on paper, oklch(.55 …) on space). Tokens now use .46 light and .68 dark. The design
+  spec's own rule applies: theme loses every fight with legibility. Eyebrows, captions, and mono meta
+  keep their role; only the lightness moved.
 
 ## A. Conflicts
 

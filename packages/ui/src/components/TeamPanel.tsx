@@ -73,7 +73,6 @@ export function TeamPanel({
       className={[
         "ow-team m-0 flex min-w-(--ow-size-team-min-w) max-w-(--ow-size-team-max-w) flex-col gap-(--ow-size-team-gap) rounded-team border border-border-subtle bg-surface-team p-(--ow-size-team-pad)",
         "transition-opacity duration-(--ow-dur-base) ease-standard",
-        dimmed ? "opacity-(--ow-opacity-dimmed)" : "",
         teamSelected ? "ring-(--ow-size-selection-ring) ring-selection-ring" : "",
       ]
         .filter(Boolean)

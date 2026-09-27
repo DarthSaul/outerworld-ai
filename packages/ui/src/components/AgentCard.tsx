@@ -37,7 +37,6 @@ export function AgentCard({
         "ow-agent-card flex w-full items-start gap-(--ow-space-2) rounded-agent bg-surface-raised p-(--ow-size-agent-pad) text-left",
         "transition-opacity duration-(--ow-dur-base) ease-standard",
         selected ? "ring-(--ow-size-selection-ring) ring-selection-ring" : "",
-        dimmed ? "opacity-(--ow-opacity-dimmed)" : "",
         state === "working" ? "animate-breathe" : "",
       ]
         .filter(Boolean)

@@ -36,7 +36,7 @@ Tailwind's variable shorthand, e.g. `duration-(--ow-dur-fast)`.
 |-------------|--------------|----------|
 | surface.space / .outpost / .panel / .raised | `--ow-surface-map` / `-team` / `-panel` / `-raised` | `bg-surface-map` … |
 | border.subtle / .strong | `--ow-border-subtle` / `-strong` | `border-border-subtle` … |
-| ink.1 / .2 / .3 | `--ow-ink-1` / `-2` / `-3` | `text-ink-1` … |
+| ink.1 / .2 / .3 | `--ow-ink-1` / `-2` / `-3` (ink.3 lightness adjusted for AA contrast, see reconciliation A18) | `text-ink-1` … |
 | clearance.read (h230) / .write (h55) | `--ow-grant-read` / `-write` | `text-grant-read`, `bg-chip-read` |
 | health.ok (h150) / .attention (h85) / .stalled (h25) | `--ow-health-ok` / `-attention` / `-stalled` | `bg-health-ok` … |
 | run.working (h195) / .idle (= ink.3) / .done (= ink.1) / .failed (h340) | `--ow-run-working` / `-idle` / `-done` / `-failed` | `text-run-working` … |
