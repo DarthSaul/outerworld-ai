@@ -1,3 +1,4 @@
+import { RigSprite } from "@darthsaul/outerworld-ai-ui";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
@@ -12,7 +13,10 @@ export default function RootLayout({ children }: { readonly children: ReactNode 
   // data-theme is set by the theme toggle in the web step; until then the OS preference applies.
   return (
     <html lang="en" suppressHydrationWarning>
-      <body>{children}</body>
+      <body>
+        <RigSprite />
+        {children}
+      </body>
     </html>
   );
 }

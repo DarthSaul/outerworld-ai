@@ -18,10 +18,12 @@
     "typecheck": "turbo run typecheck",
     "check:fast": "pnpm lint && pnpm typecheck",
     "check:task": "pnpm check:fast && node scripts/gitleaks.mjs && node scripts/floor-guard.mjs && pnpm test",
-    "check:full": "pnpm check:task && pnpm build"
+    "check:full": "pnpm check:task && pnpm build",
+    "browser:verify": "node scripts/browser/screenshot.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.14",
+    "playwright": "^1.63.0",
     "turbo": "2.11.4",
     "typescript": "~5.9.3"
   }
