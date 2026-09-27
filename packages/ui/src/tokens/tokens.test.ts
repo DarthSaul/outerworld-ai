@@ -6,6 +6,7 @@ import {
   GRANT_MODES,
   glowToken,
   HEALTH_STATES,
+  MOTION_MS,
   RUN_STATES,
   THEMED_TOKENS,
   tokenVar,
@@ -89,6 +90,14 @@ describe("theme.css contract", () => {
       .map((m) => m[2] ?? "")
       .filter((v) => !v.startsWith("var(--ow-") && v !== "initial");
     expect(literals).toEqual([]);
+  });
+});
+
+describe("MOTION_MS parity", () => {
+  it.each(Object.entries(MOTION_MS))("--ow-dur-%s equals %dms in tokens.css", (name, ms) => {
+    const m = new RegExp(`--ow-dur-${name}:\\s*(\\d+)ms;`).exec(css);
+    expect(m?.[1], name).toBeDefined();
+    expect(Number(m?.[1])).toBe(ms);
   });
 });
 

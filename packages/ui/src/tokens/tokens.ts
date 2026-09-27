@@ -38,6 +38,20 @@ export type HealthState = (typeof HEALTH_STATES)[number];
 export const GRANT_MODES = ["read", "write"] as const;
 export type GrantMode = (typeof GRANT_MODES)[number];
 
+/**
+ * Motion durations in milliseconds for JavaScript that schedules against the same clock as the
+ * CSS (the demo timeline). Mirrors tokens.css; tokens.test.ts fails if the two drift.
+ */
+export const MOTION_MS = {
+  instant: 80,
+  fast: 160,
+  base: 240,
+  slow: 400,
+  packet: 1200,
+  breathe: 2400,
+  reduced: 120,
+} as const;
+
 export type TokenName = string;
 
 /** `tokenVar("ink-1")` → `var(--ow-ink-1)`. */

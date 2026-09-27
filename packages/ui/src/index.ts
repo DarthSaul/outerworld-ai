@@ -25,7 +25,9 @@ export {
 export { RIG_PARTS, type RigPartName } from "./character/rig-parts.js";
 export { RIG_SYMBOLS, RigSprite, symbolId } from "./character/sprite.js";
 export { AgentCard, type AgentCardProps } from "./components/AgentCard.js";
+export { DetailPanel, type DetailPanelProps } from "./components/DetailPanel.js";
 export { EmptyState, type EmptyStateProps } from "./components/EmptyState.js";
+export { clockLabel, dateLabel, durationLabel } from "./components/format.js";
 export { GrantChip, type GrantChipProps } from "./components/GrantChip.js";
 export {
   HandoffLayer,
@@ -37,6 +39,7 @@ export {
 } from "./components/HandoffLayer.js";
 export { OverseerCore, type OverseerCoreProps } from "./components/OverseerCore.js";
 export { StationMap, type StationMapProps, timeLabel } from "./components/StationMap.js";
+export { StationView, type StationViewProps } from "./components/StationView.js";
 export { isSelected, type Selection, type SelectionKind } from "./components/selection.js";
 export {
   EMBLEM_UNITS,
@@ -50,12 +53,18 @@ export {
   type TeamPanelGrant,
   type TeamPanelProps,
 } from "./components/TeamPanel.js";
+export { Toast, type ToastProps, ToastRegion } from "./components/Toast.js";
+export { useDesktop } from "./components/useDesktop.js";
+export { RunDigestButton, type RunDigestButtonProps } from "./timeline/RunDigestButton.js";
+export { runDigestTimeline, type TimelineStep } from "./timeline/runDigestTimeline.js";
+export { type Timeline, type UseTimelineOptions, useTimeline } from "./timeline/useTimeline.js";
 export {
   GRANT_MODES,
   type GrantMode,
   glowToken,
   HEALTH_STATES,
   type HealthState,
+  MOTION_MS,
   RUN_STATES,
   type RunState,
   THEMED_TOKENS,
