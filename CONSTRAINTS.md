@@ -38,6 +38,10 @@ in the same change that was failing it. Tightening is silent; loosening is a rev
 Every row names the command that produces the verdict. A dimension with a number and no command
 is an aspiration, not a constraint.
 
+Rule configuration (not exceptions): Biome's `useSemanticElements` is off for SVG-only components
+(`packages/ui/src/components/HandoffLayer.tsx`), because SVG has no `<button>` element; the lanes
+are `<g role="button" tabIndex=0>` with keyboard handlers, and axe checks them in tests.
+
 Why these numbers:
 - **90 / 85 coverage on core and generator.** Both are pure-function packages built test-first
   from an empty repo, so high coverage is the natural outcome rather than a stretch. `ui` and

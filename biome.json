@@ -64,6 +64,16 @@
           }
         }
       }
+    },
+    {
+      "includes": ["packages/ui/src/components/HandoffLayer.tsx"],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "useSemanticElements": "off"
+          }
+        }
+      }
     }
   ]
 }

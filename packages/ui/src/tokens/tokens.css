@@ -82,6 +82,7 @@
   --ow-size-overseer-core-h: 160px;
   --ow-size-overseer-core-chamfer: 25%;
   --ow-size-map-gutter: var(--ow-space-12);
+  --ow-size-map-min-w: 720px; /* below this the map stacks; a gallery scrolls it instead */
   --ow-size-health-dot: 8px;
   --ow-size-packet: 6px;
   --ow-size-handoff-hit: 12px;
