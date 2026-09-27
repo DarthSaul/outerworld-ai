@@ -114,8 +114,10 @@ export interface HandoffGeometry {
   readonly side: -1 | 0 | 1;
 }
 
-const PAIR_OFFSET = 6; // layout units; ui multiplies by nothing, the spec's ±3px at 2 units/px
+const PAIR_OFFSET = 6; // layout units, the spec's ±3px at 2 units/px
 const CHEVRON_INSET = 0.85;
+const BOW_RATIO = 0.22; // how far the arc leaves the chord, as a fraction of its length
+const BOW_MAX = 180; // layout units; keeps long arcs inside the square
 
 const centerOf = (b: Box) => ({ x: b.x + b.w / 2, y: b.y + b.h / 2 });
 
@@ -151,13 +153,18 @@ export function handoffGeometry(
 
   const p0 = { x: a.x + nx, y: a.y + ny };
   const p3 = { x: b.x + nx, y: b.y + ny };
-  // Control points bow the path gently toward the map center so it clears the overseer core.
-  const c = centerOf(layout.overseer);
+  // Bow perpendicular to the chord so the path arcs around the overseer core instead of through
+  // it. Paired halves bow to opposite sides; a lone path bows away from the map center.
   const mid = { x: (p0.x + p3.x) / 2, y: (p0.y + p3.y) / 2 };
-  const bow = 0.15;
-  const cp = { x: mid.x + (c.x - mid.x) * bow, y: mid.y + (c.y - mid.y) * bow };
-  const p1 = { x: p0.x + (cp.x - p0.x) * 0.5, y: p0.y + (cp.y - p0.y) * 0.5 };
-  const p2 = { x: p3.x + (cp.x - p3.x) * 0.5, y: p3.y + (cp.y - p3.y) * 0.5 };
+  const c = centerOf(layout.overseer);
+  const px = -dy / len;
+  const py = dx / len;
+  const towardCenter = (c.x - mid.x) * px + (c.y - mid.y) * py;
+  const dir = side !== 0 ? canon * side : towardCenter > 0 ? -1 : 1;
+  const bow = Math.min(len * BOW_RATIO, BOW_MAX) * dir;
+  const cp = { x: mid.x + px * bow, y: mid.y + py * bow };
+  const p1 = { x: p0.x + (cp.x - p0.x) * 0.6, y: p0.y + (cp.y - p0.y) * 0.6 };
+  const p2 = { x: p3.x + (cp.x - p3.x) * 0.6, y: p3.y + (cp.y - p3.y) * 0.6 };
 
   const r = (n: number) => round(n);
   const path = `M ${r(p0.x)} ${r(p0.y)} C ${r(p1.x)} ${r(p1.y)}, ${r(p2.x)} ${r(p2.y)}, ${r(p3.x)} ${r(p3.y)}`;

@@ -113,6 +113,24 @@ describe("handoffGeometry", () => {
     expect(dist(ab.midpoint, ba.midpoint)).toBeGreaterThan(0);
   });
 
+  it("arcs around the overseer core: paired midpoints sit on opposite sides of the chord and clear the core", () => {
+    const ab = handoffGeometry(pairStation.handoffs[0]!, layout, pairStation.handoffs);
+    const ba = handoffGeometry(pairStation.handoffs[1]!, layout, pairStation.handoffs);
+    const a = center(layout.teams.t0!);
+    const b = center(layout.teams.t1!);
+    const chordMid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    const core = center(layout.overseer);
+    const coreRadius = Math.max(layout.overseer.w, layout.overseer.h) / 2;
+    // Signed distance of each midpoint from the chord.
+    const nx = -(b.y - a.y);
+    const ny = b.x - a.x;
+    const sideOf = (p: { x: number; y: number }) =>
+      Math.sign((p.x - chordMid.x) * nx + (p.y - chordMid.y) * ny);
+    expect(sideOf(ab.midpoint)).toBe(-sideOf(ba.midpoint));
+    expect(dist(ab.midpoint, core)).toBeGreaterThan(coreRadius);
+    expect(dist(ba.midpoint, core)).toBeGreaterThan(coreRadius);
+  });
+
   it("reports the angle in degrees from writer to reader", () => {
     const g = handoffGeometry(pairStation.handoffs[2]!, layout, pairStation.handoffs);
     const a = center(layout.teams.t0!);
