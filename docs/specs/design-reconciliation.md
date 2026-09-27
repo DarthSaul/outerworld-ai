@@ -12,6 +12,9 @@ Decisions taken 2026-09-27 by the owner:
 - A8: one ledger per team; a handoff is directional read authorization, not a file.
 - A9: one Routine per team.
 - All other rows applied as proposed. The design spec is now v0.2.
+- Core step (A17): the design's settlement mark `relay` collides with the themed word for handoff, so the
+  schema value is `beacon` (category `coordination`). The design doc's mark set still reads `relay`;
+  the glossary maps `emblem.mark.beacon` to whatever the design chooses.
 
 ## A. Conflicts
 

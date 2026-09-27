@@ -73,3 +73,18 @@ commit. Nothing is pushed.
 ## Open questions
 
 None blocking. The owner has confirmed Tailwind v4 and the read-only scope.
+
+---
+
+# Step 3 — core (2026-09-27)
+
+Plan of record was the API design in `docs/SCHEMA.md`, approved before implementation. Built
+test-first in this order, one commit: Station schema and cross-field rules → status schemas →
+StationState schema → JSON Schema export with committed copies → glossary → rig derivation →
+event model → layout and handoff geometry → ledger parsing with health derivation → demo fixture
+and its validation test → public exports and README.
+
+- [x] core public API implemented and exported
+- [x] fixture validates; derived state matches the documented states
+- [x] coverage thresholds 90/85 enforced and met
+- [x] ADR-0009 schema versioning

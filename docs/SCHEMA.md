@@ -2,8 +2,7 @@
 
 The Station and StationState schemas are the product's real API. `packages/core` defines them
 with zod, exports JSON Schema, and provides the pure functions that ui and generator build on.
-This document is the contract; the code follows it. Status: **design draft for review, 2026-09-27**
-(core step). Sections marked *generator* are documented fully in the generator step.
+This document is the contract; the code follows it. Status: **implemented in core, 2026-09-27**; kept current with the code. Sections marked *generator* are documented fully in the generator step.
 
 Conventions: neutral vocabulary (ADR-0002); collections are lowercase plural arrays, references
 are singular `<thing>Id` strings; ids are `^[a-z0-9][a-z0-9-]*$` and unique within their
@@ -28,8 +27,8 @@ Team = {
   id: string,
   name: string,
   mission: string,                 // required, one line
-  category: "research" | "build" | "operations" | "records" | "relay" | "other",
-  emblem: { hue: number /* 0..360 */, mark: "spire" | "forge" | "dome" | "archive" | "relay" | "none" },
+  category: "research" | "build" | "operations" | "records" | "coordination" | "other",
+  emblem: { hue: number /* 0..360 */, mark: "spire" | "forge" | "dome" | "archive" | "beacon" | "none" },
   scope: {
     repos: string[],               // GitHub "owner/name" strings the team's Routine may clone
   },
@@ -224,7 +223,7 @@ SCHEMA_VERSION = 1
 // ledger
 parseLedger(station: Station, files: LedgerFiles, options?: { now?: string, sourceRef?: string, sourcePath?: string }): StationState
 LedgerFiles = Record<string /* path relative to ledger root, posix */, string /* contents */>
-parseLedgerMarkdown(text: string): LedgerSections | undefined
+parseLedgerMarkdown(text: string): LedgerSections | undefined   // undefined only when neither the marker nor a known heading is present
 
 // events
 StationEvent =
@@ -234,8 +233,9 @@ StationEvent =
   | { type: "run.finished", teamId, at, outcome: "done" | "failed", error? }
   | { type: "overseer.state", state, at }
   | { type: "digest.posted", at }
-applyEvent(state: StationState, event: StationEvent): StationState   // pure, returns a new object
-emptyState(station: Station): StationState                          // all idle, all ok, no runs
+applyEvent(state: StationState, event: StationEvent, station: Station): StationState   // pure, returns a new object
+bindReducer(station: Station): (state, event) => StationState                          // the two-argument form for reducers
+emptyState(station: Station, { now, sourcePath, sourceRef? }): StationState             // all idle, all ok, no runs
 
 // layout (abstract 1000×1000 unit square, origin top-left)
 layoutStation(station: Station): Layout

@@ -13,7 +13,8 @@
       "!**/coverage",
       "!**/__snapshots__",
       "!docs/design",
-      "!pnpm-lock.yaml"
+      "!pnpm-lock.yaml",
+      "!packages/core/schema"
     ]
   },
   "formatter": {
@@ -52,5 +53,17 @@
     "parser": {
       "tailwindDirectives": true
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["**/*.test.ts", "**/*.test.tsx"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNonNullAssertion": "off"
+          }
+        }
+      }
+    }
+  ]
 }
