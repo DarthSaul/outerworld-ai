@@ -88,3 +88,74 @@ and its validation test → public exports and README.
 - [x] fixture validates; derived state matches the documented states
 - [x] coverage thresholds 90/85 enforced and met
 - [x] ADR-0009 schema versioning
+
+---
+
+# Step 4 — ui (plan, 2026-09-27)
+
+Spec module `ui` in `docs/specs/SPEC-milestone-1.md`; design in `docs/design/` (spec v0.2 §04–§08).
+Tokens and the Tailwind theme already exist. Everything below is built test-first (RTL + vitest-axe
+under happy-dom for structure and state logic) and browser-verified with headless Playwright
+screenshots (animations, reduced motion, both themes, one-column layout) before the step closes.
+
+## Architecture decisions (this step)
+
+- **One sprite, three `<use>`s.** All rig parts live in one hidden `<svg>` (`RigSprite`) rendered
+  once by the app; each `Character` is `<svg viewBox="0 0 24 32">` with `<use href="#ow-body-…">`
+  for body, head, shoulder, trace, and accessory, recolored by setting `--ow-rig-tint-hue` and
+  `--ow-rig-trim-hue` inline. `rig/rig-parts-v0.svg` seeds bodies, heads, shoulders; traces,
+  accessories, glyphs, the emblem disc, and the 48×64 hero rig are drawn new on the grid.
+- **State via attributes, motion via CSS.** `data-state="idle|working|done|failed"` on the
+  character root; `character.css` (shipped through `styles.css`) keys keyframes on it using only
+  `--ow-*` tokens. Reduced motion collapses through the token override already in `tokens.css`.
+- **Controlled components.** `StationMap` and `DetailPanel` take `selection` and `onSelect`; a
+  `StationView` composite owns the selection state and the responsive split (side by side above
+  the desktop breakpoint, map over a bottom sheet below). Apps render `StationView`.
+- **Geometry from core.** `StationMap` scales core's 1000-unit layout to its container with one
+  `viewBox`; `HandoffLayer` draws core's cubic paths; nothing in ui computes positions.
+- **Timeline in ui, reducer in core.** `runDigestTimeline` is `Array<{ atMs, event }>`;
+  `useTimeline(station, initialState)` plays it through `bindReducer`. A "Run digest" button
+  exposes play and reset.
+- **`/dev` gallery** lives in `apps/web/app/dev` and imports from ui; it has a theme switch and a
+  section per component with every state, so Playwright can screenshot each in both themes.
+- **Playwright** as a root dev dependency with a script under `scripts/browser/` that starts the
+  built app, captures screenshots per route × theme × width × reduced-motion into
+  `.outerworld/screenshots/` (gitignored), and asserts zero console errors and that under reduced
+  motion no animation runs longer than the reduced-motion token.
+
+## Task list
+
+### Phase 1: the figure
+- [ ] Task 1: `RigSprite` symbols (bodies, heads, shoulders from v0; traces ×6, accessories ×4 + crest, glyphs check/exclaim, emblem disc + marks ×5) with a test that every referenced symbol id exists
+- [ ] Task 2: `Character` (props: rig, derived, state, scale, name) + `character.css` state keyframes; tests for part selection, hue variables, `data-state`, glyph override, integer scale
+- [ ] Task 3: `OverseerCharacter` (48×64 hero rig, achromatic) and `TeamEmblem` (disc + mark from hue); tests
+- [ ] Task 4: `/dev` gallery section for the rig: every head × shoulder × accessory × state, both sizes; Playwright screenshot script (`scripts/browser/`) and first browser check of the rig in light, dark, and reduced motion
+
+### Checkpoint: figure verified in a browser
+
+### Phase 2: the map
+- [ ] Task 5: `GrantChip` (replaces `Badge`), `AgentCard` (rig + name + mandate, run × selected × dimmed), `EmptyState`; tests + axe
+- [ ] Task 6: `TeamPanel` (emblem, name, mission, health square, chips, agent grid; selected/dimmed/collapsed); tests + axe
+- [ ] Task 7: `HandoffLayer` + `Packet` (SVG from core geometry; chevrons at the reading end; default/emphasis/carrying/selected); `OverseerCore` (octagon, hero rig, state ring); tests
+- [ ] Task 8: `StationMap` (viewBox scaling of core layout, HTML overlay for panels, selection, dimming of unconnected teams); tests for selection and geometry wiring + axe
+
+### Checkpoint: fixture renders as a map
+
+### Phase 3: the panel and the demo
+- [ ] Task 9: `DetailPanel` Report tab: `ProofLine`, header, last run, `LedgerView` (sections + changed marker), `RunTimeline` (last six), handoffs, agents; per-selection content for team / agent / grant / handoff / overseer; tests + axe
+- [ ] Task 10: `StationView` composite (selection state, responsive split, bottom sheet under 720px, Esc clears) + `Toast`; tests
+- [ ] Task 11: `runDigestTimeline` + `useTimeline` + "Run digest" control; reducer-driven tests for each step of the sequence
+- [ ] Task 12: `/dev` gallery completed for every component in every state; README for ui; browser verification of the whole map in both themes, reduced motion, 375px and 1280px; fix anything found (debugging-and-error-recovery if flaky)
+
+### Checkpoint: ui step complete
+- [ ] `pnpm check:task` green; axe clean in component tests; screenshots reviewed; owner review
+
+## Risks and mitigations
+
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| Hand-drawing the 48×64 hero rig takes long or reads badly at 2× | Med | Draw it after the card rig proves the pipeline; keep it stylized (heavy silhouette, crest, chest intake), review the screenshot early |
+| `<use>` + CSS variables + keyframes on SVG groups behave differently across browsers | Med | Playwright runs Chromium only this milestone; note WebKit/Firefox as follow-up in the README |
+| happy-dom can't compute CSS, so state tests only see attributes and inline variables | Low | That is the point of Playwright; tests assert the contract (attributes, vars, hrefs), the browser check asserts the rendering |
+| Relative color syntax unsupported in the Playwright Chromium build | Low | Chromium 119+ supports it; assert computed colors in the screenshot script |
+| Tailwind `@source` misses class names composed at runtime | Med | No composed class names; state classes are static strings or data attributes |

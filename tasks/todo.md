@@ -72,3 +72,57 @@
 
 ## Checkpoint B: Scaffold complete
 - [x] `pnpm check:full` green (5 s locally, 2026-09-27); CLAUDE.md run/test section updated; CI YAML parses (actionlint unavailable locally); awaiting owner review before the core step
+
+---
+
+# Todo: Milestone 1, Step 4 — ui
+
+(See the ui plan in tasks/plan.md for architecture decisions.)
+
+## Task 1: RigSprite
+**Acceptance:** one `RigSprite` component rendering a hidden `<svg>` of `<symbol>`s on the 24×32 grid: `ow-body-idle`, `ow-body-active`, `ow-head-dome|wedge|crest`, `ow-shoulder-ball|pauldron`, `ow-trace-core|bar|chevron|split|frame|twin`, `ow-accessory-antenna|thruster|plate|crest`, `ow-glyph-check|exclaim`, `ow-emblem-disc`, `ow-mark-spire|forge|dome|archive|beacon`, `ow-hero` (48×64). Every rect grid-snapped, fills only `var(--ow-rig-*)` / `var(--ow-emblem-*)` / `var(--ow-overseer-*)`. A `RIG_SYMBOLS` const lists ids; a test renders the sprite and checks each id exists and no fill is a literal.
+**Files:** `src/character/sprite.tsx`, `sprite.test.tsx`, `rig-parts.ts` (rect data). **Scope:** M
+
+## Task 2: Character
+**Acceptance:** `<Character rig derived state scale name />` renders an `<svg role="img" aria-label="{name}, {state}">` with `data-state`, inline `--ow-rig-tint-hue/--ow-rig-trim-hue`, `--ow-rig-glow: var(--ow-rig-glow-{state})`, `--ow-rig-px`, body `active` when working, glyph check when done / exclaim when failed overriding the accessory, width/height = 24×scale / 32×scale (integer scales only, non-integer throws in dev). `character.css` keyframes for idle bob+blink, working nod+arm alternation+breathe, done pop, failed dim, all from tokens.
+**Files:** `src/character/Character.tsx`, `Character.test.tsx`, `character.css`. **Scope:** M
+
+## Task 3: OverseerCharacter and TeamEmblem
+**Acceptance:** `OverseerCharacter` uses `ow-hero`, achromatic vars, same `data-state` contract, scale 2 or 4 only. `TeamEmblem hue mark scale` renders the disc with `--ow-emblem-hue` inline and the mark symbol; health dot is not part of the emblem.
+**Files:** `src/character/OverseerCharacter.tsx`, `src/components/TeamEmblem.tsx`, tests. **Scope:** S
+
+## Task 4: Rig gallery + Playwright
+**Acceptance:** `/dev` shows the rig matrix at 1× and 2×; `scripts/browser/screenshot.mjs` (Playwright, Chromium) starts `next start` on a free port, captures `/dev` in light and dark, normal and reduced motion, at 375 and 1280, asserts zero console errors, asserts reduced-motion animation durations ≤ token; screenshots land in `.outerworld/screenshots/`. Reviewed by eye.
+**Files:** `apps/web/app/dev/page.tsx`, `scripts/browser/screenshot.mjs`, root `package.json`. **Scope:** M
+
+## Task 5: GrantChip, AgentCard, EmptyState
+**Acceptance:** `GrantChip mode label inUse revoked selected`; `AgentCard agent derived state selected dimmed onSelect` (button semantics, rig at 1×, name + one-line mandate, breathe ring while working); `EmptyState title body action?`. RTL + axe.
+**Files:** `src/components/GrantChip.tsx`, `AgentCard.tsx`, `EmptyState.tsx`, tests; delete `Badge`. **Scope:** M
+
+## Task 6: TeamPanel
+**Acceptance:** header (emblem 2×, name, mission ellipsis, health square top-right), chips row, 2-col agent grid; `selected`, `dimmed`, `collapsed` (header only); clicking the header selects the team; children clicks select agents/grants. RTL + axe.
+**Files:** `src/components/TeamPanel.tsx`, test. **Scope:** M
+
+## Task 7: HandoffLayer, Packet, OverseerCore
+**Acceptance:** `HandoffLayer handoffs geometry states selection onSelect` renders one `<path>` per handoff with a 12-unit invisible hit path, chevrons at `chevronAt`, `data-state` default/emphasis/carrying/selected; `Packet` animates along `offset-path` when `carrying`; `OverseerCore state persona` renders the octagon (clip-path from the chamfer token), the hero rig at 2×, attention ring. Tests.
+**Files:** `src/components/HandoffLayer.tsx`, `Packet.tsx`, `OverseerCore.tsx`, tests. **Scope:** M
+
+## Task 8: StationMap
+**Acceptance:** `StationMap station state layout selection onSelect` composes the SVG layer and HTML panels inside one scaled 1000×1000 frame; selection dims unconnected teams and emphasizes connected handoffs; keyboard: every selectable is a button; Esc handled by the view. RTL (selection wiring) + axe.
+**Files:** `src/components/StationMap.tsx`, test. **Scope:** M
+
+## Task 9: DetailPanel (Report)
+**Acceptance:** for each selection kind, the panel shows eyebrow, title, meta, `ProofLine` (asOf · path · sha), then: team → last run, ledger sections with changed marker, run timeline (≤6), handoffs, agents; agent → persona and state; grant → mode, tool, which agents hold it; handoff → from/to, carrying, last packet; overseer → digest, attention list, last outward post. Empty states use the glossary. RTL + axe.
+**Files:** `src/components/DetailPanel.tsx` (+ small parts), tests. **Scope:** M
+
+## Task 10: StationView + Toast
+**Acceptance:** owns selection; desktop: map + 400px panel; under 720px: map, panel as a bottom sheet; Esc clears; `Toast` region with `aria-live="polite"`. Tests.
+**Files:** `src/components/StationView.tsx`, `Toast.tsx`, tests. **Scope:** M
+
+## Task 11: Timeline
+**Acceptance:** `runDigestTimeline` (run.started → agent working → ledger.written → run.finished done → overseer reconciling → digest.posted, at token-scaled offsets); `useTimeline(station, initial)` returns `{ state, playing, play, reset }`; a test steps the reducer and asserts each state; a `RunDigestButton`.
+**Files:** `src/timeline/*.ts(x)`, tests. **Scope:** S
+
+## Task 12: Gallery, README, browser verification
+**Acceptance:** `/dev` has every component in every state; `packages/ui/README.md` documents the public API; Playwright run reviewed in light, dark, reduced motion, 375 and 1280; console clean; findings fixed at root cause.
+**Files:** `apps/web/app/dev/page.tsx`, `packages/ui/README.md`, `scripts/browser/`. **Scope:** M
