@@ -51,24 +51,24 @@
 
 ## Task 6: README, PRIVACY, ARCHITECTURE
 **Acceptance criteria:**
-- [ ] README: what it is, Claude Pro/Max requirement stated plainly, quickstart, layout, roadmap (npm publishing with Changesets + `publishConfig.access: public`, editing UI, trigger wiring, themed vocabulary), license
-- [ ] `docs/PRIVACY.md` data map: what lives in this repo, in the ledger repo, in the Routine env, in `.outerworld/`, and what leaves the machine (nothing from this app; Discord post from the Routine)
-- [ ] `docs/ARCHITECTURE.md` stub with the package boundary rule and the two jobs
+- [x] README: what it is, Claude Pro/Max requirement stated plainly, quickstart, layout, roadmap (npm publishing with Changesets + `publishConfig.access: public`, editing UI, trigger wiring, themed vocabulary), license
+- [x] `docs/PRIVACY.md` data map: what lives in this repo, in the ledger repo, in the Routine env, in `.outerworld/`, and what leaves the machine (nothing from this app; Discord post from the Routine)
+- [x] `docs/ARCHITECTURE.md` stub with the package boundary rule and the two jobs
 **Verification:** floor guard clean; links resolve. Commit `docs: readme, privacy map, architecture stub`.
 **Dependencies:** None. **Files:** 3. **Scope:** S
 
 ## Task 7: ADRs
 **Acceptance criteria:**
-- [ ] `docs/decisions/` with template and 0001 monorepo, 0002 neutral vocabulary, 0003 CSS-variable tokens under Tailwind v4, 0004 Routines as runtime, 0005 clone-and-run distribution, 0006 grants are prompt-enforced, 0007 TypeScript 5.9 pin
+- [x] `docs/decisions/` with template and 0001 monorepo, 0002 neutral vocabulary, 0003 CSS-variable tokens under Tailwind v4, 0004 Routines as runtime, 0005 clone-and-run distribution, 0006 grants are prompt-enforced, 0007 TypeScript 5.9 pin
 **Verification:** each ADR has Context / Decision / Consequences / Status. Commit `docs(adr): record founding decisions`.
 **Dependencies:** None. **Files:** 8. **Scope:** M (docs only)
 
 ## Task 8: CI
 **Acceptance criteria:**
-- [ ] `.github/workflows/ci.yml`: push + PR, `fetch-depth: 0`, Node 22, pnpm via corepack, frozen install, turbo cache off (no remote), `gitleaks/gitleaks-action`, `pnpm check:full`, floor guard with `--base origin/main`
-- [ ] Concurrency group cancels superseded runs; no secrets required
+- [x] `.github/workflows/ci.yml`: push + PR, `fetch-depth: 0`, Node 22, pnpm via corepack, frozen install, turbo cache off (no remote), `gitleaks/gitleaks-action`, `pnpm check:full`, floor guard with `--base origin/main`
+- [x] Concurrency group cancels superseded runs; no secrets required
 **Verification:** YAML parses; `act` or a dry read-through; `pnpm check:full` green locally. Commit `ci: lint, typecheck, test, gitleaks pipeline`.
 **Dependencies:** 2, 5. **Files:** 1–2. **Scope:** S
 
 ## Checkpoint B: Scaffold complete
-- [ ] `pnpm check:full` green; CLAUDE.md run/test section accurate; owner review before core step
+- [x] `pnpm check:full` green (5 s locally, 2026-09-27); CLAUDE.md run/test section updated; CI YAML parses (actionlint unavailable locally); awaiting owner review before the core step

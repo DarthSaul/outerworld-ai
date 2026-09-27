@@ -114,13 +114,18 @@ URLs. If you need a new shape of data, extend the fixture.
 
 ```
 pnpm install
-pnpm dev            # apps/web on localhost, rendering the fixture
+pnpm dev            # apps/web on http://localhost:3000 (pass -- -p 3210 for another port)
 pnpm build          # turbo build across packages
-pnpm test           # vitest across packages
-pnpm lint           # biome check
+pnpm test           # vitest across packages; coverage thresholds enforced in core and generator
+pnpm lint           # biome check .   (pnpm lint:fix to apply)
 pnpm typecheck      # tsc --noEmit across packages
-OUTERWORLD_LEDGER_PATH=/path/to/ledger pnpm dev   # render a real local ledger instead
+pnpm check:task     # what to run before a commit: lint, types, secrets, floor guard, tests (< 90 s)
+pnpm check:full     # check:task + build; what CI runs
+OUTERWORLD_LEDGER_PATH=/path/to/ledger pnpm dev   # render a real local ledger (lands in the web step)
 ```
+
+Use Node 22 (`nvm use` reads `.nvmrc`). Packages build with `tsc` to `dist/`; dependents
+typecheck against `dist/`, so run `pnpm build` once after pulling changes to a package.
 
 Read `CONSTRAINTS.md` before writing code. Do not weaken it to make a change pass. It says
 where each check runs in the pipeline. Don't silence a check, skip a test, or lower a threshold

@@ -51,12 +51,12 @@ commit. Nothing is pushed.
 - [x] `pnpm install && pnpm check:task` green; `pnpm build` green; `pnpm dev` serves a page
 
 ### Phase 3: Docs and pipeline
-- [ ] Task 6: README (purpose, subscription requirement, quickstart, roadmap with npm publishing), `docs/PRIVACY.md`, `docs/ARCHITECTURE.md` stub
-- [ ] Task 7: ADRs 0001–0007 via `documentation-and-adrs`
-- [ ] Task 8: GitHub Actions `ci.yml` via `ci-cd-and-automation`
+- [x] Task 6: README (purpose, subscription requirement, quickstart, roadmap with npm publishing), `docs/PRIVACY.md`, `docs/ARCHITECTURE.md` stub
+- [x] Task 7: ADRs 0001–0007 via `documentation-and-adrs`
+- [x] Task 8: GitHub Actions `ci.yml` via `ci-cd-and-automation`
 
 ### Checkpoint: Scaffold complete
-- [ ] `pnpm check:full` green locally; workflow YAML validates; CLAUDE.md run/test section is accurate
+- [x] `pnpm check:full` green locally; workflow YAML validates; CLAUDE.md run/test section is accurate
 - [ ] Review with the owner before the core step
 
 ## Risks and mitigations
