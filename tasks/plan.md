@@ -145,10 +145,10 @@ screenshots (animations, reduced motion, both themes, one-column layout) before 
 - [x] Task 9: `DetailPanel` Report tab: `ProofLine`, header, last run, `LedgerView` (sections + changed marker), `RunTimeline` (last six), handoffs, agents; per-selection content for team / agent / grant / handoff / overseer; tests + axe
 - [x] Task 10: `StationView` composite (selection state, responsive split, bottom sheet under 720px, Esc clears) + `Toast`; tests
 - [x] Task 11: `runDigestTimeline` + `useTimeline` + "Run digest" control; reducer-driven tests for each step of the sequence
-- [ ] Task 12: `/dev` gallery completed for every component in every state; README for ui; browser verification of the whole map in both themes, reduced motion, 375px and 1280px; fix anything found (debugging-and-error-recovery if flaky)
+- [x] Task 12: `/dev` gallery completed for every component in every state; README for ui; browser verification of the whole map in both themes, reduced motion, 375px and 1280px; fix anything found (debugging-and-error-recovery if flaky)
 
-### Checkpoint: ui step complete
-- [ ] `pnpm check:task` green; axe clean in component tests; screenshots reviewed; owner review
+### Checkpoint: ui step complete (2026-09-27)
+- [x] `pnpm check:task` green; axe clean in component tests; screenshots reviewed in light, dark, reduced motion, 375 and 1280; interaction captures (team, handoff, timeline mid and end) clean; awaiting owner review
 
 ## Risks and mitigations
 
