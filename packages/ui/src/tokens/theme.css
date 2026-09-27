@@ -1,0 +1,189 @@
+/*
+ * Tailwind v4 theme mapping. `inline` so utilities emit var(--ow-*) references and follow the
+ * theme at runtime. Only tokens with a Tailwind namespace live here; everything else is used as
+ * var(--ow-*) directly or via the (--ow-*) arbitrary-value syntax, e.g. duration-(--ow-dur-fast).
+ */
+@theme inline {
+  /* Reset Tailwind's palette so no non-token color utility exists. */
+  --color-*: initial;
+  --color-surface-map: var(--ow-surface-map);
+  --color-surface-team: var(--ow-surface-team);
+  --color-surface-panel: var(--ow-surface-panel);
+  --color-surface-raised: var(--ow-surface-raised);
+  --color-border-subtle: var(--ow-border-subtle);
+  --color-border-strong: var(--ow-border-strong);
+  --color-ink-1: var(--ow-ink-1);
+  --color-ink-2: var(--ow-ink-2);
+  --color-ink-3: var(--ow-ink-3);
+  --color-grant-read: var(--ow-grant-read);
+  --color-grant-write: var(--ow-grant-write);
+  --color-health-ok: var(--ow-health-ok);
+  --color-health-attention: var(--ow-health-attention);
+  --color-health-stalled: var(--ow-health-stalled);
+  --color-run-working: var(--ow-run-working);
+  --color-run-idle: var(--ow-run-idle);
+  --color-run-done: var(--ow-run-done);
+  --color-run-failed: var(--ow-run-failed);
+  --color-selection-ring: var(--ow-selection-ring);
+  --color-selection-halo: var(--ow-selection-halo);
+  --color-handoff-default: var(--ow-handoff-default);
+  --color-handoff-emphasis: var(--ow-handoff-emphasis);
+  --color-handoff-carrying: var(--ow-handoff-carrying);
+  --color-chip-read: var(--ow-chip-bg-read);
+  --color-chip-write: var(--ow-chip-bg-write);
+  --color-chip-read-active: var(--ow-chip-bg-read-active);
+  --color-chip-write-active: var(--ow-chip-bg-write-active);
+  --color-chip-border-read: var(--ow-chip-border-read);
+  --color-chip-border-write: var(--ow-chip-border-write);
+  --color-rig-primary: var(--ow-rig-primary);
+  --color-rig-secondary: var(--ow-rig-secondary);
+  --color-rig-highlight: var(--ow-rig-highlight);
+  --color-rig-frame: var(--ow-rig-frame);
+  --color-rig-visor: var(--ow-rig-visor);
+  --color-rig-glow: var(--ow-rig-glow);
+  --color-overseer-primary: var(--ow-overseer-primary);
+  --color-overseer-secondary: var(--ow-overseer-secondary);
+  --color-overseer-frame: var(--ow-overseer-frame);
+  --color-emblem-base: var(--ow-emblem-base);
+  --color-emblem-shade: var(--ow-emblem-shade);
+  --color-emblem-glow: var(--ow-emblem-glow);
+  --color-emblem-mark: var(--ow-emblem-mark);
+
+  --font-sans: var(--ow-font-sans);
+  --font-mono: var(--ow-font-mono);
+
+  --text-*: initial;
+  --text-display: var(--ow-text-display-size);
+  --text-display--line-height: var(--ow-text-display-line);
+  --text-display--font-weight: var(--ow-text-display-weight);
+  --text-title: var(--ow-text-title-size);
+  --text-title--line-height: var(--ow-text-title-line);
+  --text-title--font-weight: var(--ow-text-title-weight);
+  --text-heading: var(--ow-text-heading-size);
+  --text-heading--line-height: var(--ow-text-heading-line);
+  --text-heading--font-weight: var(--ow-text-heading-weight);
+  --text-body: var(--ow-text-body-size);
+  --text-body--line-height: var(--ow-text-body-line);
+  --text-body--font-weight: var(--ow-text-body-weight);
+  --text-label: var(--ow-text-label-size);
+  --text-label--line-height: var(--ow-text-label-line);
+  --text-label--font-weight: var(--ow-text-label-weight);
+  --text-caption: var(--ow-text-caption-size);
+  --text-caption--line-height: var(--ow-text-caption-line);
+  --text-caption--font-weight: var(--ow-text-caption-weight);
+  --text-mono: var(--ow-text-mono-size);
+  --text-mono--line-height: var(--ow-text-mono-line);
+  --text-mono--font-weight: var(--ow-text-mono-weight);
+  --text-eyebrow: var(--ow-text-eyebrow-size);
+  --text-eyebrow--line-height: var(--ow-text-eyebrow-line);
+  --text-eyebrow--font-weight: var(--ow-text-eyebrow-weight);
+  --text-eyebrow--letter-spacing: var(--ow-text-eyebrow-tracking);
+
+  /* Spacing: Tailwind's default multiplier is already 4px (0.25rem), matching the 4px base.
+     Named steps exist for the design doc's vocabulary. */
+  --spacing-ow-1: var(--ow-space-1);
+  --spacing-ow-2: var(--ow-space-2);
+  --spacing-ow-3: var(--ow-space-3);
+  --spacing-ow-4: var(--ow-space-4);
+  --spacing-ow-5: var(--ow-space-5);
+  --spacing-ow-6: var(--ow-space-6);
+  --spacing-ow-8: var(--ow-space-8);
+  --spacing-ow-12: var(--ow-space-12);
+
+  --radius-*: initial;
+  --radius-team: var(--ow-radius-team);
+  --radius-panel: var(--ow-radius-panel);
+  --radius-agent: var(--ow-radius-agent);
+  --radius-control: var(--ow-radius-control);
+  --radius-chip: var(--ow-radius-chip);
+  --radius-full: var(--ow-radius-full);
+
+  --breakpoint-*: initial;
+  --breakpoint-desktop: var(--ow-breakpoint-mobile);
+
+  --ease-*: initial;
+  --ease-standard: var(--ow-ease-standard);
+  --ease-exit: var(--ow-ease-exit);
+  --ease-packet: var(--ow-ease-packet);
+  --ease-breathe: var(--ow-ease-breathe);
+
+  --animate-*: initial;
+  --animate-breathe: ow-breathe var(--ow-dur-breathe) var(--ow-ease-breathe) infinite;
+  --animate-packet: ow-packet var(--ow-dur-packet) var(--ow-ease-packet) forwards;
+  --animate-chip: ow-chip var(--ow-dur-packet) var(--ow-ease-packet) forwards;
+  --animate-bob: ow-bob var(--ow-dur-breathe) var(--ow-ease-breathe) infinite;
+  --animate-nod: ow-nod var(--ow-dur-breathe) var(--ow-ease-breathe) infinite;
+  --animate-pop: ow-pop var(--ow-dur-fast) var(--ow-ease-standard) 1;
+  --animate-fail: ow-fail var(--ow-dur-fast) var(--ow-ease-standard) forwards;
+
+  @keyframes ow-breathe {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 transparent;
+    }
+    50% {
+      box-shadow: 0 0 0 var(--ow-space-1) var(--ow-breathe-halo);
+    }
+  }
+  @keyframes ow-packet {
+    0% {
+      offset-distance: 0%;
+      opacity: 0;
+    }
+    8% {
+      opacity: 1;
+    }
+    92% {
+      opacity: 1;
+    }
+    100% {
+      offset-distance: 100%;
+      opacity: 0;
+    }
+  }
+  /* Rig keyframes act on SVG groups; --ow-rig-px is set by the component as 1 unit at its scale. */
+  @keyframes ow-bob {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(calc(var(--ow-rig-bob-units) * var(--ow-rig-px, 1px)));
+    }
+  }
+  @keyframes ow-nod {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(calc(var(--ow-rig-nod-units) * var(--ow-rig-px, 1px)));
+    }
+  }
+  @keyframes ow-pop {
+    0%,
+    100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(var(--ow-rig-pop-scale));
+    }
+  }
+  @keyframes ow-fail {
+    to {
+      opacity: var(--ow-opacity-failed);
+    }
+  }
+  @keyframes ow-chip {
+    0% {
+      background: transparent;
+    }
+    20%,
+    70% {
+      background: var(--ow-chip-bg-write-active);
+    }
+    100% {
+      background: transparent;
+    }
+  }
+}
