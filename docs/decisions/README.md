@@ -13,3 +13,4 @@ supersedes the old one. Template: `0000-template.md`.
 | [0006](0006-grants-are-prompt-enforced.md) | Grants are prompt-enforced and shown as declared | Accepted |
 | [0007](0007-pin-typescript-5.md) | Pin TypeScript 5.9 for milestone 1 | Accepted |
 | [0008](0008-one-routine-and-one-ledger-per-team.md) | One Routine and one ledger per team; handoffs are read authorization | Accepted |
+| [0009](0009-schema-versioning.md) | Schema versioning strategy | Accepted |

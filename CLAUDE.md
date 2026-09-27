@@ -147,4 +147,5 @@ so and propose a change to CONSTRAINTS.md.
 - Next.js ships version-matched docs at `apps/web/node_modules/next/dist/docs/`. Read the relevant
   guide there before writing app code; Next 16 differs from older conventions.
 - Browser-verify ui and web work in a real browser (animations, reduced motion, both themes,
-  single-column layout) before calling a step done.
+  single-column layout) before calling a step done. This repo uses headless Playwright
+  screenshots for that (no Chrome DevTools MCP); keep the scripts under `scripts/browser/`.
