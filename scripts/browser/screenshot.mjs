@@ -69,6 +69,12 @@ try {
             reducedMotion,
           });
           const page = await ctx.newPage();
+          // Force the theme on every page, so the check does not depend on a page's own switch.
+          await page.addInitScript((t) => {
+            const apply = () => document.documentElement?.setAttribute("data-theme", t);
+            if (document.documentElement) apply();
+            else document.addEventListener("readystatechange", apply, { once: true });
+          }, theme);
           const errors = [];
           page.on("console", (m) => {
             if (m.type() === "error") errors.push(`${m.text()} @ ${m.location()?.url ?? "?"}`);

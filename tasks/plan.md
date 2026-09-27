@@ -142,9 +142,9 @@ screenshots (animations, reduced motion, both themes, one-column layout) before 
 ### Checkpoint: fixture renders as a map (done 2026-09-27)
 
 ### Phase 3: the panel and the demo
-- [ ] Task 9: `DetailPanel` Report tab: `ProofLine`, header, last run, `LedgerView` (sections + changed marker), `RunTimeline` (last six), handoffs, agents; per-selection content for team / agent / grant / handoff / overseer; tests + axe
-- [ ] Task 10: `StationView` composite (selection state, responsive split, bottom sheet under 720px, Esc clears) + `Toast`; tests
-- [ ] Task 11: `runDigestTimeline` + `useTimeline` + "Run digest" control; reducer-driven tests for each step of the sequence
+- [x] Task 9: `DetailPanel` Report tab: `ProofLine`, header, last run, `LedgerView` (sections + changed marker), `RunTimeline` (last six), handoffs, agents; per-selection content for team / agent / grant / handoff / overseer; tests + axe
+- [x] Task 10: `StationView` composite (selection state, responsive split, bottom sheet under 720px, Esc clears) + `Toast`; tests
+- [x] Task 11: `runDigestTimeline` + `useTimeline` + "Run digest" control; reducer-driven tests for each step of the sequence
 - [ ] Task 12: `/dev` gallery completed for every component in every state; README for ui; browser verification of the whole map in both themes, reduced motion, 375px and 1280px; fix anything found (debugging-and-error-recovery if flaky)
 
 ### Checkpoint: ui step complete

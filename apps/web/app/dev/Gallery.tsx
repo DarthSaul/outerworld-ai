@@ -15,6 +15,7 @@ import {
   type RunState,
   TeamEmblem,
 } from "@darthsaul/outerworld-ai-ui";
+import { DigestDemo } from "./DigestDemo";
 import { MapDemo } from "./MapDemo";
 import { ThemeSwitch } from "./ThemeSwitch";
 
@@ -226,6 +227,16 @@ export function Gallery({
           <div className="min-w-(--ow-size-map-min-w)">
             <MapDemo station={station} state={state} zoom={0.6} />
           </div>
+        </div>
+      </Section>
+
+      <Section title="Station view · run digest demo · responsive">
+        {/* Full-bleed: the view needs the viewport, not the gallery's reading measure. */}
+        <div
+          data-gallery="station-view"
+          className="relative left-1/2 w-screen -translate-x-1/2 px-(--ow-space-6)"
+        >
+          <DigestDemo station={station} startAt={state.provenance.asOf} />
         </div>
       </Section>
 
