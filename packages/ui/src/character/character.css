@@ -1,0 +1,76 @@
+/*
+ * Rig motion. State-driven, keyed on data-state; every value is a token. Design spec v0.2 §06:
+ * idle bobs one unit and blinks the visor; working glows, nods, alternates arms, breathes;
+ * done pops with a check; failed dims with an exclaim and never pulses. Reduced motion zeroes
+ * the bob, nod, and pop through the token override in tokens.css, and blink stops.
+ */
+
+.ow-character {
+  display: inline-block;
+  overflow: visible;
+  transition: opacity var(--ow-dur-fast) var(--ow-ease-standard);
+}
+
+.ow-character [data-part="figure"],
+.ow-character [data-part="head"],
+.ow-character [data-part="glyph"] {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* Idle: slow one-unit bob, visor blink every few seconds. */
+.ow-character[data-state="idle"] [data-part="figure"] {
+  animation: ow-bob var(--ow-dur-breathe) var(--ow-ease-breathe) infinite;
+}
+.ow-character[data-state="idle"] [data-part="head"] {
+  animation: ow-blink var(--ow-rig-blink-max) step-end infinite;
+  animation-delay: var(--ow-rig-blink-delay);
+}
+
+/* Working: glow is already run.working via --ow-rig-glow; head nods; the whole figure breathes. */
+.ow-character[data-state="working"] [data-part="head"] {
+  animation: ow-nod var(--ow-dur-breathe) var(--ow-ease-breathe) infinite;
+}
+.ow-character[data-state="working"] [data-part="figure"] {
+  animation: ow-bob var(--ow-dur-breathe) var(--ow-ease-breathe) infinite;
+}
+
+/* Done: one pop, then still. The check glyph stays lit. */
+.ow-character[data-state="done"] [data-part="figure"] {
+  animation: ow-pop var(--ow-dur-fast) var(--ow-ease-standard) 1;
+}
+
+/* Failed: dim and hold still. No loop, no pulse. */
+.ow-character[data-state="failed"] {
+  opacity: var(--ow-opacity-failed);
+}
+
+/* The visor blink: the glow band drops to the visor surround for one instant. */
+@keyframes ow-blink {
+  0%,
+  96% {
+    opacity: 1;
+  }
+  96.5%,
+  99% {
+    opacity: var(--ow-rig-blink-opacity, 0.15);
+  }
+  100% {
+    opacity: 1;
+  }
+}
+.ow-character [data-part="visor-glow"] {
+  transform-box: fill-box;
+}
+
+/* Reduced motion: selectors match the state rules above so specificity cannot lose. */
+@media (prefers-reduced-motion: reduce) {
+  .ow-character[data-state] [data-part="figure"],
+  .ow-character[data-state] [data-part="head"],
+  .ow-character[data-state] [data-part="glyph"] {
+    animation: none;
+  }
+  .ow-character {
+    transition-duration: var(--ow-dur-reduced);
+  }
+}

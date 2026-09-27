@@ -132,6 +132,7 @@
   --ow-rig-nod-units: 1;
   --ow-rig-blink-min: 4000ms;
   --ow-rig-blink-max: 6000ms;
+  --ow-rig-blink-delay: 0ms; /* per-figure offset, set inline by Character */
   --ow-rig-pop-scale: 1.08;
   --ow-opacity-failed: var(--ow-opacity-dimmed);
 
@@ -198,10 +199,8 @@
   --ow-rig-primary-c: 0.04;
   --ow-rig-secondary-l: 0.48;
   --ow-rig-secondary-c: 0.05;
-  --ow-rig-primary: oklch(var(--ow-rig-primary-l) var(--ow-rig-primary-c) var(--ow-rig-tint-hue));
-  --ow-rig-secondary: oklch(
-    var(--ow-rig-secondary-l) var(--ow-rig-secondary-c) var(--ow-rig-trim-hue)
-  );
+  /* --ow-rig-primary / -secondary are declared on .ow-character below, not here: a custom property
+     is substituted where it is declared, so a per-figure hue must be read on the figure itself. */
   /* Rig glow is state-owned: a component sets --ow-rig-glow from the run state, never from persona. */
   --ow-rig-glow-idle: var(--ow-run-idle);
   --ow-rig-glow-working: var(--ow-run-working);
@@ -215,10 +214,23 @@
 
   /* ---- Team emblem (the disc): derived from one hue ------------------- */
   --ow-emblem-hue: 230;
-  --ow-emblem-base: oklch(0.55 0.1 var(--ow-emblem-hue));
+  --ow-emblem-l: 0.55;
+  --ow-emblem-c: 0.1;
+  --ow-emblem-mark: var(--ow-ink-1);
+}
+
+/* Per-figure derivations. Declared on the figure so the inline hue it carries is what gets
+   substituted; a component sets only --ow-rig-tint-hue, --ow-rig-trim-hue, or --ow-emblem-hue. */
+.ow-character {
+  --ow-rig-primary: oklch(var(--ow-rig-primary-l) var(--ow-rig-primary-c) var(--ow-rig-tint-hue));
+  --ow-rig-secondary: oklch(
+    var(--ow-rig-secondary-l) var(--ow-rig-secondary-c) var(--ow-rig-trim-hue)
+  );
+}
+.ow-emblem {
+  --ow-emblem-base: oklch(var(--ow-emblem-l) var(--ow-emblem-c) var(--ow-emblem-hue));
   --ow-emblem-shade: oklch(from var(--ow-emblem-base) calc(l - 0.18) c calc(h + 8));
   --ow-emblem-glow: oklch(from var(--ow-emblem-base) calc(l + 0.26) calc(c - 0.02) calc(h - 20));
-  --ow-emblem-mark: var(--ow-ink-1);
 }
 
 /* ---- Dark (cool, hue 265). Defined twice per the theme rule. ------------ */
