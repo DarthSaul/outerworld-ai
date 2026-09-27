@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "teamId": "project-management",
+  "startedAt": "2026-09-27T08:00:00Z",
+  "endedAt": "2026-09-27T08:01:52Z",
+  "outcome": "done",
+  "sessionUrl": "https://claude.ai/code/session_01DEMO000000000000000002",
+  "agents": [{ "agentId": "planner", "state": "done" }, { "agentId": "scribe", "state": "done" }],
+  "grantsUsed": [
+    { "grantId": "pm-notion-read", "count": 2 },
+    { "grantId": "pm-ledger-write", "count": 1 }
+  ],
+  "ledger": { "changed": true, "linesAdded": 1, "linesRemoved": 1, "summary": "log line added" }
+}

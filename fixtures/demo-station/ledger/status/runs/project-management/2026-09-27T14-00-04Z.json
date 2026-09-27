@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "teamId": "project-management",
+  "startedAt": "2026-09-27T14:00:04Z",
+  "sessionId": "cse_01DEMO000000000000000001",
+  "sessionUrl": "https://claude.ai/code/session_01DEMO000000000000000001",
+  "agents": [
+    { "agentId": "planner", "state": "working", "note": "prioritizing next steps" },
+    { "agentId": "scribe", "state": "idle" }
+  ],
+  "grantsUsed": [{ "grantId": "pm-notion-read", "count": 3 }],
+  "ledger": { "changed": false, "linesAdded": 0, "linesRemoved": 0 }
+}

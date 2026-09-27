@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-09-27T14:03:00Z",
+  "state": "attention",
+  "lastRunStartedAt": "2026-09-27T14:02:30Z",
+  "lastOutwardPostAt": "2026-09-27T14:03:00Z",
+  "reconciled": 2,
+  "attention": [
+    { "teamId": "strength-app", "reason": "last run failed and no run since 2026-09-26" }
+  ],
+  "digestPath": "status/digest.md"
+}

@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "teamId": "project-management",
+  "startedAt": "2026-09-26T20:00:00Z",
+  "endedAt": "2026-09-26T20:02:20Z",
+  "outcome": "done",
+  "agents": [{ "agentId": "planner", "state": "done" }, { "agentId": "scribe", "state": "done" }],
+  "grantsUsed": [
+    { "grantId": "pm-notion-read", "count": 4 },
+    { "grantId": "pm-ledger-write", "count": 1 }
+  ],
+  "ledger": { "changed": true, "linesAdded": 2, "linesRemoved": 0 }
+}
