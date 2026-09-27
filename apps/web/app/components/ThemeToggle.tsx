@@ -3,23 +3,43 @@
 import { useEffect, useState } from "react";
 
 type Theme = "system" | "light" | "dark";
+const KEY = "outerworld.theme";
+
+/** Reads the persisted choice; a ?theme= query wins so the screenshot script can force one. */
+function initialTheme(): Theme {
+  try {
+    const q = new URLSearchParams(window.location.search).get("theme");
+    if (q === "light" || q === "dark") return q;
+    const stored = window.localStorage.getItem(KEY);
+    if (stored === "light" || stored === "dark") return stored;
+  } catch {
+    // Storage can be unavailable (private mode, blocked). Fall through to system.
+  }
+  return "system";
+}
 
 /**
- * Gallery-only theme switch. Sets data-theme on <html>, which tokens.css keys the dark override on.
- * Reads ?theme= so the screenshot script can force a theme without clicking.
+ * System / light / dark. Sets data-theme on <html>, which tokens.css keys the dark override on,
+ * and remembers the choice in localStorage (per-viewer convenience only; see docs/PRIVACY.md).
+ * The layout's inline script applies the stored value before first paint.
  */
-export function ThemeSwitch() {
+export function ThemeToggle() {
   const [theme, setTheme] = useState<Theme>("system");
 
   useEffect(() => {
-    const fromQuery = new URLSearchParams(window.location.search).get("theme");
-    if (fromQuery === "light" || fromQuery === "dark") setTheme(fromQuery);
+    setTheme(initialTheme());
   }, []);
 
   useEffect(() => {
     const root = document.documentElement;
     if (theme === "system") root.removeAttribute("data-theme");
     else root.setAttribute("data-theme", theme);
+    try {
+      if (theme === "system") window.localStorage.removeItem(KEY);
+      else window.localStorage.setItem(KEY, theme);
+    } catch {
+      // Storage unavailable: the attribute still applies for this page.
+    }
   }, [theme]);
 
   return (
@@ -44,3 +64,6 @@ export function ThemeSwitch() {
     </fieldset>
   );
 }
+
+/** Inline, render-blocking on purpose: applies the stored theme before the first paint. Keep tiny. */
+export const THEME_INIT_SCRIPT = `(function(){try{var q=new URLSearchParams(location.search).get("theme");var t=(q==="light"||q==="dark")?q:localStorage.getItem("${KEY}");if(t==="light"||t==="dark"){document.documentElement.setAttribute("data-theme",t)}}catch(e){/* storage unavailable: leave the system theme */}})();`;

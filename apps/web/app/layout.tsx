@@ -1,6 +1,8 @@
 import { RigSprite } from "@darthsaul/outerworld-ai-ui";
 import type { Metadata } from "next";
+import Script from "next/script";
 import type { ReactNode } from "react";
+import { THEME_INIT_SCRIPT } from "./components/ThemeToggle";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -10,9 +12,14 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { readonly children: ReactNode }) {
-  // data-theme is set by the theme toggle in the web step; until then the OS preference applies.
+  // data-theme comes from the ThemeToggle; the inline script applies the stored choice before paint.
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <Script id="theme-init" strategy="beforeInteractive">
+          {THEME_INIT_SCRIPT}
+        </Script>
+      </head>
       <body>
         <RigSprite />
         {children}
