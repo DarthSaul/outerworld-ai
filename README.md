@@ -48,7 +48,8 @@ Other commands:
 
 ```
 pnpm build        pnpm test        pnpm lint        pnpm typecheck
-pnpm check:task   # what CI runs, minus the browser checks: lint, types, secrets, floor guard, tests
+pnpm check:task   # lint, types, secrets, floor guard, tests
+pnpm browser:verify   # after pnpm build: screenshots, console errors, reduced motion, axe (Chromium)
 ```
 
 ## Layout

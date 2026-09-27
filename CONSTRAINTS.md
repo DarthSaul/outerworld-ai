@@ -31,7 +31,7 @@ in the same change that was failing it. Tightening is silent; loosening is a rev
 | Coverage: core | lines >= 90%, branches >= 85% | `vitest run --coverage` in `packages/core` (thresholds in `vitest.config.ts`) | task end, CI |
 | Coverage: generator | lines >= 90%, branches >= 85% | `vitest run --coverage` in `packages/generator` (thresholds in `vitest.config.ts`) | task end, CI |
 | Accessibility: components | Zero axe violations of any impact in rendered component tests | `vitest-axe` assertions in `packages/ui` tests | task end, CI |
-| Accessibility: app | Zero critical or serious axe violations on `/` and `/dev` in both themes | `@axe-core/cli` against a built `apps/web` served locally | CI only (needs a URL) |
+| Accessibility: app | Zero critical or serious axe violations on `/` and `/dev` in both themes | `pnpm browser:verify` (`@axe-core/playwright` inside `scripts/browser/screenshot.mjs`, against the built app served locally) | CI (browser job); locally before a ui or web step closes |
 | Schema | Demo fixture validates against the current Station and StationState schemas; exported JSON Schema matches the committed copy | Vitest tests in `packages/core` | task end, CI |
 | Generator output | Emitted ledger files match committed snapshots for the demo fixture | Vitest snapshot tests in `packages/generator` | task end, CI |
 
@@ -73,7 +73,7 @@ At least one constraint must be an outside opinion, not this project's own tests
 |-------|--------|------|--------|
 | Every edit | `pnpm check:fast` | Biome, `tsc` on touched package | < 5 s |
 | Task end | `pnpm check:task` | `check:fast` + gitleaks (if installed) + floor guard + Vitest with coverage | < 90 s |
-| CI | `pnpm check:full` | `check:task` + build + axe against served `apps/web` | unlimited |
+| CI | `pnpm check:full` + `pnpm browser:verify` | `check:task` + build, then the browser job: screenshots, console errors, reduced-motion, axe | unlimited |
 
 The scripts mirror this file. If they drift, this file wins.
 

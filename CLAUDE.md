@@ -120,8 +120,9 @@ pnpm test           # vitest across packages; coverage thresholds enforced in co
 pnpm lint           # biome check .   (pnpm lint:fix to apply)
 pnpm typecheck      # tsc --noEmit across packages
 pnpm check:task     # what to run before a commit: lint, types, secrets, floor guard, tests (< 90 s)
-pnpm check:full     # check:task + build; what CI runs
-OUTERWORLD_LEDGER_PATH=/path/to/ledger pnpm dev   # render a real local ledger (lands in the web step)
+pnpm check:full     # check:task + build; what CI's quality job runs
+pnpm browser:verify # Playwright: screenshots, console errors, reduced motion, axe; CI's browser job
+OUTERWORLD_LEDGER_PATH=/path/to/ledger pnpm dev   # render a real local ledger repo (station.json at its root)
 ```
 
 Use Node 22 (`nvm use` reads `.nvmrc`). Packages build with `tsc` to `dist/`; dependents

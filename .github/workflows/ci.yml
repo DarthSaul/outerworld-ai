@@ -2,7 +2,7 @@ name: CI
 
 # Enforces CONSTRAINTS.md on every change. Stages mirror the root check scripts:
 # check:fast (lint, types) → check:task (+ secrets, floor guard, tests with coverage) → check:full (+ build).
-# The axe run against a served apps/web joins in the web step.
+# The browser job serves the built app and runs the Playwright verification (screenshots, console, axe).
 
 on:
   push:
@@ -69,3 +69,34 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+  browser:
+    name: Browser verification (Playwright + axe)
+    runs-on: ubuntu-latest
+    needs: quality
+    env:
+      CI: "true"
+      TURBO_TELEMETRY_DISABLED: "1"
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Build
+        run: pnpm build
+      - name: Verify in a browser
+        run: pnpm browser:verify
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: .outerworld/screenshots/
+          retention-days: 7

@@ -2,13 +2,15 @@
 // Headless browser verification (this repo's stand-in for the Chrome DevTools MCP).
 // Builds nothing: run `pnpm build` first. Serves apps/web, then for every route × theme × width ×
 // reduced-motion combination captures a full-page screenshot into .outerworld/screenshots/,
-// records console errors and page errors, and under reduced motion asserts that no running
-// animation is longer than the reduced-motion token. Exit 1 on any failure.
+// records console errors and page errors, runs axe (WCAG 2.x A/AA; critical and serious block,
+// per CONSTRAINTS.md), and under reduced motion asserts that no running animation is longer
+// than the reduced-motion token. Exit 1 on any failure.
 //
 // Usage: node scripts/browser/screenshot.mjs [--routes /dev,/] [--port 3300] [--keep]
 import { spawn } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import AxeBuilder from "@axe-core/playwright";
 import { chromium } from "playwright";
 
 const arg = (name, fallback) => {
@@ -116,7 +118,38 @@ try {
                 document.documentElement.scrollWidth > document.documentElement.clientWidth,
             };
           });
-          const line = { route, theme, reducedMotion, width, ...probe, errors: errors.length };
+          // axe once per route × theme × width (motion preference does not change the tree).
+          let axeBlocking = 0;
+          if (reducedMotion === "no-preference") {
+            const results = await new AxeBuilder({ page })
+              .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+              .analyze();
+            const blocking = results.violations.filter(
+              (v) => v.impact === "critical" || v.impact === "serious",
+            );
+            axeBlocking = blocking.length;
+            for (const v of blocking) {
+              failures.push(
+                `${name}: axe ${v.impact} ${v.id}: ${v.help} (${v.nodes.length} node(s), e.g. ${v.nodes[0]?.target?.join(" ") ?? "?"})`,
+              );
+            }
+            const minor = results.violations.filter(
+              (v) => v.impact !== "critical" && v.impact !== "serious",
+            );
+            if (minor.length)
+              console.warn(
+                `${name}: axe ${minor.map((v) => `${v.impact}:${v.id}`).join(", ")} (not blocking)`,
+              );
+          }
+          const line = {
+            route,
+            theme,
+            reducedMotion,
+            width,
+            ...probe,
+            errors: errors.length,
+            axe: axeBlocking,
+          };
           report.push(line);
           if (errors.length) failures.push(`${name}: console errors: ${errors.join(" | ")}`);
           if (reducedMotion === "reduce" && probe.longest > probe.reduced) {

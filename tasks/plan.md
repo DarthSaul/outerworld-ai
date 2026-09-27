@@ -159,3 +159,33 @@ screenshots (animations, reduced motion, both themes, one-column layout) before 
 | happy-dom can't compute CSS, so state tests only see attributes and inline variables | Low | That is the point of Playwright; tests assert the contract (attributes, vars, hrefs), the browser check asserts the rendering |
 | Relative color syntax unsupported in the Playwright Chromium build | Low | Chromium 119+ supports it; assert computed colors in the screenshot script |
 | Tailwind `@source` misses class names composed at runtime | Med | No composed class names; state classes are static strings or data attributes |
+
+---
+
+# Step 5 — apps/web (plan, 2026-09-27)
+
+Spec module `web`. The ledger loader and the gallery already exist; this step makes the home page
+the product, adds the theme toggle, puts the browser checks (axe included) into CI, and verifies.
+
+## Decisions
+- **Time.** The fixture is dated; when the source is the fixture, the loader evaluates health at
+  the fixture's as-of moment so the demo never rots into "stalled". A real ledger uses the real
+  clock.
+- **Theme.** One `ThemeToggle` (system / light / dark) shared by `/` and `/dev`, persisted in
+  `localStorage` (per-viewer convenience only, per PRIVACY.md), applied to `<html data-theme>`,
+  and pre-applied by a tiny inline script in the layout so there is no flash. `?theme=` still
+  overrides for the screenshot script.
+- **axe in CI** runs through `@axe-core/playwright` inside `browser:verify` rather than
+  `@axe-core/cli`, which needs a separate WebDriver; same engine, same rule set, blocks on
+  critical and serious. CONSTRAINTS.md's row names the new command.
+- **CI job** `browser`: build, install Chromium, `pnpm browser:verify`, upload screenshots as an
+  artifact on failure.
+
+## Tasks
+- [x] Task 1: loader tests (fixture default, `OUTERWORLD_LEDGER_PATH`, invalid station → error with issues); home page renders `StationView` from the loaded ledger with a header (station name, source, as-of) and the Run digest toolbar
+- [x] Task 2: `ThemeToggle` shared by both routes, persisted, no-flash init script; `/dev` uses it
+- [x] Task 3: axe in `browser:verify`; CI `browser` job; CONSTRAINTS.md row updated; README/CLAUDE.md run notes
+- [x] Task 4: browser pass at 375 and 1280 in both themes and reduced motion, `/` and `/dev`; fix findings at the root
+
+### Checkpoint: web step complete (2026-09-27)
+- [x] `pnpm check:full` green, `pnpm browser:verify` clean including axe, CI workflow updated, owner review
