@@ -1,5 +1,5 @@
 import { SCHEMA_VERSION } from "@darthsaul/outerworld-ai-core";
-import { Badge } from "@darthsaul/outerworld-ai-ui";
+import { GrantChip } from "@darthsaul/outerworld-ai-ui";
 
 export default function HomePage() {
   return (
@@ -12,8 +12,8 @@ export default function HomePage() {
         The map lands in the ui step. This page proves the token pipeline end to end.
       </p>
       <div className="flex gap-(--ow-size-chip-gap)">
-        <Badge mode="read">notion</Badge>
-        <Badge mode="write">ledger</Badge>
+        <GrantChip mode="read" label="notion" />
+        <GrantChip mode="write" label="ledger" />
       </div>
     </main>
   );

@@ -126,20 +126,20 @@ screenshots (animations, reduced motion, both themes, one-column layout) before 
 ## Task list
 
 ### Phase 1: the figure
-- [ ] Task 1: `RigSprite` symbols (bodies, heads, shoulders from v0; traces ×6, accessories ×4 + crest, glyphs check/exclaim, emblem disc + marks ×5) with a test that every referenced symbol id exists
-- [ ] Task 2: `Character` (props: rig, derived, state, scale, name) + `character.css` state keyframes; tests for part selection, hue variables, `data-state`, glyph override, integer scale
-- [ ] Task 3: `OverseerCharacter` (48×64 hero rig, achromatic) and `TeamEmblem` (disc + mark from hue); tests
-- [ ] Task 4: `/dev` gallery section for the rig: every head × shoulder × accessory × state, both sizes; Playwright screenshot script (`scripts/browser/`) and first browser check of the rig in light, dark, and reduced motion
+- [x] Task 1: `RigSprite` symbols (bodies, heads, shoulders from v0; traces ×6, accessories ×4 + crest, glyphs check/exclaim, emblem disc + marks ×5) with a test that every referenced symbol id exists
+- [x] Task 2: `Character` (props: rig, derived, state, scale, name) + `character.css` state keyframes; tests for part selection, hue variables, `data-state`, glyph override, integer scale
+- [x] Task 3: `OverseerCharacter` (48×64 hero rig, achromatic) and `TeamEmblem` (disc + mark from hue); tests
+- [x] Task 4: `/dev` gallery section for the rig: every head × shoulder × accessory × state, both sizes; Playwright screenshot script (`scripts/browser/`) and first browser check of the rig in light, dark, and reduced motion
 
-### Checkpoint: figure verified in a browser
+### Checkpoint: figure verified in a browser (done 2026-09-27)
 
 ### Phase 2: the map
-- [ ] Task 5: `GrantChip` (replaces `Badge`), `AgentCard` (rig + name + mandate, run × selected × dimmed), `EmptyState`; tests + axe
-- [ ] Task 6: `TeamPanel` (emblem, name, mission, health square, chips, agent grid; selected/dimmed/collapsed); tests + axe
-- [ ] Task 7: `HandoffLayer` + `Packet` (SVG from core geometry; chevrons at the reading end; default/emphasis/carrying/selected); `OverseerCore` (octagon, hero rig, state ring); tests
-- [ ] Task 8: `StationMap` (viewBox scaling of core layout, HTML overlay for panels, selection, dimming of unconnected teams); tests for selection and geometry wiring + axe
+- [x] Task 5: `GrantChip` (replaces `Badge`), `AgentCard` (rig + name + mandate, run × selected × dimmed), `EmptyState`; tests + axe
+- [x] Task 6: `TeamPanel` (emblem, name, mission, health square, chips, agent grid; selected/dimmed/collapsed); tests + axe
+- [x] Task 7: `HandoffLayer` + `Packet` (SVG from core geometry; chevrons at the reading end; default/emphasis/carrying/selected); `OverseerCore` (octagon, hero rig, state ring); tests
+- [x] Task 8: `StationMap` (viewBox scaling of core layout, HTML overlay for panels, selection, dimming of unconnected teams); tests for selection and geometry wiring + axe
 
-### Checkpoint: fixture renders as a map
+### Checkpoint: fixture renders as a map (done 2026-09-27)
 
 ### Phase 3: the panel and the demo
 - [ ] Task 9: `DetailPanel` Report tab: `ProofLine`, header, last run, `LedgerView` (sections + changed marker), `RunTimeline` (last six), handoffs, agents; per-selection content for team / agent / grant / handoff / overseer; tests + axe
