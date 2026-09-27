@@ -13,6 +13,8 @@ import {
  * OUTERWORLD_LEDGER_PATH or falls back to the demo fixture. No network, ever (docs/PRIVACY.md).
  */
 const FIXTURE_ROOT = resolve(process.cwd(), "..", "..", "fixtures", "demo-station");
+/** The fixture's own moment. Health is evaluated here for the fixture so the demo never rots into "stalled". */
+export const FIXTURE_AS_OF = "2026-09-27T15:00:00Z";
 const SKIP_DIRS = new Set([".git", "node_modules"]);
 
 function walk(dir: string, root = dir): LedgerFiles {
@@ -31,6 +33,8 @@ export interface LoadedLedger {
   readonly state: StationState;
   readonly source: "fixture" | "ledger";
   readonly sourcePath: string;
+  /** The clock health was evaluated against. */
+  readonly now: string;
 }
 
 export function loadLedger(options: { readonly now?: string } = {}): LoadedLedger {
@@ -45,9 +49,7 @@ export function loadLedger(options: { readonly now?: string } = {}): LoadedLedge
       `station.json at ${stationPath} is invalid:\n${parsed.issues.map((i) => `${i.path}: ${i.message}`).join("\n")}`,
     );
   }
-  const state = parseLedger(parsed.value, walk(ledgerRoot), {
-    now: options.now ?? new Date().toISOString(),
-    sourcePath: ledgerRoot,
-  });
-  return { station: parsed.value, state, source, sourcePath: ledgerRoot };
+  const now = options.now ?? (custom ? new Date().toISOString() : FIXTURE_AS_OF);
+  const state = parseLedger(parsed.value, walk(ledgerRoot), { now, sourcePath: ledgerRoot });
+  return { station: parsed.value, state, source, sourcePath: ledgerRoot, now };
 }

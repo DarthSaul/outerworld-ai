@@ -15,9 +15,9 @@ import {
   type RunState,
   TeamEmblem,
 } from "@darthsaul/outerworld-ai-ui";
-import { DigestDemo } from "./DigestDemo";
+import { DigestDemo } from "../components/DigestDemo";
+import { ThemeToggle } from "../components/ThemeToggle";
 import { MapDemo } from "./MapDemo";
-import { ThemeSwitch } from "./ThemeSwitch";
 
 const STATES: RunState[] = ["idle", "working", "done", "failed"];
 const HEADS: RigHead[] = ["dome", "wedge"];
@@ -52,7 +52,7 @@ function Cell({ label, children }: { readonly label: string; readonly children: 
   );
 }
 
-import { type Station, type StationState, term } from "@darthsaul/outerworld-ai-core";
+import { emptyState, type Station, type StationState, term } from "@darthsaul/outerworld-ai-core";
 
 /** Every component in every state. Client-side so gallery cells can take handlers. */
 export function Gallery({
@@ -66,7 +66,7 @@ export function Gallery({
     <main className="mx-auto flex max-w-(--ow-measure) flex-col gap-(--ow-space-8) p-(--ow-space-6)">
       <header className="flex flex-wrap items-center justify-between gap-(--ow-space-3)">
         <h1 className="text-title text-ink-1">Component gallery</h1>
-        <ThemeSwitch />
+        <ThemeToggle />
       </header>
 
       <Section title="Character · run states · 1× and 2×">
@@ -236,7 +236,10 @@ export function Gallery({
           data-gallery="station-view"
           className="relative left-1/2 w-screen -translate-x-1/2 px-(--ow-space-6)"
         >
-          <DigestDemo station={station} startAt={state.provenance.asOf} />
+          <DigestDemo
+            station={station}
+            initial={emptyState(station, { now: state.provenance.asOf, sourcePath: "demo" })}
+          />
         </div>
       </Section>
 

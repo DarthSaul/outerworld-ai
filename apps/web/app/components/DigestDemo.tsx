@@ -1,6 +1,6 @@
 "use client";
 
-import { emptyState, type Station, type StationState } from "@darthsaul/outerworld-ai-core";
+import type { Station, StationState } from "@darthsaul/outerworld-ai-core";
 import {
   MOTION_MS,
   RunDigestButton,
@@ -9,31 +9,31 @@ import {
   ToastRegion,
   useTimeline,
 } from "@darthsaul/outerworld-ai-ui";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 /**
- * The "Run digest" demo: the full StationView driven by the scripted timeline through core's
- * reducer. Starts from an empty state (everything idle) so every transition is visible.
+ * The station view with the "Run digest" demo: the scripted timeline replays on top of whatever
+ * state was loaded, through core's reducer. Reset returns to the loaded state.
  */
 export function DigestDemo({
   station,
-  startAt,
+  initial,
   desktop,
 }: {
   readonly station: Station;
-  readonly startAt: string;
+  readonly initial: StationState;
   readonly desktop?: boolean;
 }) {
-  const initial = useMemo<StationState>(
-    () => emptyState(station, { now: startAt, sourcePath: "demo" }),
-    [station, startAt],
-  );
-  const t = useTimeline(station, initial, { stepMs: MOTION_MS.packet, now: startAt });
+  const t = useTimeline(station, initial, {
+    stepMs: MOTION_MS.packet,
+    now: initial.provenance.asOf,
+  });
   const [toast, setToast] = useState<string | null>(null);
   const posted = t.state.overseer.lastOutwardPostAt;
+  const postedInitially = initial.overseer.lastOutwardPostAt;
   useEffect(() => {
-    if (posted) setToast(`Digest posted ${posted}`);
-  }, [posted]);
+    if (posted && posted !== postedInitially) setToast(`Digest posted ${posted}`);
+  }, [posted, postedInitially]);
   return (
     <>
       <StationView
