@@ -67,9 +67,9 @@
   --ow-size-team-pad: var(--ow-space-4);
   --ow-size-team-gap: var(--ow-space-3);
   --ow-size-agent-pad: var(--ow-space-2);
-  --ow-size-chip-h: 22px;
+  --ow-size-chip-h: 40px; /* design v0.3: name over mode, two lines */
   --ow-size-chip-pad-x: var(--ow-space-2);
-  --ow-size-chip-pad-y: 2px;
+  --ow-size-chip-pad-y: 4px;
   --ow-size-chip-gap: 6px;
   --ow-size-control-h: 32px;
   --ow-size-control-h-dense: 28px;

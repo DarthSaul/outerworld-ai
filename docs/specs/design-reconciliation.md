@@ -59,3 +59,6 @@ Decisions taken 2026-09-27 by the owner:
   Team boxes are 360×240 layout units for up to four teams (240×200 beyond), agent cards stack in one
   column on the map, the team max width is 400px (design: 320), and the overseer core is 192×232
   (design: 144×160) so the 96×128 hero rig and two text lines fit.
+- Owner review (A20): vocabulary simplified. Station (team), Tool (grant), Handoff, Agent, Routine run,
+  Overseer; Manifest and the Reach kept. Tool chips show the capitalized tool name over a lighter
+  read / write line (chip height 40). Design spec is v0.3; the naming workshop doc is annotated.

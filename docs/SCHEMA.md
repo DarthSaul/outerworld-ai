@@ -260,10 +260,10 @@ GlossaryKey = "station" | "team" | "teams" | "scope" | "grant" | "grants" | "gra
   | "empty.handoffs.title" | "empty.handoffs.body" | "eyebrow.team" | ...
 ```
 
-Glossary contents follow naming Set D: station "the Reach", team "Outpost", scope "Standing
-orders", grant "Clearance", handoff "Relay", agent "Hand", persona "Commission", ledger
-"Manifest", run "Sortie", grant verb "Clear", overseer "the Assayer". Health and run words stay
-plain per the design's section 09. The overseer's proper name comes from its persona.
+Glossary contents (simplified 2026-09-27, reconciliation A20): station "the Reach", team
+"Station", scope "Standing orders", grant "Tool", handoff "Handoff", agent "Agent", persona
+"Persona", ledger "Manifest", run "Routine run", overseer role "Overseer". Health and run words
+stay plain. The overseer's proper name comes from its persona.
 
 ## 5. Fixture (`fixtures/demo-station/`)
 

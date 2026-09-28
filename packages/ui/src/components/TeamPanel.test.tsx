@@ -46,7 +46,7 @@ describe("TeamPanel", () => {
     expect(p.onSelect).toHaveBeenLastCalledWith({ kind: "team", id: "project-management" });
     await userEvent.click(screen.getByRole("button", { name: /Scribe/ }));
     expect(p.onSelect).toHaveBeenLastCalledWith({ kind: "agent", id: "scribe" });
-    await userEvent.click(screen.getByRole("button", { name: /notion/ }));
+    await userEvent.click(screen.getByRole("button", { name: /notion/i }));
     expect(p.onSelect).toHaveBeenLastCalledWith({ kind: "grant", id: "pm-notion-read" });
   });
 
@@ -71,7 +71,7 @@ describe("TeamPanel", () => {
   it("collapses to the header row only", () => {
     render(<TeamPanel {...props()} collapsed />);
     expect(screen.queryByRole("button", { name: /Scribe/ })).toBeNull();
-    expect(screen.queryByText("notion")).toBeNull();
+    expect(screen.queryByText("Notion")).toBeNull();
     expect(screen.getByRole("button", { name: /Project Management/ })).toBeInTheDocument();
   });
 

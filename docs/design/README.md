@@ -10,7 +10,7 @@ between the two is at the bottom of this file.
 
 | Path | What it is | Ships? |
 |------|------------|--------|
-| `outerworld-spec.dc.html` | **Design spec v0.2.** Vocabulary → schema keys, palette + semantic tokens, type scale, space + radius, iconography, motion, character rig, rig pipeline decision (A: quantized vector), team emblem (world + settlement), component inventory + states, where the theme stops. | Source doc |
+| `outerworld-spec.dc.html` | **Design spec v0.3.** Vocabulary → schema keys, palette + semantic tokens, type scale, space + radius, iconography, motion, character rig, rig pipeline decision (A: quantized vector), team emblem (world + settlement), component inventory + states, where the theme stops. | Source doc |
 | `outerworld-ui.dc.html` | **UI mock.** A full dashboard frame: map with two teams, overseer core, packet on a handoff, detail panel with Report tab (proof line, last run, ledger diff, run timeline, handoffs, agents). | Source doc |
 | `naming-workshop.dc.html` | **Naming workshop.** Three vocabulary registers (A bureaucratic, B naval, C frontier) and the chosen Set D. Product name candidates. Overseer naming rule (role noun fixed, proper name in persona). | Source doc |
 | `support.js`, `.thumbnail` | Runtime and preview for the `.dc.html` docs. Open the docs in a browser; do not edit these. | No |
@@ -77,21 +77,24 @@ working loop; stalled and failed never pulse; mono is only for evidence (timesta
 
 ## Vocabulary map (design → code)
 
-| Design (Set D) | Code / schema | Glossary key |
-|----------------|---------------|--------------|
-| the Reach | `station` | `station` |
-| Outpost | `team` | `team` |
+Simplified by the owner on 2026-09-27 (spec v0.3, reconciliation A20). The glossary in
+`packages/core/src/glossary.ts` is the source of truth for display strings.
+
+| On screen | Code / schema | Glossary key |
+|-----------|---------------|--------------|
+| the Reach | `station` (the whole map document) | `station` |
+| Station | `team` | `team` |
 | Standing orders | `team.scope` (repos + grants) | `scope` |
-| Clearance (read / write) | `grant`, `grant.mode` | `grant` |
-| Relay (directional) | `handoff` | `handoff` |
-| Hand | `agent` | `agent` |
-| Commission | `agent.persona` | `persona` |
+| Tool (read / write) | `grant`, `grant.mode` | `grant` |
+| Handoff (directional) | `handoff` | `handoff` |
+| Agent | `agent` | `agent` |
+| Persona | `agent.persona` | `persona` |
 | Manifest | ledger file | `ledger` |
-| Sortie (workshop) / Shift (UI mock) | `run` | `run` |
-| Clear (verb) | grant (verb) | `grant.verb` |
-| the Assayer (role noun) | `overseer` | `overseer` |
+| Routine run | `run` | `run` |
+| Overseer (role); proper name from the persona | `overseer` | `overseer` |
 | World + settlement | `team.emblem` | `emblem` |
 
-The design docs also use "Ultron" as an overseer placeholder. That name is unlicensable and
-never appears in code, fixtures, or the glossary. Default proper-name candidates from the
-workshop: Meridian, Lodestar, Vesper.
+"Station" on screen is a team; in code `station` is the whole document. The earlier themed set
+(Outpost, Clearance, Relay, Hand, Sortie, Assayer) survives only in the naming workshop doc.
+"Ultron" was a placeholder in the mock and never appears anywhere; the fixture's overseer is
+named Meridian.

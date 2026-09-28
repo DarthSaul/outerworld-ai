@@ -8,14 +8,15 @@ describe("glossary", () => {
     }
   });
 
-  it("returns themed nouns for the core objects (naming Set D)", () => {
-    expect(term("team")).toBe("Outpost");
-    expect(term("grant")).toBe("Clearance");
-    expect(term("handoff")).toBe("Relay");
-    expect(term("agent")).toBe("Hand");
+  it("returns the simplified display nouns for the core objects (reconciliation A20)", () => {
+    expect(term("team")).toBe("Station");
+    expect(term("grant")).toBe("Tool");
+    expect(term("handoff")).toBe("Handoff");
+    expect(term("agent")).toBe("Agent");
     expect(term("ledger")).toBe("Manifest");
-    expect(term("run")).toBe("Sortie");
-    expect(term("overseer")).toBe("the Assayer");
+    expect(term("run")).toBe("Routine run");
+    expect(term("overseer")).toBe("the Overseer");
+    expect(term("overseer.role")).toBe("Overseer");
     expect(term("station")).toBe("the Reach");
   });
 

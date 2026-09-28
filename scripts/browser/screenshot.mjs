@@ -72,10 +72,21 @@ try {
           });
           const page = await ctx.newPage();
           // Force the theme on every page, so the check does not depend on a page's own switch.
+          // Applied the instant <html> exists, before any page script or hydration runs. A later
+          // hook (readystatechange) can land mid-hydration and trip React's mismatch check.
           await page.addInitScript((t) => {
             const apply = () => document.documentElement?.setAttribute("data-theme", t);
-            if (document.documentElement) apply();
-            else document.addEventListener("readystatechange", apply, { once: true });
+            if (document.documentElement) {
+              apply();
+              return;
+            }
+            const mo = new MutationObserver(() => {
+              if (document.documentElement) {
+                apply();
+                mo.disconnect();
+              }
+            });
+            mo.observe(document, { childList: true });
           }, theme);
           const errors = [];
           page.on("console", (m) => {

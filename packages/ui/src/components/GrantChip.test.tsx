@@ -5,12 +5,18 @@ import { axe } from "vitest-axe";
 import { GrantChip } from "./GrantChip.js";
 
 describe("GrantChip", () => {
-  it("leads with the mode glyph and names the mode for assistive tech", () => {
+  it("shows the capitalized tool name over the written-out mode", () => {
     render(<GrantChip mode="read" label="notion" />);
-    const chip = screen.getByText("notion").closest("[data-mode]");
+    const chip = screen.getByText("Notion").closest("[data-mode]");
     expect(chip).toHaveAttribute("data-mode", "read");
-    expect(chip).toHaveTextContent(/^R/);
-    expect(screen.getByText("read")).toHaveClass("sr-only");
+    expect(chip?.querySelector("[data-chip-name]")).toHaveTextContent("Notion");
+    expect(chip?.querySelector("[data-chip-mode]")).toHaveTextContent("read");
+    expect(chip).toHaveTextContent(/^Notion/);
+  });
+
+  it("leaves labels that already start with a capital or carry a count alone", () => {
+    render(<GrantChip mode="write" label="Ledger ×3" />);
+    expect(screen.getByText("Ledger ×3")).toBeInTheDocument();
   });
 
   it("is a static span by default and a button when it can be selected", async () => {
@@ -18,7 +24,7 @@ describe("GrantChip", () => {
     const { rerender } = render(<GrantChip mode="write" label="ledger" />);
     expect(screen.queryByRole("button")).toBeNull();
     rerender(<GrantChip mode="write" label="ledger" onSelect={onSelect} />);
-    await userEvent.click(screen.getByRole("button", { name: /ledger/ }));
+    await userEvent.click(screen.getByRole("button", { name: /ledger/i }));
     expect(onSelect).toHaveBeenCalledTimes(1);
   });
 

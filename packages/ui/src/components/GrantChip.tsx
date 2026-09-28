@@ -14,11 +14,15 @@ export interface GrantChipProps {
   readonly className?: string;
 }
 
-const MODE_GLYPH: Record<GrantMode, string> = { read: "R", write: "W" };
+/** "notion" → "Notion"; labels already capitalized or with counts pass through. */
+export function displayLabel(label: string): string {
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
 
 /**
- * A grant chip: mode glyph (R/W, in mono) then the tool name. Color never carries mode alone.
- * Status tint stays at 16% at rest and 35% while in use; text stays ink-1 (design spec §02).
+ * A tool chip: the tool name (capitalized) over a lighter "read" / "write" line. The mode is
+ * always written out, so color never carries it alone. Status tint stays at 16% at rest and 35%
+ * while in use; text stays ink-1 (design spec v0.3 §04).
  */
 export function GrantChip({
   mode,
@@ -30,7 +34,7 @@ export function GrantChip({
   className,
 }: GrantChipProps) {
   const classes = [
-    "ow-chip inline-flex h-(--ow-size-chip-h) items-center gap-(--ow-size-chip-gap) rounded-chip border px-(--ow-size-chip-pad-x) font-mono text-mono text-ink-1",
+    "ow-chip inline-flex min-h-(--ow-size-chip-h) flex-col items-start justify-center rounded-chip border px-(--ow-size-chip-pad-x) py-(--ow-size-chip-pad-y) text-left leading-none",
     mode === "read"
       ? "border-chip-border-read bg-chip-read"
       : "border-chip-border-write bg-chip-write",
@@ -44,9 +48,15 @@ export function GrantChip({
     .join(" ");
   const content = (
     <>
-      <span aria-hidden="true">{MODE_GLYPH[mode]}</span>
-      <span className="sr-only">{mode}</span>
-      <span>{label}</span>
+      <span className="text-label text-ink-1" data-chip-name>
+        {displayLabel(label)}
+      </span>
+      <span
+        className={`font-mono text-eyebrow ${inUse ? "text-ink-1" : "text-ink-2"}`}
+        data-chip-mode
+      >
+        {mode}
+      </span>
     </>
   );
   const data = {

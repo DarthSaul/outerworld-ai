@@ -42,7 +42,7 @@ describe("DetailPanel", () => {
       const last = screen.getByRole("region", { name: byTerm("report.lastRun") });
       expect(last).toHaveTextContent("working");
       expect(last).toHaveTextContent("14:00:04");
-      expect(last).toHaveTextContent("notion ×3");
+      expect(last).toHaveTextContent("Notion ×3");
       expect(last.querySelector('[data-mode="read"]')).not.toBeNull();
     });
 
@@ -107,7 +107,7 @@ describe("DetailPanel", () => {
       "width",
       "48",
     );
-    expect(within(panel).getAllByText(/commits|notion|ledger/).length).toBeGreaterThanOrEqual(3);
+    expect(within(panel).getAllByText(/commits|notion|ledger/i).length).toBeGreaterThanOrEqual(3);
     await userEvent.click(within(panel).getByRole("button", { name: /Strength App/ }));
     expect(onSelect).toHaveBeenCalledWith({ kind: "team", id: "strength-app" });
   });
