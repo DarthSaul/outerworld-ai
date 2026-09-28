@@ -51,7 +51,7 @@ export default function HomePage() {
         </span>
         <span className="font-mono text-mono text-ink-3">{station.name}</span>
       </nav>
-      <main className="min-h-0">
+      <main className="flex min-h-0 flex-col">
         <DigestDemo station={station} initial={state} sidebar={sidebar} />
       </main>
       <footer className="flex items-center justify-between rounded-panel border border-border-subtle bg-surface-panel px-(--ow-space-4) py-(--ow-space-4) font-mono text-mono text-ink-3">

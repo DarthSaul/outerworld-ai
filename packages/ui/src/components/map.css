@@ -36,6 +36,21 @@
   width: auto;
 }
 
+/* Pan surface: the pane body is the camera; drag anywhere to move the map, the bar zooms. */
+.ow-map-pan {
+  position: relative;
+  overflow: hidden;
+  cursor: grab;
+}
+.ow-map-pan[data-dragging="true"] {
+  cursor: grabbing;
+}
+.ow-map-pan-inner {
+  position: absolute;
+  inset: 0 auto auto 0;
+  will-change: transform;
+}
+
 /* Wires from every team into the overseer: quiet, never emphasized; the overseer always reads. */
 .ow-overseer-link,
 .ow-overseer-link-chevron path {

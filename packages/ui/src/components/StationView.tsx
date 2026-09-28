@@ -5,6 +5,7 @@ import { Pane } from "./Pane.js";
 import { StationMap } from "./StationMap.js";
 import type { Selection } from "./selection.js";
 import { useDesktop } from "./useDesktop.js";
+import { usePan } from "./usePan.js";
 
 export interface StationViewProps {
   readonly station: Station;
@@ -25,6 +26,7 @@ export interface StationViewProps {
 
 const ZOOM_MIN = 0.6;
 const ZOOM_MAX = 1.4;
+const ZOOM_STEP = 0.1;
 const MAP_UNITS = 1000;
 
 /**
@@ -61,23 +63,26 @@ export function StationView({
     return () => window.removeEventListener("keydown", onKey);
   }, [setSelection]);
 
-  // Fit the map to its column: one unit per pixel at 1, clamped to the design's zoom range.
+  // Fit the map to its column on first layout and center it; afterwards the user pans and zooms.
   const mapRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
-  useLayoutEffect(() => {
+  const pan = usePan();
+  const { setOffset } = pan;
+  const fit = useCallback(() => {
     const el = mapRef.current;
-    if (!el || typeof ResizeObserver === "undefined") return;
-    const fitZoom = () => {
-      const cs = getComputedStyle(el);
-      const w =
-        el.clientWidth - Number.parseFloat(cs.paddingLeft) - Number.parseFloat(cs.paddingRight);
-      if (w > 0) setZoom(Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, w / MAP_UNITS)));
-    };
-    fitZoom();
-    const ro = new ResizeObserver(fitZoom);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
+    if (!el) return;
+    const w = el.clientWidth;
+    const h = el.clientHeight;
+    if (w <= 0) return;
+    const z = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.min(w, h || w) / MAP_UNITS));
+    setZoom(z);
+    setOffset({ x: (w - MAP_UNITS * z) / 2, y: Math.max(0, (h - MAP_UNITS * z) / 2) });
+  }, [setOffset]);
+  useLayoutEffect(() => {
+    fit();
+  }, [fit]);
+  const zoomBy = (delta: number) =>
+    setZoom((z) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round((z + delta) * 100) / 100)));
 
   const panel = (
     <DetailPanel
@@ -100,7 +105,7 @@ export function StationView({
 
   return (
     <div
-      className="ow-station-view flex flex-col gap-(--ow-space-4)"
+      className="ow-station-view flex min-h-0 flex-1 flex-col gap-(--ow-space-4)"
       data-station-view
       data-layout={desktop ? "split" : "stacked"}
     >
@@ -111,8 +116,8 @@ export function StationView({
         <div
           className={
             sidebar
-              ? "grid h-full min-h-0 grid-cols-[1fr_3fr_2fr] items-stretch gap-(--ow-space-4)"
-              : "grid h-full min-h-0 grid-cols-[minmax(0,1fr)_var(--ow-size-panel-w)] items-stretch gap-(--ow-space-4)"
+              ? "grid min-h-0 flex-1 grid-cols-[1fr_3fr_2fr] grid-rows-[minmax(0,1fr)] items-stretch gap-(--ow-space-4) overflow-hidden"
+              : "grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_var(--ow-size-panel-w)] grid-rows-[minmax(0,1fr)] items-stretch gap-(--ow-space-4) overflow-hidden"
           }
           data-columns={sidebar ? "3" : "2"}
         >
@@ -121,19 +126,58 @@ export function StationView({
             title="Map"
             void
             menu={
-              <span>
-                {term("proof.asOf")} {state.provenance.asOf}
-              </span>
+              <>
+                <span>
+                  {term("proof.asOf")} {state.provenance.asOf}
+                </span>
+                <span aria-hidden="true">·</span>
+                <button
+                  type="button"
+                  aria-label="Zoom out"
+                  className="px-(--ow-space-1)"
+                  onClick={() => zoomBy(-ZOOM_STEP)}
+                >
+                  −
+                </button>
+                <span>{Math.round(zoom * 100)}%</span>
+                <button
+                  type="button"
+                  aria-label="Zoom in"
+                  className="px-(--ow-space-1)"
+                  onClick={() => zoomBy(ZOOM_STEP)}
+                >
+                  +
+                </button>
+                <button
+                  type="button"
+                  aria-label="Fit map"
+                  className="px-(--ow-space-1)"
+                  onClick={fit}
+                >
+                  fit
+                </button>
+              </>
             }
           >
-            <div ref={mapRef} className="min-w-0 overflow-x-auto p-(--ow-space-4)">
-              <StationMap
-                station={station}
-                state={state}
-                selection={selection}
-                onSelect={setSelection}
-                zoom={zoom}
-              />
+            <div
+              ref={mapRef}
+              className="ow-map-pan h-full min-h-0 min-w-0 touch-none select-none"
+              data-map-pan
+              data-dragging={pan.dragging ? "true" : undefined}
+              {...pan.handlers}
+            >
+              <div
+                className="ow-map-pan-inner"
+                style={{ transform: `translate(${pan.offset.x}px, ${pan.offset.y}px)` }}
+              >
+                <StationMap
+                  station={station}
+                  state={state}
+                  selection={selection}
+                  onSelect={setSelection}
+                  zoom={zoom}
+                />
+              </div>
             </div>
           </Pane>
           <Pane title={term("report.tab")} menu={<span>{selectionLabel}</span>}>

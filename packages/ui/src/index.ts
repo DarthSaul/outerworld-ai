@@ -56,6 +56,7 @@ export {
 } from "./components/TeamPanel.js";
 export { Toast, type ToastProps, ToastRegion } from "./components/Toast.js";
 export { useDesktop } from "./components/useDesktop.js";
+export { DRAG_THRESHOLD_PX, type PanState, usePan } from "./components/usePan.js";
 export { RunDigestButton, type RunDigestButtonProps } from "./timeline/RunDigestButton.js";
 export { runDigestTimeline, type TimelineStep } from "./timeline/runDigestTimeline.js";
 export { type Timeline, type UseTimelineOptions, useTimeline } from "./timeline/useTimeline.js";
