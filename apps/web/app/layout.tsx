@@ -1,4 +1,4 @@
-import { RigSprite, ScreenFrame } from "@darthsaul/outerworld-ai-ui";
+import { RigSprite } from "@darthsaul/outerworld-ai-ui";
 import type { Metadata } from "next";
 import Script from "next/script";
 import type { ReactNode } from "react";
@@ -22,7 +22,7 @@ export default function RootLayout({ children }: { readonly children: ReactNode 
       </head>
       <body>
         <RigSprite />
-        <ScreenFrame label="Outerworld AI">{children}</ScreenFrame>
+        {children}
       </body>
     </html>
   );

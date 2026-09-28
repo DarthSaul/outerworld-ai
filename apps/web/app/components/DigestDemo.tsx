@@ -14,7 +14,7 @@ import { type ReactNode, useEffect, useState } from "react";
 /**
  * The station view with the "Run digest" demo: the scripted timeline replays on top of whatever
  * state was loaded, through core's reducer. Reset returns to the loaded state. With a sidebar,
- * the demo controls join it (desktop: 1fr 3fr 1fr); without one they sit above the map.
+ * the demo controls join it (desktop: 1fr 4fr 1fr); without one they sit above the map.
  */
 export function DigestDemo({
   station,

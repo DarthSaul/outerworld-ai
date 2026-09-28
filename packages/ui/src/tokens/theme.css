@@ -48,10 +48,6 @@
   --color-emblem-shade: var(--ow-emblem-shade);
   --color-emblem-glow: var(--ow-emblem-glow);
   --color-emblem-mark: var(--ow-emblem-mark);
-  --color-frame-bezel: var(--ow-frame-bezel);
-  --color-frame-bezel-highlight: var(--ow-frame-bezel-highlight);
-  --color-frame-bezel-shadow: var(--ow-frame-bezel-shadow);
-  --color-frame-chin-ink: var(--ow-frame-chin-ink);
 
   --font-sans: var(--ow-font-sans);
   --font-mono: var(--ow-font-mono);
@@ -101,8 +97,6 @@
   --radius-control: var(--ow-radius-control);
   --radius-chip: var(--ow-radius-chip);
   --radius-full: var(--ow-radius-full);
-  --radius-frame: var(--ow-frame-radius);
-  --radius-screen: var(--ow-screen-radius);
 
   /* Media queries cannot read custom properties, so this is the one literal in the theme. It
      must equal --ow-breakpoint-mobile in tokens.css; tokens.test.ts enforces that. */
