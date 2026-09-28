@@ -262,7 +262,7 @@ GlossaryKey = "station" | "team" | "teams" | "scope" | "grant" | "grants" | "gra
 
 Glossary contents (simplified 2026-09-27, reconciliation A20): station "the Reach", team
 "Station", scope "Standing orders", grant "Tool", handoff "Handoff", agent "Agent", persona
-"Persona", ledger "Manifest", run "Routine run", overseer role "Overseer". Health and run words
+"Persona", ledger "Station Report", system report (the digest) "System Report", run "Routine run", overseer role "Overseer". Health and run words
 stay plain. The overseer's proper name comes from its persona.
 
 ## 5. Fixture (`fixtures/demo-station/`)

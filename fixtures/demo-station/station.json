@@ -35,7 +35,8 @@
       "teamId": "project-management",
       "tool": "ledger",
       "mode": "write",
-      "kind": "skill"
+      "kind": "skill",
+      "label": "Station report"
     },
     {
       "id": "sa-git-read",
@@ -57,7 +58,8 @@
       "teamId": "strength-app",
       "tool": "ledger",
       "mode": "write",
-      "kind": "skill"
+      "kind": "skill",
+      "label": "Station report"
     },
     {
       "id": "sa-discord-write",

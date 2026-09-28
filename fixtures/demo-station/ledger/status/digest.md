@@ -1,4 +1,4 @@
-Ultron reconciled 2 manifests · 1 needs attention
+Ultron reconciled 2 station reports · 1 needs attention
 
 - Project Management: routine run in progress since 14:00, planner prioritizing next steps.
 - Strength App: last routine run failed (1RM calculator rounding test), nothing since Sep 26. Needs attention.

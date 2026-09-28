@@ -533,7 +533,7 @@ function OverseerBody({
         </div>
       </header>
       <ProofLine state={state} path="status/overseer.json" />
-      <Region id="dp-digest" title="digest">
+      <Region id="dp-digest" title={term("system.report")}>
         {o.digest ? (
           <pre className="whitespace-pre-wrap rounded-control border border-border-subtle p-(--ow-space-3) font-sans text-body text-ink-1">
             {o.digest}

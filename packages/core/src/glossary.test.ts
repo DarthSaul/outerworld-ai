@@ -13,7 +13,8 @@ describe("glossary", () => {
     expect(term("grant")).toBe("Tool");
     expect(term("handoff")).toBe("Handoff");
     expect(term("agent")).toBe("Agent");
-    expect(term("ledger")).toBe("Manifest");
+    expect(term("ledger")).toBe("Station Report");
+    expect(term("system.report")).toBe("System Report");
     expect(term("run")).toBe("Routine run");
     expect(term("overseer")).toBe("the Overseer");
     expect(term("overseer.role")).toBe("Overseer");

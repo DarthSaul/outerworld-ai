@@ -62,3 +62,7 @@ Decisions taken 2026-09-27 by the owner:
 - Owner review (A20): vocabulary simplified. Station (team), Tool (grant), Handoff, Agent, Routine run,
   Overseer; Manifest and the Reach kept. Tool chips show the capitalized tool name over a lighter
   read / write line (chip height 40). Design spec is v0.3; the naming workshop doc is annotated.
+- Owner review (A21): "Manifest" is now "Station Report" for a team's ledger file and the overseer's digest is
+  the "System Report". Also: the dashboard is a nav / columns (1fr 3fr 2fr) / footer grid that fits the
+  viewport, the map pane is black in both themes with drag-to-pan and zoom, and core's layout places the
+  overseer at the right edge with stations in columns to its left, each wired into it.

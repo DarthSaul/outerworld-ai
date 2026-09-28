@@ -68,7 +68,7 @@ export function StationView({
   const [zoom, setZoom] = useState(1);
   const pan = usePan();
   const { setOffset } = pan;
-  const fit = useCallback(() => {
+  const fitMap = useCallback(() => {
     const el = mapRef.current;
     if (!el) return;
     const w = el.clientWidth;
@@ -79,8 +79,8 @@ export function StationView({
     setOffset({ x: (w - MAP_UNITS * z) / 2, y: Math.max(0, (h - MAP_UNITS * z) / 2) });
   }, [setOffset]);
   useLayoutEffect(() => {
-    fit();
-  }, [fit]);
+    fitMap();
+  }, [fitMap]);
   const zoomBy = (delta: number) =>
     setZoom((z) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round((z + delta) * 100) / 100)));
 
@@ -152,9 +152,9 @@ export function StationView({
                   type="button"
                   aria-label="Fit map"
                   className="px-(--ow-space-1)"
-                  onClick={fit}
+                  onClick={fitMap}
                 >
-                  fit
+                  fitMap
                 </button>
               </>
             }

@@ -89,7 +89,8 @@ Simplified by the owner on 2026-09-27 (spec v0.3, reconciliation A20). The gloss
 | Handoff (directional) | `handoff` | `handoff` |
 | Agent | `agent` | `agent` |
 | Persona | `agent.persona` | `persona` |
-| Manifest | ledger file | `ledger` |
+| Station Report | ledger file | `ledger` |
+| System Report | the overseer's digest | `system.report` |
 | Routine run | `run` | `run` |
 | Overseer (role); proper name from the persona | `overseer` | `overseer` |
 | World + settlement | `team.emblem` | `emblem` |

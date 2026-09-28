@@ -192,7 +192,7 @@ export function StationMap({
         style={{ "--ow-map-units": units } as CSSProperties}
       >
         <svg className="ow-map-svg" viewBox={`0 0 ${units} ${units}`} aria-label={term("handoffs")}>
-          <g className="ow-overseer-links" aria-hidden="true">
+          <g className="ow-overseer-links">
             {station.teams.map((t) => {
               const g = overseerLinkGeometry(t.id, layout);
               return (

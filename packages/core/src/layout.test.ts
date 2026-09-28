@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { handoffGeometry, LAYOUT_SIZE, layoutStation } from "./layout.js";
+import { handoffGeometry, LAYOUT_SIZE, layoutStation, overseerLinkGeometry } from "./layout.js";
+
 import type { Handoff, Station, Team } from "./schema/station.js";
 
 const team = (id: string): Team => ({
@@ -35,24 +36,27 @@ const dist = (a: { x: number; y: number }, b: { x: number; y: number }) =>
   Math.hypot(a.x - b.x, a.y - b.y);
 
 describe("layoutStation", () => {
-  it("places the overseer at the center of the unit square", () => {
+  it("places the overseer at the right edge, vertically centered, with a gutter", () => {
     const l = layoutStation(station(3));
-    expect(center(l.overseer)).toEqual({ x: LAYOUT_SIZE / 2, y: LAYOUT_SIZE / 2 });
+    expect(l.overseer.x + l.overseer.w).toBeLessThan(LAYOUT_SIZE);
+    expect(l.overseer.x + l.overseer.w).toBeGreaterThan(LAYOUT_SIZE * 0.8);
+    expect(center(l.overseer).y).toBeCloseTo(LAYOUT_SIZE / 2, 6);
   });
 
-  it("uses radial mode for up to eight teams, all on one ring, equidistant from the center", () => {
-    const l = layoutStation(station(8));
+  it("stacks up to four teams in one column to the left of the overseer, in station order top to bottom", () => {
+    const l = layoutStation(station(4));
     expect(l.mode).toBe("radial");
-    const radii = Object.values(l.teams).map((b) => dist(center(b), center(l.overseer)));
-    for (const r of radii) expect(r).toBeCloseTo(radii[0]!, 2); // boxes are rounded to 3 decimals
-    expect(Object.values(l.teams).every((b) => b.ring === 0)).toBe(true);
+    const xs = new Set(Object.values(l.teams).map((b) => b.x));
+    expect(xs.size).toBe(1);
+    const ys = ["t0", "t1", "t2", "t3"].map((id) => l.teams[id]!.y);
+    expect(ys).toEqual([...ys].sort((a, b) => a - b));
+    for (const b of Object.values(l.teams)) expect(b.x + b.w).toBeLessThan(l.overseer.x);
   });
 
-  it("uses two rings for nine to sixteen teams", () => {
-    const l = layoutStation(station(12));
-    expect(l.mode).toBe("rings");
-    const rings = new Set(Object.values(l.teams).map((b) => b.ring));
-    expect(rings).toEqual(new Set([0, 1]));
+  it("uses two columns for five to ten teams and three for eleven to sixteen", () => {
+    expect(new Set(Object.values(layoutStation(station(8)).teams).map((b) => b.x)).size).toBe(2);
+    expect(new Set(Object.values(layoutStation(station(12)).teams).map((b) => b.x)).size).toBe(3);
+    expect(layoutStation(station(12)).mode).toBe("rings");
   });
 
   it("uses list mode above sixteen teams, stacked top to bottom", () => {
@@ -62,13 +66,8 @@ describe("layoutStation", () => {
     expect(ys).toEqual([...ys].sort((a, b) => a - b));
   });
 
-  it("is deterministic and orders teams by their position in the station", () => {
-    const a = layoutStation(station(5));
-    const b = layoutStation(station(5));
-    expect(a).toEqual(b);
-    // First team sits at the top (12 o'clock), the rest go clockwise.
-    expect(center(a.teams.t0!).y).toBeLessThan(center(a.overseer).y);
-    expect(center(a.teams.t1!).x).toBeGreaterThan(center(a.teams.t0!).x);
+  it("is deterministic", () => {
+    expect(layoutStation(station(5))).toEqual(layoutStation(station(5)));
   });
 
   it("keeps every team inside the square and clear of the overseer core", () => {
@@ -79,9 +78,19 @@ describe("layoutStation", () => {
         expect(b.y).toBeGreaterThanOrEqual(0);
         expect(b.x + b.w).toBeLessThanOrEqual(LAYOUT_SIZE);
         expect(b.y + b.h).toBeLessThanOrEqual(LAYOUT_SIZE);
-        expect(dist(center(b), center(l.overseer))).toBeGreaterThan(l.overseer.w / 2 + b.w / 2);
+        expect(b.x + b.w).toBeLessThan(l.overseer.x);
       }
     }
+  });
+
+  it("wires each team into the overseer: the link starts at the team's right edge and ends at the overseer's left edge", () => {
+    const l = layoutStation(station(3));
+    const g = overseerLinkGeometry("t1", l);
+    const t = l.teams.t1!;
+    expect(g.path.startsWith(`M ${t.x + t.w} ${t.y + t.h / 2}`)).toBe(true);
+    expect(g.path.endsWith(`${l.overseer.x} ${l.overseer.y + l.overseer.h / 2}`)).toBe(true);
+    expect(g.chevronAt.x).toBeGreaterThan(g.midpoint.x);
+    expect(() => overseerLinkGeometry("ghost", l)).toThrow(/ghost/);
   });
 });
 

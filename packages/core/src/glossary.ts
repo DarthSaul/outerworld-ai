@@ -1,8 +1,9 @@
 /**
  * The only place themed display strings live. Code uses neutral names (ADR-0002); the ui asks
  * `term(key)` for what to show. Simplified vocabulary chosen by the owner on 2026-09-27
- * (reconciliation A20). Health and run words, read/write, and every `.plain` entry stay plain.
- * Note: "Station" on screen is the team; in code `station` is the whole map document.
+ * (reconciliation A20, A21). Health and run words, read/write, and every `.plain` entry stay plain.
+ * Note: "Station" on screen is the team; in code `station` is the whole map document. A team's
+ * ledger file is its "Station Report"; the overseer's digest is the "System Report".
  */
 export const glossary = {
   station: "the Reach",
@@ -32,8 +33,10 @@ export const glossary = {
   "agent.verb": "Add agent",
   persona: "Persona",
   "persona.plain": "persona",
-  ledger: "Manifest",
+  ledger: "Station Report",
   "ledger.plain": "ledger",
+  "system.report": "System Report",
+  "system.report.plain": "digest",
   run: "Routine run",
   runs: "Routine runs",
   "run.plain": "run",
@@ -56,16 +59,16 @@ export const glossary = {
   "overseer.attention": "needs attention",
   "empty.handoffs.title": "No handoffs",
   "empty.handoffs.body":
-    "Stations can't read each other's manifests until a handoff is opened between them.",
+    "Stations can't read each other's station reports until a handoff is opened between them.",
   "empty.runs.title": "No routine runs yet",
   "empty.runs.body":
-    "The first routine run hasn't happened. The manifest will fill in after it does.",
-  "empty.ledger.title": "No manifest yet",
+    "The first routine run hasn't happened. The station report will fill in after it does.",
+  "empty.ledger.title": "No station report yet",
   "empty.ledger.body": "The first routine run hasn't happened.",
   "proof.asOf": "as of",
   "report.tab": "Report",
   "report.lastRun": "Last routine run",
-  "report.ledger": "Manifest",
+  "report.ledger": "Station Report",
   "report.runs": "Routine runs",
   "report.handoffs": "Handoffs",
   "report.agents": "Agents",
