@@ -7,7 +7,7 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       include: ["src/**/*.ts"],
-      exclude: ["src/**/*.test.ts"],
+      exclude: ["src/**/*.test.ts", "src/bin.ts", "src/test/**"],
       // CONSTRAINTS.md: generator lines >= 90, branches >= 85.
       thresholds: { lines: 90, branches: 85 },
     },

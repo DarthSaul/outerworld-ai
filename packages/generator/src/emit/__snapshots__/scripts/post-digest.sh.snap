@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Posts status/digest.md to Discord. The webhook URL is a secret and lives ONLY in the
+# overseer Routine's environment variables as DISCORD_WEBHOOK_URL; it is never in this repo.
+set -euo pipefail
+
+: "${DISCORD_WEBHOOK_URL:?DISCORD_WEBHOOK_URL is not set. Add it to the overseer Routine's environment variables; never commit it.}"
+
+digest="${1:-status/digest.md}"
+if [[ ! -f "$digest" ]]; then
+  echo "post-digest: $digest not found; write the digest before posting" >&2
+  exit 1
+fi
+
+# Discord limits a message to 2000 characters; the digest is written to fit.
+payload="$(node -e 'const fs=require("node:fs");process.stdout.write(JSON.stringify({content:fs.readFileSync(process.argv[1],"utf8").slice(0,2000)}))' "$digest")"
+
+curl --fail --silent --show-error \
+  -H "Content-Type: application/json" \
+  -X POST \
+  --data "$payload" \
+  "${DISCORD_WEBHOOK_URL}" > /dev/null
+
+echo "post-digest: posted $digest"
