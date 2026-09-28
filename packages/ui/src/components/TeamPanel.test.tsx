@@ -13,6 +13,7 @@ const props = (): TeamPanelProps => ({
   mission: "Keep every project's next step written down",
   emblem: { hue: 230, mark: "dome" },
   health: "ok",
+  healthLabel: "healthy",
   run: "working",
   lastRunLabel: "14:02",
   grants: [

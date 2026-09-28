@@ -1,8 +1,10 @@
 /**
  * Typed access to the design tokens defined in tokens.css. Components never write a literal
  * value; they reference a token by name through `tokenVar`, or use the Tailwind utilities that
- * theme.css derives from the same variables.
+ * theme.css derives from the same variables. Vocabularies come from core's schemas so the
+ * tokens are checked against the real state space.
  */
+import { AgentRunState, GrantMode as GrantModeSchema, Health } from "@darthsaul/outerworld-ai-core";
 
 /** Token names that vary between light and dark. tokens.test.ts checks each is defined in all three theme blocks. */
 export const THEMED_TOKENS = [
@@ -27,16 +29,16 @@ export const THEMED_TOKENS = [
   "overseer-frame",
 ] as const;
 
-/** Run-state glow tokens; the rig sets --ow-rig-glow to one of these from `data-state`. */
-export const RUN_STATES = ["idle", "working", "done", "failed"] as const;
+/** Run states, from core; the rig sets --ow-rig-glow to the matching glow token. */
+export const RUN_STATES = AgentRunState.options;
 export type RunState = (typeof RUN_STATES)[number];
 
-/** Team health tokens. */
-export const HEALTH_STATES = ["ok", "attention", "stalled"] as const;
+/** Team health states, from core. */
+export const HEALTH_STATES = Health.options;
 export type HealthState = (typeof HEALTH_STATES)[number];
 
-/** Grant modes, one hue each. */
-export const GRANT_MODES = ["read", "write"] as const;
+/** Grant modes, from core; one hue each. */
+export const GRANT_MODES = GrantModeSchema.options;
 export type GrantMode = (typeof GRANT_MODES)[number];
 
 /**
@@ -52,6 +54,12 @@ export const MOTION_MS = {
   breathe: 2400,
   reduced: 120,
 } as const;
+
+/** Map zoom range and step (design spec §04: 60–140%). Mirrors --ow-zoom-* in tokens.css. */
+export const ZOOM = { min: 0.6, max: 1.4, step: 0.1 } as const;
+
+/** Blink offset between agents on one panel, in milliseconds. Mirrors --ow-rig-blink-stagger. */
+export const BLINK_STAGGER_MS = 900;
 
 export type TokenName = string;
 

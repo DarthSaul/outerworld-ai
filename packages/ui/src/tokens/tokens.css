@@ -78,6 +78,7 @@
   --ow-size-panel-w-min: 360px;
   --ow-size-panel-w-max: 560px;
   --ow-size-panel-pad: var(--ow-space-5);
+  --ow-size-sheet-max-h: 80vh; /* the mobile report sheet */
   --ow-size-overseer-core-w: 192px; /* design: 144×160; the 2× hero rig needs the room (A19) */
   --ow-size-overseer-core-h: 232px;
   --ow-size-overseer-core-chamfer: 25%;
@@ -109,6 +110,7 @@
   --ow-breakpoint-mobile: 720px; /* below: single column, teams stacked, overseer pinned top */
   --ow-zoom-min: 0.6;
   --ow-zoom-max: 1.4;
+  --ow-zoom-step: 0.1;
   --ow-zoom-collapse: 0.6; /* below: agent names hide, teams show name + health only */
   --ow-layout-radial-max: 8; /* radial for <= 8 teams, two rings 9-16, list above 16 */
   --ow-layout-rings-max: 16;
@@ -134,6 +136,8 @@
   --ow-rig-blink-min: 4000ms;
   --ow-rig-blink-max: 6000ms;
   --ow-rig-blink-delay: 0ms; /* per-figure offset, set inline by Character */
+  --ow-rig-blink-stagger: 900ms; /* offset between agents on one panel */
+  --ow-rig-blink-opacity: 0.15; /* the visor band while blinking */
   --ow-rig-pop-scale: 1.08;
   --ow-opacity-failed: var(--ow-opacity-dimmed);
 

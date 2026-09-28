@@ -6,13 +6,14 @@ export interface PaneProps {
   /** Optional items on the right of the menu bar. */
   readonly menu?: ReactNode;
   readonly children: ReactNode;
-  /** The map column: black in both themes, dark palette inside. */
-  readonly void?: boolean;
+  /** "void" is the map column: black in both themes, dark palette inside. */
+  readonly surface?: "default" | "void";
   readonly className?: string;
 }
 
 /** A bordered column with a simple menu bar on top. The dashboard is three of these. */
-export function Pane({ title, menu, children, void: isVoid, className }: PaneProps) {
+export function Pane({ title, menu, children, surface = "default", className }: PaneProps) {
+  const isVoid = surface === "void";
   return (
     <section
       aria-label={title}
@@ -23,7 +24,7 @@ export function Pane({ title, menu, children, void: isVoid, className }: PanePro
       ]
         .filter(Boolean)
         .join(" ")}
-      data-pane={isVoid ? "void" : "default"}
+      data-pane={surface}
     >
       <header className="flex h-(--ow-size-control-h) shrink-0 items-center justify-between gap-(--ow-space-3) border-b border-border-subtle bg-surface-raised px-(--ow-space-3)">
         <span className="font-mono text-eyebrow uppercase text-ink-2">{title}</span>

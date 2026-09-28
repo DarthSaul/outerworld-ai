@@ -1,25 +1,20 @@
+import type {
+  DerivedRig,
+  Rig,
+  RigAccessory,
+  RigHead,
+  RigShoulder,
+  RigTrace,
+} from "@darthsaul/outerworld-ai-core";
 import type { CSSProperties } from "react";
 import type { RunState } from "../tokens/tokens.js";
 import { symbolId } from "./sprite.js";
 
-export type RigHead = "dome" | "wedge" | "crest";
-export type RigTrace = "core" | "bar" | "chevron" | "split" | "frame" | "twin";
-export type RigShoulder = "ball" | "pauldron";
-export type RigAccessory = "antenna" | "thruster" | "plate" | "none" | "crest";
-
-/** The persona-chosen part of the rig (core's `agent.persona.rig`). */
-export interface RigChoice {
-  readonly tintHue: number;
-  readonly trimHue: number;
-  readonly head: RigHead;
-  readonly trace: RigTrace;
-}
-
-/** The config-derived part (core's `deriveRig`). */
-export interface RigDerived {
-  readonly shoulder: RigShoulder;
-  readonly accessory: RigAccessory;
-}
+/** The persona-chosen part of the rig: core's `agent.persona.rig`. */
+export type RigChoice = Rig;
+/** The config-derived part: core's `deriveRig`. */
+export type RigDerived = DerivedRig;
+export type { RigAccessory, RigHead, RigShoulder, RigTrace };
 
 export const RIG_UNITS = { w: 24, h: 32 } as const;
 

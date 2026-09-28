@@ -17,7 +17,7 @@ describe("Pane", () => {
 
   it("marks the void variant so the map column carries the dark palette", () => {
     render(
-      <Pane title="Map" void>
+      <Pane title="Map" surface="void">
         <p>x</p>
       </Pane>,
     );

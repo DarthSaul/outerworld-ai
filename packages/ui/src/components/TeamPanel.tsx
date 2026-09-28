@@ -1,5 +1,10 @@
 import type { RigChoice, RigDerived } from "../character/Character.js";
-import type { GrantMode, HealthState, RunState } from "../tokens/tokens.js";
+import {
+  BLINK_STAGGER_MS,
+  type GrantMode,
+  type HealthState,
+  type RunState,
+} from "../tokens/tokens.js";
 import { AgentCard } from "./AgentCard.js";
 import { GrantChip } from "./GrantChip.js";
 import { isSelected, type Selection } from "./selection.js";
@@ -39,15 +44,9 @@ export interface TeamPanelProps {
   /** Agent card columns. One lets mandates read in full on the map. */
   readonly agentColumns?: 1 | 2;
   readonly onSelect: (selection: Selection) => void;
-  /** Plain health word for the header, from the glossary. */
-  readonly healthLabel?: string;
+  /** Plain health word for the header, from the glossary (`term(`health.${health}`)`). */
+  readonly healthLabel: string;
 }
-
-const HEALTH_LABEL: Record<HealthState, string> = {
-  ok: "healthy",
-  attention: "needs attention",
-  stalled: "stalled",
-};
 
 /**
  * A team on the map: header (emblem at 2×, name, mission, health square), grant chips, then
@@ -104,7 +103,7 @@ export function TeamPanel({
                 <span aria-hidden="true">·</span>
               </>
             ) : null}
-            <span data-health-label>{healthLabel ?? HEALTH_LABEL[health]}</span>
+            <span data-health-label>{healthLabel}</span>
           </span>
         </span>
         <span
@@ -141,7 +140,7 @@ export function TeamPanel({
                 key={a.id}
                 {...a}
                 selected={isSelected(selection, "agent", a.id)}
-                blinkDelayMs={i * 900}
+                blinkDelayMs={i * BLINK_STAGGER_MS}
                 onSelect={(agentId) => onSelect({ kind: "agent", id: agentId })}
               />
             ))}

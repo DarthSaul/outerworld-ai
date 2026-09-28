@@ -1,5 +1,14 @@
-import { type Station, type StationState, term } from "@darthsaul/outerworld-ai-core";
-import { type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { LAYOUT_SIZE, type Station, type StationState, term } from "@darthsaul/outerworld-ai-core";
+import {
+  type ReactNode,
+  type PointerEvent as ReactPointerEvent,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
+import { ZOOM } from "../tokens/tokens.js";
 import { DetailPanel } from "./DetailPanel.js";
 import { Pane } from "./Pane.js";
 import { StationMap } from "./StationMap.js";
@@ -24,15 +33,12 @@ export interface StationViewProps {
   readonly sidebar?: ReactNode;
 }
 
-const ZOOM_MIN = 0.6;
-const ZOOM_MAX = 1.4;
-const ZOOM_STEP = 0.1;
-const MAP_UNITS = 1000;
+const clampZoom = (z: number) => Math.min(ZOOM.max, Math.max(ZOOM.min, z));
 
 /**
  * The dashboard's main view: owns the selection (or mirrors a controlled one), lays out sidebar,
  * map, and report panel on desktop, stacks everything with the panel as a bottom sheet below the
- * breakpoint, fits the map's zoom to its column, and clears on Escape.
+ * breakpoint, fits the map's zoom to its column, and clears on Escape or a click on empty map.
  */
 export function StationView({
   station,
@@ -54,19 +60,28 @@ export function StationView({
     },
     [controlled, onSelectionChange],
   );
+  const clear = useCallback(() => setSelection(null), [setSelection]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setSelection(null);
+      if (e.key === "Escape") clear();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [setSelection]);
+  }, [clear]);
 
   // Fit the map to its column on first layout and center it; afterwards the user pans and zooms.
   const mapRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
-  const pan = usePan();
+  /** A tap on the pan surface itself (not on a team, agent, or path) clears the selection. */
+  const onTap = useCallback(
+    (e: ReactPointerEvent<HTMLElement>) => {
+      const t = e.target as HTMLElement;
+      if (t === e.currentTarget || t.hasAttribute("data-map-pan-inner")) clear();
+    },
+    [clear],
+  );
+  const pan = usePan(undefined, { onTap });
   const { setOffset } = pan;
   const fitMap = useCallback(() => {
     const el = mapRef.current;
@@ -74,15 +89,19 @@ export function StationView({
     const w = el.clientWidth;
     const h = el.clientHeight;
     if (w <= 0) return;
-    const z = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.min(w, h || w) / MAP_UNITS));
+    const z = clampZoom(Math.min(w, h || w) / LAYOUT_SIZE);
     setZoom(z);
-    setOffset({ x: (w - MAP_UNITS * z) / 2, y: Math.max(0, (h - MAP_UNITS * z) / 2) });
+    setOffset({ x: (w - LAYOUT_SIZE * z) / 2, y: Math.max(0, (h - LAYOUT_SIZE * z) / 2) });
   }, [setOffset]);
   useLayoutEffect(() => {
     fitMap();
   }, [fitMap]);
-  const zoomBy = (delta: number) =>
-    setZoom((z) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round((z + delta) * 100) / 100)));
+  const zoomBy = useCallback(
+    (delta: number) => setZoom((z) => clampZoom(Math.round((z + delta) * 100) / 100)),
+    [],
+  );
+  const zoomIn = useCallback(() => zoomBy(ZOOM.step), [zoomBy]);
+  const zoomOut = useCallback(() => zoomBy(-ZOOM.step), [zoomBy]);
 
   const panel = (
     <DetailPanel
@@ -91,7 +110,7 @@ export function StationView({
       selection={selection}
       onSelect={setSelection}
       bare
-      {...(desktop ? {} : { onClose: () => setSelection(null), sheet: true })}
+      {...(desktop ? {} : { onClose: clear, sheet: true })}
     />
   );
   const selectionLabel = selection ? `${selection.kind} · ${selection.id}` : "none";
@@ -124,7 +143,7 @@ export function StationView({
           {sidebarPane}
           <Pane
             title="Map"
-            void
+            surface="void"
             menu={
               <>
                 <span>
@@ -135,7 +154,7 @@ export function StationView({
                   type="button"
                   aria-label="Zoom out"
                   className="px-(--ow-space-1)"
-                  onClick={() => zoomBy(-ZOOM_STEP)}
+                  onClick={zoomOut}
                 >
                   −
                 </button>
@@ -144,7 +163,7 @@ export function StationView({
                   type="button"
                   aria-label="Zoom in"
                   className="px-(--ow-space-1)"
-                  onClick={() => zoomBy(ZOOM_STEP)}
+                  onClick={zoomIn}
                 >
                   +
                 </button>
@@ -154,7 +173,7 @@ export function StationView({
                   className="px-(--ow-space-1)"
                   onClick={fitMap}
                 >
-                  fitMap
+                  Fit
                 </button>
               </>
             }
@@ -168,6 +187,7 @@ export function StationView({
             >
               <div
                 className="ow-map-pan-inner"
+                data-map-pan-inner
                 style={{ transform: `translate(${pan.offset.x}px, ${pan.offset.y}px)` }}
               >
                 <StationMap
@@ -187,7 +207,7 @@ export function StationView({
       ) : (
         <>
           {sidebarPane}
-          <Pane title="Map" void>
+          <Pane title="Map" surface="void">
             <div className="p-(--ow-space-4)">
               <StationMap
                 station={station}
@@ -199,7 +219,7 @@ export function StationView({
             </div>
           </Pane>
           {selection ? (
-            <div className="ow-sheet fixed inset-x-0 bottom-0 z-10 max-h-[80vh] overflow-y-auto">
+            <div className="ow-sheet fixed inset-x-0 bottom-0 z-10 max-h-(--ow-size-sheet-max-h) overflow-y-auto">
               <Pane title={term("report.tab")}>{panel}</Pane>
             </div>
           ) : null}

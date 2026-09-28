@@ -1,7 +1,8 @@
+import type { OverseerState } from "@darthsaul/outerworld-ai-core";
 import type { CSSProperties } from "react";
 import { symbolId } from "./sprite.js";
 
-export type OverseerState = "idle" | "reconciling" | "reported" | "attention";
+export type { OverseerState };
 
 export const HERO_UNITS = { w: 48, h: 64 } as const;
 

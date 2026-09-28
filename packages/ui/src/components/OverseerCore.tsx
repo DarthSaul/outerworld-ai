@@ -7,27 +7,23 @@ export interface OverseerCoreProps {
   /** Fixed role noun from the glossary (`term("overseer.role")`). */
   readonly roleNoun: string;
   readonly state: OverseerState;
+  /** Plain word for the state from the glossary (`term(\`overseer.${state}\`)`). */
+  readonly stateLabel: string;
   readonly lastPostLabel?: string;
   readonly attentionCount?: number;
   readonly selected?: boolean;
   readonly onSelect: (selection: Selection) => void;
 }
 
-const STATE_LABEL: Record<OverseerState, string> = {
-  idle: "idle",
-  reconciling: "reconciling",
-  reported: "reported",
-  attention: "needs attention",
-};
-
 /**
- * The overseer's octagon at the map center: the hero rig at 2×, the role noun, the proper
- * name, and one status line. Attention shows as a ring on the core, never as the glow.
+ * The overseer's octagon on the map: the hero rig at 2×, the role noun, the proper name, and
+ * one status line. Attention shows as a ring on the core, never as the glow.
  */
 export function OverseerCore({
   name,
   roleNoun,
   state,
+  stateLabel,
   lastPostLabel,
   attentionCount,
   selected,
@@ -38,7 +34,7 @@ export function OverseerCore({
       ? `posted ${lastPostLabel}`
       : state === "attention" && attentionCount
         ? `${attentionCount} need attention`
-        : STATE_LABEL[state];
+        : stateLabel;
   return (
     <div className="flex flex-col items-center gap-(--ow-space-2)" data-overseer-core>
       <button

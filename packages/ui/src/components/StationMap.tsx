@@ -1,20 +1,20 @@
 import {
-  type Agent,
   deriveRig,
-  type Handoff,
   type HandoffGeometry,
   handoffGeometry,
+  LAYOUT_SIZE,
   layoutStation,
   overseerLinkGeometry,
   type Station,
   type StationState,
   term,
 } from "@darthsaul/outerworld-ai-core";
-import { type CSSProperties, useMemo } from "react";
+import { type CSSProperties, memo, useMemo } from "react";
 import type { HealthState } from "../tokens/tokens.js";
-import { HandoffLayer } from "./HandoffLayer.js";
+import { timeLabel } from "./format.js";
+import { CHEVRON_PATH, HandoffLayer } from "./HandoffLayer.js";
 import { OverseerCore } from "./OverseerCore.js";
-import type { Selection } from "./selection.js";
+import { type Selection, teamOfSelection } from "./selection.js";
 import { TeamPanel, type TeamPanelAgent, type TeamPanelGrant } from "./TeamPanel.js";
 
 export interface StationMapProps {
@@ -28,41 +28,19 @@ export interface StationMapProps {
   readonly zoom?: number;
 }
 
-/** "14:02" in UTC from an ISO timestamp; the proof line carries the full value. */
-export function timeLabel(iso: string | undefined): string | undefined {
-  if (!iso) return undefined;
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return undefined;
-  return `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}`;
-}
-
-/** The team a selection belongs to, or undefined for the overseer. */
-function teamOfSelection(
-  selection: Selection | null | undefined,
-  station: Station,
-): string | undefined {
-  if (!selection) return undefined;
-  switch (selection.kind) {
-    case "team":
-      return selection.id;
-    case "agent":
-      return station.agents.find((a) => a.id === selection.id)?.teamId;
-    case "grant":
-      return station.grants.find((g) => g.id === selection.id)?.teamId;
-    case "handoff": {
-      const h = station.handoffs.find((x) => x.id === selection.id);
-      return h?.from;
-    }
-    default:
-      return undefined;
-  }
-}
+const boxStyle = (b: { x: number; y: number; w: number; h: number }): CSSProperties =>
+  ({
+    "--ow-box-x": b.x,
+    "--ow-box-y": b.y,
+    "--ow-box-w": b.w,
+    "--ow-box-h": b.h,
+  }) as CSSProperties;
 
 /**
- * The map: core's layout in a 1000-unit frame, an SVG handoff layer, and one TeamPanel per team as
- * HTML over it, with the overseer core at the center. Computes no geometry itself.
+ * The map: core's layout in a 1000-unit frame, an SVG handoff layer, wires from every team into
+ * the overseer, and one TeamPanel per team as HTML over it. Computes no geometry itself.
  */
-export function StationMap({
+export const StationMap = memo(function StationMap({
   station,
   state,
   selection,
@@ -77,7 +55,7 @@ export function StationMap({
     return out;
   }, [station, layout]);
 
-  const focusTeam = teamOfSelection(selection, station);
+  const focusTeam = teamOfSelection(station, selection);
   const connected = new Set<string>();
   const emphasized = new Set<string>();
   if (focusTeam) {
@@ -99,7 +77,7 @@ export function StationMap({
   }
 
   const teamName = (id: string) => station.teams.find((t) => t.id === id)?.name ?? id;
-  const handoffItems = station.handoffs.map((h: Handoff) => ({
+  const handoffItems = station.handoffs.map((h) => ({
     id: h.id,
     from: h.from,
     to: h.to,
@@ -114,6 +92,7 @@ export function StationMap({
       name={station.overseer.persona.name}
       roleNoun={term("overseer.role")}
       state={state.overseer.state}
+      stateLabel={term(`overseer.${state.overseer.state}`)}
       {...(lastPost !== undefined ? { lastPostLabel: lastPost } : {})}
       attentionCount={state.overseer.attention.length}
       selected={selection?.kind === "overseer"}
@@ -121,14 +100,16 @@ export function StationMap({
     />
   );
 
-  const panels = station.teams.map((t) => {
+  const panelFor = (teamId: string) => {
+    const t = station.teams.find((x) => x.id === teamId);
+    if (!t) return null;
     const ts = state.teams[t.id];
     const health: HealthState = ts?.health ?? "ok";
     const grants: TeamPanelGrant[] = station.grants
       .filter((g) => g.teamId === t.id)
       .map((g) => ({ id: g.id, mode: g.mode, label: g.label ?? g.tool }));
     const agents: TeamPanelAgent[] = station.agents
-      .filter((a: Agent) => a.teamId === t.id)
+      .filter((a) => a.teamId === t.id)
       .map((a) => ({
         id: a.id,
         name: a.persona.name,
@@ -140,15 +121,14 @@ export function StationMap({
     const last = timeLabel(ts?.lastRun?.startedAt);
     return (
       <TeamPanel
-        key={t.id}
         id={t.id}
         name={t.name}
         mission={t.mission}
         emblem={t.emblem}
         health={health}
+        healthLabel={term(`health.${health}`)}
         run={ts?.run ?? "idle"}
         {...(last ? { lastRunLabel: last } : {})}
-        healthLabel={term(`health.${health}`)}
         grants={grants}
         agents={agents}
         selection={selection ?? null}
@@ -157,7 +137,7 @@ export function StationMap({
         agentColumns={1}
       />
     );
-  });
+  };
 
   if (stacked) {
     return (
@@ -166,32 +146,30 @@ export function StationMap({
         data-map-stacked
       >
         <div className="flex justify-center">{overseer}</div>
-        {panels}
+        {station.teams.map((t) => (
+          <div key={t.id}>{panelFor(t.id)}</div>
+        ))}
       </div>
     );
   }
 
-  const units = 1000;
-  const box = (b: { x: number; y: number; w: number; h: number }): CSSProperties =>
-    ({
-      "--ow-box-x": b.x,
-      "--ow-box-y": b.y,
-      "--ow-box-w": b.w,
-      "--ow-box-h": b.h,
-    }) as CSSProperties;
   const center = layout.overseer;
   return (
     <div
       className="ow-map-viewport"
       data-map-viewport
-      style={{ "--ow-map-units": units, "--ow-map-zoom": zoom } as CSSProperties}
+      style={{ "--ow-map-units": LAYOUT_SIZE, "--ow-map-zoom": zoom } as CSSProperties}
     >
       <div
         className="ow-map-frame"
         data-map-frame
-        style={{ "--ow-map-units": units } as CSSProperties}
+        style={{ "--ow-map-units": LAYOUT_SIZE } as CSSProperties}
       >
-        <svg className="ow-map-svg" viewBox={`0 0 ${units} ${units}`} aria-label={term("handoffs")}>
+        <svg
+          className="ow-map-svg"
+          viewBox={`0 0 ${LAYOUT_SIZE} ${LAYOUT_SIZE}`}
+          aria-label={term("handoffs")}
+        >
           <g className="ow-overseer-links">
             {station.teams.map((t) => {
               const g = overseerLinkGeometry(t.id, layout);
@@ -207,11 +185,7 @@ export function StationMap({
                     transform={`translate(${g.chevronAt.x} ${g.chevronAt.y}) rotate(${g.angle})`}
                     className="ow-overseer-link-chevron"
                   >
-                    <path
-                      d="M -6 -4 L 0 0 L -6 4"
-                      fill="none"
-                      strokeWidth="var(--ow-size-hairline)"
-                    />
+                    <path d={CHEVRON_PATH} fill="none" strokeWidth="var(--ow-size-hairline)" />
                   </g>
                 </g>
               );
@@ -226,22 +200,22 @@ export function StationMap({
             onSelect={onSelect}
           />
         </svg>
-        {station.teams.map((t, i) => (
+        {station.teams.map((t) => (
           <div
             key={t.id}
             className="ow-map-box"
-            style={box(layout.teams[t.id] ?? { x: 0, y: 0, w: 0, h: 0 })}
+            style={boxStyle(layout.teams[t.id] ?? { x: 0, y: 0, w: 0, h: 0 })}
           >
-            {panels[i]}
+            {panelFor(t.id)}
           </div>
         ))}
         <div
           className="ow-map-box ow-map-box--center"
-          style={box({ x: center.x + center.w / 2, y: center.y + center.h / 2, w: 0, h: 0 })}
+          style={boxStyle({ x: center.x + center.w / 2, y: center.y + center.h / 2, w: 0, h: 0 })}
         >
           {overseer}
         </div>
       </div>
     </div>
   );
-}
+});

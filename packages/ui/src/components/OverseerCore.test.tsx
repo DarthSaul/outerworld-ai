@@ -7,7 +7,13 @@ import { OverseerCore } from "./OverseerCore.js";
 describe("OverseerCore", () => {
   it("is a button named after the overseer, holding the hero rig at 2×", () => {
     render(
-      <OverseerCore name="Ultron" roleNoun="Overseer" state="reconciling" onSelect={() => {}} />,
+      <OverseerCore
+        name="Ultron"
+        roleNoun="Overseer"
+        stateLabel="idle"
+        state="reconciling"
+        onSelect={() => {}}
+      />,
     );
     const btn = screen.getByRole("button", { name: /Ultron/ });
     expect(btn).toHaveAttribute("data-state", "reconciling");
@@ -17,7 +23,15 @@ describe("OverseerCore", () => {
 
   it("selects the overseer", async () => {
     const onSelect = vi.fn();
-    render(<OverseerCore name="M" roleNoun="Overseer" state="idle" onSelect={onSelect} />);
+    render(
+      <OverseerCore
+        name="M"
+        roleNoun="Overseer"
+        stateLabel="idle"
+        state="idle"
+        onSelect={onSelect}
+      />,
+    );
     await userEvent.click(screen.getByRole("button"));
     expect(onSelect).toHaveBeenCalledWith({ kind: "overseer", id: "overseer" });
   });
@@ -27,6 +41,7 @@ describe("OverseerCore", () => {
       <OverseerCore
         name="M"
         roleNoun="Overseer"
+        stateLabel="idle"
         state="reported"
         lastPostLabel="14:03"
         onSelect={() => {}}
@@ -37,6 +52,7 @@ describe("OverseerCore", () => {
       <OverseerCore
         name="M"
         roleNoun="Overseer"
+        stateLabel="idle"
         state="attention"
         attentionCount={2}
         onSelect={() => {}}
@@ -46,7 +62,16 @@ describe("OverseerCore", () => {
   });
 
   it("marks selected", () => {
-    render(<OverseerCore name="M" roleNoun="Overseer" state="idle" selected onSelect={() => {}} />);
+    render(
+      <OverseerCore
+        name="M"
+        roleNoun="Overseer"
+        stateLabel="idle"
+        state="idle"
+        selected
+        onSelect={() => {}}
+      />,
+    );
     expect(screen.getByRole("button")).toHaveAttribute("aria-pressed", "true");
   });
 
@@ -55,6 +80,7 @@ describe("OverseerCore", () => {
       <OverseerCore
         name="Ultron"
         roleNoun="Overseer"
+        stateLabel="idle"
         state="attention"
         attentionCount={1}
         onSelect={() => {}}

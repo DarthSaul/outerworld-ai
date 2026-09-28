@@ -1,15 +1,13 @@
+import type { HandoffGeometry } from "@darthsaul/outerworld-ai-core";
 import type { CSSProperties, KeyboardEvent } from "react";
 import { isSelected, type Selection } from "./selection.js";
 
-/** Core's HandoffGeometry, restated here so ui carries no dependency on core's types at runtime. */
-export interface HandoffPathGeometry {
-  readonly path: string;
-  readonly midpoint: { readonly x: number; readonly y: number };
-  readonly angle: number;
-  readonly chevronAt: { readonly x: number; readonly y: number };
-  readonly paired: boolean;
-  readonly side: -1 | 0 | 1;
-}
+/** Core's geometry for one path; the layer draws it and computes nothing. */
+export type HandoffPathGeometry = HandoffGeometry;
+
+/** One reading chevron, drawn at the origin pointing +x; translate and rotate it into place. */
+export const CHEVRON_PATH = "M -6 -4 L 0 0 L -6 4";
+const CHEVRON_PATH_SECOND = "M -2 -4 L 4 0 L -2 4";
 
 export interface HandoffLayerItem {
   readonly id: string;
@@ -93,8 +91,8 @@ export function HandoffLayer(props: HandoffLayerProps) {
               transform={`translate(${g.chevronAt.x} ${g.chevronAt.y}) rotate(${g.angle})`}
               className="ow-handoff-chevron"
             >
-              <path d="M -6 -4 L 0 0 L -6 4" fill="none" strokeWidth="var(--ow-size-hairline)" />
-              <path d="M -2 -4 L 4 0 L -2 4" fill="none" strokeWidth="var(--ow-size-hairline)" />
+              <path d={CHEVRON_PATH} fill="none" strokeWidth="var(--ow-size-hairline)" />
+              <path d={CHEVRON_PATH_SECOND} fill="none" strokeWidth="var(--ow-size-hairline)" />
             </g>
             {state === "carrying" ? <Packet handoffId={h.id} path={g.path} /> : null}
           </g>

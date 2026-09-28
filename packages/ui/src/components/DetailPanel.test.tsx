@@ -84,7 +84,7 @@ describe("DetailPanel", () => {
           onSelect={() => {}}
         />,
       );
-      expect(screen.getByRole("alert")).toHaveTextContent(/older than/i);
+      expect(screen.getByRole("status")).toHaveTextContent(/older than/i);
       expect(screen.getByText(/stalled/)).toBeInTheDocument();
     });
   });

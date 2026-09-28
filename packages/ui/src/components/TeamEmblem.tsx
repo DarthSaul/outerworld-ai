@@ -1,7 +1,9 @@
+import type { EmblemMark as EmblemMarkSchema } from "@darthsaul/outerworld-ai-core";
 import type { CSSProperties } from "react";
 import { symbolId } from "../character/sprite.js";
 
-export type EmblemMark = "spire" | "forge" | "dome" | "archive" | "beacon" | "none";
+/** Emblem marks, from core's schema. */
+export type EmblemMark = (typeof EmblemMarkSchema.options)[number];
 
 export const EMBLEM_UNITS = 16;
 

@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
+  BLINK_STAGGER_MS,
   GRANT_MODES,
   glowToken,
   HEALTH_STATES,
@@ -10,6 +11,7 @@ import {
   RUN_STATES,
   THEMED_TOKENS,
   tokenVar,
+  ZOOM,
 } from "./tokens.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -98,6 +100,20 @@ describe("MOTION_MS parity", () => {
     const m = new RegExp(`--ow-dur-${name}:\\s*(\\d+)ms;`).exec(css);
     expect(m?.[1], name).toBeDefined();
     expect(Number(m?.[1])).toBe(ms);
+  });
+});
+
+describe("ZOOM and blink parity", () => {
+  const num = (name: string) => Number(new RegExp(`--ow-${name}:\\s*([\\d.]+)`).exec(css)?.[1]);
+  it("mirrors the zoom range and step in tokens.css", () => {
+    expect(num("zoom-min")).toBe(ZOOM.min);
+    expect(num("zoom-max")).toBe(ZOOM.max);
+    expect(num("zoom-step")).toBe(ZOOM.step);
+  });
+  it("mirrors the blink stagger in tokens.css", () => {
+    expect(new RegExp(`--ow-rig-blink-stagger:\\s*${BLINK_STAGGER_MS}ms;`).test(css)).toBe(true);
+    expect(css).toMatch(/--ow-rig-blink-opacity:\s*[\d.]+;/);
+    expect(css).toMatch(/--ow-size-sheet-max-h:/);
   });
 });
 
