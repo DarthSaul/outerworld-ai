@@ -204,3 +204,25 @@ Contract: `docs/SCHEMA.md` §6 (CLI, emitted layout, prompt shape, public API). 
 
 ### Checkpoint: generator complete (2026-09-27)
 - [x] coverage 90/85 met, snapshots committed, `pnpm check:task` green, owner review
+
+---
+
+# Step 7 — close (2026-09-27)
+
+Five-axis review of every package (core, ui, generator + scripts, web + docs), findings fixed in
+four commits (`28e1a52`, `5ab185b`, `ff1d958`, `f3e8c59`), integration fixes in `978a181`.
+
+- [x] Review: prototype-safe ids and lookups, one health derivation, honest clock (core);
+      safer CLI, reliable prompts, webhook gitleaks rule (generator); dynamic rendering, hardened
+      ledger reader, demo badge only for the fixture (web); reliable pan, report views split, core
+      types, tokens for every number (ui)
+- [x] Simplification pass: `DetailPanel` is a 98-line dispatcher over `resolveSelection`;
+      report views live in `components/report/`
+- [x] Docs: CLAUDE.md, ADR-0008/0009, README roadmap, SCHEMA.md §6, CONSTRAINTS measured table
+- [x] `pnpm check:full` green (core 103, generator 51, ui 174, web 12), floor guard clean,
+      `pnpm browser:verify` clean at 375 and 1280 in both themes and reduced motion, `/` and `/dev`
+
+### Checkpoint: milestone 1 complete (2026-09-27)
+- [x] Everything local; nothing pushed, so CI has not run yet
+- [ ] Owner: replace the fixture overseer name "Ultron" before any public release (Marvel mark)
+- [ ] Owner: manual live Routine smoke test (done criterion Option A)
