@@ -5,8 +5,8 @@ import { OverseerCharacter } from "./OverseerCharacter.js";
 
 describe("OverseerCharacter", () => {
   it("is an image named by the overseer and its state, using the hero symbol", () => {
-    render(<OverseerCharacter name="Meridian" state="reconciling" scale={2} />);
-    const img = screen.getByRole("img", { name: "Meridian, reconciling" });
+    render(<OverseerCharacter name="Ultron" state="reconciling" scale={2} />);
+    const img = screen.getByRole("img", { name: "Ultron, reconciling" });
     expect(img).toHaveAttribute("data-state", "reconciling");
     expect(img.querySelector("use")).toHaveAttribute("href", "#ow-hero");
     expect(img).toHaveAttribute("viewBox", "0 0 48 64");
@@ -44,7 +44,7 @@ describe("OverseerCharacter", () => {
   });
 
   it("has no axe violations", async () => {
-    const { container } = render(<OverseerCharacter name="Meridian" state="reported" scale={2} />);
+    const { container } = render(<OverseerCharacter name="Ultron" state="reported" scale={2} />);
     expect(await axe(container)).toHaveNoViolations();
   });
 });

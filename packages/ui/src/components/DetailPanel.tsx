@@ -366,9 +366,7 @@ function AgentBody({
           scale={2}
         />
         <div className="flex min-w-0 flex-col gap-(--ow-space-1)">
-          <Eyebrow>
-            {term("agent")} · {term("persona")}
-          </Eyebrow>
+          <Eyebrow>{term("agent")}</Eyebrow>
           <h2 className="text-title text-ink-1">{agent.persona.name}</h2>
           <p className="text-body text-ink-2">{agent.persona.mandate}</p>
           <p className="font-mono text-mono text-ink-3">
@@ -523,9 +521,7 @@ function OverseerBody({
       <header className="flex items-start gap-(--ow-space-3)">
         <OverseerCharacter name={station.overseer.persona.name} state={o.state} scale={2} />
         <div className="flex min-w-0 flex-col gap-(--ow-space-1)">
-          <Eyebrow>
-            {term("overseer.role")} · {term("overseer.plain")}
-          </Eyebrow>
+          <Eyebrow>{term("overseer.role")}</Eyebrow>
           <h2 className="text-title text-ink-1">{station.overseer.persona.name}</h2>
           <p className="text-body text-ink-2">{station.overseer.persona.mandate}</p>
           <p className="font-mono text-mono text-ink-3">

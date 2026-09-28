@@ -54,7 +54,7 @@ describe("fixtures/demo-station", () => {
     expect(state.handoffs["strength-app-to-project-management"]?.carrying).toBe(true);
     expect(state.handoffs["project-management-to-strength-app"]?.carrying).toBe(false);
     expect(state.overseer.state).toBe("attention");
-    expect(state.overseer.digest).toMatch(/Meridian reconciled 2/);
+    expect(state.overseer.digest).toMatch(/Ultron reconciled 2/);
     expect(state.teams["project-management"]?.recentRuns).toHaveLength(3);
     expect(state.teams["project-management"]?.ledger.sections?.nextSteps).toHaveLength(2);
     expect(state.provenance.asOf).toBe("2026-09-27T14:03:00Z");

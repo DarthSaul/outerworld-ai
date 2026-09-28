@@ -26,10 +26,10 @@ describe("StationView", () => {
 
   it("owns the selection: clicking selects, the panel follows, Escape clears", async () => {
     render(<StationView station={station} state={state} desktop />);
-    await userEvent.click(screen.getByRole("button", { name: /Meridian/ }));
+    await userEvent.click(screen.getByRole("button", { name: /Ultron/ }));
     expect(
       within(screen.getByRole("complementary")).getByRole("heading", { level: 2 }),
-    ).toHaveTextContent("Meridian");
+    ).toHaveTextContent("Ultron");
     await userEvent.keyboard("{Escape}");
     expect(within(screen.getByRole("complementary")).getByRole("status")).toBeInTheDocument();
   });
@@ -45,6 +45,12 @@ describe("StationView", () => {
     await userEvent.click(within(panel).getByRole("button", { name: /Builder/ }));
     expect(within(panel).getByRole("heading", { level: 2 })).toHaveTextContent("Builder");
     expect(screen.getByRole("button", { name: /Builder/, pressed: true })).toBeInTheDocument();
+  });
+
+  it("lays out sidebar, map, and report in three columns when a sidebar is given", () => {
+    render(<StationView station={station} state={state} desktop sidebar={<p>settings</p>} />);
+    expect(document.querySelector("[data-columns]")).toHaveAttribute("data-columns", "3");
+    expect(screen.getByText("settings").closest("[data-sidebar]")).not.toBeNull();
   });
 
   it("accepts a controlled selection", () => {

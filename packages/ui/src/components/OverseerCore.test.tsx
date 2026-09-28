@@ -7,14 +7,11 @@ import { OverseerCore } from "./OverseerCore.js";
 describe("OverseerCore", () => {
   it("is a button named after the overseer, holding the hero rig at 2×", () => {
     render(
-      <OverseerCore name="Meridian" roleNoun="Overseer" state="reconciling" onSelect={() => {}} />,
+      <OverseerCore name="Ultron" roleNoun="Overseer" state="reconciling" onSelect={() => {}} />,
     );
-    const btn = screen.getByRole("button", { name: /Meridian/ });
+    const btn = screen.getByRole("button", { name: /Ultron/ });
     expect(btn).toHaveAttribute("data-state", "reconciling");
-    expect(screen.getByRole("img", { name: "Meridian, reconciling" })).toHaveAttribute(
-      "width",
-      "96",
-    );
+    expect(screen.getByRole("img", { name: "Ultron, reconciling" })).toHaveAttribute("width", "96");
     expect(btn).toHaveTextContent("Overseer");
   });
 
@@ -56,7 +53,7 @@ describe("OverseerCore", () => {
   it("has no axe violations", async () => {
     const { container } = render(
       <OverseerCore
-        name="Meridian"
+        name="Ultron"
         roleNoun="Overseer"
         state="attention"
         attentionCount={1}

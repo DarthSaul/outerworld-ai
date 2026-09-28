@@ -9,7 +9,7 @@ describe("HomePage", () => {
     expect(screen.getByText(/demo fixture/i)).toBeInTheDocument();
     expect(screen.getByText(/2026-09-27T14:03:00Z/)).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "Project Management" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Meridian/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Ultron/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /run digest/i })).toBeInTheDocument();
   });
 

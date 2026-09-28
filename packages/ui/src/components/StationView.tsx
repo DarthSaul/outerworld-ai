@@ -13,8 +13,13 @@ export interface StationViewProps {
   readonly onSelectionChange?: (selection: Selection | null) => void;
   /** Force the layout (tests, gallery). Otherwise follows the desktop breakpoint. */
   readonly desktop?: boolean;
-  /** Extra controls rendered above the map, e.g. the Run digest button. */
+  /** Extra controls rendered above the map when there is no sidebar. */
   readonly toolbar?: ReactNode;
+  /**
+   * Left column on desktop: settings and everything that is not the map or the report. With a
+   * sidebar the desktop grid is 1fr 4fr 1fr (sidebar, map, report); without one it is map + panel.
+   */
+  readonly sidebar?: ReactNode;
 }
 
 const ZOOM_MIN = 0.6;
@@ -22,9 +27,9 @@ const ZOOM_MAX = 1.4;
 const MAP_UNITS = 1000;
 
 /**
- * The dashboard's main view: owns the selection (or mirrors a controlled one), splits map and
- * report panel side by side on desktop, stacks the map with the panel as a bottom sheet below
- * the breakpoint, fits the map's zoom to the available width, and clears on Escape.
+ * The dashboard's main view: owns the selection (or mirrors a controlled one), lays out sidebar,
+ * map, and report panel on desktop, stacks everything with the panel as a bottom sheet below the
+ * breakpoint, fits the map's zoom to its column, and clears on Escape.
  */
 export function StationView({
   station,
@@ -33,6 +38,7 @@ export function StationView({
   onSelectionChange,
   desktop: forced,
   toolbar,
+  sidebar,
 }: StationViewProps) {
   const detected = useDesktop(true);
   const desktop = forced ?? detected;
@@ -54,7 +60,7 @@ export function StationView({
     return () => window.removeEventListener("keydown", onKey);
   }, [setSelection]);
 
-  // Fit the map to its container: one unit per pixel at 1, clamped to the design's zoom range.
+  // Fit the map to its column: one unit per pixel at 1, clamped to the design's zoom range.
   const mapRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
   useLayoutEffect(() => {
@@ -79,6 +85,11 @@ export function StationView({
       {...(desktop ? {} : { onClose: () => setSelection(null), sheet: true })}
     />
   );
+  const sidebarBlock = sidebar ? (
+    <div className="flex min-w-0 flex-col gap-(--ow-space-4)" data-sidebar>
+      {sidebar}
+    </div>
+  ) : null;
 
   return (
     <div
@@ -86,11 +97,19 @@ export function StationView({
       data-station-view
       data-layout={desktop ? "split" : "stacked"}
     >
-      {toolbar ? (
+      {toolbar && !sidebar ? (
         <div className="flex flex-wrap items-center gap-(--ow-space-3)">{toolbar}</div>
       ) : null}
       {desktop ? (
-        <div className="grid grid-cols-[minmax(0,1fr)_var(--ow-size-panel-w)] items-start gap-(--ow-space-6)">
+        <div
+          className={
+            sidebar
+              ? "grid grid-cols-[1fr_4fr_1fr] items-start gap-(--ow-space-6)"
+              : "grid grid-cols-[minmax(0,1fr)_var(--ow-size-panel-w)] items-start gap-(--ow-space-6)"
+          }
+          data-columns={sidebar ? "3" : "2"}
+        >
+          {sidebarBlock}
           <div ref={mapRef} className="min-w-0 overflow-x-auto">
             <StationMap
               station={station}
@@ -104,6 +123,7 @@ export function StationView({
         </div>
       ) : (
         <>
+          {sidebarBlock}
           <StationMap
             station={station}
             state={state}

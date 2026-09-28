@@ -96,5 +96,5 @@ Simplified by the owner on 2026-09-27 (spec v0.3, reconciliation A20). The gloss
 
 "Station" on screen is a team; in code `station` is the whole document. The earlier themed set
 (Outpost, Clearance, Relay, Hand, Sortie, Assayer) survives only in the naming workshop doc.
-"Ultron" was a placeholder in the mock and never appears anywhere; the fixture's overseer is
-named Meridian.
+The fixture's overseer is named "Ultron" at the owner's request (a Marvel trademark; replace before
+any public release).

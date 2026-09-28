@@ -156,8 +156,8 @@ describe("DetailPanel", () => {
       />,
     );
     const panel = screen.getByRole("complementary");
-    expect(within(panel).getByRole("heading", { level: 2 })).toHaveTextContent("Meridian");
-    expect(panel).toHaveTextContent("Meridian reconciled 2");
+    expect(within(panel).getByRole("heading", { level: 2 })).toHaveTextContent("Ultron");
+    expect(panel).toHaveTextContent("Ultron reconciled 2");
     expect(panel).toHaveTextContent("last run failed and no run since");
     expect(panel).toHaveTextContent("2026-09-27T14:03:00Z");
   });

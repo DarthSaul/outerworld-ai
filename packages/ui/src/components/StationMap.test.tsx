@@ -12,7 +12,7 @@ describe("StationMap", () => {
     render(<StationMap station={station} state={state} onSelect={() => {}} />);
     expect(screen.getByRole("group", { name: "Project Management" })).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "Strength App" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Meridian/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Ultron/ })).toBeInTheDocument();
     expect(document.querySelectorAll("[data-handoff]")).toHaveLength(2);
   });
 
@@ -101,7 +101,7 @@ describe("StationMap", () => {
     expect(onSelect).toHaveBeenLastCalledWith({ kind: "team", id: "strength-app" });
     await userEvent.click(screen.getByRole("button", { name: /Scribe/ }));
     expect(onSelect).toHaveBeenLastCalledWith({ kind: "agent", id: "scribe" });
-    await userEvent.click(screen.getByRole("button", { name: /Meridian/ }));
+    await userEvent.click(screen.getByRole("button", { name: /Ultron/ }));
     expect(onSelect).toHaveBeenLastCalledWith({ kind: "overseer", id: "overseer" });
     await userEvent.click(
       screen.getByRole("button", { name: "Strength App to Project Management" }),

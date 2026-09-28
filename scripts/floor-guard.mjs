@@ -109,7 +109,7 @@ const TOKENS =
   /#[0-9a-fA-F]{3,8}\b|\b(rgba?|hsla?|oklch)\(|\b\d+(\.\d+)?ms\b|border-radius:\s*\d+px|rounded-\[\d+px\]/;
 // 7. Themed vocabulary in code identifiers (project floor rule). Neutral names only.
 const THEMED =
-  /\b(planet|planets|lane|lanes|orbit|orbits|galaxy|starship|spaceship|rocket|moon|moons|outpost|outposts|clearance|clearances|relay|relays|manifest|manifests|sortie|sorties|commission|commissions|assayer|ultron)\b/i;
+  /\b(planet|planets|lane|lanes|orbit|orbits|galaxy|starship|spaceship|rocket|moon|moons|outpost|outposts|clearance|clearances|relay|relays|manifest|manifests|sortie|sorties|commission|commissions|assayer)\b/i;
 
 for (const { file, text } of added) {
   if (isThisGuard(file)) continue;

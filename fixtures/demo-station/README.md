@@ -4,7 +4,7 @@ A fictional person's Station and a fake ledger repo. Every screenshot, test, sto
 in this repository uses this fixture. Nothing here is real: no real people, repos, sessions, or
 webhook URLs. When you need a new shape of data, extend this fixture rather than adding real data.
 
-- `station.json` — the Station document (two teams, three agents, one overseer named Meridian).
+- `station.json` — the Station document (two teams, three agents, one overseer named Ultron).
 - `ledger/` — what a ledger repo looks like after a few runs: team ledgers, run records, team
   status, overseer status, and the last digest.
 
