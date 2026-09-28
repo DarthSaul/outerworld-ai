@@ -189,3 +189,18 @@ the product, adds the theme toggle, puts the browser checks (axe included) into 
 
 ### Checkpoint: web step complete (2026-09-27)
 - [x] `pnpm check:full` green, `pnpm browser:verify` clean including axe, CI workflow updated, owner review
+
+---
+
+# Step 6 — generator (plan, 2026-09-27)
+
+Contract: `docs/SCHEMA.md` §6 (CLI, emitted layout, prompt shape, public API). Built test-first with
+`toMatchFileSnapshot` against the fixture so every emitted file is reviewable in diffs.
+
+- [x] Task 1: emitters for `station.json`, `agents/*.md`, `skills/*/SKILL.md`, `ledger/*.md`, `status/README.md` (+ .gitkeep), `scripts/post-digest.sh`; snapshot tests
+- [x] Task 2: `emitClaudeMd` with the handoff table and status contract; `emitRoutinePrompt` and `emitOverseerPrompt` with the setup checklist from verified Routines facts; snapshot tests
+- [x] Task 3: `emitLedger` (sorted, deterministic) and `protectedPaths`; the CLI (`generate`, `validate`, `--dry-run`, `--force`, exit codes) with tests that run it against a temp dir; README
+- [x] Task 4: `docs/SCHEMA.md` §6 final, `templates/ledger-repo/` skeleton, run the generated ledger through `OUTERWORLD_LEDGER_PATH` in the app (loader test) — the milestone's "render a generated ledger" criterion
+
+### Checkpoint: generator complete (2026-09-27)
+- [x] coverage 90/85 met, snapshots committed, `pnpm check:task` green, owner review

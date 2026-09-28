@@ -279,7 +279,75 @@ A fictional person's Station: two teams, three agents, one overseer named "Merid
 The scripted demo timeline (ui step) walks: run.started → agent working → ledger.written →
 run.finished done → overseer reconciling → digest.posted.
 
-## 6. Generator output (*generator step*)
+## 6. Generator: CLI and emitted files
 
-Documented in full when the generator ships. The layout is section 2; every emitted file is
-snapshot-tested against the fixture.
+Implemented 2026-09-27. `packages/generator` turns a Station document into the
+files a private ledger repo needs. Pure functions produce `{ path, contents }` records; the CLI
+is the only place `node:fs` appears.
+
+### CLI
+
+```
+outerworld generate --station <path/to/station.json> --out <dir> [--dry-run] [--force]
+outerworld validate --station <path/to/station.json>
+```
+
+- `generate` validates the Station (same rules as core's `parseStation`), emits the file set,
+  and writes it under `--out`. It refuses to overwrite `ledger/*.md`, `status/**`, or
+  `station.json` when they already exist unless `--force`, because those are the user's and
+  the Routines' data; everything else (personas, skills, prompts, `CLAUDE.md`, the script) is
+  regenerated on every run. `--dry-run` prints the file list with sizes and writes nothing.
+- Exit codes: `0` written (or dry run), `1` invalid station (issues printed as `path: message`),
+  `2` could not read or write (the OS error, no stack).
+- Output is deterministic: same Station, same bytes. Files are sorted by path.
+
+### Emitted layout
+
+```
+CLAUDE.md                        the ledger repo's agent guide: what this repo is, the teams, the
+                                 handoff table (who may read whose station report), the status
+                                 contract, and the rules every Routine follows
+station.json                     the Station document, verbatim (pretty-printed)
+agents/<agentId>.md              persona: name, mandate, tone, allowlist, rig (for the record)
+skills/<skillId>/SKILL.md        one per grant with kind "skill" (skillId = the grant's tool id)
+routines/<teamId>.prompt.md      the prompt to paste into the Routine, with a setup header
+routines/overseer.prompt.md      the overseer's prompt
+ledger/<teamId>.md               the team's station report skeleton (fixed headings)
+scripts/post-digest.sh           posts status/digest.md to $DISCORD_WEBHOOK_URL; fails loudly if unset
+status/README.md                 the status JSON contract (schemas in section 2), stamped with the
+                                 schema version; status/teams/ and status/runs/ hold .gitkeep
+```
+
+### Routine prompt shape (`routines/<teamId>.prompt.md`)
+
+1. **Setup checklist** (a fenced block at the top, for the human creating the Routine): the
+   repository to attach, which connectors to keep enabled (from the team's connector grants)
+   and a reminder that every other connector should be removed, the schedule (interval or cron
+   from the Station), the environment variable the overseer needs (`DISCORD_WEBHOOK_URL`) and the
+   network allow-list entry for `discord.com`, and the two ways to create it: claude.ai/code/routines
+   or `/schedule` in the CLI. Facts come from the Claude Code docs; nothing is invented.
+2. **Identity**: team name, mission, the agents and their personas (linked to `agents/*.md`).
+3. **Allowed tools**: the team's grants with modes, restated as rules the prompt enforces.
+4. **Handoffs**: which station reports this team may read (inbound) and that its own report is
+   read by whom (outbound), with paths.
+5. **Procedure**: read `ledger/<teamId>.md`, read inbound reports, do the mission, update the
+   three fixed sections of the station report, write the status files, commit to the default
+   branch with a conventional message (fall back to `claude/status` if the push is rejected).
+6. **Status contract**: exact JSON shapes for `status/teams/<teamId>.json` and
+   `status/runs/<teamId>/<startedAt>.json`, with `CLAUDE_CODE_REMOTE_SESSION_ID` for the session
+   link. Filenames use the ISO start time with `:` replaced by `-`.
+
+The overseer prompt reads every station report and status file, writes `status/overseer.json`
+and `status/digest.md`, runs `scripts/post-digest.sh`, and commits.
+
+### Public API
+
+```ts
+emitLedger(station: Station, options?: { generatedAt?: string }): EmittedFile[]
+// individual emitters, all pure:
+emitClaudeMd, emitStationJson, emitAgentPersona, emitSkill, emitRoutinePrompt,
+emitOverseerPrompt, emitLedgerSkeleton, emitPostDigestScript, emitStatusReadme
+protectedPaths(files: EmittedFile[]): string[]   // ledger/*.md, status/**, station.json
+```
+
+`generatedAt` stamps headers; the fixture snapshot uses a fixed value so output is stable.

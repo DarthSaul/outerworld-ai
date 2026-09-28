@@ -74,3 +74,27 @@ describe("loadLedger", () => {
     expect(() => loadLedger()).toThrow(/teams/);
   });
 });
+
+describe("loadLedger on a generated ledger repo", () => {
+  it("renders what the generator emitted: every station present, stalled until its first run, skeleton sections parsed", async () => {
+    const { emitLedger } = await import("@darthsaul/outerworld-ai-generator");
+    const { readFileSync: read } = await import("node:fs");
+    const { dirname } = await import("node:path");
+    const fixture = JSON.parse(
+      read(join(process.cwd(), "..", "..", "fixtures", "demo-station", "station.json"), "utf8"),
+    );
+    const dir = mkdtempSync(join(tmpdir(), "ow-generated-"));
+    for (const f of emitLedger(fixture, { generatedAt: "2026-09-27T15:00:00Z" })) {
+      mkdirSync(dirname(join(dir, f.path)), { recursive: true });
+      writeFileSync(join(dir, f.path), f.contents);
+    }
+    process.env.OUTERWORLD_LEDGER_PATH = dir;
+    const l = loadLedger({ now: "2026-09-27T15:00:00Z" });
+    expect(l.source).toBe("ledger");
+    expect(l.state.issues).toEqual([]);
+    expect(Object.keys(l.state.teams).sort()).toEqual(["project-management", "strength-app"]);
+    expect(l.state.teams["strength-app"]?.health).toBe("stalled");
+    expect(l.state.teams["strength-app"]?.ledger.sections?.nextSteps).toEqual(["(nothing yet)"]);
+    expect(l.state.overseer.state).toBe("idle");
+  });
+});

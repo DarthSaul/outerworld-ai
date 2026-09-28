@@ -42,6 +42,9 @@ importers:
         specifier: ^19.3.0
         version: 19.3.0(react@19.3.0)
     devDependencies:
+      '@darthsaul/outerworld-ai-generator':
+        specifier: workspace:*
+        version: link:../../packages/generator
       '@tailwindcss/postcss':
         specifier: ^4.3.3
         version: 4.3.3
