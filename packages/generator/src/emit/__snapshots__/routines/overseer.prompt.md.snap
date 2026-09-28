@@ -64,7 +64,8 @@ Handoffs in force:
    `state: "attention"`, add `notes: "post failed: <reason>"`, commit, and push.
 
 Push rules: `git pull --rebase origin <default branch>` before each push; if a push is rejected
-twice, push to `claude/status-overseer-<startedAt>` and say so in `notes`; never force-push.
+twice, push to `claude/status-overseer-<startedAt>` with `:` replaced by `-` in the timestamp (a git
+branch name cannot contain `:`) and say so in `notes`; never force-push.
 
 You never edit a station report. You never post anything except the digest. You never assert
 a state you did not read from a file.

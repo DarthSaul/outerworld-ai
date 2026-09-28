@@ -53,8 +53,10 @@ Commit every change with a conventional message (\`chore(<teamId>): run <started
 2. \`git push origin <default branch>\`.
 3. If the push is rejected, repeat steps 1 and 2 once.
 4. If it is rejected again, push to a fresh branch named \`claude/status-<teamId>-<startedAt>\`
-   (\`claude/\` branches are always accepted) and write \`notes: "pushed to claude/status-…"\` in the
-   closing record. The dashboard reads only the default branch, so the owner merges that branch.
+   with \`:\` replaced by \`-\` in the timestamp, as in the run filename (a git branch name cannot
+   contain \`:\`; \`claude/\` branches are always accepted), and write \`notes: "pushed to
+   claude/status-…"\` in the closing record. The dashboard reads only the default branch, so the
+   owner merges that branch.
 
 Never force-push. Never commit secrets: no tokens, no webhook URLs.`;
 
@@ -219,7 +221,8 @@ ${table(["from", "", "to", "note"], handoffRows)}
    \`state: "attention"\`, add \`notes: "post failed: <reason>"\`, commit, and push.
 
 Push rules: \`git pull --rebase origin <default branch>\` before each push; if a push is rejected
-twice, push to \`claude/status-overseer-<startedAt>\` and say so in \`notes\`; never force-push.
+twice, push to \`claude/status-overseer-<startedAt>\` with \`:\` replaced by \`-\` in the timestamp (a git
+branch name cannot contain \`:\`) and say so in \`notes\`; never force-push.
 
 You never edit a station report. You never post anything except the digest. You never assert
 a state you did not read from a file.

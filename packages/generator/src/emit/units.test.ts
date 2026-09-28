@@ -146,10 +146,14 @@ describe("emitters with a minimal station", () => {
       expect(checkout).toBeGreaterThan(-1);
       expect(firstCommit).toBeGreaterThan(checkout);
       expect(p).toContain("auto-named `claude/` branch");
+      // A git ref cannot contain ":", so the fallback branch uses the run filename's timestamp.
+      expect(p).toMatch(
+        /claude\/status-(<teamId>|overseer)-<startedAt>`[\s\S]{0,40}`:` replaced by `-`/,
+      );
     }
-    expect(emitClaudeMd(s, "2026-01-01T00:00:00Z").contents).toContain(
-      "check out the default branch first",
-    );
+    const claudeMd = emitClaudeMd(s, "2026-01-01T00:00:00Z").contents;
+    expect(claudeMd).toContain("check out the default branch first");
+    expect(claudeMd).toContain("`claude/status-<teamId or overseer>-<startedAt>`");
   });
 
   it("emitLedger stamps the current time when generatedAt is omitted", () => {

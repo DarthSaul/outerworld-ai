@@ -106,9 +106,11 @@ status/digest.md                 # the overseer's last outward post (Markdown)
 
 Routines commit status changes to the default branch (their own repo, only the owner's commits,
 so the push check passes). A cloud session starts on an auto-named `claude/` branch, so the prompt
-tells the Routine to check out the default branch before its first commit; if the push is rejected
-it pushes `claude/status-<teamId>-<startedAt>` and says so in the run's `notes`. The dashboard
-reads whichever checkout is at `OUTERWORLD_LEDGER_PATH`.
+tells the Routine to check out the default branch before its first commit. If the push is rejected
+twice, a team run pushes `claude/status-<teamId>-<startedAt>` and the overseer pushes
+`claude/status-overseer-<startedAt>`, with `:` replaced by `-` in the timestamp as in the run
+filename (a git ref cannot contain `:`), and says so in the run's `notes`. The dashboard reads
+whichever checkout is at `OUTERWORLD_LEDGER_PATH`.
 
 ### Team ledger (`ledger/<teamId>.md`)
 
@@ -334,7 +336,8 @@ status/README.md                 the status JSON contract (schemas in section 2)
    read by whom (outbound), with paths.
 5. **Procedure**: read `ledger/<teamId>.md`, read inbound reports, do the mission, update the
    three fixed sections of the station report, write the status files, commit to the default
-   branch with a conventional message (fall back to `claude/status` if the push is rejected).
+   branch with a conventional message (fall back to `claude/status-<teamId>-<startedAt>` after
+   two rejected pushes; see section 2).
 6. **Status contract**: exact JSON shapes for `status/teams/<teamId>.json` and
    `status/runs/<teamId>/<startedAt>.json`, with `CLAUDE_CODE_REMOTE_SESSION_ID` for the session
    link. Filenames use the ISO start time with `:` replaced by `-`.
