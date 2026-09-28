@@ -9,7 +9,7 @@ import {
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
-import { runCli } from "./cli.js";
+import { assertInsideOut, runCli } from "./cli.js";
 import { FIXTURE_STATION_PATH, GENERATED_AT } from "./test/fixture.js";
 
 function io() {
@@ -136,6 +136,41 @@ describe("outerworld generate", () => {
       runCli(["generate", "--station", FIXTURE_STATION_PATH, "--out", file], { stdout, stderr }),
     ).toBe(2);
     expect(err.join("\n")).toMatch(/cannot write/);
+  });
+
+  it("rejects unknown flags and value flags without a value, writing nothing", () => {
+    const dir = tmp();
+    const a = io();
+    expect(
+      runCli(["generate", "--station", FIXTURE_STATION_PATH, "--out", dir, "--dryrun"], a),
+    ).toBe(1);
+    expect(a.err.join("\n")).toMatch(/unknown flag --dryrun/);
+    expect(walk(dir)).toEqual([]);
+    const b = io();
+    expect(
+      runCli(
+        [
+          "generate",
+          "--station",
+          FIXTURE_STATION_PATH,
+          "--out",
+          dir,
+          "--generated-at",
+          "--dry-run",
+        ],
+        b,
+      ),
+    ).toBe(1);
+    expect(b.err.join("\n")).toMatch(/--generated-at needs a value/);
+    expect(walk(dir)).toEqual([]);
+  });
+
+  it("never writes outside --out, even for a hostile emitted path", () => {
+    const out = tmp();
+    expect(() => assertInsideOut(out, "../escape/SKILL.md")).toThrow(/escapes/);
+    expect(() => assertInsideOut(out, "/etc/passwd")).toThrow(/absolute/);
+    expect(() => assertInsideOut(out, "")).toThrow(/escapes/);
+    expect(assertInsideOut(out, "skills/x/SKILL.md")).toBe(join(out, "skills", "x", "SKILL.md"));
   });
 
   it("prints usage and exits 1 on unknown commands or missing flags", () => {

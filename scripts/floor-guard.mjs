@@ -13,7 +13,8 @@ const argBase = (() => {
 
 const git = (args, { diffExit = false } = {}) => {
   try {
-    return execFileSync("git", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+    // A whole-milestone diff exceeds Node's default 1 MiB buffer, which would read as "could not diff".
+    return execFileSync("git", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], maxBuffer: 256 * 1024 * 1024 });
   } catch (e) {
     return diffExit && e.status === 1 && typeof e.stdout === "string" ? e.stdout : null;
   }
@@ -92,7 +93,7 @@ const isDocs = (f) => /\.md$/.test(f) || /^docs\//.test(f) || /\.claude\//.test(
 // Token rule applies to component and app source, not to the token definitions themselves.
 const isTokenSource = (f) =>
   /^(packages\/ui|apps\/web)\/.*\.(tsx?|css)$/.test(f) &&
-  !/tokens/.test(f) &&
+  !/\/tokens\//.test(f) &&
   !isTest(f) &&
   !/\/dev\//.test(f);
 
@@ -115,7 +116,7 @@ for (const { file, text } of added) {
   if (isThisGuard(file)) continue;
   if (SUPPRESSIONS.test(text) && !isDocs(file)) flag("silenced-checker", file, text);
   if (STUBS.test(text) && !isDocs(file)) flag("unfinished-work", file, text);
-  if (SKIPS.test(text)) flag("test-made-easier", file, text);
+  if (SKIPS.test(text) && !isDocs(file)) flag("test-made-easier", file, text);
   if (isConstraints(file) && /^\| *(W|E)\d+ *\|/.test(text)) flag("new-exception", file, text);
   if (isTokenSource(file) && TOKENS.test(text)) flag("hardcoded-token", file, text);
   if (

@@ -85,7 +85,7 @@ describe("emitters with a minimal station", () => {
   it("routine prompt: no repos, no grants, no handoffs, no agents", () => {
     const p = emitRoutinePrompt(s.teams[0]!, s).contents;
     expect(p).toContain("keep none enabled");
-    expect(p).not.toContain(" and `");
+    expect(p).not.toContain("(this one) and");
     expect(p).toContain("cron `0 9 * * 1-5` (UTC)");
     expect(p.split("- none").length).toBeGreaterThanOrEqual(3);
   });
@@ -134,7 +134,7 @@ describe("emitters with a minimal station", () => {
     });
     const p = emitOverseerPrompt(withHandoff).contents;
     expect(p).toContain("every 90 minutes");
-    expect(p).toContain('"reconciled": 2');
+    expect(p).toContain('"reconciled": "<number of reports read>"');
   });
 
   it("emitLedger stamps the current time when generatedAt is omitted", () => {

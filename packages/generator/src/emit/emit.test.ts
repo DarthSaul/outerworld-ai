@@ -98,7 +98,15 @@ describe("emitLedger", () => {
     expect(p).toContain("ledger/project-management.md"); // inbound handoff it may read
     expect(p).toContain("status/runs/strength-app/");
     expect(p).toContain("CLAUDE_CODE_REMOTE_SESSION_ID");
-    expect(p).toContain("claude/status");
+    expect(p).toContain("git pull --rebase origin");
+    expect(p).toContain("claude/status-<teamId>-<startedAt>");
+    expect(p).not.toContain("Model:");
+    expect(p).toMatch(/## If anything fails/);
+    expect(p).toMatch(/inbound report is missing/);
+    expect(p).toMatch(/newest first/);
+    expect(p).toContain("`notes`");
+    expect(p).toMatch(/sa-discord-write.*no agent holds it/);
+    expect(p).not.toMatch(/sa-git-read.*no agent holds it/);
   });
 
   it("the overseer prompt names every station report, the digest, the script, and the env var", () => {
@@ -111,6 +119,9 @@ describe("emitLedger", () => {
     expect(p).toContain("DISCORD_WEBHOOK_URL");
     expect(p).toContain("discord.com");
     expect(p).toMatch(/every 720 minutes|every 12 hours/);
+    expect(p).toMatch(/BEFORE posting/);
+    expect(p).toMatch(/attention.*else.*reported.*else.*idle/s);
+    expect(p).toContain('"<number of reports read>"');
   });
 
   it("CLAUDE.md carries the handoff table and the status contract", () => {
@@ -121,6 +132,7 @@ describe("emitLedger", () => {
     expect(c).toContain("status/teams/<teamId>.json");
     expect(c).toContain("schemaVersion");
     expect(c).toContain(GENERATED_AT);
+    expect(c).toContain("notes");
   });
 
   it("the digest script reads the webhook from the environment and fails loudly without it", () => {
@@ -130,6 +142,9 @@ describe("emitLedger", () => {
     expect(s).toMatch(/set -euo pipefail/);
     expect(s).toContain("status/digest.md");
     expect(s).toMatch(/exit 1/);
+    expect(s).toMatch(/command -v node/);
+    expect(s).toMatch(/2000/);
+    expect(s).not.toMatch(/slice\(/);
   });
 
   it("status/README.md is stamped with the schema version", () => {

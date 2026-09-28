@@ -38,7 +38,8 @@ and `outcome`, then rewrite it at the end.
     "linesRemoved": 0,
     "summary": "<optional one line>"
   },
-  "error": "<required when outcome is failed>"
+  "error": "<required when outcome is failed>",
+  "notes": "<optional one line, e.g. a fallback branch or a skipped step>"
 }
 ```
 
@@ -80,6 +81,7 @@ Written by the overseer. The digest is the Markdown it posts outward (System Rep
       "reason": "<one line>"
     }
   ],
-  "digestPath": "status/digest.md"
+  "digestPath": "status/digest.md",
+  "notes": "<optional one line>"
 }
 ```

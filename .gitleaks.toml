@@ -1,0 +1,12 @@
+# gitleaks configuration: the default ruleset plus what this project specifically must never leak.
+# Rules only; no allowlist entries (CONSTRAINTS.md).
+title = "outerworld-ai"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "discord-webhook-url"
+description = "Discord webhook URL (the overseer's outward channel; lives only in the Routine's environment)"
+regex = '''https?://(?:[a-z]+\.)?discord(?:app)?\.com/api/webhooks/\d+/[\w-]+'''
+keywords = ["webhooks"]
