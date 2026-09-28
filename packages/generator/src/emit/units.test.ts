@@ -1,0 +1,144 @@
+import type { Agent, Grant, Station, Team } from "@darthsaul/outerworld-ai-core";
+import { describe, expect, it } from "vitest";
+import {
+  emitAgentPersona,
+  emitClaudeMd,
+  emitLedger,
+  emitOverseerPrompt,
+  emitRoutinePrompt,
+  emitSkill,
+} from "./index.js";
+import { bullet, grantLabel, scheduleLabel, table } from "./text.js";
+
+const team = (over: Partial<Team> = {}): Team => ({
+  id: "solo",
+  name: "Solo",
+  mission: "Do one thing",
+  category: "other",
+  emblem: { hue: 1, mark: "none" },
+  scope: { repos: [] },
+  schedule: { kind: "cron", expression: "0 9 * * 1-5", timezone: "UTC" },
+  ...over,
+});
+const grant = (over: Partial<Grant> = {}): Grant => ({
+  id: "g",
+  teamId: "solo",
+  tool: "search",
+  mode: "read",
+  kind: "connector",
+  ...over,
+});
+const agent = (over: Partial<Agent> = {}): Agent => ({
+  id: "a",
+  teamId: "solo",
+  persona: {
+    name: "A",
+    mandate: "m",
+    tone: "t",
+    allowlist: [],
+    rig: { tintHue: 0, trimHue: 0, head: "dome", trace: "core" },
+  },
+  ...over,
+});
+const station = (over: Partial<Station> = {}): Station => ({
+  schemaVersion: 1,
+  id: "s",
+  name: "S",
+  teams: [team()],
+  agents: [],
+  grants: [],
+  handoffs: [],
+  overseer: {
+    persona: { name: "O", mandate: "m", tone: "t" },
+    schedule: { kind: "interval", everyMinutes: 90 },
+    outward: { kind: "discord-webhook" },
+  },
+  ...over,
+});
+
+describe("text helpers", () => {
+  it("labels cron schedules and non-hour intervals", () => {
+    expect(scheduleLabel({ kind: "cron", expression: "0 9 * * *", timezone: "UTC" })).toBe(
+      "cron `0 9 * * *` (UTC)",
+    );
+    expect(scheduleLabel({ kind: "interval", everyMinutes: 90 })).toBe("every 90 minutes");
+    expect(scheduleLabel({ kind: "interval", everyMinutes: 60 })).toBe("every 60 minutes (1 hour)");
+    expect(scheduleLabel({ kind: "interval", everyMinutes: 120 })).toBe(
+      "every 120 minutes (2 hours)",
+    );
+  });
+
+  it("falls back to the tool name when a grant has no label", () => {
+    expect(grantLabel(grant())).toBe("search (read, connector)");
+    expect(grantLabel(grant({ label: "Web search" }))).toBe("Web search (read, connector)");
+  });
+
+  it("renders 'none' for an empty bullet list and escapes pipes in tables", () => {
+    expect(bullet([])).toBe("- none");
+    expect(table(["a"], [["x|y"]])).toContain("x\\|y");
+  });
+});
+
+describe("emitters with a minimal station", () => {
+  const s = station();
+
+  it("routine prompt: no repos, no grants, no handoffs, no agents", () => {
+    const p = emitRoutinePrompt(s.teams[0]!, s).contents;
+    expect(p).toContain("keep none enabled");
+    expect(p).not.toContain("(this one) and");
+    expect(p).toContain("cron `0 9 * * 1-5` (UTC)");
+    expect(p.split("- none").length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("routine prompt: handoff notes and unknown team ids degrade to the id", () => {
+    const withHandoffs = station({
+      teams: [team(), team({ id: "other", name: "Other" })],
+      handoffs: [
+        { id: "in", from: "other", to: "solo", note: "reads for context" },
+        { id: "out", from: "solo", to: "other" },
+        { id: "ghost", from: "nowhere", to: "solo" },
+      ],
+    });
+    const p = emitRoutinePrompt(withHandoffs.teams[0]!, withHandoffs).contents;
+    expect(p).toContain("reads for context");
+    expect(p).toContain("Other reads `ledger/solo.md`");
+    expect(p).toContain("from nowhere");
+  });
+
+  it("persona: unknown team falls back to the id", () => {
+    const p = emitAgentPersona(agent({ teamId: "missing" }), s).contents;
+    expect(p).toContain("**missing**");
+  });
+
+  it("skill: a non-ledger skill gets a placeholder body", () => {
+    const g = grant({ tool: "release-notes", kind: "skill", mode: "write" });
+    const f = emitSkill("release-notes", [g], s);
+    expect(f.path).toBe("skills/release-notes/SKILL.md");
+    expect(f.contents).toContain("instructions are yours to write");
+  });
+
+  it("CLAUDE.md: a team with no agents says none; handoffs without notes render an empty cell", () => {
+    const withHandoff = station({
+      teams: [team(), team({ id: "b", name: "B" })],
+      handoffs: [{ id: "h", from: "solo", to: "b" }],
+    });
+    const c = emitClaudeMd(withHandoff, "2026-01-01T00:00:00Z").contents;
+    expect(c).toMatch(/\| none \|/);
+    expect(c).toContain("`solo` (Solo) | → | `b` (B)");
+  });
+
+  it("overseer prompt: handoffs without notes and the reconciled count", () => {
+    const withHandoff = station({
+      teams: [team(), team({ id: "b", name: "B" })],
+      handoffs: [{ id: "h", from: "solo", to: "b" }],
+    });
+    const p = emitOverseerPrompt(withHandoff).contents;
+    expect(p).toContain("every 90 minutes");
+    expect(p).toContain('"reconciled": "<number of reports read>"');
+  });
+
+  it("emitLedger stamps the current time when generatedAt is omitted", () => {
+    const c = emitLedger(s).find((f) => f.path === "CLAUDE.md")?.contents ?? "";
+    expect(c).toMatch(/Generated by Outerworld AI on \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z/);
+  });
+});

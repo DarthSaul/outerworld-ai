@@ -1,0 +1,425 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://outerworld.ai/schema/v1/station.schema.json",
+  "title": "Station",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "teams": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "mission": {
+            "type": "string",
+            "minLength": 1
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "research",
+              "build",
+              "operations",
+              "records",
+              "coordination",
+              "other"
+            ]
+          },
+          "emblem": {
+            "type": "object",
+            "properties": {
+              "hue": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 360
+              },
+              "mark": {
+                "type": "string",
+                "enum": [
+                  "spire",
+                  "forge",
+                  "dome",
+                  "archive",
+                  "beacon",
+                  "none"
+                ]
+              }
+            },
+            "required": [
+              "hue",
+              "mark"
+            ],
+            "additionalProperties": {}
+          },
+          "scope": {
+            "type": "object",
+            "properties": {
+              "repos": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "required": [
+              "repos"
+            ],
+            "additionalProperties": {}
+          },
+          "schedule": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "interval"
+                  },
+                  "everyMinutes": {
+                    "type": "integer",
+                    "minimum": 60,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "kind",
+                  "everyMinutes"
+                ],
+                "additionalProperties": {}
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "cron"
+                  },
+                  "expression": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "timezone": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "kind",
+                  "expression",
+                  "timezone"
+                ],
+                "additionalProperties": {}
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "mission",
+          "category",
+          "emblem",
+          "scope",
+          "schedule"
+        ],
+        "additionalProperties": {}
+      }
+    },
+    "agents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          },
+          "teamId": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          },
+          "persona": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "mandate": {
+                "type": "string",
+                "minLength": 1
+              },
+              "tone": {
+                "type": "string",
+                "minLength": 1
+              },
+              "allowlist": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9][a-z0-9-]*$"
+                }
+              },
+              "rig": {
+                "type": "object",
+                "properties": {
+                  "tintHue": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 360
+                  },
+                  "trimHue": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 360
+                  },
+                  "head": {
+                    "type": "string",
+                    "enum": [
+                      "dome",
+                      "wedge",
+                      "crest"
+                    ]
+                  },
+                  "trace": {
+                    "type": "string",
+                    "enum": [
+                      "core",
+                      "bar",
+                      "chevron",
+                      "split",
+                      "frame",
+                      "twin"
+                    ]
+                  }
+                },
+                "required": [
+                  "tintHue",
+                  "trimHue",
+                  "head",
+                  "trace"
+                ],
+                "additionalProperties": {}
+              }
+            },
+            "required": [
+              "name",
+              "mandate",
+              "tone",
+              "allowlist",
+              "rig"
+            ],
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "id",
+          "teamId",
+          "persona"
+        ],
+        "additionalProperties": {}
+      }
+    },
+    "grants": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          },
+          "teamId": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          },
+          "tool": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "read",
+              "write"
+            ]
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "connector",
+              "skill"
+            ]
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "id",
+          "teamId",
+          "tool",
+          "mode",
+          "kind"
+        ],
+        "additionalProperties": {}
+      }
+    },
+    "handoffs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          },
+          "from": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          },
+          "to": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "from",
+          "to"
+        ],
+        "additionalProperties": {}
+      }
+    },
+    "overseer": {
+      "type": "object",
+      "properties": {
+        "persona": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "mandate": {
+              "type": "string",
+              "minLength": 1
+            },
+            "tone": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "name",
+            "mandate",
+            "tone"
+          ],
+          "additionalProperties": {}
+        },
+        "schedule": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "interval"
+                },
+                "everyMinutes": {
+                  "type": "integer",
+                  "minimum": 60,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "kind",
+                "everyMinutes"
+              ],
+              "additionalProperties": {}
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "cron"
+                },
+                "expression": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "timezone": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "kind",
+                "expression",
+                "timezone"
+              ],
+              "additionalProperties": {}
+            }
+          ]
+        },
+        "outward": {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "discord-webhook"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "persona",
+        "schedule",
+        "outward"
+      ],
+      "additionalProperties": {}
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "id",
+    "name",
+    "teams",
+    "agents",
+    "grants",
+    "handoffs",
+    "overseer"
+  ],
+  "additionalProperties": {}
+}

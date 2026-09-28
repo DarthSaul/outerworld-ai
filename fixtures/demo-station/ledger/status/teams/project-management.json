@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "teamId": "project-management",
+  "updatedAt": "2026-09-27T14:00:04Z",
+  "lastRunStartedAt": "2026-09-27T14:00:04Z",
+  "agents": [
+    { "agentId": "planner", "state": "working", "note": "prioritizing next steps" },
+    { "agentId": "scribe", "state": "idle" }
+  ],
+  "ledgerPath": "ledger/project-management.md"
+}

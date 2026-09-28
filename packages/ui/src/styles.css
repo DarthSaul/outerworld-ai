@@ -1,0 +1,11 @@
+/* Public style entry for @darthsaul/outerworld-ai-ui. Consumers import this after tailwindcss. */
+/* IBM Plex, OFL-1.1, self-hosted from node_modules via Fontsource. No network font requests. */
+@import "@fontsource/ibm-plex-sans/400.css";
+@import "@fontsource/ibm-plex-sans/500.css";
+@import "@fontsource/ibm-plex-sans/600.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+@import "./tokens/tokens.css";
+@import "./tokens/theme.css";
+@import "./character/character.css";
+@import "./components/map.css";

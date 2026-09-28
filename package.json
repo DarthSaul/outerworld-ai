@@ -1,0 +1,31 @@
+{
+  "name": "outerworld-ai",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A space-themed map of your Claude Code Routines: teams, permissions, handoffs, and one overseer.",
+  "license": "MIT",
+  "packageManager": "pnpm@10.31.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "typecheck": "turbo run typecheck",
+    "check:fast": "pnpm lint && pnpm typecheck",
+    "check:task": "pnpm check:fast && node scripts/gitleaks.mjs && node scripts/floor-guard.mjs && pnpm test",
+    "check:full": "pnpm check:task && pnpm build",
+    "browser:verify": "node scripts/browser/screenshot.mjs"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@biomejs/biome": "2.5.14",
+    "playwright": "^1.63.0",
+    "turbo": "2.11.4",
+    "typescript": "~5.9.3"
+  }
+}

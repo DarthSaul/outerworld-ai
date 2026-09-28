@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "teamId": "strength-app",
+  "updatedAt": "2026-09-26T08:04:40Z",
+  "lastRunStartedAt": "2026-09-26T08:00:00Z",
+  "agents": [{ "agentId": "builder", "state": "failed", "note": "tests red, build not cut" }],
+  "ledgerPath": "ledger/strength-app.md"
+}

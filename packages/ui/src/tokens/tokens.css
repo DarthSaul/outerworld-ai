@@ -1,0 +1,327 @@
+/*
+ * Outerworld AI design tokens.
+ * Source of truth: docs/design/Outerworld Spec.dc.html (v0.1) translated 2026-09-27.
+ * Every color, radius, spacing step, size, and motion value the ui package uses is defined here
+ * and nowhere else. Names are neutral (team, grant, handoff, agent, overseer); the design doc's
+ * themed names (outpost, clearance, relay, hand) map to these per docs/design/README.md.
+ *
+ * Light is the default (warm paper, hue 80). Dark is cool (hue 265), defined twice per the
+ * theme rule in CLAUDE.md: under prefers-color-scheme guarded by :root:not([data-theme="light"]),
+ * and again under :root[data-theme="dark"].
+ */
+
+:root {
+  /* ---- Type ------------------------------------------------------------ */
+  --ow-font-sans: "IBM Plex Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --ow-font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --ow-measure: 64ch;
+
+  --ow-text-display-size: 28px;
+  --ow-text-display-line: 32px;
+  --ow-text-display-weight: 600;
+  --ow-text-title-size: 20px;
+  --ow-text-title-line: 26px;
+  --ow-text-title-weight: 600;
+  --ow-text-heading-size: 16px;
+  --ow-text-heading-line: 22px;
+  --ow-text-heading-weight: 600;
+  --ow-text-body-size: 14px;
+  --ow-text-body-line: 20px;
+  --ow-text-body-weight: 400;
+  --ow-text-label-size: 13px;
+  --ow-text-label-line: 18px;
+  --ow-text-label-weight: 500;
+  --ow-text-caption-size: 12px;
+  --ow-text-caption-line: 16px;
+  --ow-text-caption-weight: 400;
+  --ow-text-mono-size: 12px;
+  --ow-text-mono-line: 16px;
+  --ow-text-mono-weight: 400;
+  --ow-text-eyebrow-size: 11px;
+  --ow-text-eyebrow-line: 14px;
+  --ow-text-eyebrow-weight: 500;
+  --ow-text-eyebrow-tracking: 0.1em;
+  --ow-text-min-map: 12px; /* nothing on the map renders smaller at 100% zoom */
+
+  /* ---- Space (4px base) ------------------------------------------------ */
+  --ow-space-1: 4px;
+  --ow-space-2: 8px;
+  --ow-space-3: 12px;
+  --ow-space-4: 16px;
+  --ow-space-5: 20px;
+  --ow-space-6: 24px;
+  --ow-space-8: 32px;
+  --ow-space-12: 48px;
+
+  /* ---- Radius (steps down with nesting) -------------------------------- */
+  --ow-radius-team: 16px; /* team panel on the map */
+  --ow-radius-panel: 12px; /* detail panel, beside the map */
+  --ow-radius-agent: 8px; /* agent card inside a team */
+  --ow-radius-control: 6px; /* buttons, inputs, tabs */
+  --ow-radius-chip: 4px; /* grant chip */
+  --ow-radius-full: 9999px; /* the team emblem disc is the only full circle */
+
+  /* ---- Sizes ----------------------------------------------------------- */
+  --ow-size-team-min-w: 240px;
+  --ow-size-team-max-w: 400px; /* design: 320; widened so mandates fit (A19) */
+  --ow-size-team-pad: var(--ow-space-4);
+  --ow-size-team-gap: var(--ow-space-3);
+  --ow-size-agent-pad: var(--ow-space-2);
+  --ow-size-chip-h: 40px; /* design v0.3: name over mode, two lines */
+  --ow-size-chip-pad-x: var(--ow-space-2);
+  --ow-size-chip-pad-y: 4px;
+  --ow-size-chip-gap: 6px;
+  --ow-size-control-h: 32px;
+  --ow-size-control-h-dense: 28px;
+  --ow-size-control-pad-x: var(--ow-space-3);
+  --ow-size-panel-w: 400px;
+  --ow-size-panel-w-min: 360px;
+  --ow-size-panel-w-max: 560px;
+  --ow-size-panel-pad: var(--ow-space-5);
+  --ow-size-sheet-max-h: 80vh; /* the mobile report sheet */
+  --ow-size-overseer-core-w: 192px; /* design: 144×160; the 2× hero rig needs the room (A19) */
+  --ow-size-overseer-core-h: 232px;
+  --ow-size-overseer-core-chamfer: 25%;
+  --ow-size-map-gutter: var(--ow-space-12);
+  --ow-size-map-min-w: 720px; /* below this the map stacks; a gallery scrolls it instead */
+  --ow-size-health-dot: 8px;
+  --ow-size-packet: 6px;
+  --ow-size-handoff-hit: 12px;
+  --ow-size-handoff-pair-offset: 3px;
+  --ow-size-icon-grid: 20px;
+  --ow-size-icon-stroke: 1.5px;
+  --ow-size-icon-chamfer: 2px;
+  --ow-size-selection-ring: 2px;
+  --ow-size-frame-border: 2px;
+  --ow-size-hairline: 1px;
+  /* Rig unit grid: 24x32 units at integer scales only. */
+  --ow-rig-unit-w: 24;
+  --ow-rig-unit-h: 32;
+  --ow-rig-scale-card: 1;
+  --ow-rig-scale-panel: 2;
+  --ow-rig-scale-editor: 4;
+  --ow-rig-chip-w: 14px; /* head-only chip below 1x */
+  --ow-rig-chip-h: 9px;
+  --ow-emblem-unit: 16; /* 16x16 disc; 2x on map, 4x in panel header */
+  --ow-emblem-scale-map: 2;
+  --ow-emblem-scale-panel: 4;
+
+  /* ---- Layout ---------------------------------------------------------- */
+  --ow-breakpoint-mobile: 720px; /* below: single column, teams stacked, overseer pinned top */
+  --ow-zoom-min: 0.6;
+  --ow-zoom-max: 1.4;
+  --ow-zoom-step: 0.1;
+  --ow-zoom-collapse: 0.6; /* below: agent names hide, teams show name + health only */
+  --ow-layout-radial-max: 8; /* radial for <= 8 teams, two rings 9-16, list above 16 */
+  --ow-layout-rings-max: 16;
+  --ow-opacity-dimmed: 0.6;
+  --ow-opacity-lane: 0.6; /* light theme: handoff default = border.strong at 60% */
+
+  /* ---- Motion ---------------------------------------------------------- */
+  --ow-dur-instant: 80ms; /* hover, focus ring */
+  --ow-dur-fast: 160ms; /* chip light-up in, selection */
+  --ow-dur-base: 240ms; /* panel open, health crossfade */
+  --ow-dur-slow: 400ms; /* layout reflow, handoff redraw */
+  --ow-dur-packet: 1200ms; /* one ledger packet along one handoff, fixed regardless of length */
+  --ow-dur-breathe: 2400ms; /* working loop */
+  --ow-dur-reduced: 120ms; /* every animation collapses to this opacity change */
+  --ow-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ow-ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --ow-ease-packet: linear;
+  --ow-ease-breathe: ease-in-out;
+  --ow-motion-panel-slide: 16px;
+  /* Rig motion (units are rig grid units; a component multiplies by its integer scale). */
+  --ow-rig-bob-units: 1;
+  --ow-rig-nod-units: 1;
+  --ow-rig-blink-min: 4000ms;
+  --ow-rig-blink-max: 6000ms;
+  --ow-rig-blink-delay: 0ms; /* per-figure offset, set inline by Character */
+  --ow-rig-blink-stagger: 900ms; /* offset between agents on one panel */
+  --ow-rig-blink-opacity: 0.15; /* the visor band while blinking */
+  --ow-rig-pop-scale: 1.08;
+  --ow-opacity-failed: var(--ow-opacity-dimmed);
+
+  /* ---- Color: light (warm paper, hue 80) ------------------------------- */
+  --ow-accent-l: 0.52;
+  --ow-accent-c: 0.13;
+  --ow-surface-map: oklch(0.95 0.008 80);
+  --ow-surface-map-end: oklch(0.91 0.01 80); /* the app's slight vertical gradient ends here */
+  --ow-surface-void: oklch(0 0 0); /* the map column: black in both themes */
+  --ow-surface-team: oklch(0.98 0.006 80);
+  --ow-surface-panel: oklch(0.995 0.003 80);
+  --ow-surface-raised: oklch(0.92 0.01 80);
+  --ow-border-subtle: oklch(0.86 0.01 80);
+  --ow-border-strong: oklch(0.72 0.012 80);
+  --ow-ink-1: oklch(0.22 0.014 265);
+  --ow-ink-2: oklch(0.45 0.014 265);
+  --ow-ink-3: oklch(0.46 0.012 265); /* design: .58; raised for WCAG AA at 11-13px (A18) */
+
+  /* One hue = one meaning, never reused. Accents share L/C per theme and vary hue only. */
+  --ow-grant-read: oklch(var(--ow-accent-l) var(--ow-accent-c) 230);
+  --ow-grant-write: oklch(var(--ow-accent-l) var(--ow-accent-c) 55);
+  --ow-health-ok: oklch(var(--ow-accent-l) var(--ow-accent-c) 150);
+  --ow-health-attention: oklch(0.62 var(--ow-accent-c) 85);
+  --ow-health-stalled: oklch(var(--ow-accent-l) var(--ow-accent-c) 25);
+  --ow-run-working: oklch(var(--ow-accent-l) var(--ow-accent-c) 195);
+  --ow-run-idle: var(--ow-ink-3);
+  --ow-run-done: var(--ow-ink-1);
+  --ow-run-failed: oklch(
+    var(--ow-accent-l) var(--ow-accent-c) 340
+  ); /* proposed hue, contrast-check in ui step */
+
+  --ow-selection-ring: var(--ow-ink-1);
+  --ow-selection-halo: color-mix(in oklch, var(--ow-ink-1) 20%, transparent);
+  --ow-handoff-default: color-mix(in oklch, var(--ow-border-strong) 60%, transparent);
+  --ow-handoff-emphasis: var(--ow-ink-2);
+  --ow-handoff-carrying: var(--ow-run-working);
+
+  /* Component aliases. Status hues are never fills behind text: dot, stroke, or 12-20% tint. */
+  --ow-tint-rest: 16%;
+  --ow-tint-active: 35%;
+  --ow-chip-bg-read: color-mix(in oklch, var(--ow-grant-read) var(--ow-tint-rest), transparent);
+  --ow-chip-bg-write: color-mix(in oklch, var(--ow-grant-write) var(--ow-tint-rest), transparent);
+  --ow-chip-bg-read-active: color-mix(
+    in oklch,
+    var(--ow-grant-read) var(--ow-tint-active),
+    transparent
+  );
+  --ow-chip-bg-write-active: color-mix(
+    in oklch,
+    var(--ow-grant-write) var(--ow-tint-active),
+    transparent
+  );
+  --ow-chip-border-read: color-mix(in oklch, var(--ow-grant-read) 50%, transparent);
+  --ow-chip-border-write: color-mix(in oklch, var(--ow-grant-write) 50%, transparent);
+  --ow-breathe-halo: color-mix(in oklch, var(--ow-run-working) 35%, transparent);
+
+  /* ---- Rig: fixed by theme (persona cannot set these) ------------------ */
+  --ow-rig-highlight: var(--ow-ink-1); /* collar line only */
+  --ow-rig-frame: oklch(0.32 0.015 265); /* neck, hands, waist, knees, feet: the inner mechanism */
+  --ow-rig-visor: oklch(0.18 0.02 265); /* dark surround behind the glow band */
+  /* Rig: derived from the persona's two hues at render time. Chrome is a metal tint, not paint:
+     primary L .62-.78 C <= .05, secondary L .40-.55 C <= .06. A component sets only the hues. */
+  --ow-rig-tint-hue: 265;
+  --ow-rig-trim-hue: 265;
+  --ow-rig-primary-l: 0.7;
+  --ow-rig-primary-c: 0.04;
+  --ow-rig-secondary-l: 0.48;
+  --ow-rig-secondary-c: 0.05;
+  /* --ow-rig-primary / -secondary are declared on .ow-character below, not here: a custom property
+     is substituted where it is declared, so a per-figure hue must be read on the figure itself. */
+  /* Rig glow is state-owned: a component sets --ow-rig-glow from the run state, never from persona. */
+  --ow-rig-glow-idle: var(--ow-run-idle);
+  --ow-rig-glow-working: var(--ow-run-working);
+  --ow-rig-glow-done: var(--ow-run-done);
+  --ow-rig-glow-failed: var(--ow-run-failed);
+  --ow-rig-glow: var(--ow-rig-glow-idle);
+  /* Overseer: achromatic, no tint allowed. */
+  --ow-overseer-primary: oklch(0.45 0.012 265);
+  --ow-overseer-secondary: oklch(0.7 0.012 265);
+  --ow-overseer-frame: oklch(0.3 0.012 265);
+
+  /* ---- Team emblem (the disc): derived from one hue ------------------- */
+  --ow-emblem-hue: 230;
+  --ow-emblem-l: 0.55;
+  --ow-emblem-c: 0.1;
+  --ow-emblem-mark: var(--ow-ink-1);
+}
+
+/* Per-figure derivations. Declared on the figure so the inline hue it carries is what gets
+   substituted; a component sets only --ow-rig-tint-hue, --ow-rig-trim-hue, or --ow-emblem-hue. */
+.ow-character {
+  --ow-rig-primary: oklch(var(--ow-rig-primary-l) var(--ow-rig-primary-c) var(--ow-rig-tint-hue));
+  --ow-rig-secondary: oklch(
+    var(--ow-rig-secondary-l) var(--ow-rig-secondary-c) var(--ow-rig-trim-hue)
+  );
+}
+.ow-emblem {
+  --ow-emblem-base: oklch(var(--ow-emblem-l) var(--ow-emblem-c) var(--ow-emblem-hue));
+  --ow-emblem-shade: oklch(from var(--ow-emblem-base) calc(l - 0.18) c calc(h + 8));
+  --ow-emblem-glow: oklch(from var(--ow-emblem-base) calc(l + 0.26) calc(c - 0.02) calc(h - 20));
+}
+
+/* ---- Dark (cool, hue 265). Defined twice per the theme rule. ------------ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ow-accent-l: 0.78;
+    --ow-surface-map: oklch(0.14 0.012 265);
+    --ow-surface-map-end: oklch(0.1 0.012 265);
+    --ow-surface-team: oklch(0.19 0.014 265);
+    --ow-surface-panel: oklch(0.23 0.014 265);
+    --ow-surface-raised: oklch(0.27 0.014 265);
+    --ow-border-subtle: oklch(0.32 0.014 265);
+    --ow-border-strong: oklch(0.45 0.014 265);
+    --ow-ink-1: oklch(0.93 0.008 80);
+    --ow-ink-2: oklch(0.72 0.01 265);
+    --ow-ink-3: oklch(0.68 0.012 265); /* design: .55; raised for WCAG AA at 11-13px (A18) */
+    --ow-health-attention: oklch(var(--ow-accent-l) var(--ow-accent-c) 85);
+    --ow-health-stalled: oklch(0.7 var(--ow-accent-c) 25);
+    --ow-selection-halo: color-mix(in oklch, var(--ow-ink-1) 25%, transparent);
+    --ow-handoff-default: color-mix(in oklch, var(--ow-border-strong) 50%, transparent);
+    --ow-opacity-lane: 0.5;
+    --ow-rig-frame: oklch(0.24 0.015 265);
+    --ow-overseer-primary: oklch(0.62 0.012 265);
+    --ow-overseer-secondary: oklch(0.36 0.012 265);
+    --ow-overseer-frame: oklch(0.18 0.012 265);
+  }
+}
+
+:root[data-theme="dark"] {
+  --ow-accent-l: 0.78;
+  --ow-surface-map: oklch(0.14 0.012 265);
+  --ow-surface-map-end: oklch(0.1 0.012 265);
+  --ow-surface-team: oklch(0.19 0.014 265);
+  --ow-surface-panel: oklch(0.23 0.014 265);
+  --ow-surface-raised: oklch(0.27 0.014 265);
+  --ow-border-subtle: oklch(0.32 0.014 265);
+  --ow-border-strong: oklch(0.45 0.014 265);
+  --ow-ink-1: oklch(0.93 0.008 80);
+  --ow-ink-2: oklch(0.72 0.01 265);
+  --ow-ink-3: oklch(0.68 0.012 265); /* design: .55; raised for WCAG AA at 11-13px (A18) */
+  --ow-health-attention: oklch(var(--ow-accent-l) var(--ow-accent-c) 85);
+  --ow-health-stalled: oklch(0.7 var(--ow-accent-c) 25);
+  --ow-selection-halo: color-mix(in oklch, var(--ow-ink-1) 25%, transparent);
+  --ow-handoff-default: color-mix(in oklch, var(--ow-border-strong) 50%, transparent);
+  --ow-opacity-lane: 0.5;
+  --ow-rig-frame: oklch(0.24 0.015 265);
+  --ow-overseer-primary: oklch(0.62 0.012 265);
+  --ow-overseer-secondary: oklch(0.36 0.012 265);
+  --ow-overseer-frame: oklch(0.18 0.012 265);
+}
+
+/* ---- Reduced motion: every animation collapses to one opacity change. ---- */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --ow-dur-instant: var(--ow-dur-reduced);
+    --ow-dur-fast: var(--ow-dur-reduced);
+    --ow-dur-base: var(--ow-dur-reduced);
+    --ow-dur-slow: var(--ow-dur-reduced);
+    --ow-dur-packet: 0ms;
+    --ow-dur-breathe: 0ms;
+    --ow-motion-panel-slide: 0px;
+    --ow-rig-bob-units: 0;
+    --ow-rig-nod-units: 0;
+    --ow-rig-pop-scale: 1;
+  }
+}
+
+/* ---- The void: the map column is black in both themes, so it carries the dark palette. ---- */
+.ow-void {
+  --ow-accent-l: 0.78;
+  --ow-surface-team: oklch(0.19 0.014 265);
+  --ow-surface-panel: oklch(0.23 0.014 265);
+  --ow-surface-raised: oklch(0.27 0.014 265);
+  --ow-border-subtle: oklch(0.32 0.014 265);
+  --ow-border-strong: oklch(0.45 0.014 265);
+  --ow-ink-1: oklch(0.93 0.008 80);
+  --ow-ink-2: oklch(0.72 0.01 265);
+  --ow-ink-3: oklch(0.68 0.012 265);
+  --ow-health-attention: oklch(var(--ow-accent-l) var(--ow-accent-c) 85);
+  --ow-health-stalled: oklch(0.7 var(--ow-accent-c) 25);
+  --ow-selection-halo: color-mix(in oklch, var(--ow-ink-1) 25%, transparent);
+  --ow-handoff-default: color-mix(in oklch, var(--ow-border-strong) 50%, transparent);
+  --ow-rig-frame: oklch(0.24 0.015 265);
+  --ow-overseer-primary: oklch(0.62 0.012 265);
+  --ow-overseer-secondary: oklch(0.36 0.012 265);
+  --ow-overseer-frame: oklch(0.18 0.012 265);
+}

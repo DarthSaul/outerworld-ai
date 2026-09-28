@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0b0d12;color:#e6e8ee;font-family:'Manrope',Helvetica,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#e6e8ee}a:hover{color:#ffb454}
+</style>
+</helmet>
+<div style="max-width:1400px;margin:0 auto;padding:48px 28px 80px;display:flex;flex-direction:column;gap:40px">
+  <header style="display:flex;flex-direction:column;gap:10px">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.12em;color:#8b93a7">NAMING WORKSHOP · 3 REGISTERS</div>
+    <h1 style="margin:0;font-size:32px;font-weight:600;letter-spacing:-.01em">Same five concepts, three vocabularies — read as UI copy</h1>
+    <p style="margin:0;max-width:760px;color:#a3aabb;font-size:15px;line-height:1.5;text-wrap:pretty">Each column maps the same objects: whole map, team, permission scope, grant, handoff, agent, persona file, ledger, run, the grant verb, and the overseer role. Plain word always in the tooltip; metaphor only in nouns and verbs.</p>
+  </header>
+
+  <section id="D" style="background:#151a26;border:1px solid #3a4460;border-radius:14px;padding:24px;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px">
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:center;gap:10px"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;padding:3px 8px;border-radius:4px;background:#ffb454;color:#1a1204">SET D · CHOSEN, THEN SIMPLIFIED 2026-09-27 (see spec v0.3: Station, Tool, Handoff, Agent, Routine run, Overseer; Manifest and the Reach kept)</span><span style="font-size:13px;color:#8b93a7">B verbs + documents · C people + places</span></div>
+      <h2 style="margin:0;font-size:24px;font-weight:600">The Reach</h2>
+      <dl style="margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-size:13px">
+        <dt style="color:#8b93a7">map</dt><dd style="margin:0">the Reach</dd>
+        <dt style="color:#8b93a7">team</dt><dd style="margin:0">Outpost</dd>
+        <dt style="color:#8b93a7">scope</dt><dd style="margin:0">Standing orders</dd>
+        <dt style="color:#8b93a7">grant</dt><dd style="margin:0">Clearance <span style="color:#8b93a7">· read / write clearance</span></dd>
+        <dt style="color:#8b93a7">handoff</dt><dd style="margin:0">Relay <span style="color:#8b93a7">· directional</span></dd>
+        <dt style="color:#8b93a7">agent</dt><dd style="margin:0">Hand</dd>
+        <dt style="color:#8b93a7">persona</dt><dd style="margin:0">Commission</dd>
+        <dt style="color:#8b93a7">ledger</dt><dd style="margin:0">Manifest</dd>
+        <dt style="color:#8b93a7">run</dt><dd style="margin:0">Sortie</dd>
+        <dt style="color:#8b93a7">verb</dt><dd style="margin:0">Clear</dd>
+        <dt style="color:#8b93a7">overseer</dt><dd style="margin:0">the Assayer</dd>
+      </dl>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;color:#8b93a7">BUTTONS</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        <button style="font:inherit;font-size:13px;font-weight:600;padding:8px 14px;border-radius:6px;border:0;background:#ffb454;color:#1a1204;cursor:pointer">Found outpost</button>
+        <button style="font:inherit;font-size:13px;font-weight:500;padding:8px 14px;border-radius:6px;border:1px solid #3a4460;background:transparent;color:#e6e8ee;cursor:pointer">Clear a tool</button>
+        <button style="font:inherit;font-size:13px;font-weight:500;padding:8px 14px;border-radius:6px;border:1px solid #3a4460;background:transparent;color:#e6e8ee;cursor:pointer">Open relay</button>
+        <button style="font:inherit;font-size:13px;font-weight:500;padding:8px 14px;border-radius:6px;border:1px solid #3a4460;background:transparent;color:#e6e8ee;cursor:pointer">Edit standing orders</button>
+      </div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;color:#8b93a7;margin-top:6px">DETAIL PANEL HEADER</div>
+      <div style="background:#0b0d12;border:1px solid #232838;border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:6px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;color:#8b93a7">OUTPOST · 3 CLEARANCES</div>
+        <div style="font-size:20px;font-weight:600">Cartography</div>
+        <div style="font-size:13px;color:#a3aabb;display:flex;gap:8px;flex-wrap:wrap"><span>2 hands</span><span>·</span><span>last sortie 14:02</span><span>·</span><span style="color:#5fd39a">healthy</span></div>
+      </div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;color:#8b93a7;margin-top:6px">EMPTY STATE</div>
+      <div style="border:1px dashed #3a4460;border-radius:10px;padding:20px;display:flex;flex-direction:column;gap:10px;align-items:flex-start">
+        <div style="font-size:14px;font-weight:600">No relays</div>
+        <div style="font-size:13px;color:#a3aabb;line-height:1.5;text-wrap:pretty">Outposts can't read each other's manifests until a relay is opened between them.</div>
+        <button style="font:inherit;font-size:13px;font-weight:600;padding:7px 12px;border-radius:6px;border:0;background:#ffb454;color:#1a1204;cursor:pointer">Open relay</button>
+      </div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;color:#8b93a7;margin-top:6px">OVERSEER STATUS LINE</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#c4cbdc;background:#0b0d12;border-radius:8px;padding:10px 12px">Assayer reconciled 3 manifests · 2 need attention</div>
+    </div>
+  </section>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:20px">
+
+    <!-- SET A -->
+    <section id="A" style="background:#11141c;border:1px solid #232838;border-radius:14px;padding:24px;display:flex;flex-direction:column;gap:22px">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="display:flex;align-items:center;gap:10px"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;padding:3px 8px;border-radius:4px;background:#1e2433;color:#c4cbdc">SET A</span><span style="font-size:13px;color:#8b93a7">bureaucratic · diplomatic</span></div>
+        <h2 style="margin:0;font-size:24px;font-weight:600">Concord</h2>
+        <p style="margin:0;font-size:13px;color:#a3aabb;line-height:1.5">Cold, precise, corporate-Blade-Runner. Everything is a document.</p>
+      </div>
+      <dl style="margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-size:13px">
+        <dt style="color:#8b93a7">map</dt><dd style="margin:0">the Concord</dd>
+        <dt style="color:#8b93a7">team</dt><dd style="margin:0">Enclave</dd>
+        <dt style="color:#8b93a7">scope</dt><dd style="margin:0">Charter</dd>
+        <dt style="color:#8b93a7">grant</dt><dd style="margin:0">Permit <span style="color:#8b93a7">· read permit / write permit</span></dd>
+        <dt style="color:#8b93a7">handoff</dt><dd style="margin:0">Courier <span style="color:#8b93a7">· directional</span></dd>
+        <dt style="color:#8b93a7">agent</dt><dd style="margin:0">Delegate</dd>
+        <dt style="color:#8b93a7">persona</dt><dd style="margin:0">Dossier</dd>
+        <dt style="color:#8b93a7">ledger</dt><dd style="margin:0">Dispatch</dd>
+        <dt style="color:#8b93a7">run</dt><dd style="margin:0">Session</dd>
+        <dt style="color:#8b93a7">verb</dt><dd style="margin:0">Issue</dd>
+        <dt style="color:#8b93a7">overseer</dt><dd style="margin:0">the Arbiter</dd>
+      </dl>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;color:#8b93a7">BUTTONS</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <button style="font:inherit;font-size:13px;font-weight:600;padding:8px 14px;border-radius:6px;border:0;background:#ffb454;color:#1a1204;cursor:pointer">Found enclave</button>
+          <button style="font:inherit;font-size:13px;font-weight:500;padding:8px 14px;border-radius:6px;border:1px solid #2c3346;background:transparent;color:#e6e8ee;cursor:pointer">Issue permit</button>
+          <button style="font:inherit;font-size:13px;font-weight:500;padding:8px 14px;border-radius:6px;border:1px solid #2c3346;background:transparent;color:#e6e8ee;cursor:pointer">Open courier</button>
+          <button style="font:inherit;font-size:13px;font-weight:500;padding:8px 14px;border-radius:6px;border:1px solid #2c3346;background:transparent;color:#e6e8ee;cursor:pointer">Amend charter</button>
+        </div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;color:#8b93a7;margin-top:6px">DETAIL PANEL HEADER</div>
+        <div style="background:#0b0d12;border:1px solid #232838;border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:6px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;color:#8b93a7">ENCLAVE · CHARTER · 3 PERMITS</div>
+          <div style="font-size:20px;font-weight:600">Cartography</div>
+          <div style="font-size:13px;color:#a3aabb;display:flex;gap:8px;flex-wrap:wrap"><span>2 delegates</span><span>·</span><span>last session 14:02</span><span>·</span><span style="color:#5fd39a">healthy</span></div>
+        </div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;color:#8b93a7;margin-top:6px">EMPTY STATE</div>
+        <div style="border:1px dashed #2c3346;border-radius:10px;padding:20px;display:flex;flex-direction:column;gap:10px;align-items:flex-start">
+          <div style="font-size:14px;font-weight:600">No couriers</div>
+          <div style="font-size:13px;color:#a3aabb;line-height:1.5;text-wrap:pretty">Enclaves can't read each other's dispatches until a courier is opened between them.</div>
+          <button style="font:inherit;font-size:13px;font-weight:600;padding:7px 12px;border-radius:6px;border:0;background:#ffb454;color:#1a1204;cursor:pointer">Open courier</button>
+        </div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;color:#8b93a7;margin-top:6px">OVERSEER STATUS LINE</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#c4cbdc;background:#0b0d12;border-radius:8px;padding:10px 12px">Arbiter reconciled 3 dispatches · 2 need attention</div>
+      </div>
+      <div style="border-top:1px solid #232838;padding-top:14px;font-size:13px;line-height:1.5;color:#a3aabb"><strong style="color:#e6e8ee">Risk.</strong> Courier is a person, not a route — "courier route" if it grates. Session is plain, which may be the point.</div>
+    </section>
+
+    <!-- SET B -->
+    <section id="B" style="background:#11141c;border:1px solid #232838;border-radius:14px;padding:24px;display:flex;flex-direction:column;gap:22px">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="display:flex;align-items:center;gap:10px"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;padding:3px 8px;border-radius:4px;background:#1e2433;color:#c4cbdc">SET B</span><span style="font-size:13px;color:#8b93a7">naval · expedition</span></div>
+        <h2 style="margin:0;font-size:24px;font-weight:600">Fleet</h2>
+        <p style="margin:0;font-size:13px;color:#a3aabb;line-height:1.5">Crisp verbs, terse logs. Star Wars fleet ops, Transformers command deck.</p>
+      </div>
+      <dl style="margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-size:13px">
+        <dt style="color:#8b93a7">map</dt><dd style="margin:0">the Fleet</dd>
+        <dt style="color:#8b93a7">team</dt><dd style="margin:0">Command</dd>
+        <dt style="color:#8b93a7">scope</dt><dd style="margin:0">Standing orders</dd>
+        <dt style="color:#8b93a7">grant</dt><dd style="margin:0">Clearance <span style="color:#8b93a7">· read / write clearance</span></dd>
+        <dt style="color:#8b93a7">handoff</dt><dd style="margin:0">Relay <span style="color:#8b93a7">· directional</span></dd>
+        <dt style="color:#8b93a7">agent</dt><dd style="margin:0">Officer</dd>
+        <dt style="color:#8b93a7">persona</dt><dd style="margin:0">Commission</dd>
+        <dt style="color:#8b93a7">ledger</dt><dd style="margin:0">Log</dd>
+        <dt style="color:#8b93a7">run</dt><dd style="margin:0">Sortie</dd>
+        <dt style="color:#8b93a7">verb</dt><dd style="margin:0">Clear</dd>
+        <dt style="color:#8b93a7">overseer</dt><dd style="margin:0">the Bridge</dd>
+      </dl>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;color:#8b93a7">BUTTONS</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <button style="font:inherit;font-size:13px;font-weight:600;padding:8px 14px;border-radius:6px;border:0;background:#ffb454;color:#1a1204;cursor:pointer">New command</button>
+          <button style="font:inherit;font-size:13px;font-weight:500;padding:8px 14px;border-radius:6px;border:1px solid #2c3346;background:transparent;color:#e6e8ee;cursor:pointer">Grant clearance</button>
+          <button style="font:inherit;font-size:13px;font-weight:500;padding:8px 14px;border-radius:6px;border:1px solid #2c3346;background:transparent;color:#e6e8ee;cursor:pointer">Open relay</button>
+          <button style="font:inherit;font-size:13px;font-weight:500;padding:8px 14px;border-radius:6px;border:1px solid #2c3346;background:transparent;color:#e6e8ee;cursor:pointer">Edit standing orders</button>
+        </div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;color:#8b93a7;margin-top:6px">DETAIL PANEL HEADER</div>
+        <div style="background:#0b0d12;border:1px solid #232838;border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:6px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;color:#8b93a7">COMMAND · 3 CLEARANCES</div>
+          <div style="font-size:20px;font-weight:600">Cartography</div>
+          <div style="font-size:13px;color:#a3aabb;display:flex;gap:8px;flex-wrap:wrap"><span>2 officers</span><span>·</span><span>last sortie 14:02</span><span>·</span><span style="color:#5fd39a">healthy</span></div>
+        </div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;color:#8b93a7;margin-top:6px">EMPTY STATE</div>
+        <div style="border:1px dashed #2c3346;border-radius:10px;padding:20px;display:flex;flex-direction:column;gap:10px;align-items:flex-start">
+          <div style="font-size:14px;font-weight:600">No relays</div>
+          <div style="font-size:13px;color:#a3aabb;line-height:1.5;text-wrap:pretty">Commands can't read each other's logs until a relay is opened between them.</div>
+          <button style="font:inherit;font-size:13px;font-weight:600;padding:7px 12px;border-radius:6px;border:0;background:#ffb454;color:#1a1204;cursor:pointer">Open relay</button>
+        </div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;color:#8b93a7;margin-top:6px">OVERSEER STATUS LINE</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#c4cbdc;background:#0b0d12;border-radius:8px;padding:10px 12px">Bridge reconciled 3 logs · 2 need attention</div>
+      </div>
+      <div style="border-top:1px solid #232838;padding-top:14px;font-size:13px;line-height:1.5;color:#a3aabb"><strong style="color:#e6e8ee">Risk.</strong> Officer/Bridge imply rank between agents that doesn't exist. Planets-as-commands wants a station or flagship visual, not a globe.</div>
+    </section>
+
+    <!-- SET C -->
+    <section id="C" style="background:#11141c;border:1px solid #232838;border-radius:14px;padding:24px;display:flex;flex-direction:column;gap:22px">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="display:flex;align-items:center;gap:10px"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;padding:3px 8px;border-radius:4px;background:#1e2433;color:#c4cbdc">SET C</span><span style="font-size:13px;color:#8b93a7">frontier · industrial</span></div>
+        <h2 style="margin:0;font-size:24px;font-weight:600">The Reach</h2>
+        <p style="margin:0;font-size:13px;color:#a3aabb;line-height:1.5">Tactile, worn, space-factory. Dune's guild economics without the mysticism.</p>
+      </div>
+      <dl style="margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-size:13px">
+        <dt style="color:#8b93a7">map</dt><dd style="margin:0">the Reach</dd>
+        <dt style="color:#8b93a7">team</dt><dd style="margin:0">Outpost</dd>
+        <dt style="color:#8b93a7">scope</dt><dd style="margin:0">Claim</dd>
+        <dt style="color:#8b93a7">grant</dt><dd style="margin:0">Lease <span style="color:#8b93a7">· read lease / write lease</span></dd>
+        <dt style="color:#8b93a7">handoff</dt><dd style="margin:0">Haul <span style="color:#8b93a7">· directional</span></dd>
+        <dt style="color:#8b93a7">agent</dt><dd style="margin:0">Hand</dd>
+        <dt style="color:#8b93a7">persona</dt><dd style="margin:0">Papers</dd>
+        <dt style="color:#8b93a7">ledger</dt><dd style="margin:0">Manifest</dd>
+        <dt style="color:#8b93a7">run</dt><dd style="margin:0">Shift</dd>
+        <dt style="color:#8b93a7">verb</dt><dd style="margin:0">Stake</dd>
+        <dt style="color:#8b93a7">overseer</dt><dd style="margin:0">the Assayer</dd>
+      </dl>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;color:#8b93a7">BUTTONS</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <button style="font:inherit;font-size:13px;font-weight:600;padding:8px 14px;border-radius:6px;border:0;background:#ffb454;color:#1a1204;cursor:pointer">Found outpost</button>
+          <button style="font:inherit;font-size:13px;font-weight:500;padding:8px 14px;border-radius:6px;border:1px solid #2c3346;background:transparent;color:#e6e8ee;cursor:pointer">Stake a lease</button>
+          <button style="font:inherit;font-size:13px;font-weight:500;padding:8px 14px;border-radius:6px;border:1px solid #2c3346;background:transparent;color:#e6e8ee;cursor:pointer">Open haul</button>
+          <button style="font:inherit;font-size:13px;font-weight:500;padding:8px 14px;border-radius:6px;border:1px solid #2c3346;background:transparent;color:#e6e8ee;cursor:pointer">Amend claim</button>
+        </div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;color:#8b93a7;margin-top:6px">DETAIL PANEL HEADER</div>
+        <div style="background:#0b0d12;border:1px solid #232838;border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:6px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;color:#8b93a7">OUTPOST · CLAIM · 3 LEASES</div>
+          <div style="font-size:20px;font-weight:600">Cartography</div>
+          <div style="font-size:13px;color:#a3aabb;display:flex;gap:8px;flex-wrap:wrap"><span>2 hands</span><span>·</span><span>last shift 14:02</span><span>·</span><span style="color:#5fd39a">healthy</span></div>
+        </div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;color:#8b93a7;margin-top:6px">EMPTY STATE</div>
+        <div style="border:1px dashed #2c3346;border-radius:10px;padding:20px;display:flex;flex-direction:column;gap:10px;align-items:flex-start">
+          <div style="font-size:14px;font-weight:600">No hauls</div>
+          <div style="font-size:13px;color:#a3aabb;line-height:1.5;text-wrap:pretty">Outposts can't read each other's manifests until a haul is opened between them.</div>
+          <button style="font:inherit;font-size:13px;font-weight:600;padding:7px 12px;border-radius:6px;border:0;background:#ffb454;color:#1a1204;cursor:pointer">Open haul</button>
+        </div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;color:#8b93a7;margin-top:6px">OVERSEER STATUS LINE</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#c4cbdc;background:#0b0d12;border-radius:8px;padding:10px 12px">Assayer reconciled 3 manifests · 2 need attention</div>
+      </div>
+      <div style="border-top:1px solid #232838;padding-top:14px;font-size:13px;line-height:1.5;color:#a3aabb"><strong style="color:#e6e8ee">Risk.</strong> "Shift" collides with the modifier key in shortcut copy. Manifest + Shift are the best ledger/run words of the three; Assayer (grades ore → ranks priorities) is the best overseer.</div>
+    </section>
+  </div>
+
+  <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px">
+    <div style="background:#11141c;border:1px solid #232838;border-radius:14px;padding:24px;display:flex;flex-direction:column;gap:14px">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;color:#8b93a7">PRODUCT NAME CANDIDATES · all generic words, trademark-check before use</div>
+      <dl style="margin:0;display:grid;grid-template-columns:auto 1fr;gap:10px 16px;font-size:14px">
+        <dt style="font-weight:600">Orrery</dt><dd style="margin:0;color:#a3aabb">a mechanical model of a planetary system in motion — literally this dashboard</dd>
+        <dt style="font-weight:600">Ephemeris</dt><dd style="margin:0;color:#a3aabb">a table of where bodies <em>were</em> at given times — fits "never state it can't prove"</dd>
+        <dt style="font-weight:600">Astrolabe</dt><dd style="margin:0;color:#a3aabb">an instrument for reading position; warmer, more artifact-like</dd>
+        <dt style="font-weight:600">Lodestar</dt><dd style="margin:0;color:#a3aabb">the fixed point everything is reckoned against; also works as the overseer's name</dd>
+      </dl>
+    </div>
+    <div style="background:#11141c;border:1px solid #232838;border-radius:14px;padding:24px;display:flex;flex-direction:column;gap:14px">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;color:#8b93a7">OVERSEER · ROLE NOUN + PROPER NAME</div>
+      <p style="margin:0;font-size:14px;line-height:1.55;color:#a3aabb;text-wrap:pretty">Ship the <strong style="color:#e6e8ee">role noun</strong> (Arbiter / Bridge / Assayer) as the fixed UI label and let the install set the proper name in the persona file — same as every other agent. Default proper name candidates: <strong style="color:#e6e8ee">Meridian</strong>, <strong style="color:#e6e8ee">Lodestar</strong>, <strong style="color:#e6e8ee">Vesper</strong>. Reads as different via position (fixed center, no planet), its own 48×64 hero rig (spec §07), and a desaturated palette.</p>
+    </div>
+  </section>
+</div>
+</x-dc>
+</body>
+</html>
