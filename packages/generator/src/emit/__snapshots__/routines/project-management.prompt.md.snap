@@ -57,6 +57,9 @@ Outbound handoffs (who reads your report):
 
 ## Procedure
 
+0. `git checkout <default branch>` (for example `git checkout main`). The cloud session
+   starts on an auto-named `claude/` branch, which is not where the ledger lives: every run clones
+   the default branch and the dashboard reads it, so every commit of this run goes there.
 1. Write the opening run record (below), commit it, and push, so the dashboard can see the run
    is open even if a later step fails.
 2. Read your station report and every inbound report.

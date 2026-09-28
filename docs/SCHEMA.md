@@ -105,8 +105,10 @@ status/digest.md                 # the overseer's last outward post (Markdown)
 ```
 
 Routines commit status changes to the default branch (their own repo, only the owner's commits,
-so the push check passes); if the push is rejected they push `claude/status` and the prompt says
-so in the run's `notes`. The dashboard reads whichever checkout is at `OUTERWORLD_LEDGER_PATH`.
+so the push check passes). A cloud session starts on an auto-named `claude/` branch, so the prompt
+tells the Routine to check out the default branch before its first commit; if the push is rejected
+it pushes `claude/status-<teamId>-<startedAt>` and says so in the run's `notes`. The dashboard
+reads whichever checkout is at `OUTERWORLD_LEDGER_PATH`.
 
 ### Team ledger (`ledger/<teamId>.md`)
 
