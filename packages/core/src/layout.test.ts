@@ -45,7 +45,7 @@ describe("layoutStation", () => {
 
   it("stacks up to four teams in one column to the left of the overseer, in station order top to bottom", () => {
     const l = layoutStation(station(4));
-    expect(l.mode).toBe("radial");
+    expect(l.mode).toBe("columns");
     const xs = new Set(Object.values(l.teams).map((b) => b.x));
     expect(xs.size).toBe(1);
     const ys = ["t0", "t1", "t2", "t3"].map((id) => l.teams[id]!.y);
@@ -56,7 +56,7 @@ describe("layoutStation", () => {
   it("uses two columns for five to ten teams and three for eleven to sixteen", () => {
     expect(new Set(Object.values(layoutStation(station(8)).teams).map((b) => b.x)).size).toBe(2);
     expect(new Set(Object.values(layoutStation(station(12)).teams).map((b) => b.x)).size).toBe(3);
-    expect(layoutStation(station(12)).mode).toBe("rings");
+    expect(layoutStation(station(12)).mode).toBe("columns");
   });
 
   it("uses list mode above sixteen teams, stacked top to bottom", () => {

@@ -25,7 +25,10 @@
     },
     "outcome": {
       "type": "string",
-      "enum": ["done", "failed"]
+      "enum": [
+        "done",
+        "failed"
+      ]
     },
     "sessionId": {
       "type": "string"
@@ -45,13 +48,21 @@
           },
           "state": {
             "type": "string",
-            "enum": ["idle", "working", "done", "failed"]
+            "enum": [
+              "idle",
+              "working",
+              "done",
+              "failed"
+            ]
           },
           "note": {
             "type": "string"
           }
         },
-        "required": ["agentId", "state"],
+        "required": [
+          "agentId",
+          "state"
+        ],
         "additionalProperties": {}
       }
     },
@@ -70,7 +81,10 @@
             "maximum": 9007199254740991
           }
         },
-        "required": ["grantId", "count"],
+        "required": [
+          "grantId",
+          "count"
+        ],
         "additionalProperties": {}
       }
     },
@@ -94,7 +108,11 @@
           "type": "string"
         }
       },
-      "required": ["changed", "linesAdded", "linesRemoved"],
+      "required": [
+        "changed",
+        "linesAdded",
+        "linesRemoved"
+      ],
       "additionalProperties": {}
     },
     "error": {
@@ -104,6 +122,13 @@
       "type": "string"
     }
   },
-  "required": ["schemaVersion", "teamId", "startedAt", "agents", "grantsUsed", "ledger"],
+  "required": [
+    "schemaVersion",
+    "teamId",
+    "startedAt",
+    "agents",
+    "grantsUsed",
+    "ledger"
+  ],
   "additionalProperties": {}
 }

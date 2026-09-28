@@ -2,7 +2,6 @@ import type { Handoff, Station } from "./schema/station.js";
 
 /** The abstract square everything is laid out in. The ui scales it to pixels. */
 export const LAYOUT_SIZE = 1000;
-export const RADIAL_MAX = 8;
 export const RINGS_MAX = 16;
 
 export interface Box {
@@ -11,17 +10,14 @@ export interface Box {
   readonly w: number;
   readonly h: number;
 }
-export interface TeamBox extends Box {
-  readonly ring: 0 | 1;
-}
+export type TeamBox = Box;
 export interface Layout {
-  readonly mode: "radial" | "rings" | "list";
+  readonly mode: "columns" | "list";
   readonly overseer: Box;
   readonly teams: Readonly<Record<string, TeamBox>>;
 }
 
 const OVERSEER = { w: 192, h: 232 } as const; // holds the 96×128 hero rig plus two text lines (reconciliation A19)
-/** Radial tiers: box size and ring radius by team count, chosen so no box leaves the square. */
 const LIST_GAP = 24;
 
 const round = (n: number) => Math.round(n * 1000) / 1000;
@@ -62,7 +58,6 @@ export function layoutStation(station: Station): Layout {
         y: round(top + row * (h + LIST_GAP)),
         w: round(w),
         h,
-        ring: 0,
       };
     });
     return { mode: "list", overseer: overseerTop, teams };
@@ -91,9 +86,9 @@ export function layoutStation(station: Station): Layout {
     const rowPitch = (region.bottom - region.top) / inThisColumn;
     const cx = region.left + colPitch * (col + 0.5);
     const cy = region.top + rowPitch * (row + 0.5);
-    teams[t.id] = { ...boxAt(cx, cy, tier.w, tier.h), ring: 0 };
+    teams[t.id] = { ...boxAt(cx, cy, tier.w, tier.h) };
   });
-  return { mode: n <= 4 ? "radial" : "rings", overseer, teams };
+  return { mode: "columns", overseer, teams };
 }
 
 export interface HandoffGeometry {

@@ -1,5 +1,11 @@
+import { deriveHealth, own } from "./health.js";
 import { SCHEMA_VERSION } from "./schema/common.js";
-import type { RunSummary, StationState, TeamState } from "./schema/state.js";
+import {
+  RECENT_RUNS_MAX,
+  type RunSummary,
+  type StationState,
+  type TeamState,
+} from "./schema/state.js";
 import type { Station } from "./schema/station.js";
 import type { AgentRunState, OverseerState, RunOutcome } from "./schema/status.js";
 
@@ -30,8 +36,6 @@ export type StationEvent =
     }
   | { readonly type: "overseer.state"; readonly state: OverseerState; readonly at: string }
   | { readonly type: "digest.posted"; readonly at: string };
-
-export const RECENT_RUNS_MAX = 6;
 
 const emptyLedger = (): RunSummary["ledger"] => ({
   changed: false,
@@ -73,16 +77,6 @@ export function emptyState(
   };
 }
 
-type Mutable<T> = { -readonly [K in keyof T]: T[K] };
-
-function cloneState(state: StationState): Mutable<StationState> {
-  return structuredClone(state) as Mutable<StationState>;
-}
-
-function agentsOfTeam(teamId: string, station: Station): string[] {
-  return station.agents.filter((a) => a.teamId === teamId).map((a) => a.id);
-}
-
 /** `(state, event) => state` with the Station bound, for reducers and timelines. */
 export function bindReducer(
   station: Station,
@@ -92,14 +86,14 @@ export function bindReducer(
 
 /**
  * Applies one event and returns a new state. Pure. The Station says which agents and handoffs
- * belong to a team. `bindReducer(station)` gives the two-argument form a reducer wants.
+ * belong to a team. Health is re-derived with the same rules the ledger parser uses.
  */
 export function applyEvent(
   state: StationState,
   event: StationEvent,
   station: Station,
 ): StationState {
-  const next = cloneState(state);
+  const next = structuredClone(state);
   next.provenance = { ...next.provenance, asOf: event.at };
 
   if (event.type === "overseer.state") {
@@ -111,7 +105,7 @@ export function applyEvent(
     return next;
   }
 
-  const team = next.teams[event.teamId];
+  const team = own(next.teams, event.teamId);
   if (!team) {
     next.issues = [
       ...next.issues,
@@ -123,7 +117,8 @@ export function applyEvent(
     ];
     return next;
   }
-  const memberIds = agentsOfTeam(event.teamId, station);
+  const memberIds = station.agents.filter((a) => a.teamId === event.teamId).map((a) => a.id);
+  const outbound = station.handoffs.filter((h) => h.from === event.teamId).map((h) => h.id);
 
   switch (event.type) {
     case "run.started": {
@@ -132,11 +127,21 @@ export function applyEvent(
       team.ledger = { ...team.ledger, changedInLastRun: false };
       team.degraded = false;
       for (const id of memberIds) next.agents[id] = { state: "working" };
-      for (const id of outboundHandoffs(event.teamId, station))
-        next.handoffs[id] = { carrying: false };
+      for (const id of outbound) next.handoffs[id] = { carrying: false };
       break;
     }
     case "agent.state": {
+      if (!own(next.agents, event.agentId)) {
+        next.issues = [
+          ...next.issues,
+          {
+            level: "warn",
+            path: "event.agent.state",
+            message: `unknown agent "${event.agentId}"; event ignored`,
+          },
+        ];
+        break;
+      }
       next.agents[event.agentId] = {
         state: event.state,
         ...(event.note !== undefined ? { note: event.note } : {}),
@@ -151,8 +156,7 @@ export function applyEvent(
       };
       team.ledger = { ...team.ledger, exists: true, changedInLastRun: true };
       if (team.lastRun) team.lastRun = { ...team.lastRun, ledger };
-      for (const id of outboundHandoffs(event.teamId, station))
-        next.handoffs[id] = { carrying: true };
+      for (const id of outbound) next.handoffs[id] = { carrying: true };
       break;
     }
     case "run.finished": {
@@ -164,21 +168,22 @@ export function applyEvent(
       };
       team.lastRun = finished;
       team.run = event.outcome;
-      team.recentRuns = [finished, ...team.recentRuns].slice(0, RECENT_RUNS_MAX);
-      if (event.outcome === "failed") {
-        team.health = "attention";
-        team.healthReason = `last run failed: ${event.error ?? "no error given"}`;
-      } else {
-        team.health = "ok";
-        team.healthReason = undefined;
-      }
+      // The open run may already be in recentRuns (parsed from the ledger): replace it, don't duplicate it.
+      const rest = team.recentRuns.filter((r) => r.startedAt !== finished.startedAt);
+      team.recentRuns = [finished, ...rest].slice(0, RECENT_RUNS_MAX);
+      const overseerReason = next.overseer.attention.find((a) => a.teamId === event.teamId)?.reason;
+      const malformed = team.healthReason === "a status file for this team could not be read";
+      const h = deriveHealth({
+        latest: finished,
+        stalled: false,
+        ...(overseerReason !== undefined ? { overseerReason } : {}),
+        malformed,
+      });
+      team.health = h.health;
+      team.healthReason = h.healthReason;
       for (const id of memberIds) next.agents[id] = { state: event.outcome };
       break;
     }
   }
   return next;
-}
-
-function outboundHandoffs(teamId: string, station: Station): string[] {
-  return station.handoffs.filter((h) => h.from === teamId).map((h) => h.id);
 }

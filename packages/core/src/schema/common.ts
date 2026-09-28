@@ -18,7 +18,8 @@ export type Result<T> =
 /** Ids are lowercase kebab: stable in filenames, URLs, and prompts. */
 export const Id = z
   .string()
-  .regex(/^[a-z0-9][a-z0-9-]*$/, "id must be lowercase letters, digits, and hyphens");
+  .regex(/^[a-z0-9][a-z0-9-]*$/, "id must be lowercase letters, digits, and hyphens")
+  .refine((id) => !(id in Object.prototype), "id must not be a JavaScript object property name");
 
 export const Hue = z.number().min(0).max(360);
 

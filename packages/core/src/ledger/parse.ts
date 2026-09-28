@@ -1,6 +1,12 @@
 import { emptyState } from "../events.js";
-import type { Issue } from "../schema/common.js";
-import type { LedgerSections, RunSummary, StationState, TeamState } from "../schema/state.js";
+import { deriveHealth, own } from "../health.js";
+import { type Issue, Timestamp } from "../schema/common.js";
+import {
+  type LedgerSections,
+  RECENT_RUNS_MAX,
+  type RunSummary,
+  type StationState,
+} from "../schema/state.js";
 import type { Schedule, Station } from "../schema/station.js";
 import {
   type OverseerStatus,
@@ -21,21 +27,18 @@ export interface ParseLedgerOptions {
   readonly sourceRef?: string;
 }
 
-export const RECENT_RUNS = 6;
 export const DEGRADED_AFTER_MS = 24 * 60 * 60 * 1000;
 const STALL_FACTOR = 2;
 const DEFAULT_INTERVAL_MS = DEGRADED_AFTER_MS;
 const LEDGER_MARKER = /<!--\s*ow:ledger\s+v\d+/;
+const KNOWN_HEADING = /^##\s+(next steps|waiting on|log)\s*$/im;
 
 type Sections = { nextSteps: string[]; waitingOn: string[]; log: string[] };
-
-const SECTION_KEYS: Record<string, keyof Sections> = {
-  "next steps": "nextSteps",
-  "waiting on": "waitingOn",
-  log: "log",
-};
-
-const KNOWN_HEADING = /^##\s+(next steps|waiting on|log)\s*$/im;
+const SECTION_KEYS = new Map<string, keyof Sections>([
+  ["next steps", "nextSteps"],
+  ["waiting on", "waitingOn"],
+  ["log", "log"],
+]);
 
 /** Reads the three fixed sections of a team ledger. Undefined when neither the marker nor a known heading is present. */
 export function parseLedgerMarkdown(text: string): LedgerSections | undefined {
@@ -46,7 +49,7 @@ export function parseLedgerMarkdown(text: string): LedgerSections | undefined {
     const line = raw.trim();
     const heading = /^##\s+(.+?)\s*$/.exec(line)?.[1];
     if (heading !== undefined) {
-      current = SECTION_KEYS[heading.toLowerCase()];
+      current = SECTION_KEYS.get(heading.toLowerCase());
       continue;
     }
     const bullet = /^[-*]\s+(.+)$/.exec(line)?.[1];
@@ -72,9 +75,8 @@ function summarize(run: RunRecord): RunSummary {
 function intervalMs(schedule: Schedule, runs: readonly RunRecord[]): number {
   if (schedule.kind === "interval") return schedule.everyMinutes * 60 * 1000;
   const [latest, previous] = runs;
-  if (latest && previous) {
+  if (latest && previous)
     return Math.max(Date.parse(latest.startedAt) - Date.parse(previous.startedAt), 60 * 1000);
-  }
   return DEFAULT_INTERVAL_MS;
 }
 
@@ -87,14 +89,19 @@ export function parseLedger(
   files: LedgerFiles,
   options: ParseLedgerOptions,
 ): StationState {
-  const state = structuredClone(
-    emptyState(station, {
-      now: options.now,
-      sourcePath: options.sourcePath,
-      ...(options.sourceRef !== undefined ? { sourceRef: options.sourceRef } : {}),
-    }),
-  ) as { -readonly [K in keyof StationState]: StationState[K] };
+  const state = emptyState(station, {
+    now: options.now,
+    sourcePath: options.sourcePath,
+    ...(options.sourceRef !== undefined ? { sourceRef: options.sourceRef } : {}),
+  });
   const issues: { level: Issue["level"]; path: string; message: string }[] = [];
+  const clockOk = Timestamp.safeParse(options.now).success;
+  if (!clockOk)
+    issues.push({
+      level: "error",
+      path: "options.now",
+      message: `now is not an ISO timestamp: "${options.now}"; time-based health not derived`,
+    });
   const nowMs = Date.parse(options.now);
   let newest = Number.NEGATIVE_INFINITY;
   const seen = (ts: string | undefined) => {
@@ -116,15 +123,15 @@ export function parseLedger(
     parsed: { ok: boolean; issues: readonly Issue[] },
   ) => {
     if (parsed.ok) {
-      issues.push(
-        ...parsed.issues.map((i) => ({ ...i, level: "warn" as const, path: `${path}#${i.path}` })),
-      );
+      issues.push(...parsed.issues.map((i) => ({ ...i, path: `${path}#${i.path}` })));
       return;
     }
-    const detail = parsed.issues.map((i) => `${i.path}: ${i.message}`).join("; ");
-    issues.push({ level: "warn", path, message: `invalid ${kind}: ${detail}` });
+    issues.push({
+      level: "warn",
+      path,
+      message: `invalid ${kind}: ${parsed.issues.map((i) => `${i.path}: ${i.message}`).join("; ")}`,
+    });
   };
-
   const readJson = (path: string, contents: string): unknown => {
     try {
       return JSON.parse(contents);
@@ -135,31 +142,31 @@ export function parseLedger(
   };
 
   for (const [path, contents] of byPath) {
-    const runTeamId = /^status\/runs\/([^/]+)\/[^/]+\.json$/.exec(path)?.[1];
-    if (runTeamId !== undefined) {
-      const teamId = runTeamId;
+    const runFolder = /^status\/runs\/([^/]+)\/[^/]+\.json$/.exec(path)?.[1];
+    if (runFolder !== undefined) {
       const raw = readJson(path, contents);
       if (raw === undefined) {
-        malformedTeams.add(teamId);
+        malformedTeams.add(runFolder);
         continue;
       }
       const parsed = parseRunRecord(raw);
       report(path, "run record", parsed);
       if (!parsed.ok) {
-        malformedTeams.add(teamId);
+        malformedTeams.add(runFolder);
         continue;
       }
-      if (!state.teams[parsed.value.teamId]) {
+      const teamId = parsed.value.teamId;
+      if (!own(state.teams, teamId)) {
+        issues.push({ level: "warn", path, message: `unknown team "${teamId}"; run ignored` });
+        continue;
+      }
+      if (teamId !== runFolder)
         issues.push({
           level: "warn",
           path,
-          message: `unknown team "${parsed.value.teamId}"; run ignored`,
+          message: `run belongs to "${teamId}" but sits in the "${runFolder}" folder`,
         });
-        continue;
-      }
-      const list = runsByTeam.get(parsed.value.teamId) ?? [];
-      list.push(parsed.value);
-      runsByTeam.set(parsed.value.teamId, list);
+      runsByTeam.set(teamId, [...(runsByTeam.get(teamId) ?? []), parsed.value]);
       continue;
     }
     const statusTeamId = /^status\/teams\/([^/]+)\.json$/.exec(path)?.[1];
@@ -188,7 +195,8 @@ export function parseLedger(
   }
 
   for (const team of station.teams) {
-    const t = state.teams[team.id] as { -readonly [K in keyof TeamState]: TeamState[K] };
+    const t = state.teams[team.id];
+    if (!t) continue;
     const runs = (runsByTeam.get(team.id) ?? []).sort(
       (a, b) => Date.parse(b.startedAt) - Date.parse(a.startedAt),
     );
@@ -201,7 +209,7 @@ export function parseLedger(
       ...(sections ? { sections } : {}),
       changedInLastRun: latest?.ledger.changed ?? false,
     };
-    t.recentRuns = runs.slice(0, RECENT_RUNS).map(summarize);
+    t.recentRuns = runs.slice(0, RECENT_RUNS_MAX).map(summarize);
     if (latest) {
       t.lastRun = summarize(latest);
       seen(latest.startedAt);
@@ -210,48 +218,41 @@ export function parseLedger(
 
     const interval = intervalMs(team.schedule, runs);
     const sinceStartMs = latest ? nowMs - Date.parse(latest.startedAt) : Number.POSITIVE_INFINITY;
-    const stalled = latest ? sinceStartMs > STALL_FACTOR * interval : t.ledger.exists;
+    const stalled = clockOk && (latest ? sinceStartMs > STALL_FACTOR * interval : t.ledger.exists);
     const open = latest !== undefined && latest.endedAt === undefined;
-
     t.run = !latest ? "idle" : open ? (stalled ? "idle" : "working") : (latest.outcome ?? "idle");
-    t.degraded = latest !== undefined && sinceStartMs > DEGRADED_AFTER_MS;
+    t.degraded = clockOk && latest !== undefined && sinceStartMs > DEGRADED_AFTER_MS;
 
-    const overseerFlag = overseer?.attention.find((a) => a.teamId === team.id);
-    if (stalled) {
-      t.health = "stalled";
-      t.healthReason = latest
-        ? `no run since ${latest.startedAt}; expected every ${Math.round(interval / 60000)} min`
-        : "ledger exists but no run has been recorded";
-    } else if (latest?.outcome === "failed") {
-      t.health = "attention";
-      t.healthReason = `last run failed: ${latest.error ?? "no error given"}`;
-    } else if (overseerFlag) {
-      t.health = "attention";
-      t.healthReason = `overseer: ${overseerFlag.reason}`;
-    } else if (malformedTeams.has(team.id)) {
-      t.health = "attention";
-      t.healthReason = "a status file for this team could not be read";
-    } else {
-      t.health = "ok";
-      t.healthReason = undefined;
-    }
+    const overseerReason = overseer?.attention.find((a) => a.teamId === team.id)?.reason;
+    const h = deriveHealth(
+      {
+        ...(latest ? { latest: summarize(latest) } : {}),
+        stalled,
+        ...(overseerReason !== undefined ? { overseerReason } : {}),
+        malformed: malformedTeams.has(team.id) || !clockOk,
+      },
+      Math.round(interval / 60000),
+    );
+    t.health = h.health;
+    t.healthReason =
+      !clockOk && h.health === "attention"
+        ? "clock unreadable; health not derived"
+        : h.healthReason;
 
     // Agent states: the team status file wins when it is newer than the latest run's start.
     const status = teamStatus.get(team.id);
     seen(status?.updatedAt);
     const fromStatus =
       status && (!latest || Date.parse(status.updatedAt) >= Date.parse(latest.startedAt));
-    const agentStates = fromStatus ? status.agents : (latest?.agents ?? []);
-    for (const a of agentStates) {
-      if (state.agents[a.agentId]) {
+    for (const a of fromStatus ? status.agents : (latest?.agents ?? [])) {
+      if (own(state.agents, a.agentId))
         state.agents[a.agentId] = {
           state: a.state,
           ...(a.note !== undefined ? { note: a.note } : {}),
         };
-      }
     }
-    for (const h of station.handoffs) {
-      if (h.from === team.id) state.handoffs[h.id] = { carrying: t.ledger.changedInLastRun };
+    for (const hnd of station.handoffs) {
+      if (hnd.from === team.id) state.handoffs[hnd.id] = { carrying: t.ledger.changedInLastRun };
     }
   }
 

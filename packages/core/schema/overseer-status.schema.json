@@ -16,7 +16,12 @@
     },
     "state": {
       "type": "string",
-      "enum": ["idle", "reconciling", "reported", "attention"]
+      "enum": [
+        "idle",
+        "reconciling",
+        "reported",
+        "attention"
+      ]
     },
     "lastRunStartedAt": {
       "type": "string",
@@ -46,7 +51,10 @@
             "type": "string"
           }
         },
-        "required": ["teamId", "reason"],
+        "required": [
+          "teamId",
+          "reason"
+        ],
         "additionalProperties": {}
       }
     },
@@ -55,6 +63,13 @@
       "minLength": 1
     }
   },
-  "required": ["schemaVersion", "updatedAt", "state", "reconciled", "attention", "digestPath"],
+  "required": [
+    "schemaVersion",
+    "updatedAt",
+    "state",
+    "reconciled",
+    "attention",
+    "digestPath"
+  ],
   "additionalProperties": {}
 }

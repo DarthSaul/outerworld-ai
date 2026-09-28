@@ -11,11 +11,11 @@ export {
   applyEvent,
   bindReducer,
   emptyState,
-  RECENT_RUNS_MAX,
   type StationEvent,
 } from "./events.js";
 // Glossary
 export { GLOSSARY_KEYS, type GlossaryKey, glossary, term } from "./glossary.js";
+export { deriveHealth, type HealthInputs } from "./health.js";
 // Layout
 export {
   type Box,
@@ -25,7 +25,6 @@ export {
   type Layout,
   layoutStation,
   overseerLinkGeometry,
-  RADIAL_MAX,
   RINGS_MAX,
   type TeamBox,
 } from "./layout.js";
@@ -36,7 +35,6 @@ export {
   type ParseLedgerOptions,
   parseLedger,
   parseLedgerMarkdown,
-  RECENT_RUNS,
 } from "./ledger/parse.js";
 // Rig
 export {
@@ -95,8 +93,3 @@ export {
   runRecordIssues,
   TeamStatus,
 } from "./schema/status.js";
-
-/** Returns true when a document's `schemaVersion` can be read by this build without migration. */
-export function isSupportedSchemaVersion(version: unknown): boolean {
-  return version === 1;
-}

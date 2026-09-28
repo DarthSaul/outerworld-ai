@@ -63,6 +63,12 @@ describe("parseRunRecord", () => {
     expect(result.issues[0]?.path).toBe("startedAt");
   });
 
+  it("rejects a session URL that is not https (it is rendered as a link)", () => {
+    const result = parseRunRecord({ ...openRun(), sessionUrl: "javascript:alert(1)" });
+    expect(result.ok).toBe(false);
+    expect(result.issues[0]?.path).toBe("sessionUrl");
+  });
+
   it("rejects an unknown agent state", () => {
     const result = parseRunRecord({
       ...openRun(),

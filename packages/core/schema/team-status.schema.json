@@ -34,13 +34,21 @@
           },
           "state": {
             "type": "string",
-            "enum": ["idle", "working", "done", "failed"]
+            "enum": [
+              "idle",
+              "working",
+              "done",
+              "failed"
+            ]
           },
           "note": {
             "type": "string"
           }
         },
-        "required": ["agentId", "state"],
+        "required": [
+          "agentId",
+          "state"
+        ],
         "additionalProperties": {}
       }
     },
@@ -49,6 +57,12 @@
       "minLength": 1
     }
   },
-  "required": ["schemaVersion", "teamId", "updatedAt", "agents", "ledgerPath"],
+  "required": [
+    "schemaVersion",
+    "teamId",
+    "updatedAt",
+    "agents",
+    "ledgerPath"
+  ],
   "additionalProperties": {}
 }

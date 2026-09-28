@@ -24,7 +24,10 @@
           "type": "string"
         }
       },
-      "required": ["asOf", "sourcePath"],
+      "required": [
+        "asOf",
+        "sourcePath"
+      ],
       "additionalProperties": {}
     },
     "teams": {
@@ -38,14 +41,23 @@
         "properties": {
           "health": {
             "type": "string",
-            "enum": ["ok", "attention", "stalled"]
+            "enum": [
+              "ok",
+              "attention",
+              "stalled"
+            ]
           },
           "healthReason": {
             "type": "string"
           },
           "run": {
             "type": "string",
-            "enum": ["idle", "working", "done", "failed"]
+            "enum": [
+              "idle",
+              "working",
+              "done",
+              "failed"
+            ]
           },
           "lastRun": {
             "type": "object",
@@ -62,7 +74,10 @@
               },
               "outcome": {
                 "type": "string",
-                "enum": ["done", "failed"]
+                "enum": [
+                  "done",
+                  "failed"
+                ]
               },
               "sessionUrl": {
                 "type": "string",
@@ -83,7 +98,10 @@
                       "maximum": 9007199254740991
                     }
                   },
-                  "required": ["grantId", "count"],
+                  "required": [
+                    "grantId",
+                    "count"
+                  ],
                   "additionalProperties": {}
                 }
               },
@@ -107,14 +125,22 @@
                     "type": "string"
                   }
                 },
-                "required": ["changed", "linesAdded", "linesRemoved"],
+                "required": [
+                  "changed",
+                  "linesAdded",
+                  "linesRemoved"
+                ],
                 "additionalProperties": {}
               },
               "error": {
                 "type": "string"
               }
             },
-            "required": ["startedAt", "grantsUsed", "ledger"],
+            "required": [
+              "startedAt",
+              "grantsUsed",
+              "ledger"
+            ],
             "additionalProperties": {}
           },
           "recentRuns": {
@@ -135,7 +161,10 @@
                 },
                 "outcome": {
                   "type": "string",
-                  "enum": ["done", "failed"]
+                  "enum": [
+                    "done",
+                    "failed"
+                  ]
                 },
                 "sessionUrl": {
                   "type": "string",
@@ -156,7 +185,10 @@
                         "maximum": 9007199254740991
                       }
                     },
-                    "required": ["grantId", "count"],
+                    "required": [
+                      "grantId",
+                      "count"
+                    ],
                     "additionalProperties": {}
                   }
                 },
@@ -180,14 +212,22 @@
                       "type": "string"
                     }
                   },
-                  "required": ["changed", "linesAdded", "linesRemoved"],
+                  "required": [
+                    "changed",
+                    "linesAdded",
+                    "linesRemoved"
+                  ],
                   "additionalProperties": {}
                 },
                 "error": {
                   "type": "string"
                 }
               },
-              "required": ["startedAt", "grantsUsed", "ledger"],
+              "required": [
+                "startedAt",
+                "grantsUsed",
+                "ledger"
+              ],
               "additionalProperties": {}
             }
           },
@@ -222,21 +262,35 @@
                     }
                   }
                 },
-                "required": ["nextSteps", "waitingOn", "log"],
+                "required": [
+                  "nextSteps",
+                  "waitingOn",
+                  "log"
+                ],
                 "additionalProperties": {}
               },
               "changedInLastRun": {
                 "type": "boolean"
               }
             },
-            "required": ["path", "exists", "changedInLastRun"],
+            "required": [
+              "path",
+              "exists",
+              "changedInLastRun"
+            ],
             "additionalProperties": {}
           },
           "degraded": {
             "type": "boolean"
           }
         },
-        "required": ["health", "run", "recentRuns", "ledger", "degraded"],
+        "required": [
+          "health",
+          "run",
+          "recentRuns",
+          "ledger",
+          "degraded"
+        ],
         "additionalProperties": {}
       }
     },
@@ -251,13 +305,20 @@
         "properties": {
           "state": {
             "type": "string",
-            "enum": ["idle", "working", "done", "failed"]
+            "enum": [
+              "idle",
+              "working",
+              "done",
+              "failed"
+            ]
           },
           "note": {
             "type": "string"
           }
         },
-        "required": ["state"],
+        "required": [
+          "state"
+        ],
         "additionalProperties": {}
       }
     },
@@ -274,7 +335,9 @@
             "type": "boolean"
           }
         },
-        "required": ["carrying"],
+        "required": [
+          "carrying"
+        ],
         "additionalProperties": {}
       }
     },
@@ -283,7 +346,12 @@
       "properties": {
         "state": {
           "type": "string",
-          "enum": ["idle", "reconciling", "reported", "attention"]
+          "enum": [
+            "idle",
+            "reconciling",
+            "reported",
+            "attention"
+          ]
         },
         "lastRunStartedAt": {
           "type": "string",
@@ -313,7 +381,10 @@
                 "type": "string"
               }
             },
-            "required": ["teamId", "reason"],
+            "required": [
+              "teamId",
+              "reason"
+            ],
             "additionalProperties": {}
           }
         },
@@ -321,7 +392,11 @@
           "type": "string"
         }
       },
-      "required": ["state", "reconciled", "attention"],
+      "required": [
+        "state",
+        "reconciled",
+        "attention"
+      ],
       "additionalProperties": {}
     },
     "issues": {
@@ -331,7 +406,10 @@
         "properties": {
           "level": {
             "type": "string",
-            "enum": ["warn", "error"]
+            "enum": [
+              "warn",
+              "error"
+            ]
           },
           "path": {
             "type": "string"
@@ -340,11 +418,23 @@
             "type": "string"
           }
         },
-        "required": ["level", "path", "message"],
+        "required": [
+          "level",
+          "path",
+          "message"
+        ],
         "additionalProperties": {}
       }
     }
   },
-  "required": ["schemaVersion", "provenance", "teams", "agents", "handoffs", "overseer", "issues"],
+  "required": [
+    "schemaVersion",
+    "provenance",
+    "teams",
+    "agents",
+    "handoffs",
+    "overseer",
+    "issues"
+  ],
   "additionalProperties": {}
 }

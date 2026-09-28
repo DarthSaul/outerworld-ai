@@ -36,7 +36,7 @@ export const RunRecord = z.looseObject({
   endedAt: Timestamp.optional(),
   outcome: RunOutcome.optional(),
   sessionId: z.string().optional(),
-  sessionUrl: z.url().optional(),
+  sessionUrl: z.url({ protocol: /^https$/ }).optional(), // rendered as a link: https only
   agents: z.array(AgentState),
   grantsUsed: z.array(GrantUse),
   ledger: LedgerChange,

@@ -4,6 +4,9 @@ import { AgentRunState, GrantUse, LedgerChange, OverseerState, RunOutcome } from
 
 export const Health = z.enum(["ok", "attention", "stalled"]);
 
+/** How many recent runs the dashboard keeps per team. */
+export const RECENT_RUNS_MAX = 6;
+
 export const IssueSchema = z.looseObject({
   level: z.enum(["warn", "error"]),
   path: z.string(),
@@ -15,7 +18,7 @@ export const RunSummary = z.looseObject({
   startedAt: Timestamp,
   endedAt: Timestamp.optional(),
   outcome: RunOutcome.optional(),
-  sessionUrl: z.url().optional(),
+  sessionUrl: z.url({ protocol: /^https$/ }).optional(), // rendered as a link: https only
   grantsUsed: z.array(GrantUse),
   ledger: LedgerChange,
   error: z.string().optional(),
@@ -32,7 +35,7 @@ export const TeamState = z.looseObject({
   healthReason: z.string().optional(),
   run: AgentRunState,
   lastRun: RunSummary.optional(),
-  recentRuns: z.array(RunSummary).max(6),
+  recentRuns: z.array(RunSummary).max(RECENT_RUNS_MAX),
   ledger: z.looseObject({
     path: z.string(),
     exists: z.boolean(),

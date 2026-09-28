@@ -37,7 +37,14 @@
           },
           "category": {
             "type": "string",
-            "enum": ["research", "build", "operations", "records", "coordination", "other"]
+            "enum": [
+              "research",
+              "build",
+              "operations",
+              "records",
+              "coordination",
+              "other"
+            ]
           },
           "emblem": {
             "type": "object",
@@ -49,10 +56,20 @@
               },
               "mark": {
                 "type": "string",
-                "enum": ["spire", "forge", "dome", "archive", "beacon", "none"]
+                "enum": [
+                  "spire",
+                  "forge",
+                  "dome",
+                  "archive",
+                  "beacon",
+                  "none"
+                ]
               }
             },
-            "required": ["hue", "mark"],
+            "required": [
+              "hue",
+              "mark"
+            ],
             "additionalProperties": {}
           },
           "scope": {
@@ -66,7 +83,9 @@
                 }
               }
             },
-            "required": ["repos"],
+            "required": [
+              "repos"
+            ],
             "additionalProperties": {}
           },
           "schedule": {
@@ -84,7 +103,10 @@
                     "maximum": 9007199254740991
                   }
                 },
-                "required": ["kind", "everyMinutes"],
+                "required": [
+                  "kind",
+                  "everyMinutes"
+                ],
                 "additionalProperties": {}
               },
               {
@@ -103,13 +125,25 @@
                     "minLength": 1
                   }
                 },
-                "required": ["kind", "expression", "timezone"],
+                "required": [
+                  "kind",
+                  "expression",
+                  "timezone"
+                ],
                 "additionalProperties": {}
               }
             ]
           }
         },
-        "required": ["id", "name", "mission", "category", "emblem", "scope", "schedule"],
+        "required": [
+          "id",
+          "name",
+          "mission",
+          "category",
+          "emblem",
+          "scope",
+          "schedule"
+        ],
         "additionalProperties": {}
       }
     },
@@ -163,22 +197,48 @@
                   },
                   "head": {
                     "type": "string",
-                    "enum": ["dome", "wedge", "crest"]
+                    "enum": [
+                      "dome",
+                      "wedge",
+                      "crest"
+                    ]
                   },
                   "trace": {
                     "type": "string",
-                    "enum": ["core", "bar", "chevron", "split", "frame", "twin"]
+                    "enum": [
+                      "core",
+                      "bar",
+                      "chevron",
+                      "split",
+                      "frame",
+                      "twin"
+                    ]
                   }
                 },
-                "required": ["tintHue", "trimHue", "head", "trace"],
+                "required": [
+                  "tintHue",
+                  "trimHue",
+                  "head",
+                  "trace"
+                ],
                 "additionalProperties": {}
               }
             },
-            "required": ["name", "mandate", "tone", "allowlist", "rig"],
+            "required": [
+              "name",
+              "mandate",
+              "tone",
+              "allowlist",
+              "rig"
+            ],
             "additionalProperties": {}
           }
         },
-        "required": ["id", "teamId", "persona"],
+        "required": [
+          "id",
+          "teamId",
+          "persona"
+        ],
         "additionalProperties": {}
       }
     },
@@ -197,22 +257,34 @@
           },
           "tool": {
             "type": "string",
-            "minLength": 1
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
           },
           "mode": {
             "type": "string",
-            "enum": ["read", "write"]
+            "enum": [
+              "read",
+              "write"
+            ]
           },
           "kind": {
             "type": "string",
-            "enum": ["connector", "skill"]
+            "enum": [
+              "connector",
+              "skill"
+            ]
           },
           "label": {
             "type": "string",
             "minLength": 1
           }
         },
-        "required": ["id", "teamId", "tool", "mode", "kind"],
+        "required": [
+          "id",
+          "teamId",
+          "tool",
+          "mode",
+          "kind"
+        ],
         "additionalProperties": {}
       }
     },
@@ -237,7 +309,11 @@
             "type": "string"
           }
         },
-        "required": ["id", "from", "to"],
+        "required": [
+          "id",
+          "from",
+          "to"
+        ],
         "additionalProperties": {}
       }
     },
@@ -260,7 +336,11 @@
               "minLength": 1
             }
           },
-          "required": ["name", "mandate", "tone"],
+          "required": [
+            "name",
+            "mandate",
+            "tone"
+          ],
           "additionalProperties": {}
         },
         "schedule": {
@@ -278,7 +358,10 @@
                   "maximum": 9007199254740991
                 }
               },
-              "required": ["kind", "everyMinutes"],
+              "required": [
+                "kind",
+                "everyMinutes"
+              ],
               "additionalProperties": {}
             },
             {
@@ -297,7 +380,11 @@
                   "minLength": 1
                 }
               },
-              "required": ["kind", "expression", "timezone"],
+              "required": [
+                "kind",
+                "expression",
+                "timezone"
+              ],
               "additionalProperties": {}
             }
           ]
@@ -310,14 +397,29 @@
               "const": "discord-webhook"
             }
           },
-          "required": ["kind"],
+          "required": [
+            "kind"
+          ],
           "additionalProperties": {}
         }
       },
-      "required": ["persona", "schedule", "outward"],
+      "required": [
+        "persona",
+        "schedule",
+        "outward"
+      ],
       "additionalProperties": {}
     }
   },
-  "required": ["schemaVersion", "id", "name", "teams", "agents", "grants", "handoffs", "overseer"],
+  "required": [
+    "schemaVersion",
+    "id",
+    "name",
+    "teams",
+    "agents",
+    "grants",
+    "handoffs",
+    "overseer"
+  ],
   "additionalProperties": {}
 }

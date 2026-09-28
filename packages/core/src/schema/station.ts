@@ -52,7 +52,7 @@ export const Team = z.looseObject({
 export const Grant = z.looseObject({
   id: Id,
   teamId: Id,
-  tool: z.string().min(1),
+  tool: Id,
   mode: GrantMode,
   kind: GrantKind,
   label: z.string().min(1).optional(),
