@@ -40,7 +40,7 @@ export default function HomePage() {
   );
   return (
     <div
-      className="ow-dashboard grid h-dvh grid-rows-[auto_minmax(0,1fr)_auto] gap-(--ow-space-4) p-(--ow-space-4)"
+      className="ow-dashboard grid min-h-dvh grid-rows-[auto_auto_auto] gap-(--ow-space-4) p-(--ow-space-4) desktop:h-dvh desktop:grid-rows-[auto_minmax(0,1fr)_auto]"
       data-fits-viewport
     >
       <nav

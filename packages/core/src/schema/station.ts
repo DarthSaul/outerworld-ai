@@ -98,6 +98,12 @@ export const Station = z.looseObject({
   overseer: Overseer,
 });
 
+export type TeamCategory = z.infer<typeof TeamCategory>;
+export type EmblemMark = z.infer<typeof EmblemMark>;
+export type GrantMode = z.infer<typeof GrantMode>;
+export type GrantKind = z.infer<typeof GrantKind>;
+export type RigHead = z.infer<typeof RigHead>;
+export type RigTrace = z.infer<typeof RigTrace>;
 export type Schedule = z.infer<typeof Schedule>;
 export type Team = z.infer<typeof Team>;
 export type Grant = z.infer<typeof Grant>;

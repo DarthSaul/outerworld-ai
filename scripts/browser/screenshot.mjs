@@ -184,7 +184,7 @@ try {
               `${name}: taller than the viewport but body overflow is hidden, so it cannot scroll`,
             );
           // With a real ledger (OUTERWORLD_LEDGER_PATH set) check by hand that the nav shows your station's name.
-          if (!process.env.OUTERWORLD_LEDGER_PATH && !probe.fixtureName)
+          if (route === "/" && !process.env.OUTERWORLD_LEDGER_PATH && !probe.fixtureName)
             failures.push(
               `${name}: "Demo Station" is missing; the served page does not reflect the loaded ledger`,
             );

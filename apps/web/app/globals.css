@@ -8,13 +8,15 @@ body {
 }
 
 /* The dashboard fits the viewport and scrolls inside its panes; other routes stay normal documents. */
-body:has([data-fits-viewport]) {
+body:has([data-fits-viewport] [data-layout="split"]) {
   overflow: hidden;
 }
 
 body {
   min-height: 100dvh;
-  background: linear-gradient(180deg, var(--ow-surface-map), var(--ow-surface-map-end));
+  /* A solid color under the gradient: contrast tools read background-color, not the image. */
+  background-color: var(--ow-surface-map);
+  background-image: linear-gradient(180deg, var(--ow-surface-map), var(--ow-surface-map-end));
   background-attachment: fixed;
   color: var(--ow-ink-1);
   font-family: var(--ow-font-sans);
