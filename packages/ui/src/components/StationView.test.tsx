@@ -51,6 +51,9 @@ describe("StationView", () => {
     render(<StationView station={station} state={state} desktop sidebar={<p>settings</p>} />);
     expect(document.querySelector("[data-columns]")).toHaveAttribute("data-columns", "3");
     expect(screen.getByText("settings").closest("[data-sidebar]")).not.toBeNull();
+    expect(screen.getByRole("region", { name: "Overview" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Map" })).toHaveAttribute("data-pane", "void");
+    expect(screen.getByRole("region", { name: "Report" })).toBeInTheDocument();
   });
 
   it("accepts a controlled selection", () => {

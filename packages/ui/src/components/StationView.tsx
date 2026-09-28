@@ -1,6 +1,7 @@
-import type { Station, StationState } from "@darthsaul/outerworld-ai-core";
+import { type Station, type StationState, term } from "@darthsaul/outerworld-ai-core";
 import { type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { DetailPanel } from "./DetailPanel.js";
+import { Pane } from "./Pane.js";
 import { StationMap } from "./StationMap.js";
 import type { Selection } from "./selection.js";
 import { useDesktop } from "./useDesktop.js";
@@ -17,7 +18,7 @@ export interface StationViewProps {
   readonly toolbar?: ReactNode;
   /**
    * Left column on desktop: settings and everything that is not the map or the report. With a
-   * sidebar the desktop grid is 1fr 4fr 1fr (sidebar, map, report); without one it is map + panel.
+   * sidebar the desktop grid is 1fr 3fr 1fr (sidebar, map, report); without one it is map + panel.
    */
   readonly sidebar?: ReactNode;
 }
@@ -67,7 +68,9 @@ export function StationView({
     const el = mapRef.current;
     if (!el || typeof ResizeObserver === "undefined") return;
     const fitZoom = () => {
-      const w = el.clientWidth;
+      const cs = getComputedStyle(el);
+      const w =
+        el.clientWidth - Number.parseFloat(cs.paddingLeft) - Number.parseFloat(cs.paddingRight);
       if (w > 0) setZoom(Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, w / MAP_UNITS)));
     };
     fitZoom();
@@ -82,13 +85,17 @@ export function StationView({
       state={state}
       selection={selection}
       onSelect={setSelection}
+      bare
       {...(desktop ? {} : { onClose: () => setSelection(null), sheet: true })}
     />
   );
-  const sidebarBlock = sidebar ? (
-    <div className="flex min-w-0 flex-col gap-(--ow-space-4)" data-sidebar>
-      {sidebar}
-    </div>
+  const selectionLabel = selection ? `${selection.kind} · ${selection.id}` : "none";
+  const sidebarPane = sidebar ? (
+    <Pane title="Overview">
+      <div className="flex min-w-0 flex-col gap-(--ow-space-4) p-(--ow-space-4)" data-sidebar>
+        {sidebar}
+      </div>
+    </Pane>
   ) : null;
 
   return (
@@ -104,36 +111,52 @@ export function StationView({
         <div
           className={
             sidebar
-              ? "grid grid-cols-[1fr_4fr_1fr] items-start gap-(--ow-space-6)"
-              : "grid grid-cols-[minmax(0,1fr)_var(--ow-size-panel-w)] items-start gap-(--ow-space-6)"
+              ? "grid grid-cols-[1fr_3fr_1fr] items-stretch gap-(--ow-space-4)"
+              : "grid grid-cols-[minmax(0,1fr)_var(--ow-size-panel-w)] items-stretch gap-(--ow-space-4)"
           }
           data-columns={sidebar ? "3" : "2"}
         >
-          {sidebarBlock}
-          <div ref={mapRef} className="min-w-0 overflow-x-auto">
-            <StationMap
-              station={station}
-              state={state}
-              selection={selection}
-              onSelect={setSelection}
-              zoom={zoom}
-            />
-          </div>
-          {panel}
+          {sidebarPane}
+          <Pane
+            title="Map"
+            void
+            menu={
+              <span>
+                {term("proof.asOf")} {state.provenance.asOf}
+              </span>
+            }
+          >
+            <div ref={mapRef} className="min-w-0 overflow-x-auto p-(--ow-space-4)">
+              <StationMap
+                station={station}
+                state={state}
+                selection={selection}
+                onSelect={setSelection}
+                zoom={zoom}
+              />
+            </div>
+          </Pane>
+          <Pane title={term("report.tab")} menu={<span>{selectionLabel}</span>}>
+            {panel}
+          </Pane>
         </div>
       ) : (
         <>
-          {sidebarBlock}
-          <StationMap
-            station={station}
-            state={state}
-            selection={selection}
-            onSelect={setSelection}
-            stacked
-          />
+          {sidebarPane}
+          <Pane title="Map" void>
+            <div className="p-(--ow-space-4)">
+              <StationMap
+                station={station}
+                state={state}
+                selection={selection}
+                onSelect={setSelection}
+                stacked
+              />
+            </div>
+          </Pane>
           {selection ? (
             <div className="ow-sheet fixed inset-x-0 bottom-0 z-10 max-h-[80vh] overflow-y-auto">
-              {panel}
+              <Pane title={term("report.tab")}>{panel}</Pane>
             </div>
           ) : null}
         </>

@@ -4,7 +4,7 @@ import { DigestDemo } from "./components/DigestDemo";
 import { ThemeToggle } from "./components/ThemeToggle";
 
 /**
- * The dashboard. Server-side: read the ledger. Desktop: three columns, 1fr 4fr 1fr; the left
+ * The dashboard. Server-side: read the ledger. Desktop: three columns, 1fr 3fr 1fr; the left
  * column holds identity, settings, and controls, the middle the map, the right the report.
  */
 export default function HomePage() {

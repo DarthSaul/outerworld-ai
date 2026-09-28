@@ -3,7 +3,9 @@
 @source "../../../packages/ui/src";
 
 body {
-  background: var(--ow-surface-map);
+  min-height: 100dvh;
+  background: linear-gradient(180deg, var(--ow-surface-map), var(--ow-surface-map-end));
+  background-attachment: fixed;
   color: var(--ow-ink-1);
   font-family: var(--ow-font-sans);
   -webkit-font-smoothing: antialiased;

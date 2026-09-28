@@ -15,7 +15,7 @@
   height: calc(var(--ow-map-units) * 1px);
   transform: scale(var(--ow-map-zoom));
   transform-origin: top left;
-  background: var(--ow-surface-map);
+  background: transparent; /* the pane behind it owns the color */
   overflow: visible;
 }
 .ow-map-svg {

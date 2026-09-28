@@ -8,6 +8,7 @@
 export const THEMED_TOKENS = [
   "accent-l",
   "surface-map",
+  "surface-map-end",
   "surface-team",
   "surface-panel",
   "surface-raised",

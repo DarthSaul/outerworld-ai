@@ -7,6 +7,8 @@
   /* Reset Tailwind's palette so no non-token color utility exists. */
   --color-*: initial;
   --color-surface-map: var(--ow-surface-map);
+  --color-surface-map-end: var(--ow-surface-map-end);
+  --color-surface-void: var(--ow-surface-void);
   --color-surface-team: var(--ow-surface-team);
   --color-surface-panel: var(--ow-surface-panel);
   --color-surface-raised: var(--ow-surface-raised);

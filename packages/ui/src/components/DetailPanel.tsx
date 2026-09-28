@@ -28,6 +28,8 @@ export interface DetailPanelProps {
   readonly onClose?: () => void;
   /** Rendered as a bottom sheet (mobile). */
   readonly sheet?: boolean;
+  /** No border, background, or radius: the parent pane supplies them. */
+  readonly bare?: boolean;
 }
 
 /* ---------- small parts ---------- */
@@ -572,6 +574,7 @@ export function DetailPanel({
   onSelect,
   onClose,
   sheet,
+  bare,
 }: DetailPanelProps) {
   let body: ReactNode;
   if (!selection) {
@@ -616,7 +619,8 @@ export function DetailPanel({
     <aside
       aria-label={term("report.tab")}
       className={[
-        "ow-detail flex flex-col gap-(--ow-space-5) rounded-panel border border-border-subtle bg-surface-panel p-(--ow-size-panel-pad)",
+        "ow-detail flex flex-col gap-(--ow-space-5) p-(--ow-size-panel-pad)",
+        bare ? "" : "rounded-panel border border-border-subtle bg-surface-panel",
         sheet ? "ow-detail--sheet" : "",
       ]
         .filter(Boolean)

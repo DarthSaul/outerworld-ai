@@ -7,7 +7,7 @@ describe("HomePage", () => {
     render(<HomePage />);
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Demo Station");
     expect(screen.getByText(/demo fixture/i)).toBeInTheDocument();
-    expect(screen.getByText(/2026-09-27T14:03:00Z/)).toBeInTheDocument();
+    expect(screen.getAllByText(/2026-09-27T14:03:00Z/).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByRole("group", { name: "Project Management" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Ultron/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /run digest/i })).toBeInTheDocument();
