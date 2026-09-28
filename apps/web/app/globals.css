@@ -3,7 +3,8 @@
 @source "../../../packages/ui/src";
 
 body {
-  background: var(--ow-surface-map);
+  margin: 0;
+  background: var(--ow-frame-bezel);
   color: var(--ow-ink-1);
   font-family: var(--ow-font-sans);
   -webkit-font-smoothing: antialiased;

@@ -1,0 +1,56 @@
+/* The retro monitor: a plastic bezel with a bevel, a curved-corner screen with an edge vignette
+   and a faint glass sheen, and a chin with a power LED. No scanlines (design spec §09). */
+.ow-frame {
+  box-sizing: border-box;
+  min-height: 100dvh;
+  padding: var(--ow-frame-width);
+  padding-bottom: calc(var(--ow-frame-width) + var(--ow-space-6));
+  background: var(--ow-frame-bezel);
+  border-radius: var(--ow-frame-radius);
+  box-shadow:
+    inset var(--ow-size-frame-border) var(--ow-size-frame-border) 0 var(--ow-frame-bezel-highlight),
+    inset calc(-1 * var(--ow-size-frame-border)) calc(-1 * var(--ow-size-frame-border)) 0
+    var(--ow-frame-bezel-shadow);
+  position: relative;
+}
+.ow-screen {
+  position: relative;
+  min-height: calc(100dvh - 2 * var(--ow-frame-width) - var(--ow-space-6));
+  border-radius: var(--ow-screen-radius);
+  background: var(--ow-surface-map);
+  box-shadow:
+    inset 0 0 var(--ow-screen-vignette-blur) var(--ow-screen-vignette),
+    0 0 0 var(--ow-size-frame-border) var(--ow-frame-bezel-shadow);
+  overflow: clip;
+}
+/* Glass sheen: a soft diagonal highlight that never covers text contrast (single-digit percent). */
+.ow-screen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(135deg, var(--ow-screen-glass), transparent 40%);
+}
+.ow-frame-chin {
+  position: absolute;
+  left: var(--ow-frame-width);
+  right: var(--ow-frame-width);
+  bottom: calc(var(--ow-frame-width) * 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--ow-frame-chin-ink);
+  font-family: var(--ow-font-mono);
+  font-size: var(--ow-text-eyebrow-size);
+  letter-spacing: var(--ow-text-eyebrow-tracking);
+  text-transform: uppercase;
+}
+.ow-frame-led {
+  display: inline-block;
+  width: var(--ow-size-health-dot);
+  height: var(--ow-size-health-dot);
+  border-radius: var(--ow-radius-full);
+  background: var(--ow-health-ok);
+  box-shadow: 0 0 var(--ow-space-2) var(--ow-health-ok);
+}

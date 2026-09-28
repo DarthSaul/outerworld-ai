@@ -38,6 +38,7 @@ export {
   Packet,
 } from "./components/HandoffLayer.js";
 export { OverseerCore, type OverseerCoreProps } from "./components/OverseerCore.js";
+export { ScreenFrame, type ScreenFrameProps } from "./components/ScreenFrame.js";
 export { StationMap, type StationMapProps, timeLabel } from "./components/StationMap.js";
 export { StationView, type StationViewProps } from "./components/StationView.js";
 export { isSelected, type Selection, type SelectionKind } from "./components/selection.js";

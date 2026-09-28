@@ -24,6 +24,12 @@ export const THEMED_TOKENS = [
   "overseer-primary",
   "overseer-secondary",
   "overseer-frame",
+  "frame-bezel",
+  "frame-bezel-highlight",
+  "frame-bezel-shadow",
+  "frame-chin-ink",
+  "screen-vignette",
+  "screen-glass",
 ] as const;
 
 /** Run-state glow tokens; the rig sets --ow-rig-glow to one of these from `data-state`. */

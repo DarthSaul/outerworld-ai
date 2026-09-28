@@ -31,12 +31,20 @@ const HUES = [230, 55, 150, 300, 20];
 function Section({
   title,
   children,
+  wide,
 }: {
   readonly title: string;
   readonly children: React.ReactNode;
+  readonly wide?: boolean;
 }) {
   return (
-    <section className="flex flex-col gap-(--ow-space-3)">
+    <section
+      className={
+        wide
+          ? "flex w-full flex-col gap-(--ow-space-3)"
+          : "flex max-w-(--ow-measure) flex-col gap-(--ow-space-3)"
+      }
+    >
       <h2 className="font-mono text-eyebrow uppercase text-ink-3">{title}</h2>
       {children}
     </section>
@@ -63,7 +71,7 @@ export function Gallery({
   readonly state: StationState;
 }) {
   return (
-    <main className="mx-auto flex max-w-(--ow-measure) flex-col gap-(--ow-space-8) p-(--ow-space-6)">
+    <main className="flex w-full flex-col gap-(--ow-space-8) p-(--ow-space-6)">
       <header className="flex flex-wrap items-center justify-between gap-(--ow-space-3)">
         <h1 className="text-title text-ink-1">Component gallery</h1>
         <ThemeToggle />
@@ -230,7 +238,7 @@ export function Gallery({
         </div>
       </Section>
 
-      <Section title="Station view · run digest demo · responsive">
+      <Section title="Station view · run digest demo · responsive" wide>
         {/* Full-bleed: the view needs the viewport, not the gallery's reading measure. */}
         <div
           data-gallery="station-view"
