@@ -20,9 +20,17 @@ export interface Layout {
   readonly teams: Readonly<Record<string, TeamBox>>;
 }
 
-const OVERSEER = { w: 144, h: 160 } as const; // design spec §04, in layout units
-const TEAM = { w: 280, h: 200 } as const;
-const RING_RADIUS = [340, 470] as const;
+const OVERSEER = { w: 192, h: 232 } as const; // holds the 96×128 hero rig plus two text lines (reconciliation A19)
+/** Radial tiers: box size and ring radius by team count, chosen so no box leaves the square. */
+const COMPACT_TIER = { maxTeams: 8, w: 240, h: 200, radius: 360 } as const;
+const RADIAL_TIERS = [
+  { maxTeams: 2, w: 360, h: 240, radius: 370 },
+  { maxTeams: 4, w: 320, h: 220, radius: 330 },
+  COMPACT_TIER,
+] as const;
+const TEAM = { w: 240, h: 200 } as const;
+/** Ring radii for the two-ring layout. */
+const RING_RADIUS = { inner: 296, outer: 420 } as const;
 const LIST_GAP = 24;
 
 const round = (n: number) => Math.round(n * 1000) / 1000;
@@ -54,11 +62,9 @@ export function layoutStation(station: Station): Layout {
   const teams: Record<string, TeamBox> = {};
 
   if (n <= RADIAL_MAX) {
-    const w = TEAM.w;
-    const h = TEAM.h;
-    const scale = 0.8; // inner-ring scale keeps the 8-team case inside the square
-    for (const [t, p] of onRing(station.teams, RING_RADIUS[0])) {
-      teams[t.id] = { ...boxAt(p.x, p.y, w * scale, h * scale), ring: 0 };
+    const tier = RADIAL_TIERS.find((t) => n <= t.maxTeams) ?? COMPACT_TIER;
+    for (const [t, p] of onRing(station.teams, tier.radius)) {
+      teams[t.id] = { ...boxAt(p.x, p.y, tier.w, tier.h), ring: 0 };
     }
     return { mode: "radial", overseer, teams };
   }
@@ -68,14 +74,10 @@ export function layoutStation(station: Station): Layout {
     const outer = n - inner;
     const w = TEAM.w * 0.6;
     const h = TEAM.h * 0.6;
-    for (const [t, p] of onRing(station.teams.slice(0, inner), RING_RADIUS[0] * 0.8)) {
+    for (const [t, p] of onRing(station.teams.slice(0, inner), RING_RADIUS.inner)) {
       teams[t.id] = { ...boxAt(p.x, p.y, w, h), ring: 0 };
     }
-    for (const [t, p] of onRing(
-      station.teams.slice(inner),
-      RING_RADIUS[1] * 0.92,
-      Math.PI / outer,
-    )) {
+    for (const [t, p] of onRing(station.teams.slice(inner), RING_RADIUS.outer, Math.PI / outer)) {
       teams[t.id] = { ...boxAt(p.x, p.y, w, h), ring: 1 };
     }
     return { mode: "rings", overseer, teams };

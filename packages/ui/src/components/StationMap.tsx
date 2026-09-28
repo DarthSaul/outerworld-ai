@@ -153,6 +153,7 @@ export function StationMap({
         selection={selection ?? null}
         dimmed={focusTeam !== undefined && !connected.has(t.id)}
         onSelect={onSelect}
+        agentColumns={1}
       />
     );
   });

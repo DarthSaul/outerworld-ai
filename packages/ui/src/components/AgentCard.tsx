@@ -56,7 +56,7 @@ export function AgentCard({
       />
       <span className="flex min-w-0 flex-col gap-(--ow-space-1)">
         <span className="text-label text-ink-1">{name}</span>
-        <span className="truncate text-caption text-ink-2">{mandate}</span>
+        <span className="line-clamp-2 text-caption text-ink-2">{mandate}</span>
         <span className="font-mono text-mono text-ink-3">{state}</span>
       </span>
     </button>

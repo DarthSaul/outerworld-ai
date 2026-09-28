@@ -72,7 +72,7 @@ describe("layoutStation", () => {
   });
 
   it("keeps every team inside the square and clear of the overseer core", () => {
-    for (const n of [1, 3, 8, 16]) {
+    for (const n of [1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 16]) {
       const l = layoutStation(station(n));
       for (const b of Object.values(l.teams)) {
         expect(b.x).toBeGreaterThanOrEqual(0);

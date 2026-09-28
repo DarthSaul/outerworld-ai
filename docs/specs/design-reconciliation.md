@@ -55,3 +55,7 @@ Decisions taken 2026-09-27 by the owner:
 10. **Grant model.** Connector id set for milestone 1 (notion, git, discord, file) and whether a grant is a connector or a skill; the mock treats each as a connector name with a mode.
 11. **Ledger file format.** Markdown with `## Next steps` / `## Waiting on` sections in the mock; the diff gutter needs a stable section structure. Define minimal headings the Routine must keep.
 12. **Glossary contents.** Set D strings, verbs, eyebrows, empty-state copy, and the overseer role noun "Assayer"; plain word always in the tooltip.
+- Owner review (A19): team cards were truncating mandates and the overseer core clipped the hero's head.
+  Team boxes are 360×240 layout units for up to four teams (240×200 beyond), agent cards stack in one
+  column on the map, the team max width is 400px (design: 320), and the overseer core is 192×232
+  (design: 144×160) so the 96×128 hero rig and two text lines fit.

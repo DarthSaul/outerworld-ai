@@ -3,7 +3,6 @@ import {
   deriveRig,
   type Grant,
   type Handoff,
-  overseerRig,
   type RunSummary,
   type Station,
   type StationState,
@@ -519,14 +518,13 @@ function OverseerBody({
   readonly onSelect: (s: Selection) => void;
 }) {
   const o = state.overseer;
-  const rig = overseerRig();
   return (
     <>
       <header className="flex items-start gap-(--ow-space-3)">
         <OverseerCharacter name={station.overseer.persona.name} state={o.state} scale={2} />
         <div className="flex min-w-0 flex-col gap-(--ow-space-1)">
           <Eyebrow>
-            {term("overseer.role")} · {rig.head} · {rig.trace}
+            {term("overseer.role")} · {term("overseer.plain")}
           </Eyebrow>
           <h2 className="text-title text-ink-1">{station.overseer.persona.name}</h2>
           <p className="text-body text-ink-2">{station.overseer.persona.mandate}</p>

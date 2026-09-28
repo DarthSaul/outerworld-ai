@@ -36,6 +36,8 @@ export interface TeamPanelProps {
   readonly dimmed?: boolean;
   /** Header row only (map zoomed out or mobile list). */
   readonly collapsed?: boolean;
+  /** Agent card columns. One lets mandates read in full on the map. */
+  readonly agentColumns?: 1 | 2;
   readonly onSelect: (selection: Selection) => void;
   /** Plain health word for the header, from the glossary. */
   readonly healthLabel?: string;
@@ -66,12 +68,13 @@ export function TeamPanel({
   collapsed,
   onSelect,
   healthLabel,
+  agentColumns = 2,
 }: TeamPanelProps) {
   const teamSelected = isSelected(selection, "team", id);
   return (
     <fieldset
       className={[
-        "ow-team m-0 flex min-w-(--ow-size-team-min-w) max-w-(--ow-size-team-max-w) flex-col gap-(--ow-size-team-gap) rounded-team border border-border-subtle bg-surface-team p-(--ow-size-team-pad)",
+        "ow-team m-0 flex w-full min-w-(--ow-size-team-min-w) max-w-(--ow-size-team-max-w) flex-col gap-(--ow-size-team-gap) rounded-team border border-border-subtle bg-surface-team p-(--ow-size-team-pad)",
         "transition-opacity duration-(--ow-dur-base) ease-standard",
         teamSelected ? "ring-(--ow-size-selection-ring) ring-selection-ring" : "",
       ]
@@ -93,7 +96,7 @@ export function TeamPanel({
         <TeamEmblem name={name} hue={emblem.hue} mark={emblem.mark} scale={2} />
         <span className="flex min-w-0 flex-1 flex-col gap-(--ow-space-1)">
           <span className="text-label font-semibold text-ink-1">{name}</span>
-          <span className="truncate text-caption text-ink-2">{mission}</span>
+          <span className="line-clamp-2 text-caption text-ink-2">{mission}</span>
           <span className="flex flex-wrap gap-(--ow-space-1) font-mono text-mono text-ink-3">
             {lastRunLabel ? (
               <>
@@ -126,7 +129,13 @@ export function TeamPanel({
               ))}
             </div>
           ) : null}
-          <div className="grid grid-cols-1 gap-(--ow-space-2) desktop:grid-cols-2">
+          <div
+            className={
+              agentColumns === 1
+                ? "grid grid-cols-1 gap-(--ow-space-2)"
+                : "grid grid-cols-1 gap-(--ow-space-2) desktop:grid-cols-2"
+            }
+          >
             {agents.map((a, i) => (
               <AgentCard
                 key={a.id}
