@@ -2,6 +2,12 @@
 @import "@darthsaul/outerworld-ai-ui/styles.css";
 @source "../../../packages/ui/src";
 
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+}
+
 body {
   min-height: 100dvh;
   background: linear-gradient(180deg, var(--ow-surface-map), var(--ow-surface-map-end));

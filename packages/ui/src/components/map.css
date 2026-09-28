@@ -36,6 +36,12 @@
   width: auto;
 }
 
+/* Wires from every team into the overseer: quiet, never emphasized; the overseer always reads. */
+.ow-overseer-link,
+.ow-overseer-link-chevron path {
+  stroke: var(--ow-handoff-default);
+}
+
 /* Lanes */
 .ow-handoff-stroke,
 .ow-handoff-chevron path {

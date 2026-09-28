@@ -43,7 +43,7 @@ export function ThemeToggle() {
   }, [theme]);
 
   return (
-    <fieldset className="flex items-center gap-(--ow-space-2) border-0 p-0">
+    <fieldset className="flex flex-wrap items-center gap-(--ow-space-2) border-0 p-0">
       <legend className="sr-only">Theme</legend>
       {(["system", "light", "dark"] as const).map((t) => (
         <label

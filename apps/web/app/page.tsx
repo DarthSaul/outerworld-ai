@@ -4,24 +4,17 @@ import { DigestDemo } from "./components/DigestDemo";
 import { ThemeToggle } from "./components/ThemeToggle";
 
 /**
- * The dashboard. Server-side: read the ledger. Desktop: three columns, 1fr 3fr 1fr; the left
- * column holds identity, settings, and controls, the middle the map, the right the report.
+ * The dashboard, sized to the viewport: a nav row, the three columns (overview 1fr, map 3fr,
+ * report 2fr), and a footer row. Panes scroll inside themselves; the page never does.
  */
 export default function HomePage() {
   const { station, state, source, sourcePath } = loadLedger();
   const sidebar = (
     <>
       <div className="flex flex-col gap-(--ow-space-1)">
-        <p className="font-mono text-eyebrow uppercase text-ink-3">
-          Outerworld AI · {term("station")}
-        </p>
         <h1 className="text-title text-ink-1">{station.name}</h1>
-        <p className="flex flex-col gap-(--ow-space-1) font-mono text-mono text-ink-3">
-          <span>
-            {term("proof.asOf")} {state.provenance.asOf}
-          </span>
-          <span>{source === "fixture" ? "demo fixture" : sourcePath}</span>
-          {state.provenance.sourceRef ? <span>{state.provenance.sourceRef}</span> : null}
+        <p className="font-mono text-mono text-ink-3">
+          {term("proof.asOf")} {state.provenance.asOf}
         </p>
       </div>
       <section aria-label="Settings" className="flex flex-col gap-(--ow-space-2)">
@@ -48,8 +41,26 @@ export default function HomePage() {
     </>
   );
   return (
-    <main className="flex min-h-screen flex-col gap-(--ow-space-6) p-(--ow-space-6)">
-      <DigestDemo station={station} initial={state} sidebar={sidebar} />
-    </main>
+    <div className="grid h-dvh grid-rows-[auto_minmax(0,1fr)_auto] gap-(--ow-space-4) p-(--ow-space-4)">
+      <nav
+        aria-label="Primary"
+        className="flex items-center justify-between rounded-panel border border-border-subtle bg-surface-panel px-(--ow-space-4) py-(--ow-space-4)"
+      >
+        <span className="font-mono text-label uppercase text-ink-1">
+          Outerworld AI · {term("station")}
+        </span>
+        <span className="font-mono text-mono text-ink-3">{station.name}</span>
+      </nav>
+      <main className="min-h-0">
+        <DigestDemo station={station} initial={state} sidebar={sidebar} />
+      </main>
+      <footer className="flex items-center justify-between rounded-panel border border-border-subtle bg-surface-panel px-(--ow-space-4) py-(--ow-space-4) font-mono text-mono text-ink-3">
+        <span>{source === "fixture" ? "demo fixture" : sourcePath}</span>
+        <span>
+          {state.provenance.sourceRef ? `${state.provenance.sourceRef} · ` : ""}
+          {term("proof.asOf")} {state.provenance.asOf}
+        </span>
+      </footer>
+    </div>
   );
 }

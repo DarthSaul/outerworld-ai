@@ -24,6 +24,7 @@ export {
   LAYOUT_SIZE,
   type Layout,
   layoutStation,
+  overseerLinkGeometry,
   RADIAL_MAX,
   RINGS_MAX,
   type TeamBox,

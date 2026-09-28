@@ -5,6 +5,7 @@ import {
   type HandoffGeometry,
   handoffGeometry,
   layoutStation,
+  overseerLinkGeometry,
   type Station,
   type StationState,
   term,
@@ -191,6 +192,31 @@ export function StationMap({
         style={{ "--ow-map-units": units } as CSSProperties}
       >
         <svg className="ow-map-svg" viewBox={`0 0 ${units} ${units}`} aria-label={term("handoffs")}>
+          <g className="ow-overseer-links" aria-hidden="true">
+            {station.teams.map((t) => {
+              const g = overseerLinkGeometry(t.id, layout);
+              return (
+                <g key={t.id} data-overseer-link={t.id}>
+                  <path
+                    d={g.path}
+                    fill="none"
+                    className="ow-overseer-link"
+                    strokeWidth="var(--ow-size-hairline)"
+                  />
+                  <g
+                    transform={`translate(${g.chevronAt.x} ${g.chevronAt.y}) rotate(${g.angle})`}
+                    className="ow-overseer-link-chevron"
+                  >
+                    <path
+                      d="M -6 -4 L 0 0 L -6 4"
+                      fill="none"
+                      strokeWidth="var(--ow-size-hairline)"
+                    />
+                  </g>
+                </g>
+              );
+            })}
+          </g>
           <HandoffLayer
             handoffs={handoffItems}
             geometry={geometry}

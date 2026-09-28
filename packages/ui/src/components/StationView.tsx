@@ -18,7 +18,7 @@ export interface StationViewProps {
   readonly toolbar?: ReactNode;
   /**
    * Left column on desktop: settings and everything that is not the map or the report. With a
-   * sidebar the desktop grid is 1fr 3fr 1fr (sidebar, map, report); without one it is map + panel.
+   * sidebar the desktop grid is 1fr 3fr 2fr (sidebar, map, report); without one it is map + panel.
    */
   readonly sidebar?: ReactNode;
 }
@@ -111,8 +111,8 @@ export function StationView({
         <div
           className={
             sidebar
-              ? "grid grid-cols-[1fr_3fr_1fr] items-stretch gap-(--ow-space-4)"
-              : "grid grid-cols-[minmax(0,1fr)_var(--ow-size-panel-w)] items-stretch gap-(--ow-space-4)"
+              ? "grid h-full min-h-0 grid-cols-[1fr_3fr_2fr] items-stretch gap-(--ow-space-4)"
+              : "grid h-full min-h-0 grid-cols-[minmax(0,1fr)_var(--ow-size-panel-w)] items-stretch gap-(--ow-space-4)"
           }
           data-columns={sidebar ? "3" : "2"}
         >

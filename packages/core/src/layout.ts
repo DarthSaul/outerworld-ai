@@ -22,15 +22,6 @@ export interface Layout {
 
 const OVERSEER = { w: 192, h: 232 } as const; // holds the 96×128 hero rig plus two text lines (reconciliation A19)
 /** Radial tiers: box size and ring radius by team count, chosen so no box leaves the square. */
-const COMPACT_TIER = { maxTeams: 8, w: 240, h: 200, radius: 360 } as const;
-const RADIAL_TIERS = [
-  { maxTeams: 2, w: 360, h: 240, radius: 370 },
-  { maxTeams: 4, w: 320, h: 220, radius: 330 },
-  COMPACT_TIER,
-] as const;
-const TEAM = { w: 240, h: 200 } as const;
-/** Ring radii for the two-ring layout. */
-const RING_RADIUS = { inner: 296, outer: 420 } as const;
 const LIST_GAP = 24;
 
 const round = (n: number) => Math.round(n * 1000) / 1000;
@@ -39,68 +30,70 @@ function boxAt(cx: number, cy: number, w: number, h: number): Box {
   return { x: round(cx - w / 2), y: round(cy - h / 2), w, h };
 }
 
-/** Pairs each item with a center on a ring, first at 12 o'clock, clockwise. */
-function onRing<T>(
-  items: readonly T[],
-  radius: number,
-  offset = 0,
-): Array<[T, { x: number; y: number }]> {
-  const c = LAYOUT_SIZE / 2;
-  return items.map((item, i) => {
-    const angle = -Math.PI / 2 + offset + (2 * Math.PI * i) / items.length;
-    return [item, { x: c + radius * Math.cos(angle), y: c + radius * Math.sin(angle) }];
-  });
-}
+const GUTTER = 48; // design spec §04 map gutter, in layout units
+const COLUMN_TIERS = [
+  { maxTeams: 4, columns: 1, w: 360, h: 240 },
+  { maxTeams: 10, columns: 2, w: 300, h: 220 },
+  { maxTeams: 16, columns: 3, w: 240, h: 200 },
+] as const;
+const LIST_TIER = COLUMN_TIERS[2];
 
 /**
- * Deterministic layout: the overseer at the center; teams radial for up to 8, on two rings for
- * 9-16, in a list beyond (design spec §04). Team order is station order. Pure.
+ * Deterministic layout: the overseer sits at the right edge, vertically centered; teams stack
+ * in one to three columns to its left (one column up to four teams, two up to ten, three up to
+ * sixteen), in station order, top to bottom then left to right. Above sixteen teams the map
+ * becomes a list with the overseer pinned at the top. Pure.
  */
 export function layoutStation(station: Station): Layout {
   const n = station.teams.length;
-  const overseer = boxAt(LAYOUT_SIZE / 2, LAYOUT_SIZE / 2, OVERSEER.w, OVERSEER.h);
   const teams: Record<string, TeamBox> = {};
 
-  if (n <= RADIAL_MAX) {
-    const tier = RADIAL_TIERS.find((t) => n <= t.maxTeams) ?? COMPACT_TIER;
-    for (const [t, p] of onRing(station.teams, tier.radius)) {
-      teams[t.id] = { ...boxAt(p.x, p.y, tier.w, tier.h), ring: 0 };
-    }
-    return { mode: "radial", overseer, teams };
+  if (n > RINGS_MAX) {
+    const cols = 2;
+    const w = (LAYOUT_SIZE - LIST_GAP * (cols + 1)) / cols;
+    const h = 120;
+    const top = OVERSEER.h + LIST_GAP * 2;
+    const overseerTop = boxAt(LAYOUT_SIZE / 2, OVERSEER.h / 2 + LIST_GAP, OVERSEER.w, OVERSEER.h);
+    station.teams.forEach((t, i) => {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      teams[t.id] = {
+        x: round(LIST_GAP + col * (w + LIST_GAP)),
+        y: round(top + row * (h + LIST_GAP)),
+        w: round(w),
+        h,
+        ring: 0,
+      };
+    });
+    return { mode: "list", overseer: overseerTop, teams };
   }
 
-  if (n <= RINGS_MAX) {
-    const inner = Math.ceil(n / 2);
-    const outer = n - inner;
-    const w = TEAM.w * 0.6;
-    const h = TEAM.h * 0.6;
-    for (const [t, p] of onRing(station.teams.slice(0, inner), RING_RADIUS.inner)) {
-      teams[t.id] = { ...boxAt(p.x, p.y, w, h), ring: 0 };
-    }
-    for (const [t, p] of onRing(station.teams.slice(inner), RING_RADIUS.outer, Math.PI / outer)) {
-      teams[t.id] = { ...boxAt(p.x, p.y, w, h), ring: 1 };
-    }
-    return { mode: "rings", overseer, teams };
-  }
-
-  // List: overseer pinned at top center, teams stacked below it, two columns.
-  const cols = 2;
-  const w = (LAYOUT_SIZE - LIST_GAP * (cols + 1)) / cols;
-  const h = 120;
-  const top = OVERSEER.h + LIST_GAP * 2;
-  const overseerTop = boxAt(LAYOUT_SIZE / 2, OVERSEER.h / 2 + LIST_GAP, OVERSEER.w, OVERSEER.h);
+  const tier = COLUMN_TIERS.find((t) => n <= t.maxTeams) ?? LIST_TIER;
+  const overseer = boxAt(
+    LAYOUT_SIZE - GUTTER - OVERSEER.w / 2,
+    LAYOUT_SIZE / 2,
+    OVERSEER.w,
+    OVERSEER.h,
+  );
+  // Teams occupy the space left of the overseer, with a gutter on every side.
+  const region = {
+    left: GUTTER,
+    right: overseer.x - GUTTER,
+    top: GUTTER,
+    bottom: LAYOUT_SIZE - GUTTER,
+  };
+  const perColumn = Math.ceil(n / tier.columns);
+  const colPitch = (region.right - region.left) / tier.columns;
   station.teams.forEach((t, i) => {
-    const col = i % cols;
-    const row = Math.floor(i / cols);
-    teams[t.id] = {
-      x: round(LIST_GAP + col * (w + LIST_GAP)),
-      y: round(top + row * (h + LIST_GAP)),
-      w: round(w),
-      h,
-      ring: 0,
-    };
+    const col = Math.floor(i / perColumn);
+    const row = i % perColumn;
+    const inThisColumn = Math.min(perColumn, n - col * perColumn);
+    const rowPitch = (region.bottom - region.top) / inThisColumn;
+    const cx = region.left + colPitch * (col + 0.5);
+    const cy = region.top + rowPitch * (row + 0.5);
+    teams[t.id] = { ...boxAt(cx, cy, tier.w, tier.h), ring: 0 };
   });
-  return { mode: "list", overseer: overseerTop, teams };
+  return { mode: n <= 4 ? "radial" : "rings", overseer, teams };
 }
 
 export interface HandoffGeometry {
@@ -185,4 +178,34 @@ export function handoffGeometry(
 function cubicAt(p0: number, p1: number, p2: number, p3: number, t: number): number {
   const u = 1 - t;
   return u * u * u * p0 + 3 * u * u * t * p1 + 3 * u * t * t * p2 + t * t * t * p3;
+}
+
+/**
+ * The wire from a team to the overseer: a cubic from the team box's right edge into the
+ * overseer box's left edge, with the chevron at the overseer end (it reads). Pure.
+ */
+export function overseerLinkGeometry(teamId: string, layout: Layout): HandoffGeometry {
+  const team = layout.teams[teamId];
+  if (!team) throw new Error(`team "${teamId}" is not in the layout`);
+  const o = layout.overseer;
+  const p0 = { x: team.x + team.w, y: team.y + team.h / 2 };
+  const p3 = { x: o.x, y: o.y + o.h / 2 };
+  const dx = p3.x - p0.x;
+  const p1 = { x: p0.x + dx * 0.5, y: p0.y };
+  const p2 = { x: p3.x - dx * 0.5, y: p3.y };
+  const r = (n: number) => round(n);
+  return {
+    path: `M ${r(p0.x)} ${r(p0.y)} C ${r(p1.x)} ${r(p1.y)}, ${r(p2.x)} ${r(p2.y)}, ${r(p3.x)} ${r(p3.y)}`,
+    midpoint: {
+      x: r(cubicAt(p0.x, p1.x, p2.x, p3.x, 0.5)),
+      y: r(cubicAt(p0.y, p1.y, p2.y, p3.y, 0.5)),
+    },
+    angle: (Math.atan2(p3.y - p0.y, p3.x - p0.x) * 180) / Math.PI,
+    chevronAt: {
+      x: r(cubicAt(p0.x, p1.x, p2.x, p3.x, 0.92)),
+      y: r(cubicAt(p0.y, p1.y, p2.y, p3.y, 0.92)),
+    },
+    paired: false,
+    side: 0,
+  };
 }

@@ -17,7 +17,7 @@ export function Pane({ title, menu, children, void: isVoid, className }: PanePro
     <section
       aria-label={title}
       className={[
-        "ow-pane flex min-w-0 flex-col overflow-hidden rounded-panel border border-border-subtle",
+        "ow-pane flex min-h-0 min-w-0 flex-col overflow-hidden rounded-panel border border-border-subtle",
         isVoid ? "ow-void bg-surface-void" : "bg-surface-panel",
         className ?? "",
       ]
@@ -33,7 +33,7 @@ export function Pane({ title, menu, children, void: isVoid, className }: PanePro
           </div>
         ) : null}
       </header>
-      <div className="min-w-0 flex-1">{children}</div>
+      <div className="min-h-0 min-w-0 flex-1 overflow-auto">{children}</div>
     </section>
   );
 }
