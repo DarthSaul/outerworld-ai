@@ -8,7 +8,8 @@ import { bullet, grantLabel, grantsOf, json, scheduleLabel, table, teamById } fr
  * `/schedule`; the minimum schedule interval is one hour; every connected connector is attached
  * by default and can be removed per Routine; the Default environment uses the Trusted network
  * allow-list, which does not include discord.com (Custom + Allowed domains adds it); environment
- * variables are set on the cloud environment; each run clones the default branch; pushes to
+ * variables are set on the cloud environment; each run clones the default branch and the session
+ * starts on an auto-named `claude/` branch (observed on a live run, 2026-09-28); pushes to
  * `claude/`-prefixed branches are always accepted; the session id is in
  * `CLAUDE_CODE_REMOTE_SESSION_ID` and its `cse_` prefix becomes `session_` in the transcript URL.
  */
@@ -40,6 +41,10 @@ Then rewrite \`status/teams/${teamId}.json\`.
 Never write to \`status/\` outside these two files. Never invent a state you did not reach.`;
 }
 
+const CHECKOUT_FIRST = `\`git checkout <default branch>\` (for example \`git checkout main\`). The cloud session
+   starts on an auto-named \`claude/\` branch, which is not where the ledger lives: every run clones
+   the default branch and the dashboard reads it, so every commit of this run goes there.`;
+
 const COMMIT_RULES = `## Commit and push
 
 Commit every change with a conventional message (\`chore(<teamId>): run <startedAt>\`). Then:
@@ -48,8 +53,10 @@ Commit every change with a conventional message (\`chore(<teamId>): run <started
 2. \`git push origin <default branch>\`.
 3. If the push is rejected, repeat steps 1 and 2 once.
 4. If it is rejected again, push to a fresh branch named \`claude/status-<teamId>-<startedAt>\`
-   (\`claude/\` branches are always accepted) and write \`notes: "pushed to claude/status-…"\` in the
-   closing record. The dashboard reads only the default branch, so the owner merges that branch.
+   with \`:\` replaced by \`-\` in the timestamp, as in the run filename (a git branch name cannot
+   contain \`:\`; \`claude/\` branches are always accepted), and write \`notes: "pushed to
+   claude/status-…"\` in the closing record. The dashboard reads only the default branch, so the
+   owner merges that branch.
 
 Never force-push. Never commit secrets: no tokens, no webhook URLs.`;
 
@@ -125,6 +132,7 @@ ${bullet(outbound.map((h) => `${name(h.to)} reads \`ledger/${team.id}.md\`${h.no
 
 ## Procedure
 
+0. ${CHECKOUT_FIRST}
 1. Write the opening run record (below), commit it, and push, so the dashboard can see the run
    is open even if a later step fails.
 2. Read your station report and every inbound report.
@@ -195,6 +203,7 @@ ${table(["from", "", "to", "note"], handoffRows)}
 
 ## What you write, in this order
 
+0. ${CHECKOUT_FIRST}
 1. \`status/overseer.json\` with \`state: "reconciling"\` at the start of the run; commit and push it.
 2. Read everything above. Set \`reconciled\` to the number of station reports you actually read.
 3. \`status/digest.md\`: the System Report, plain words, under 2000 characters (the post fails above
@@ -212,7 +221,8 @@ ${table(["from", "", "to", "note"], handoffRows)}
    \`state: "attention"\`, add \`notes: "post failed: <reason>"\`, commit, and push.
 
 Push rules: \`git pull --rebase origin <default branch>\` before each push; if a push is rejected
-twice, push to \`claude/status-overseer-<startedAt>\` and say so in \`notes\`; never force-push.
+twice, push to \`claude/status-overseer-<startedAt>\` with \`:\` replaced by \`-\` in the timestamp (a git
+branch name cannot contain \`:\`) and say so in \`notes\`; never force-push.
 
 You never edit a station report. You never post anything except the digest. You never assert
 a state you did not read from a file.

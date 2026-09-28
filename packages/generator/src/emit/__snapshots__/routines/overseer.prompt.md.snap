@@ -44,6 +44,9 @@ Handoffs in force:
 
 ## What you write, in this order
 
+0. `git checkout <default branch>` (for example `git checkout main`). The cloud session
+   starts on an auto-named `claude/` branch, which is not where the ledger lives: every run clones
+   the default branch and the dashboard reads it, so every commit of this run goes there.
 1. `status/overseer.json` with `state: "reconciling"` at the start of the run; commit and push it.
 2. Read everything above. Set `reconciled` to the number of station reports you actually read.
 3. `status/digest.md`: the System Report, plain words, under 2000 characters (the post fails above
@@ -61,7 +64,8 @@ Handoffs in force:
    `state: "attention"`, add `notes: "post failed: <reason>"`, commit, and push.
 
 Push rules: `git pull --rebase origin <default branch>` before each push; if a push is rejected
-twice, push to `claude/status-overseer-<startedAt>` and say so in `notes`; never force-push.
+twice, push to `claude/status-overseer-<startedAt>` with `:` replaced by `-` in the timestamp (a git
+branch name cannot contain `:`) and say so in `notes`; never force-push.
 
 You never edit a station report. You never post anything except the digest. You never assert
 a state you did not read from a file.

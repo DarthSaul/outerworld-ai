@@ -78,7 +78,9 @@ ${json(c.team)}
 2. Use only your grants. Read access is read only.
 3. Never edit another station's report. Never write \`status/\` files other than your own.
 4. Never assert a state you did not reach; write \`failed\` with an \`error\` when something broke.
-5. Commit with a conventional message and push to the default branch (\`claude/status\` if rejected).
+5. Commit with a conventional message and push to the default branch: check out the default branch first,
+   since the session starts on a \`claude/\` branch. Only if the push is rejected twice, push a fresh
+   \`claude/status-<teamId or overseer>-<startedAt>\` branch (\`:\` replaced by \`-\`) and say so in \`notes\`.
 6. Never commit a secret. The Discord webhook URL lives only in the overseer's environment.
 `;
   return { path: "CLAUDE.md", contents };

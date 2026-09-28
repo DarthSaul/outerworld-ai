@@ -58,6 +58,9 @@ Outbound handoffs (who reads your report):
 
 ## Procedure
 
+0. `git checkout <default branch>` (for example `git checkout main`). The cloud session
+   starts on an auto-named `claude/` branch, which is not where the ledger lives: every run clones
+   the default branch and the dashboard reads it, so every commit of this run goes there.
 1. Write the opening run record (below), commit it, and push, so the dashboard can see the run
    is open even if a later step fails.
 2. Read your station report and every inbound report.
@@ -96,7 +99,9 @@ Commit every change with a conventional message (`chore(<teamId>): run <startedA
 2. `git push origin <default branch>`.
 3. If the push is rejected, repeat steps 1 and 2 once.
 4. If it is rejected again, push to a fresh branch named `claude/status-<teamId>-<startedAt>`
-   (`claude/` branches are always accepted) and write `notes: "pushed to claude/status-…"` in the
-   closing record. The dashboard reads only the default branch, so the owner merges that branch.
+   with `:` replaced by `-` in the timestamp, as in the run filename (a git branch name cannot
+   contain `:`; `claude/` branches are always accepted), and write `notes: "pushed to
+   claude/status-…"` in the closing record. The dashboard reads only the default branch, so the
+   owner merges that branch.
 
 Never force-push. Never commit secrets: no tokens, no webhook URLs.
