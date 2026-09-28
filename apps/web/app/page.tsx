@@ -1,7 +1,10 @@
 import { term } from "@darthsaul/outerworld-ai-core";
 import { loadLedger } from "../lib/ledger";
-import { DigestDemo } from "./components/DigestDemo";
+import { Dashboard } from "./components/Dashboard";
 import { ThemeToggle } from "./components/ThemeToggle";
+
+/** Read the ledger on every request: a real ledger repo changes between visits. */
+export const dynamic = "force-dynamic";
 
 /**
  * The dashboard, sized to the viewport: a nav row, the three columns (overview 1fr, map 3fr,
@@ -9,14 +12,9 @@ import { ThemeToggle } from "./components/ThemeToggle";
  */
 export default function HomePage() {
   const { station, state, source, sourcePath } = loadLedger();
+  const demo = source === "fixture";
   const sidebar = (
     <>
-      <div className="flex flex-col gap-(--ow-space-1)">
-        <h1 className="text-title text-ink-1">{station.name}</h1>
-        <p className="font-mono text-mono text-ink-3">
-          {term("proof.asOf")} {state.provenance.asOf}
-        </p>
-      </div>
       <section aria-label="Settings" className="flex flex-col gap-(--ow-space-2)">
         <h2 className="font-mono text-eyebrow uppercase text-ink-3">Settings</h2>
         <ThemeToggle />
@@ -41,7 +39,10 @@ export default function HomePage() {
     </>
   );
   return (
-    <div className="grid h-dvh grid-rows-[auto_minmax(0,1fr)_auto] gap-(--ow-space-4) p-(--ow-space-4)">
+    <div
+      className="ow-dashboard grid h-dvh grid-rows-[auto_minmax(0,1fr)_auto] gap-(--ow-space-4) p-(--ow-space-4)"
+      data-fits-viewport
+    >
       <nav
         aria-label="Primary"
         className="flex items-center justify-between rounded-panel border border-border-subtle bg-surface-panel px-(--ow-space-4) py-(--ow-space-4)"
@@ -49,13 +50,13 @@ export default function HomePage() {
         <span className="font-mono text-label uppercase text-ink-1">
           Outerworld AI · {term("station")}
         </span>
-        <span className="font-mono text-mono text-ink-3">{station.name}</span>
+        <h1 className="text-label text-ink-1">{station.name}</h1>
       </nav>
       <main className="flex min-h-0 flex-col">
-        <DigestDemo station={station} initial={state} sidebar={sidebar} />
+        <Dashboard station={station} initial={state} demo={demo} sidebar={sidebar} />
       </main>
       <footer className="flex items-center justify-between rounded-panel border border-border-subtle bg-surface-panel px-(--ow-space-4) py-(--ow-space-4) font-mono text-mono text-ink-3">
-        <span>{source === "fixture" ? "demo fixture" : sourcePath}</span>
+        <span>{demo ? "demo fixture" : sourcePath}</span>
         <span>
           {state.provenance.sourceRef ? `${state.provenance.sourceRef} · ` : ""}
           {term("proof.asOf")} {state.provenance.asOf}

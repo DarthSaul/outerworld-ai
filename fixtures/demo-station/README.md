@@ -1,7 +1,7 @@
 # Demo Station fixture
 
-A fictional person's Station and a fake ledger repo. Every screenshot, test, story, and example
-in this repository uses this fixture. Nothing here is real: no real people, repos, sessions, or
+A fictional person's Station and a fake ledger repo. Every screenshot, test, gallery cell (`/dev`), and
+example in this repository uses this fixture. Nothing here is real: no real people, repos, sessions, or
 webhook URLs. When you need a new shape of data, extend this fixture rather than adding real data.
 
 - `station.json` — the Station document (two teams, three agents, one overseer named Ultron).

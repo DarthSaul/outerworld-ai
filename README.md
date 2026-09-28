@@ -1,9 +1,9 @@
 # Outerworld AI
 
 A dashboard that renders your AI agents, and how they are allowed to work together, as a
-space-themed map. Teams of agents live on planets, planets have governed permissions, authorized
-handoffs between planets are travel lanes, and one overseer at the center reads everything and
-reports outward.
+space-themed map. Teams of agents are stations, stations have governed permissions, authorized
+handoffs between stations are drawn as wires, and one overseer at the right edge reads everything
+and reports outward.
 
 The agents do not run in this app. They run as **Claude Code Routines**, Anthropic's
 cloud-scheduled Claude Code sessions. That means Outerworld AI only works with a Claude Pro or
@@ -44,6 +44,24 @@ pnpm dev                                   # dashboard on http://localhost:3000,
 OUTERWORLD_LEDGER_PATH=/path/to/ledger pnpm dev   # render your own local ledger repo instead
 ```
 
+The production build works the same way: `pnpm build`, then `pnpm start` (or
+`OUTERWORLD_LEDGER_PATH=/path/to/ledger pnpm start`). Both routes render on every request, so the
+page always reflects the ledger on disk. With a real ledger the dashboard shows the station view
+only; the scripted "Run digest" demo exists for the fixture alone.
+
+### Generate a ledger repo
+
+```
+pnpm build                                                     # builds the generator CLI to packages/generator/dist
+node packages/generator/dist/bin.js generate --station fixtures/demo-station/station.json --out /path/to/ledger
+node packages/generator/dist/bin.js validate --station /path/to/ledger/station.json
+OUTERWORLD_LEDGER_PATH=/path/to/ledger pnpm dev                # render what you just generated
+```
+
+Start from your own `station.json` (the fixture's is the example; `docs/SCHEMA.md` is the
+contract). The generated repo is yours to keep private: it carries the prompts your Routines run
+and the status files they write back. See `templates/ledger-repo/README.md`.
+
 Other commands:
 
 ```
@@ -73,10 +91,18 @@ Packages are published under the `@darthsaul` scope and are private for now: clo
 - In-browser editing: standing orders, personas, and handoffs edited in the detail panel, committed
   to the ledger repo.
 - Routine trigger wiring (the per-routine HTTP trigger) so a handoff can wake the reader team.
-- The final space-themed vocabulary (currently workshopped in `docs/design/`; code uses neutral
-  names so the rename is one file).
-- The 48×64 overseer hero rig and the raster-sprite upgrade path documented in the design spec.
+- Vocabulary: the on-screen words (Station, Tool, Handoff, Agent, Routine run, Overseer, Station
+  Report, System Report) live in core's glossary; code keeps neutral names, so any later rename is
+  one file. The fixture's overseer name is a placeholder to replace before any public release.
+- ~~The 48×64 overseer hero rig~~ shipped 2026-09-27. The raster-sprite upgrade path in the design
+  spec remains open.
 - Connector drift: status files reporting which connectors a run actually had.
+- Optional manual team positions in the Station document (reconciliation A10); layout is derived
+  today.
+- TypeScript 7 spike once the Go compiler is stable (ADR-0007).
+- Verify the dashboard in WebKit and Firefox; `browser:verify` runs Chromium only.
+- Enforce ui line coverage and the web first-load JS budget now that both are recorded in
+  `CONSTRAINTS.md`.
 
 ## Contributing
 

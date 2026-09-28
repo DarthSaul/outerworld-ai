@@ -1,5 +1,7 @@
 # Spec: Outerworld AI — Milestone 1
 
+> Historical. Layout, vocabulary, and tooling here are superseded by `design-reconciliation.md` A18–A21 (overseer at the right edge with stations in columns; Station / Tool / Handoff / Station Report / System Report; `/dev` gallery and Playwright verification instead of Storybook).
+
 Status: approved 2026-09-27 (open questions resolved below). Design reconciliation applied 2026-09-27: `docs/specs/design-reconciliation.md`. Intent: `docs/intent/milestone-1.md`. Quality bar: `CONSTRAINTS.md`.
 
 ## Objective

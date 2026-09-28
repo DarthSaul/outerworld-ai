@@ -5,6 +5,10 @@
 html,
 body {
   height: 100%;
+}
+
+/* The dashboard fits the viewport and scrolls inside its panes; other routes stay normal documents. */
+body:has([data-fits-viewport]) {
   overflow: hidden;
 }
 

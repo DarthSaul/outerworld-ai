@@ -36,7 +36,7 @@ The contract is `docs/SCHEMA.md`; versioning is ADR-0009. Committed JSON Schemas
 ### Layout and rig
 | Export | Description |
 |--------|-------------|
-| `layoutStation(station)` | Deterministic boxes in a 1000-unit square: radial ≤ 8 teams, two rings ≤ 16, list beyond; overseer at center. |
+| `layoutStation(station)` | Deterministic boxes in a 1000-unit square: `mode: "columns"` (overseer at the right edge, teams in columns to its left) up to 16 teams, `"list"` beyond with the overseer pinned at the top. |
 | `handoffGeometry(handoff, layout, all)` | SVG cubic path, midpoint, angle, chevron point; paired handoffs offset to opposite sides. |
 | `deriveRig(agent, station)` | Shoulder (pauldron if any write grant) and accessory (antenna / thruster / plate / none). |
 | `overseerRig()` | The fixed overseer rig. |

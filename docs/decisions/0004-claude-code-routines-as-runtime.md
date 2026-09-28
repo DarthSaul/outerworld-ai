@@ -30,8 +30,8 @@ hand and stays honest about it in the README.
   since the ledger repo layout is runtime-agnostic.
 
 ## Consequences
-- The dashboard is explicitly last-known-state, with a proof line (timestamp, path, commit) on
-  every reporter view. It never streams and never asserts what the ledger cannot prove.
+- The dashboard is explicitly last-known-state, with a proof line (commit sha when the ledger is
+  a git checkout, then the as-of time) in the footer, and the ledger path beside it. It never streams and never asserts what the ledger cannot prove.
 - Facts about Routines (trigger payloads, environment variables, connector behavior) are looked
   up in the Claude Code docs when they matter, never invented.
 - One Routine per team (ADR-0008) keeps the number of hand-created Routines small.

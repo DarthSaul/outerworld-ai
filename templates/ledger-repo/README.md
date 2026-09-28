@@ -4,7 +4,7 @@ The private repository your Claude Code Routines clone and commit to. Outerworld
 its contents from your `station.json`:
 
 ```
-outerworld generate --station station.json --out .
+node packages/generator/dist/bin.js generate --station station.json --out /path/to/this/repo   # from the outerworld-ai checkout, after pnpm build
 ```
 
 Then create one Routine per station plus the overseer at claude.ai/code/routines (or with

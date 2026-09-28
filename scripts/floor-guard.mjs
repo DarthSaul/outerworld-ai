@@ -14,7 +14,11 @@ const argBase = (() => {
 const git = (args, { diffExit = false } = {}) => {
   try {
     // A whole-milestone diff exceeds Node's default 1 MiB buffer, which would read as "could not diff".
-    return execFileSync("git", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], maxBuffer: 256 * 1024 * 1024 });
+    return execFileSync("git", args, {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      maxBuffer: 256 * 1024 * 1024,
+    });
   } catch (e) {
     return diffExit && e.status === 1 && typeof e.stdout === "string" ? e.stdout : null;
   }

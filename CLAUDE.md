@@ -5,8 +5,8 @@ Read this before touching anything. Keep it under 200 lines; update it when a de
 ## What this is
 
 A dashboard that renders a person's AI agents and how they are allowed to work together as a
-space-themed map. Teams of agents live on planets, planets have governed permissions, authorized
-handoffs are travel lanes, and one overseer at the center reads everything and reports outward.
+space-themed map. Teams of agents are stations, stations have governed permissions, authorized
+handoffs are drawn as wires, and one overseer at the right edge reads everything and reports outward.
 
 The agents do **not** run here. They run as Claude Code Routines (Anthropic's cloud-scheduled
 Claude Code sessions, Pro/Max+ subscription required). This app has exactly two jobs:
@@ -35,7 +35,7 @@ schema key, or test name.
 |------------|---------|
 | `team`     | agents sharing one permission scope (connectors + repo scope) and one mission |
 | `grant`    | a tool/skill a team may use; `mode: 'read' \| 'write'` |
-| `handoff`  | an authorized lane between two teams: one ledger file, one writer team, one reader team |
+| `handoff`  | a read authorization from one team to another's ledger (ADR-0008): one ledger per team, no extra file; the reader team may read the writer team's `ledger/<team>.md` |
 | `agent`    | a worker with a persona (name, mandate, tone, tool allowlist) and a visual identity; exactly one team |
 | `overseer` | the privileged agent that reads all ledgers and is the only one allowed to post outward |
 | `station`  | the whole map (temporary name for the document root) |
@@ -60,7 +60,7 @@ schema key, or test name.
 ```
 apps/web/               Next.js dashboard; consumes ui via workspace:*
 packages/core/          @darthsaul/outerworld-ai-core — headless. zod schema for Station +
-                        StationState, glossary, layout math (lane geometry), event model,
+                        StationState, glossary, layout math (handoff geometry), event model,
                         ledger parsing. Zero React, zero DOM, zero filesystem.
 packages/ui/            @darthsaul/outerworld-ai-ui — React components + the rigged Character
                         SVG. Tokens as CSS variables + a Tailwind preset.
@@ -82,7 +82,7 @@ Every color, radius, spacing step, and motion duration is a CSS custom property 
 `rgb()`, a pixel radius, or a `ms` value. Per-agent recoloring goes through the palette contract: the persona sets only
 `rig: { tintHue, trimHue, head, trace }`; chrome, trim, emblem shade and glow are derived in the
 token CSS; glow is owned by run state; shoulder and accessory are derived from grants and
-handoffs in core. The overseer has its own 48×64 hero rig, achromatic, in the map's center core.
+handoffs in core. The overseer has its own 48×64 hero rig, achromatic, at the right edge of the map with the stations in columns to its left.
 
 ## Design source of truth
 
@@ -95,7 +95,7 @@ hand-drawn rig.
 
 ## Fixtures only, never real data
 
-Every screenshot, test, story, and example uses `fixtures/demo-station/`, a fictional user.
+Every screenshot, test, gallery cell (`/dev`), and example uses `fixtures/demo-station/`, a fictional user.
 Never commit a real Station, real ledger output, real usernames, real repo names, or real webhook
 URLs. If you need a new shape of data, extend the fixture.
 
@@ -123,7 +123,15 @@ pnpm check:task     # what to run before a commit: lint, types, secrets, floor g
 pnpm check:full     # check:task + build; what CI's quality job runs
 pnpm browser:verify # Playwright: screenshots, console errors, reduced motion, axe; CI's browser job
 OUTERWORLD_LEDGER_PATH=/path/to/ledger pnpm dev   # render a real local ledger repo (station.json at its root)
+pnpm start          # after pnpm build: the production server; both routes render per request (force-dynamic)
+node packages/generator/dist/bin.js generate --station fixtures/demo-station/station.json --out /tmp/ledger
+node packages/generator/dist/bin.js validate --station /tmp/ledger/station.json
 ```
+
+The generator quickstart above (after `pnpm build`) is the fastest way to get a real ledger repo to
+point `OUTERWORLD_LEDGER_PATH` at. The dashboard never simulates on a real ledger: the "Run digest"
+demo timeline exists for the fixture only. `/dev` is the component gallery (there is no Storybook);
+it always renders the fixture and ships in production builds as a localhost tool.
 
 Use Node 22 (`nvm use` reads `.nvmrc`). Packages build with `tsc` to `dist/`; dependents
 typecheck against `dist/`, so run `pnpm build` once after pulling changes to a package.

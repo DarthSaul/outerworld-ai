@@ -12,18 +12,21 @@ import {
 import { type ReactNode, useEffect, useState } from "react";
 
 /**
- * The station view with the "Run digest" demo: the scripted timeline replays on top of whatever
- * state was loaded, through core's reducer. Reset returns to the loaded state. With a sidebar,
- * the demo controls join it (desktop: 1fr 3fr 1fr); without one they sit above the map.
+ * The dashboard body: the station view over the loaded state. In demo mode (the fixture) the
+ * "Run digest" timeline can replay on top of it through core's reducer; with a real ledger there
+ * is no simulation, because the map must never show a state the ledger cannot prove.
  */
-export function DigestDemo({
+export function Dashboard({
   station,
   initial,
+  demo,
   desktop,
   sidebar,
 }: {
   readonly station: Station;
   readonly initial: StationState;
+  /** True only for the fixture: enables the scripted timeline and its toast. */
+  readonly demo: boolean;
   readonly desktop?: boolean;
   readonly sidebar?: ReactNode;
 }) {
@@ -35,10 +38,11 @@ export function DigestDemo({
   const posted = t.state.overseer.lastOutwardPostAt;
   const postedInitially = initial.overseer.lastOutwardPostAt;
   useEffect(() => {
-    if (posted && posted !== postedInitially) setToast(`Digest posted ${posted}`);
-  }, [posted, postedInitially]);
-  const controls = (
-    <div className="flex flex-wrap items-center gap-(--ow-space-3)">
+    if (demo && posted && posted !== postedInitially) setToast(`Digest posted ${posted}`);
+  }, [demo, posted, postedInitially]);
+  const state = demo ? t.state : initial;
+  const controls = demo ? (
+    <div className="flex flex-wrap items-center gap-(--ow-space-3)" data-demo-controls>
       <RunDigestButton
         playing={t.playing}
         onPlay={t.play}
@@ -49,12 +53,12 @@ export function DigestDemo({
       />
       <span className="font-mono text-mono text-ink-3">step {t.step}</span>
     </div>
-  );
+  ) : null;
   return (
     <>
       <StationView
         station={station}
-        state={t.state}
+        state={state}
         {...(desktop !== undefined ? { desktop } : {})}
         {...(sidebar
           ? {
@@ -65,11 +69,15 @@ export function DigestDemo({
                 </>
               ),
             }
-          : { toolbar: controls })}
+          : controls
+            ? { toolbar: controls }
+            : {})}
       />
-      <ToastRegion>
-        {toast ? <Toast id="digest" message={toast} onDismiss={() => setToast(null)} /> : null}
-      </ToastRegion>
+      {demo ? (
+        <ToastRegion>
+          {toast ? <Toast id="digest" message={toast} onDismiss={() => setToast(null)} /> : null}
+        </ToastRegion>
+      ) : null}
     </>
   );
 }

@@ -13,7 +13,7 @@ What lives where, and what leaves your machine. Keep this current whenever a dat
 | The Discord digest text (`status/digest.md`) | Your private ledger repo | Never | Written by the overseer Routine; posted by `scripts/post-digest.sh`. |
 | Discord webhook URL, any token or secret | The Routine's cloud environment variables | Never, anywhere | The generator has no input for it and no emitted file contains it. gitleaks runs in CI. |
 | Per-routine HTTP trigger URLs | Not stored in milestone 1 | Never | Treated as secrets when trigger wiring lands. |
-| Local workspace (`.outerworld/`) | Your machine, inside this checkout | Never (gitignored) | Reserved for local scratch such as a checked-out ledger path. |
+| Local workspace (`.outerworld/`) | Your machine, inside this checkout | Never (gitignored) | Local scratch such as a checked-out ledger path. `browser:verify` writes its screenshots (of the fixture) to `.outerworld/screenshots/`, and CI uploads that directory as a build artifact. |
 | Theme preference | Your browser's `localStorage` | n/a | Only per-viewer convenience; nothing else is stored in the browser. |
 
 ## What leaves the machine

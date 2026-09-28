@@ -57,8 +57,8 @@ Why these numbers:
 
 | Metric | Today | Direction |
 |--------|-------|-----------|
-| Coverage: ui (lines) | not yet measured | record after ui step; must not fall |
-| apps/web first-load JS | not yet measured | record after web step; must not grow |
+| Coverage: ui (lines) | 89.06 % (2026-09-27, `pnpm --filter @darthsaul/outerworld-ai-ui exec vitest run --coverage`, "All files" row: statements 86.42, branches 75.24, functions 87.83) | must not fall |
+| apps/web first-load JS | 990.8 KiB raw / 274.9 KiB gzip for `/` (2026-09-27; Next 16 prints no size table, so: `pnpm --filter web build`, `pnpm start`, sum every `<script src>` the served `/` HTML loads) | must not grow |
 
 ## Ranking by circularity
 

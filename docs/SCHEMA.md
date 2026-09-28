@@ -14,7 +14,7 @@ collection; timestamps are ISO 8601 UTC strings; every object tolerates unknown 
 ```ts
 Station = {
   schemaVersion: 1,
-  id: string,                      // the station's own id, e.g. "saul-station"
+  id: string,                      // the station's own id, e.g. "demo-station"
   name: string,                    // display name
   teams: Team[],                   // 1..n
   agents: Agent[],                 // each belongs to exactly one team
@@ -242,7 +242,7 @@ layoutStation(station: Station): Layout
 Layout = {
   overseer: { x, y, w, h },
   teams: Record<teamId, { x, y, w, h, ring: 0 | 1 }>,
-  mode: "radial" | "rings" | "list",
+  mode: "columns" | "list",       // overseer at the right edge, teams in columns to its left; list above 16 teams
 }
 handoffGeometry(handoff: Handoff, layout: Layout, all: Handoff[]): HandoffGeometry
 HandoffGeometry = { path: string /* SVG d, cubic */, midpoint: {x,y}, angle: number, chevronAt: {x,y}, paired: boolean, side: -1 | 0 | 1 }
@@ -267,7 +267,7 @@ stay plain. The overseer's proper name comes from its persona.
 
 ## 5. Fixture (`fixtures/demo-station/`)
 
-A fictional person's Station: two teams, three agents, one overseer named "Meridian".
+A fictional person's Station: two teams, three agents, one overseer named "Ultron" (owner's choice; a placeholder to replace before public release).
 - `project-management` (category operations, emblem dome, hue 230): agents `planner` (working)
   and `scribe` (idle); grants notion read, ledger write; interval 360 min; last run open.
 - `strength-app` (category build, emblem forge, hue 55): agent `builder` (failed); grants git

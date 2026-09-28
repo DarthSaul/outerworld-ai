@@ -125,6 +125,12 @@ try {
               loops: anims.filter((a) => a.iterations === Number.POSITIVE_INFINITY).length,
               theme: document.documentElement.getAttribute("data-theme"),
               bg: getComputedStyle(document.body).backgroundColor,
+              // A document taller than the viewport must be scrollable: only the dashboard locks body overflow.
+              tall:
+                document.documentElement.scrollHeight > document.documentElement.clientHeight + 1,
+              canScroll: getComputedStyle(document.body).overflowY !== "hidden",
+              // With no OUTERWORLD_LEDGER_PATH the served page must reflect the fixture ledger.
+              fixtureName: document.body.innerText.includes("Demo Station"),
               hasHorizontalScroll:
                 document.documentElement.scrollWidth > document.documentElement.clientWidth,
             };
@@ -173,6 +179,15 @@ try {
           }
           if (probe.hasHorizontalScroll)
             failures.push(`${name}: horizontal page scroll at ${width}px`);
+          if (probe.tall && !probe.canScroll)
+            failures.push(
+              `${name}: taller than the viewport but body overflow is hidden, so it cannot scroll`,
+            );
+          // With a real ledger (OUTERWORLD_LEDGER_PATH set) check by hand that the nav shows your station's name.
+          if (!process.env.OUTERWORLD_LEDGER_PATH && !probe.fixtureName)
+            failures.push(
+              `${name}: "Demo Station" is missing; the served page does not reflect the loaded ledger`,
+            );
           if (probe.theme !== theme)
             failures.push(`${name}: data-theme is ${probe.theme}, expected ${theme}`);
           await ctx.close();

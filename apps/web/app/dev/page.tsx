@@ -1,11 +1,11 @@
-import { loadLedger } from "../../lib/ledger";
+import { loadFixture } from "../../lib/ledger";
 import { Gallery } from "./Gallery";
 
-/** The fixture's "as of" moment, so the gallery is deterministic for screenshots. */
-const FIXTURE_AS_OF = "2026-09-27T15:00:00Z";
+/** The gallery is regenerated per request like the dashboard; it always shows the fixture. */
+export const dynamic = "force-dynamic";
 
-/** Component gallery: the server loads the fixture; the client-side Gallery renders every component in every state. */
+/** Component gallery: the server loads the demo fixture (never a real ledger); the client-side Gallery renders every component in every state. */
 export default function DevPage() {
-  const { station, state } = loadLedger({ now: FIXTURE_AS_OF });
+  const { station, state } = loadFixture();
   return <Gallery station={station} state={state} />;
 }

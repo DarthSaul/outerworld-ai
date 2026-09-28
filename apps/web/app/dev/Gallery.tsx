@@ -1,5 +1,6 @@
 "use client";
 
+import { emptyState, type Station, type StationState, term } from "@darthsaul/outerworld-ai-core";
 import {
   AgentCard,
   Character,
@@ -15,7 +16,7 @@ import {
   type RunState,
   TeamEmblem,
 } from "@darthsaul/outerworld-ai-ui";
-import { DigestDemo } from "../components/DigestDemo";
+import { Dashboard } from "../components/Dashboard";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { MapDemo } from "./MapDemo";
 
@@ -51,8 +52,6 @@ function Cell({ label, children }: { readonly label: string; readonly children: 
     </div>
   );
 }
-
-import { emptyState, type Station, type StationState, term } from "@darthsaul/outerworld-ai-core";
 
 /** Every component in every state. Client-side so gallery cells can take handlers. */
 export function Gallery({
@@ -236,9 +235,10 @@ export function Gallery({
           data-gallery="station-view"
           className="relative left-1/2 w-screen -translate-x-1/2 px-(--ow-space-6)"
         >
-          <DigestDemo
+          <Dashboard
             station={station}
             initial={emptyState(station, { now: state.provenance.asOf, sourcePath: "demo" })}
+            demo
           />
         </div>
       </Section>
