@@ -4,6 +4,7 @@ import {
   type BudgetLine,
   type Budgets,
   type ChatMessage,
+  type ConnectorToolCatalog,
   checkBudget,
   historyBudget,
   isTerminal,
@@ -49,6 +50,16 @@ export interface ToolImpl {
   ): Promise<unknown>;
 }
 
+/** What the loop needs from connected MCP servers (the ConnectorManager provides it). */
+export interface ConnectorBridge {
+  catalog(): ConnectorToolCatalog;
+  describe(
+    connectorId: string,
+    tool: string,
+  ): { description: string; inputSchema: Record<string, unknown> } | undefined;
+  call(connectorId: string, tool: string, input: unknown, signal: AbortSignal): Promise<unknown>;
+}
+
 export interface RetryPolicy {
   /** Retries after the first attempt. */
   readonly attempts: number;
@@ -69,6 +80,8 @@ export interface RunServiceOptions {
   /** The model for an id; throws (e.g. no API key) to fail the run with that message. */
   readonly models: (modelId: string) => LanguageModel | Promise<LanguageModel>;
   readonly tools?: Readonly<Record<string, ToolImpl>>;
+  /** Connected connectors; their tools are offered to agents granted the connector. */
+  readonly connectors?: ConnectorBridge;
   readonly maxSteps?: number;
   /** Runs executing at once against the provider; the rest wait queued. */
   readonly concurrency?: number;
@@ -398,8 +411,21 @@ export class RunService {
       const station = loaded.station;
       const model = await this.#o.models(agent.config.model);
 
-      const registry = this.#tools;
-      const granted = resolveGrants(agent.config, station, {});
+      const connectors = this.#o.connectors;
+      const granted = resolveGrants(agent.config, station, connectors?.catalog() ?? {});
+      // Connector tools are implemented by calling through to the connector.
+      const registry: Record<string, ToolImpl> = { ...this.#tools };
+      for (const t of granted) {
+        if (t.source.kind !== "connector" || !connectors) continue;
+        const { connectorId, tool: name } = t.source;
+        const described = connectors.describe(connectorId, name);
+        registry[t.name] = {
+          description: described?.description ?? name,
+          inputSchema: described?.inputSchema ?? { type: "object" },
+          class: t.class,
+          execute: (input, ctx) => connectors.call(connectorId, name, input, ctx.signal),
+        };
+      }
       const offered = granted.filter((t) => registry[t.name] !== undefined);
       const tools: ToolSet = Object.fromEntries(
         offered.map((t) => [

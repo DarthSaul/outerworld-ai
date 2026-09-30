@@ -34,8 +34,8 @@ export const KNOWN_TOOL_CLASSES: Readonly<Record<string, ToolClass>> = {
 
 /** The subset of MCP tool annotations classification looks at. They are hints, never trusted alone. */
 export interface ToolHints {
-  readonly readOnlyHint?: boolean;
-  readonly destructiveHint?: boolean;
+  readonly readOnlyHint?: boolean | undefined;
+  readonly destructiveHint?: boolean | undefined;
 }
 
 /**

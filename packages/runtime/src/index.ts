@@ -26,6 +26,14 @@ export {
   DispatchStore,
 } from "./dispatch/dispatch-store.js";
 export {
+  ConnectorManager,
+  type ConnectorStatus,
+  type ConnectorTool,
+  type ConnectorView,
+  type TransportFactory,
+} from "./mcp/connector-manager.js";
+export { KeychainOAuthProvider } from "./mcp/oauth-provider.js";
+export {
   type MemoryRecord,
   type MemoryScope,
   type MemoryStatus,
@@ -39,6 +47,7 @@ export {
   scriptedModels,
 } from "./run/models.js";
 export {
+  type ConnectorBridge,
   type RetryPolicy,
   RunService,
   type RunServiceOptions,
