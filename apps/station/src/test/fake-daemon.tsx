@@ -22,6 +22,7 @@ import type {
   ConnectorItem,
   ConsentRecord,
   DispatchRecord,
+  MemoryItem,
   RunRecord,
   SessionDetail,
   SessionRecord,
@@ -105,6 +106,7 @@ export function fakeApi() {
   const consents: ConsentRecord[] = [];
   const dispatches: DispatchRecord[] = [];
   const connectors: ConnectorItem[] = [];
+  const memories: MemoryItem[] = [];
   const connectAnswer: {
     status: ConnectorItem["status"];
     authorizationUrl?: string;
@@ -162,6 +164,25 @@ export function fakeApi() {
         settings.openrouter = { configured: true, source: "keychain" };
       } else settings.openrouter = { configured: false, source: null };
       return undefined;
+    }
+    if (parts[0] === "agents" && parts[2] === "memories") {
+      const mine = (m: MemoryItem) => m.agentId === parts[1] || m.scope === "station";
+      return {
+        proposals: memories.filter((m) => m.agentId === parts[1] && m.status === "proposed"),
+        beliefs: memories.filter((m) => mine(m) && m.status === "approved"),
+      };
+    }
+    if (parts[0] === "memories") {
+      const m = memories.find((x) => x.id === parts[1]);
+      if (!m) throw new ApiError(404, "no memory");
+      const i = memories.indexOf(m);
+      if (method === "DELETE") {
+        memories.splice(i, 1);
+        return undefined;
+      }
+      const status = parts[2] === "reject" ? "rejected" : "approved";
+      memories[i] = { ...m, status, ...(b.text ? { text: String(b.text) } : {}) };
+      return memories[i];
     }
     if (parts[0] === "agents" && parts[2] === "sessions") {
       const agentId = parts[1] ?? "";
@@ -353,6 +374,7 @@ export function fakeApi() {
   return {
     connectors,
     connectAnswer,
+    memories,
     api,
     calls,
     state,

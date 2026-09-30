@@ -20,7 +20,7 @@ const arg = (name, fallback) => {
 };
 const routes = arg(
   "routes",
-  "/dev,/,/crew,/crew/vesper,/comms,/settings,/notifications,/connectors",
+  "/dev,/,/crew,/crew/vesper,/comms,/memory,/settings,/notifications,/connectors",
 ).split(",");
 const port = Number(arg("port", "3300"));
 const outDir = join(process.cwd(), ".outerworld", "screenshots");

@@ -30,6 +30,7 @@ daemon.
 | `src/comms/` | COMMS (`/comms`): pick a crew member, start or open sessions, several chat windows side by side (`?agent=…&open=a,b`). A window streams the reply from ephemeral `run.delta` events (`subscribe` on the daemon context), then shows the stored transcript once the run ends; tool use and refusals appear inline; Cancel while a run is active. A `dispatch` result shows as a card (worker, task, live status) whose Watch button embeds the worker's session, live; a worker's report shows as a labelled card. While a run is working, the message box sends a direction to it (steer). |
 | `src/pages/StationPage.tsx` | Station: Running now (every run in flight, dispatched work marked, each linking to its session) and the latest events. |
 | `src/pages/SettingsPage.tsx` | Settings (`/settings`): which models runs use (OpenRouter or the scripted fake) and whether a key is configured; a password field sends a new key once, and it is never shown again. |
+| `src/pages/MemoryPage.tsx` | Memory: pick a crew member (`?agent=`), approve (as written or edited) or discard proposals, edit or forget stored beliefs. |
 | `src/test/fake-daemon.tsx` | An in-memory fake of the crew API and a hand-driven event stream for component tests. |
 
 ## Tests

@@ -93,10 +93,10 @@ describe("App shell", () => {
     expect(items.map((li) => li.dataset.eventType)).toEqual(["station.updated", "station.started"]);
   });
 
-  it("renders a placeholder for screens later phases build", () => {
+  it("renders every screen's own page, with no placeholders left", () => {
     renderAt("/memory");
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(term("memory"));
-    expect(screen.getByText(/phase 7/)).toBeInTheDocument();
+    expect(screen.getByText(term("memory.pick"))).toBeInTheDocument();
   });
 
   it("has no axe violations on the Station screen with events", async () => {

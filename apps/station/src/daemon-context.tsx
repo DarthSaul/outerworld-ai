@@ -59,6 +59,9 @@ export function invalidateFor(event: RuntimeEvent, client: QueryClient): void {
     void client.invalidateQueries({ queryKey: ["consents"] });
   } else if (event.type === "station.kill_switch") {
     void client.invalidateQueries({ queryKey: ["kill-switch"] });
+  } else if (event.type.startsWith("memory.")) {
+    // A station-wide belief shows for every crew member, so refresh them all.
+    void client.invalidateQueries({ queryKey: ["memories"] });
   } else if (event.type.startsWith("budget.")) {
     void client.invalidateQueries({ queryKey: ["spend"] });
   }

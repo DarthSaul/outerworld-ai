@@ -335,3 +335,64 @@ export function useDisconnect() {
       api.send("POST", `/connectors/${encodeURIComponent(id)}/disconnect`, { forget }),
   });
 }
+
+export interface MemoryItem {
+  readonly id: string;
+  readonly agentId: string;
+  readonly scope: "agent" | "station";
+  readonly text: string;
+  readonly status: "proposed" | "approved" | "rejected";
+  readonly sourceRunId?: string;
+  readonly createdAt: string;
+  readonly decidedAt?: string;
+}
+
+export interface MemoryView {
+  readonly proposals: readonly MemoryItem[];
+  readonly beliefs: readonly MemoryItem[];
+}
+
+export function useMemories(agentId: string | undefined) {
+  const { api } = useDaemon();
+  return useQuery({
+    queryKey: ["memories", agentId],
+    queryFn: () => api.get<MemoryView>(`/agents/${encodeURIComponent(agentId ?? "")}/memories`),
+    enabled: agentId !== undefined,
+  });
+}
+
+/** Approve (with `text` when the Commander edited it) or reject a proposal. */
+export function useDecideMemory() {
+  const { api } = useDaemon();
+  return useMutation({
+    mutationFn: ({
+      id,
+      decision,
+      text,
+    }: {
+      id: string;
+      decision: "approve" | "reject";
+      text?: string;
+    }) =>
+      api.send<MemoryItem>(
+        "POST",
+        `/memories/${encodeURIComponent(id)}/${decision}`,
+        text !== undefined ? { text } : undefined,
+      ),
+  });
+}
+
+export function useEditMemory() {
+  const { api } = useDaemon();
+  return useMutation({
+    mutationFn: ({ id, text }: { id: string; text: string }) =>
+      api.send<MemoryItem>("PATCH", `/memories/${encodeURIComponent(id)}`, { text }),
+  });
+}
+
+export function useForgetMemory() {
+  const { api } = useDaemon();
+  return useMutation({
+    mutationFn: (id: string) => api.send("DELETE", `/memories/${encodeURIComponent(id)}`),
+  });
+}

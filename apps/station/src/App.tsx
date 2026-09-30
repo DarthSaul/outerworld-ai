@@ -1,5 +1,4 @@
 import { type GlossaryKey, term } from "@darthsaul/outerworld-ai-core";
-import { EmptyState } from "@darthsaul/outerworld-ai-ui";
 import { lazy, Suspense } from "react";
 import { NavLink, Route, Routes } from "react-router";
 import { CommsPage } from "./comms/CommsPage.js";
@@ -8,36 +7,23 @@ import { useDaemon } from "./daemon-context.js";
 import { AgentPage } from "./pages/AgentPage.js";
 import { ConnectorsPage } from "./pages/ConnectorsPage.js";
 import { CrewPage } from "./pages/CrewPage.js";
+import { MemoryPage } from "./pages/MemoryPage.js";
 import { NotificationsPage } from "./pages/NotificationsPage.js";
 import { SettingsPage } from "./pages/SettingsPage.js";
 import { StationPage } from "./pages/StationPage.js";
 
 const Gallery = lazy(() => import("./dev/GalleryPage.js"));
 
-/** The seven v1 screens (brief §5). Screens other than Station fill in phase by phase. */
-export const SCREENS: ReadonlyArray<{ path: string; label: GlossaryKey; phase?: number }> = [
+/** The seven v1 screens (brief §5). */
+export const SCREENS: ReadonlyArray<{ path: string; label: GlossaryKey }> = [
   { path: "/", label: "station" },
   { path: "/comms", label: "comms" },
   { path: "/crew", label: "agents" },
-  { path: "/memory", label: "memory", phase: 7 },
+  { path: "/memory", label: "memory" },
   { path: "/notifications", label: "notifications" },
   { path: "/connectors", label: "connectors" },
   { path: "/settings", label: "settings" },
 ];
-
-function Placeholder({ label, phase }: { label: GlossaryKey; phase: number }) {
-  return (
-    <section aria-labelledby="screen-title" className="flex flex-col gap-(--ow-space-4)">
-      <h1 id="screen-title" className="text-heading text-ink-1">
-        {term(label)}
-      </h1>
-      <EmptyState
-        title={term("empty.phase.title")}
-        body={`Lands in phase ${phase} of the v1 plan.`}
-      />
-    </section>
-  );
-}
 
 function StatusBadge() {
   const { status } = useDaemon();
@@ -96,18 +82,12 @@ export function App() {
               <Routes>
                 <Route path="/" element={<StationPage />} />
                 <Route path="/comms" element={<CommsPage />} />
+                <Route path="/memory" element={<MemoryPage />} />
                 <Route path="/crew" element={<CrewPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/notifications" element={<NotificationsPage />} />
                 <Route path="/connectors" element={<ConnectorsPage />} />
                 <Route path="/crew/:id" element={<AgentPage />} />
-                {SCREENS.filter((s) => s.phase !== undefined).map((s) => (
-                  <Route
-                    key={s.path}
-                    path={`${s.path}/*`}
-                    element={<Placeholder label={s.label} phase={s.phase ?? 0} />}
-                  />
-                ))}
               </Routes>
             </main>
           </div>

@@ -217,8 +217,9 @@ decisions made, open questions.
 **CHECKPOINT 6** — you connect Notion and test the Project Manager.
 
 ## Phase 7 — Memory
-- [ ] `remember` → proposal `{ text, scope: "agent"|"station", sourceRunId }`; Memory screen: *Stored beliefs* / *Awaiting your decision* (approve, edit-then-approve, reject), edit/delete beliefs; `memory.*` events.
-- [ ] Prompt assembly injects approved agent + station beliefs, newest first, token-capped. Tests: approved belief appears in the next run's request (asserted on `doStreamCalls`); rejected one never does.
+- [x] `remember` → proposal `{ text, scope: "agent"|"station", sourceRunId }`; Memory screen: *Stored beliefs* / *Awaiting your decision* (approve, edit-then-approve, reject), edit/delete beliefs; `memory.*` events (`memory.updated` added for edits and deletes).
+- [x] Prompt assembly injects approved agent + station beliefs, newest decided first, capped at a quarter of the prompt budget. Tests: approved belief appears in the next run's request (asserted on `doStreamCalls`); rejected one never does.
+- [x] Daemon: `GET /api/agents/:id/memories`, approve (optionally edited), reject, edit, delete; a decided proposal is 409. The phase placeholders are gone: every v1 screen is real.
 
 ## Phase 8 — Scheduler
 - [ ] Schedules in `agent.json` (cron, timezone, prompt, target session defaulting to a per-schedule "Scheduled" session, `catchUp`); croner; `schedule.fired`/`schedule.missed`; catch-up once on startup when enabled (last fire persisted).
