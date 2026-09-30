@@ -104,6 +104,13 @@ export {
   type SpentSoFar,
   utcDay,
 } from "./policy/budget.js";
+// Connector tool classification and presets (ADR-0012)
+export {
+  classifyConnectorTool,
+  KNOWN_TOOL_CLASSES,
+  NOTION_PRESET,
+  type ToolHints,
+} from "./policy/connector-tools.js";
 // Dispatch (brief §7)
 export { checkDispatch, type DispatchCheck, dispatchTargets } from "./policy/dispatch.js";
 // Effective grants (brief §6)
