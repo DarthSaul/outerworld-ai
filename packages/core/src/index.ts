@@ -90,6 +90,17 @@ export {
   parseLedger,
   parseLedgerMarkdown,
 } from "./ledger/parse.js";
+// Budgets and consent (brief §6, §15)
+export {
+  BUDGET_WARNING_SHARE,
+  type BudgetCheck,
+  type BudgetLine,
+  type BudgetScope,
+  checkBudget,
+  needsConsent,
+  type SpentSoFar,
+  utcDay,
+} from "./policy/budget.js";
 // Effective grants (brief §6)
 export {
   BUILTIN_TOOLS,
