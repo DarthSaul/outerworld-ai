@@ -83,6 +83,9 @@ docs/                    ARCHITECTURE, SCHEMA, PRIVACY, design assets, ADRs, spe
   prop, the Overseer editing crew, session compaction.
 - **v3**: more MCP connectors, channel and webhook triggers, visual station editing, embeddings
   memory, a desktop shell, npm publishing.
+- Flaky hydration mismatch (React #418) on `/` at 1280 px with motion, seen in about 1 of 4
+  `browser:verify` runs on the milestone 1 dashboard; not reproduced under `next dev` or CPU
+  throttling. Recheck once `browser:verify` targets the v1 SPA.
 - The on-screen vocabulary (Station, Room, Crew, Hallway, Prop, COMMS) is another product's and
   lives only in core's glossary; revisit it before a public release.
 

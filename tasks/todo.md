@@ -204,6 +204,12 @@ decisions made, open questions.
 
 **CHECKPOINT 10**
 
+## Follow-ups (not scheduled)
+- Intermittent React #418 hydration mismatch in `browser:verify` on `/` at 1280 px with motion
+  (about 1 in 4 runs, light or dark). Not reproduced in 30 `next dev` loads, 40 `next start` loads,
+  or 16 loads at 6x CPU throttling. Deprioritized by the owner 2026-09-29 in favor of unit tests;
+  recheck when `browser:verify` moves to the SPA in Phase 1 (apps/web goes away).
+
 ## Out of scope (stop and ask if any of these appears)
 Conveyor Lines / Bays / Inbox / Outbox / Logbook; webhooks, folder watchers, channel triggers;
 terminal/shell tools; recursive delegation; helper copies; agents creating/editing agents; desktop
