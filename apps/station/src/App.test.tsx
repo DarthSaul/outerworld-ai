@@ -1,4 +1,5 @@
 import { type RuntimeEvent, term } from "@darthsaul/outerworld-ai-core";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { describe, expect, it } from "vitest";
@@ -39,11 +40,13 @@ const fakeConnection = () => {
 
 const renderAt = (path: string, conn = fakeConnection()) => {
   const view = render(
-    <DaemonProvider token="tok" connect={conn.connect}>
-      <MemoryRouter initialEntries={[path]}>
-        <App />
-      </MemoryRouter>
-    </DaemonProvider>,
+    <QueryClientProvider client={new QueryClient()}>
+      <DaemonProvider token="tok" connect={conn.connect}>
+        <MemoryRouter initialEntries={[path]}>
+          <App />
+        </MemoryRouter>
+      </DaemonProvider>
+    </QueryClientProvider>,
   );
   return { ...view, conn };
 };

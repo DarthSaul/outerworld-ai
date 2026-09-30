@@ -3,6 +3,8 @@ import { EmptyState } from "@darthsaul/outerworld-ai-ui";
 import { lazy, Suspense } from "react";
 import { NavLink, Route, Routes } from "react-router";
 import { useDaemon } from "./daemon-context.js";
+import { AgentPage } from "./pages/AgentPage.js";
+import { CrewPage } from "./pages/CrewPage.js";
 import { StationPage } from "./pages/StationPage.js";
 
 const Gallery = lazy(() => import("./dev/GalleryPage.js"));
@@ -11,7 +13,7 @@ const Gallery = lazy(() => import("./dev/GalleryPage.js"));
 export const SCREENS: ReadonlyArray<{ path: string; label: GlossaryKey; phase?: number }> = [
   { path: "/", label: "station" },
   { path: "/comms", label: "comms", phase: 3 },
-  { path: "/crew", label: "agents", phase: 2 },
+  { path: "/crew", label: "agents" },
   { path: "/memory", label: "memory", phase: 7 },
   { path: "/notifications", label: "notifications", phase: 9 },
   { path: "/connectors", label: "connectors", phase: 6 },
@@ -70,7 +72,7 @@ export function App() {
                     <li key={s.path}>
                       <NavLink
                         to={s.path}
-                        end
+                        end={s.path === "/"}
                         className="text-label text-ink-2 aria-[current=page]:text-ink-1 aria-[current=page]:underline"
                       >
                         {term(s.label)}
@@ -84,6 +86,8 @@ export function App() {
             <main className="min-w-0 rounded-panel border border-border-subtle bg-surface-panel p-(--ow-space-4)">
               <Routes>
                 <Route path="/" element={<StationPage />} />
+                <Route path="/crew" element={<CrewPage />} />
+                <Route path="/crew/:id" element={<AgentPage />} />
                 {SCREENS.filter((s) => s.phase !== undefined).map((s) => (
                   <Route
                     key={s.path}

@@ -1,4 +1,5 @@
 import type { RuntimeEvent } from "@darthsaul/outerworld-ai-core";
+import { type QueryClient, useQueryClient } from "@tanstack/react-query";
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useState } from "react";
 import { type Api, createApi } from "./lib/api.js";
 import {
@@ -21,6 +22,20 @@ export interface DaemonState {
 
 const DaemonContext = createContext<DaemonState | null>(null);
 
+/**
+ * Events are the only signal that server state changed: each one invalidates the queries it can
+ * affect, so every open tab refetches and stays true to the daemon.
+ */
+export function invalidateFor(event: RuntimeEvent, client: QueryClient): void {
+  if (event.type === "agent.updated") {
+    void client.invalidateQueries({ queryKey: ["station"] });
+    void client.invalidateQueries({ queryKey: ["agent", event.agentId] });
+  } else if (event.type === "station.updated") {
+    void client.invalidateQueries({ queryKey: ["station"] });
+    void client.invalidateQueries({ queryKey: ["agent"] });
+  }
+}
+
 export type Connect = (options: ConnectOptions) => Connection;
 
 /**
@@ -30,13 +45,17 @@ export type Connect = (options: ConnectOptions) => Connection;
 export function DaemonProvider({
   token,
   connect = connectEvents,
+  api: given,
   children,
 }: {
   readonly token: string;
   readonly connect?: Connect;
+  /** Injected in tests; otherwise a client for this token. */
+  readonly api?: Api;
   readonly children: ReactNode;
 }) {
-  const api = useMemo(() => createApi({ token }), [token]);
+  const api = useMemo(() => given ?? createApi({ token }), [given, token]);
+  const queryClient = useQueryClient();
   const [status, setStatus] = useState<ConnectionStatus>("connecting");
   const [recent, setRecent] = useState<RuntimeEvent[]>([]);
 
@@ -45,10 +64,13 @@ export function DaemonProvider({
       url: "/api/events",
       token,
       onStatus: setStatus,
-      onEvent: (e) => setRecent((prev) => [e, ...prev].slice(0, RECENT)),
+      onEvent: (e) => {
+        setRecent((prev) => [e, ...prev].slice(0, RECENT));
+        invalidateFor(e, queryClient);
+      },
     });
     return () => conn.close();
-  }, [token, connect]);
+  }, [token, connect, queryClient]);
 
   const value = useMemo(
     () => ({ api, status, recent, latestSeq: recent[0]?.seq ?? 0 }),

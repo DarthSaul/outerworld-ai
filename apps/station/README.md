@@ -25,7 +25,9 @@ daemon.
 | `src/lib/event-stream.ts` | `connectEvents(options)`: the SSE stream over `fetch` (to send the token), core's parser and event schema, reconnect with `Last-Event-ID` and capped exponential backoff, stop on 401. |
 | `src/daemon-context.tsx` | `DaemonProvider` owns the one event connection and the API client; `useDaemon()` gives `{ api, status, latestSeq, recent }`. |
 | `src/App.tsx` | Shell and routes: Station, COMMS, Crew, Memory, Notifications, Connectors, Settings (glossary names); `/dev` is the component gallery (milestone 1 map fixture, D14). |
-| `src/pages/` | Screens. Station shows the latest events until the map is adapted (Phase 9). |
+| `src/queries.ts` | TanStack Query hooks for station, agents, models, and every crew/room mutation. Mutations never patch the cache: the daemon's `agent.updated` / `station.updated` events invalidate it (`invalidateFor` in `daemon-context.tsx`), so changes from other tabs or hand edits appear the same way. |
+| `src/pages/` | Screens. Station shows the latest events until the map is adapted (Phase 9). Crew (`/crew`) lists rooms with prop toggles and their crew; the agent editor (`/crew/:id`) edits config (Full power flagged), connector grants, the four documents (each with its own save state), and shows the effective tools. |
+| `src/test/fake-daemon.tsx` | An in-memory fake of the crew API and a hand-driven event stream for component tests. |
 
 ## Tests
 
