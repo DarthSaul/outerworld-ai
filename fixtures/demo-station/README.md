@@ -11,5 +11,5 @@ connector URL uses the reserved `.example` domain). `pnpm dev` runs on a copy un
 - `agents/quill/`: a project manager in Operations, granted Notion, with a disabled weekday
   briefing schedule.
 
-Model ids are placeholders until Phase 3 fixes the supported-model list. Phase 9 extends this
+Phase 9 extends this
 fixture to exercise every screen; the milestone 1 map fixture is `fixtures/map-demo/` (D14).

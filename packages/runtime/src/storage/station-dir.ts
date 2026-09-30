@@ -1,8 +1,11 @@
 import { lstat, readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
+  AGENT_DOCUMENTS,
   type AgentConfig,
+  type AgentDocumentName,
   type Issue,
+  MAX_DOCUMENT_BYTES,
   parseAgentConfig,
   parseStationConfig,
   type StationConfig,
@@ -10,13 +13,9 @@ import {
 } from "@darthsaul/outerworld-ai-core";
 import { writeFileAtomic } from "./atomic-write.js";
 
-/** The four markdown documents that make up a crew member (brief §9). */
-export const AGENT_DOCUMENTS = ["identity", "purpose", "standing-orders", "context"] as const;
-export type AgentDocumentName = (typeof AGENT_DOCUMENTS)[number];
+export { AGENT_DOCUMENTS, type AgentDocumentName };
 
 const ID = /^[a-z0-9][a-z0-9-]*$/;
-/** Larger documents are truncated on load with a warning; they would crowd out the prompt. */
-const MAX_DOCUMENT_BYTES = 256 * 1024;
 
 /** Where everything lives inside `$OUTERWORLD_HOME` (brief §9). */
 export function stationPaths(home: string) {

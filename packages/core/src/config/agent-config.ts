@@ -9,6 +9,7 @@ import {
   versionIssues,
 } from "../schema/common.js";
 import { Rig } from "../schema/station.js";
+import { isSupportedModel } from "./models.js";
 
 /**
  * `agents/<id>/agent.json` (brief §9): the config half of a crew member. The documents
@@ -71,6 +72,13 @@ export function agentConfigIssues(agent: AgentConfig): Issue[] {
     ...versionIssues(agent.schemaVersion),
     ...duplicateIdIssues(agent.schedules, "schedules"),
   ];
+  if (!isSupportedModel(agent.model)) {
+    issues.push({
+      level: "warn",
+      path: "model",
+      message: `"${agent.model}" is not on the supported model list; tool calling may not work`,
+    });
+  }
   const seen = new Set<string>();
   agent.connectorGrants.forEach((id, i) => {
     if (seen.has(id)) {

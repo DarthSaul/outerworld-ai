@@ -69,6 +69,14 @@ decisions made, open questions.
   that fixture moves to `fixtures/map-demo/`. New schemas are `StationConfig`/`AgentConfig`.
 - **D15 Token exposure to local users.** Any local process can fetch the SPA's index.html from
   127.0.0.1 and read the token; v1 assumes a single-user machine (documented in PRIVACY.md).
+- **D16 Tool classes and names (Phase 2).** Built-ins: `dispatch`, `read_session`, `web_fetch`,
+  `read_file`, `list_files`, `remember` are `read`; only `write_file` is `write` (dispatch is gated
+  by depth and budgets, memory by the Commander's approval). Connector tools are named
+  `<connectorId>__<tool>` (provider-safe characters, 64 max, hashed when truncated) so they never
+  collide with built-ins. Depth 0 withholds `dispatch` from the Overseer.
+- **D17 Supported models (Phase 2).** `anthropic/claude-sonnet-5.5` (default),
+  `anthropic/claude-opus-5.5`, `openai/gpt-5.6-terra`, `google/gemini-3.8-flash`, checked against
+  OpenRouter's model list on 2026-09-29. Other ids load with a warning, not an error.
 - **D11 Old core modules.** Ledger parsing, status schemas, StationState, health, and the demo
   timeline are Routines-specific; they are deleted in Phase 1 when the new schema lands (tests for
   them go with them; commit message says why).

@@ -27,7 +27,7 @@ const overseer: AgentConfig = {
   name: "Vesper",
   roomId: "command",
   role: "overseer",
-  model: "vendor/model-a",
+  model: "anthropic/claude-sonnet-5.5",
   approvalMode: "ask",
   connectorGrants: [],
   schedules: [],

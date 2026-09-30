@@ -7,6 +7,20 @@
  * Contract: docs/SCHEMA.md. Versioning: docs/decisions/0009-schema-versioning.md.
  */
 
+// Crew and room HTTP contract (Phase 2)
+export {
+  AGENT_DOCUMENTS,
+  AgentDocumentName,
+  type AgentView,
+  CreateAgentInput,
+  CreateRoomInput,
+  DocumentInput,
+  MAX_DOCUMENT_BYTES,
+  type StationView,
+  slugify,
+  UpdateAgentInput,
+  UpdateRoomInput,
+} from "./api/crew-api.js";
 // Station runtime config (station.json, agent.json) — ADR-0010
 export {
   AgentConfig,
@@ -16,6 +30,12 @@ export {
   parseAgentConfig,
   Schedule as AgentSchedule,
 } from "./config/agent-config.js";
+export {
+  DEFAULT_MODEL,
+  isSupportedModel,
+  SUPPORTED_MODELS,
+  type SupportedModel,
+} from "./config/models.js";
 export {
   Budgets,
   Connector,
@@ -61,6 +81,17 @@ export {
   parseLedger,
   parseLedgerMarkdown,
 } from "./ledger/parse.js";
+// Effective grants (brief §6)
+export {
+  BUILTIN_TOOLS,
+  type ConnectorToolCatalog,
+  connectorToolName,
+  type EffectiveTool,
+  resolveGrants,
+  type ToolClass,
+  type ToolSource,
+  type ToolSpec,
+} from "./policy/grants.js";
 // Rig
 export {
   type DerivedRig,

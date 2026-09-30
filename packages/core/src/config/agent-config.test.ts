@@ -6,7 +6,7 @@ const valid = (): Record<string, unknown> => ({
   name: "Project Manager",
   roomId: "operations",
   role: "crew",
-  model: "vendor/model-a",
+  model: "anthropic/claude-sonnet-5.5",
   approvalMode: "ask",
   connectorGrants: ["notion"],
   schedules: [
@@ -36,7 +36,7 @@ describe("parseAgentConfig", () => {
       schemaVersion: 1,
       name: "Scout",
       roomId: "command",
-      model: "vendor/model-a",
+      model: "anthropic/claude-sonnet-5.5",
       schedules: [{ id: "s", cron: "0 9 * * *", timezone: "UTC", prompt: "Go." }],
     });
     expect(r.ok).toBe(true);
