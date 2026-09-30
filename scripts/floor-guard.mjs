@@ -71,6 +71,9 @@ const ignored = (f) => ignoreRes.some((re) => re.test(f));
 const added = [];
 const removed = [];
 const deleted = [];
+// Old paths of renames: gone from the tree as surely as a deletion (git may pair a deleted
+// package.json with a new one elsewhere).
+const renamedAway = [];
 const pathOf = (s) => s.replace(/^[ab]\//, "");
 let file = "";
 let oldFile = "";
@@ -80,6 +83,7 @@ for (const line of diff.split("\n")) {
     const newFile = pathOf(line.slice(4));
     file = newFile === "/dev/null" ? oldFile : newFile;
     if (newFile === "/dev/null") deleted.push(file);
+    else if (oldFile !== "/dev/null" && oldFile !== newFile) renamedAway.push(oldFile);
   } else if (line.startsWith("+") && !line.startsWith("+++"))
     added.push({ file, text: line.slice(1) });
   else if (line.startsWith("-") && !line.startsWith("---"))
@@ -134,9 +138,10 @@ for (const { file, text } of added) {
 }
 
 // A test retired together with what it tests is not a test made easier: its whole package is
-// deleted (package.json in the same diff), or the module it tests (foo.test.ts with foo.ts) is.
+// deleted or renamed away (package.json in the same diff), or the module it tests (foo.test.ts with
+// foo.ts) is.
 // Deleting a test while its code stays is still flagged.
-const deletedPackages = deleted
+const deletedPackages = [...deleted, ...renamedAway]
   .filter((f) => /(^|\/)package\.json$/.test(f))
   .map((f) => f.replace(/package\.json$/, ""))
   .filter((dir) => dir !== ""); // deleting the root package.json retires nothing
