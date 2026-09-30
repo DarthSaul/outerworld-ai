@@ -12,8 +12,12 @@ import {
 /** How many recent events the shell keeps in memory for the activity view. */
 const RECENT = 50;
 
+export type EventListener = (event: RuntimeEvent) => void;
+
 export interface DaemonState {
   readonly api: Api;
+  /** Every event as it arrives, ephemeral ones included (streamed text). Returns unsubscribe. */
+  readonly subscribe: (listener: EventListener) => () => void;
   readonly status: ConnectionStatus;
   readonly latestSeq: number;
   /** Newest first. */
@@ -33,6 +37,11 @@ export function invalidateFor(event: RuntimeEvent, client: QueryClient): void {
   } else if (event.type === "station.updated") {
     void client.invalidateQueries({ queryKey: ["station"] });
     void client.invalidateQueries({ queryKey: ["agent"] });
+  } else if (event.type.startsWith("session.")) {
+    void client.invalidateQueries({ queryKey: ["sessions", event.agentId] });
+    void client.invalidateQueries({ queryKey: ["session", event.sessionId] });
+  } else if (event.type.startsWith("run.") && !event.ephemeral) {
+    void client.invalidateQueries({ queryKey: ["session", event.sessionId] });
   }
 }
 
@@ -58,6 +67,7 @@ export function DaemonProvider({
   const queryClient = useQueryClient();
   const [status, setStatus] = useState<ConnectionStatus>("connecting");
   const [recent, setRecent] = useState<RuntimeEvent[]>([]);
+  const [listeners] = useState(() => new Set<EventListener>());
 
   useEffect(() => {
     const conn = connect({
@@ -65,17 +75,27 @@ export function DaemonProvider({
       token,
       onStatus: setStatus,
       onEvent: (e) => {
+        for (const l of listeners) l(e);
         if (e.ephemeral) return;
         setRecent((prev) => [e, ...prev].slice(0, RECENT));
         invalidateFor(e, queryClient);
       },
     });
     return () => conn.close();
-  }, [token, connect, queryClient]);
+  }, [token, connect, queryClient, listeners]);
 
+  const subscribe = useMemo(
+    () => (listener: EventListener) => {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+    [listeners],
+  );
   const value = useMemo(
-    () => ({ api, status, recent, latestSeq: recent[0]?.seq ?? 0 }),
-    [api, status, recent],
+    () => ({ api, subscribe, status, recent, latestSeq: recent[0]?.seq ?? 0 }),
+    [api, subscribe, status, recent],
   );
   return <DaemonContext.Provider value={value}>{children}</DaemonContext.Provider>;
 }

@@ -94,9 +94,9 @@ describe("App shell", () => {
   });
 
   it("renders a placeholder for screens later phases build", () => {
-    renderAt("/comms");
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(term("comms"));
-    expect(screen.getByText(/phase 3/)).toBeInTheDocument();
+    renderAt("/memory");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(term("memory"));
+    expect(screen.getByText(/phase 7/)).toBeInTheDocument();
   });
 
   it("has no axe violations on the Station screen with events", async () => {

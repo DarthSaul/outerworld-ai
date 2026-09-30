@@ -2,9 +2,11 @@ import { type GlossaryKey, term } from "@darthsaul/outerworld-ai-core";
 import { EmptyState } from "@darthsaul/outerworld-ai-ui";
 import { lazy, Suspense } from "react";
 import { NavLink, Route, Routes } from "react-router";
+import { CommsPage } from "./comms/CommsPage.js";
 import { useDaemon } from "./daemon-context.js";
 import { AgentPage } from "./pages/AgentPage.js";
 import { CrewPage } from "./pages/CrewPage.js";
+import { SettingsPage } from "./pages/SettingsPage.js";
 import { StationPage } from "./pages/StationPage.js";
 
 const Gallery = lazy(() => import("./dev/GalleryPage.js"));
@@ -12,12 +14,12 @@ const Gallery = lazy(() => import("./dev/GalleryPage.js"));
 /** The seven v1 screens (brief §5). Screens other than Station fill in phase by phase. */
 export const SCREENS: ReadonlyArray<{ path: string; label: GlossaryKey; phase?: number }> = [
   { path: "/", label: "station" },
-  { path: "/comms", label: "comms", phase: 3 },
+  { path: "/comms", label: "comms" },
   { path: "/crew", label: "agents" },
   { path: "/memory", label: "memory", phase: 7 },
   { path: "/notifications", label: "notifications", phase: 9 },
   { path: "/connectors", label: "connectors", phase: 6 },
-  { path: "/settings", label: "settings", phase: 3 },
+  { path: "/settings", label: "settings" },
 ];
 
 function Placeholder({ label, phase }: { label: GlossaryKey; phase: number }) {
@@ -86,7 +88,9 @@ export function App() {
             <main className="min-w-0 rounded-panel border border-border-subtle bg-surface-panel p-(--ow-space-4)">
               <Routes>
                 <Route path="/" element={<StationPage />} />
+                <Route path="/comms" element={<CommsPage />} />
                 <Route path="/crew" element={<CrewPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/crew/:id" element={<AgentPage />} />
                 {SCREENS.filter((s) => s.phase !== undefined).map((s) => (
                   <Route

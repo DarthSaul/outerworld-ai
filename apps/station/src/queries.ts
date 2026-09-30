@@ -1,9 +1,12 @@
 import type {
   AgentDocumentName,
   AgentView,
+  ChatMessage,
   CreateAgentInput,
   CreateRoomInput,
   Room,
+  RunState,
+  SettingsView,
   StationView,
   SupportedModel,
   UpdateAgentInput,
@@ -89,4 +92,101 @@ export function useDeleteRoom() {
   return useMutation({
     mutationFn: (id: string) => api.send("DELETE", `/rooms/${encodeURIComponent(id)}`),
   });
+}
+
+/** A stored session as the daemon returns it (mirrors the daemon's SessionDetail). */
+export interface SessionRecord {
+  readonly id: string;
+  readonly agentId: string;
+  readonly title: string;
+  readonly createdAt: string;
+  readonly archivedAt?: string;
+}
+export interface RunRecord {
+  readonly id: string;
+  readonly sessionId: string;
+  readonly agentId: string;
+  readonly state: RunState;
+  readonly model: string;
+  readonly createdAt: string;
+  readonly error?: string;
+  readonly steps: number;
+}
+export interface SessionDetail {
+  readonly session: SessionRecord;
+  readonly messages: readonly {
+    id: string;
+    position: number;
+    runId?: string;
+    message: ChatMessage;
+  }[];
+  readonly runs: readonly RunRecord[];
+}
+
+export function useSessions(agentId: string | undefined) {
+  const { api } = useDaemon();
+  return useQuery({
+    queryKey: ["sessions", agentId],
+    queryFn: () =>
+      api.get<SessionRecord[]>(`/agents/${encodeURIComponent(agentId ?? "")}/sessions`),
+    enabled: agentId !== undefined,
+  });
+}
+
+export function useSession(id: string) {
+  const { api } = useDaemon();
+  return useQuery({
+    queryKey: ["session", id],
+    queryFn: () => api.get<SessionDetail>(`/sessions/${encodeURIComponent(id)}`),
+  });
+}
+
+export function useCreateSession() {
+  const { api } = useDaemon();
+  return useMutation({
+    mutationFn: (agentId: string) =>
+      api.send<SessionRecord>("POST", `/agents/${encodeURIComponent(agentId)}/sessions`, {}),
+  });
+}
+
+export function useUpdateSession(id: string) {
+  const { api } = useDaemon();
+  return useMutation({
+    mutationFn: (input: { title?: string; archived?: true }) =>
+      api.send<SessionRecord>("PATCH", `/sessions/${encodeURIComponent(id)}`, input),
+  });
+}
+
+export function useSendMessage(sessionId: string) {
+  const { api } = useDaemon();
+  return useMutation({
+    mutationFn: (text: string) =>
+      api.send<{ runId: string }>("POST", `/sessions/${encodeURIComponent(sessionId)}/messages`, {
+        text,
+      }),
+  });
+}
+
+export function useCancelRun() {
+  const { api } = useDaemon();
+  return useMutation({
+    mutationFn: (runId: string) => api.send("POST", `/runs/${encodeURIComponent(runId)}/cancel`),
+  });
+}
+
+export function useSettings() {
+  const { api } = useDaemon();
+  return useQuery({ queryKey: ["settings"], queryFn: () => api.get<SettingsView>("/settings") });
+}
+
+export function useSetApiKey() {
+  const { api } = useDaemon();
+  return useMutation({
+    mutationFn: (key: string) => api.send("PUT", "/settings/openrouter", { key }),
+  });
+}
+
+export function useClearApiKey() {
+  const { api } = useDaemon();
+  return useMutation({ mutationFn: () => api.send("DELETE", "/settings/openrouter") });
 }

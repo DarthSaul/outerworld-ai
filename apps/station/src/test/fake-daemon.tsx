@@ -3,6 +3,7 @@ import {
   type AgentConfig,
   type AgentDocumentName,
   type AgentView,
+  type ChatMessage,
   type RuntimeEvent,
   resolveGrants,
   type StationConfig,
@@ -17,6 +18,7 @@ import { App } from "../App.js";
 import { type Connect, DaemonProvider } from "../daemon-context.js";
 import { type Api, ApiError } from "../lib/api.js";
 import type { ConnectOptions } from "../lib/event-stream.js";
+import type { RunRecord, SessionDetail, SessionRecord } from "../queries.js";
 
 export interface Call {
   readonly method: string;
@@ -78,6 +80,16 @@ export function fakeApi() {
       ],
     ]),
   };
+  const sessions = new Map<
+    string,
+    { session: SessionRecord; messages: ChatMessage[]; runs: RunRecord[] }
+  >();
+  const settings = {
+    modelMode: "fake" as "fake" | "openrouter",
+    openrouter: { configured: false, source: null as "keychain" | "env" | null },
+  };
+  let ids = 0;
+  const nextId = (prefix: string) => `${prefix}${++ids}`;
   const calls: Call[] = [];
   const view = (id: string): AgentView => {
     const a = state.agents.get(id);
@@ -97,6 +109,76 @@ export function fakeApi() {
       return v;
     }
     if (method === "GET" && path === "/models") return SUPPORTED_MODELS;
+    if (path === "/settings") return settings;
+    if (path === "/settings/openrouter") {
+      if (method === "PUT") {
+        if (!String(b.key).startsWith("sk-or-"))
+          throw new ApiError(400, "OpenRouter did not accept this key");
+        settings.openrouter = { configured: true, source: "keychain" };
+      } else settings.openrouter = { configured: false, source: null };
+      return undefined;
+    }
+    if (parts[0] === "agents" && parts[2] === "sessions") {
+      const agentId = parts[1] ?? "";
+      if (method === "GET") {
+        return [...sessions.values()]
+          .filter((x) => x.session.agentId === agentId)
+          .map((x) => x.session)
+          .reverse();
+      }
+      const session: SessionRecord = {
+        id: nextId("s"),
+        agentId,
+        title: "New session",
+        createdAt: "2026-09-29T12:00:00.000Z",
+      };
+      sessions.set(session.id, { session, messages: [], runs: [] });
+      return session;
+    }
+    if (parts[0] === "sessions") {
+      const entry = sessions.get(parts[1] ?? "");
+      if (!entry) throw new ApiError(404, `no session "${parts[1]}"`);
+      if (method === "GET") {
+        const detail: SessionDetail = {
+          session: entry.session,
+          messages: entry.messages.map((message, i) => ({
+            id: `${entry.session.id}-m${i}`,
+            position: i + 1,
+            message,
+          })),
+          runs: [...entry.runs].reverse(),
+        };
+        return detail;
+      }
+      if (method === "PATCH") {
+        entry.session = {
+          ...entry.session,
+          ...(b.title ? { title: String(b.title) } : {}),
+          ...(b.archived ? { archivedAt: "2026-09-29T12:00:00.000Z" } : {}),
+        };
+        return entry.session;
+      }
+      if (parts[2] === "messages") {
+        const run: RunRecord = {
+          id: nextId("r"),
+          sessionId: entry.session.id,
+          agentId: entry.session.agentId,
+          state: "running",
+          model: "anthropic/claude-sonnet-5.5",
+          createdAt: "2026-09-29T12:00:00.000Z",
+          steps: 0,
+        };
+        entry.runs.push(run);
+        entry.messages.push({ role: "user", text: String(b.text) });
+        return { runId: run.id };
+      }
+    }
+    if (parts[0] === "runs" && parts[2] === "cancel") {
+      for (const entry of sessions.values()) {
+        entry.runs = entry.runs.map((r) => (r.id === parts[1] ? { ...r, state: "cancelled" } : r));
+      }
+      return undefined;
+    }
     if (parts[0] === "agents") {
       const id = parts[1] ?? "";
       if (method === "GET") return view(id);
@@ -165,7 +247,7 @@ export function fakeApi() {
     send: async <T,>(method: "POST" | "PUT" | "PATCH" | "DELETE", path: string, body?: unknown) =>
       route(method, path, body) as T,
   };
-  return { api, calls, state };
+  return { api, calls, state, sessions, settings };
 }
 
 /** Renders the whole app at `path` against the fake API, with an event stream the test drives. */

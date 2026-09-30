@@ -27,6 +27,8 @@ daemon.
 | `src/App.tsx` | Shell and routes: Station, COMMS, Crew, Memory, Notifications, Connectors, Settings (glossary names); `/dev` is the component gallery (milestone 1 map fixture, D14). |
 | `src/queries.ts` | TanStack Query hooks for station, agents, models, and every crew/room mutation. Mutations never patch the cache: the daemon's `agent.updated` / `station.updated` events invalidate it (`invalidateFor` in `daemon-context.tsx`), so changes from other tabs or hand edits appear the same way. |
 | `src/pages/` | Screens. Station shows the latest events until the map is adapted (Phase 9). Crew (`/crew`) lists rooms with prop toggles and their crew; the agent editor (`/crew/:id`) edits config (Full power flagged), connector grants, the four documents (each with its own save state), and shows the effective tools. |
+| `src/comms/` | COMMS (`/comms`): pick a crew member, start or open sessions, several chat windows side by side (`?agent=…&open=a,b`). A window streams the reply from ephemeral `run.delta` events (`subscribe` on the daemon context), then shows the stored transcript once the run ends; tool use and refusals appear inline; Cancel while a run is active. |
+| `src/pages/SettingsPage.tsx` | Settings (`/settings`): which models runs use (OpenRouter or the scripted fake) and whether a key is configured; a password field sends a new key once, and it is never shown again. |
 | `src/test/fake-daemon.tsx` | An in-memory fake of the crew API and a hand-driven event stream for component tests. |
 
 ## Tests
