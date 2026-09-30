@@ -30,4 +30,42 @@ export const MIGRATIONS: readonly Migration[] = [
         begin select raise(abort, 'events are append-only'); end;
     `,
   },
+  {
+    version: 2,
+    name: "sessions, runs, messages",
+    sql: `
+      create table sessions (
+        id text primary key,
+        agent_id text not null,
+        title text not null,
+        created_at text not null,
+        archived_at text
+      );
+      create index sessions_agent on sessions (agent_id, created_at);
+      create table runs (
+        id text primary key,
+        session_id text not null references sessions (id),
+        agent_id text not null,
+        state text not null,
+        trigger text not null,
+        model text not null,
+        created_at text not null,
+        started_at text,
+        ended_at text,
+        error text,
+        steps integer not null default 0
+      );
+      create index runs_state on runs (state);
+      create index runs_session on runs (session_id, created_at);
+      create table messages (
+        id text primary key,
+        session_id text not null references sessions (id),
+        run_id text references runs (id),
+        position integer not null,
+        message text not null,
+        created_at text not null,
+        unique (session_id, position)
+      );
+    `,
+  },
 ];

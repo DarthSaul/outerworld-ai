@@ -117,7 +117,7 @@ describe("openDatabase", () => {
     openDatabase(path).close();
     const db = openDatabase(path);
     const applied = db.prepare("select version from schema_migrations order by version").all();
-    expect(applied).toEqual([{ version: 1 }]);
+    expect(applied).toEqual([{ version: 1 }, { version: 2 }]);
     db.close();
   });
 

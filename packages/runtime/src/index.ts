@@ -24,6 +24,13 @@ export {
   MemorySecretStore,
   type SecretStore,
 } from "./secrets/store.js";
+export {
+  type RunRecord,
+  type RunTrigger,
+  type SessionRecord,
+  SessionStore,
+  type StoredMessage,
+} from "./sessions/session-store.js";
 export { type AtomicWriteOptions, writeFileAtomic } from "./storage/atomic-write.js";
 export { type Db, openDatabase } from "./storage/database.js";
 export { type EventListener, EventStore } from "./storage/event-store.js";
