@@ -7,12 +7,14 @@ import {
 } from "@darthsaul/outerworld-ai-core";
 import {
   type ApiKeyService,
+  type ConsentStore,
   type CrewService,
   NotFoundError,
   type RunRecord,
   type RunService,
   type SessionRecord,
   type SessionStore,
+  type SpendStore,
   type StoredMessage,
 } from "@darthsaul/outerworld-ai-runtime";
 import { Hono } from "hono";
@@ -29,6 +31,8 @@ export interface CommsDeps {
   readonly crew: CrewService;
   readonly runs: RunService;
   readonly sessions: SessionStore;
+  readonly consents: ConsentStore;
+  readonly spend: SpendStore;
   readonly apiKeys: ApiKeyService;
   readonly modelMode: "openrouter" | "fake";
 }

@@ -2,16 +2,23 @@ import { chmod, mkdir } from "node:fs/promises";
 import type { AddressInfo } from "node:net";
 import {
   ApiKeyService,
+  ConsentStore,
   CrewService,
+  createFileTools,
   createRedactor,
+  createRememberTool,
+  createWebFetch,
   EventStore,
   KeychainSecretStore,
+  KillSwitch,
   loadStationDir,
+  MemoryStore,
   openDatabase,
   openRouterModels,
   RunService,
   type SecretStore,
   SessionStore,
+  SpendStore,
   scriptedModels,
   stationPaths,
 } from "@darthsaul/outerworld-ai-runtime";
@@ -63,10 +70,21 @@ export async function startDaemon(
   const redact = createRedactor(() => apiKeys.knownSecrets());
   const events = new EventStore(db, { redact });
   const sessions = new SessionStore(db);
+  const consents = new ConsentStore(db);
+  const spend = new SpendStore(db);
+  const memories = new MemoryStore(db);
   const runs = new RunService({
     home: config.home,
     events,
     sessions,
+    consents,
+    spend,
+    killSwitch: new KillSwitch(db),
+    tools: {
+      ...createFileTools({ workspacesDir: paths.workspacesDir }),
+      web_fetch: createWebFetch(),
+      remember: createRememberTool({ memories, events }),
+    },
     models: config.modelMode === "fake" ? scriptedModels() : openRouterModels(apiKeys),
     redact,
   });
@@ -96,6 +114,8 @@ export async function startDaemon(
     crew: new CrewService({ home: config.home, events }),
     runs,
     sessions,
+    consents,
+    spend,
     apiKeys,
     modelMode: config.modelMode,
     version: VERSION,

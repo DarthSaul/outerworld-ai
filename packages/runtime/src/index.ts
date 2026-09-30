@@ -5,6 +5,14 @@
  * dispatcher, scheduler, tools, MCP, memory, and budgets. All runtime logic lives here, never in
  * apps/*, so it can move into a desktop shell unchanged. Pure policy lives in core.
  */
+
+export {
+  type ConsentRecord,
+  type ConsentStatus,
+  ConsentStore,
+} from "./controls/consent-store.js";
+export { KillSwitch } from "./controls/kill-switch.js";
+export { SpendStore, type SpendTotal } from "./controls/spend-store.js";
 export {
   ConflictError,
   CrewService,

@@ -1,15 +1,24 @@
 import {
+  type AgentConfig,
   assemblePrompt,
+  type BudgetLine,
+  type Budgets,
   type ChatMessage,
+  checkBudget,
   historyBudget,
   isTerminal,
+  needsConsent,
   resolveGrants,
   roleBriefing,
   SUPPORTED_MODELS,
   type ToolCallRecord,
   type ToolClass,
+  utcDay,
 } from "@darthsaul/outerworld-ai-core";
 import { APICallError, jsonSchema, type LanguageModel, streamText, type ToolSet, tool } from "ai";
+import type { ConsentRecord, ConsentStore } from "../controls/consent-store.js";
+import type { KillSwitch } from "../controls/kill-switch.js";
+import type { SpendStore } from "../controls/spend-store.js";
 import { ConflictError, NotFoundError } from "../crew/crew-service.js";
 import type {
   RunRecord,
@@ -44,6 +53,12 @@ export interface RunServiceOptions {
   readonly home: string;
   readonly events: EventStore;
   readonly sessions: SessionStore;
+  /** Pending consent requests (brief §6). */
+  readonly consents: ConsentStore;
+  /** Spend per model call, for budgets and totals (brief §15). */
+  readonly spend: SpendStore;
+  readonly killSwitch: KillSwitch;
+  readonly now?: () => Date;
   /** The model for an id; throws (e.g. no API key) to fail the run with that message. */
   readonly models: (modelId: string) => LanguageModel | Promise<LanguageModel>;
   readonly tools?: Readonly<Record<string, ToolImpl>>;
@@ -148,6 +163,10 @@ export class RunService {
   readonly #active = new Map<string, AbortController>();
   readonly #done = new Map<string, Promise<RunRecord>>();
   readonly #sleep: (ms: number) => Promise<void>;
+  /** Runs paused for consent, waiting for the Commander's decision. */
+  readonly #waiting = new Map<string, (decision: "approved" | "denied") => void>();
+  /** Budget warnings already sent (one per cap per run, agent-day, or station-day). */
+  readonly #warned = new Set<string>();
 
   constructor(options: RunServiceOptions) {
     this.#o = options;
@@ -157,6 +176,8 @@ export class RunService {
 
   /** On startup: every run a crash left unfinished becomes interrupted (never resumed). */
   recover(): RunRecord[] {
+    // A consent that was pending when the daemon stopped can no longer be answered.
+    this.#o.consents.expireAll();
     const runs = this.#o.sessions.interruptUnfinished();
     for (const r of runs) {
       this.#o.events.append({
@@ -207,6 +228,9 @@ export class RunService {
     trigger: RunTrigger = "user",
   ): Promise<{ runId: string }> {
     const session = this.#session(sessionId);
+    if (this.#o.killSwitch.engaged()) {
+      throw new ConflictError("the kill switch is on: clear it to run anything again");
+    }
     if (session.archivedAt) throw new ConflictError("this session is archived");
     if (this.#o.sessions.runs(sessionId).some((r) => !isTerminal(r.state))) {
       throw new ConflictError("a run is already running in this session");
@@ -238,6 +262,34 @@ export class RunService {
     controller.abort(new Cancelled(by));
   }
 
+  /** Approves or denies a pending consent; the paused run continues with the decision. */
+  resolveConsent(consentId: string, decision: "approved" | "denied"): ConsentRecord {
+    const current = this.#o.consents.get(consentId);
+    if (!current) throw new NotFoundError(`no consent "${consentId}"`);
+    const resume = this.#waiting.get(consentId);
+    if (current.status === "pending" && !resume) {
+      this.#o.consents.expireForRun(current.runId);
+      throw new ConflictError("that request's run is no longer waiting");
+    }
+    const decided = this.#o.consents.decide(consentId, decision);
+    resume?.(decision);
+    return decided;
+  }
+
+  killSwitchEngaged(): boolean {
+    return this.#o.killSwitch.engaged();
+  }
+
+  /**
+   * The kill switch (brief §11): the state is persisted first, then every queued, running, or
+   * waiting run is cancelled, and nothing new starts until it is cleared.
+   */
+  setKillSwitch(engaged: boolean): void {
+    this.#o.killSwitch.set(engaged);
+    this.#o.events.append({ type: "station.kill_switch", payload: { engaged } });
+    if (engaged) for (const c of this.#active.values()) c.abort(new Cancelled("kill_switch"));
+  }
+
   /** Resolves with the run once it reaches a terminal state (tests, dispatch in Phase 5). */
   async settled(runId: string): Promise<RunRecord> {
     const pending = this.#done.get(runId);
@@ -261,6 +313,7 @@ export class RunService {
     try {
       await this.#slots.acquire(signal);
       holding = true;
+      if (this.#o.killSwitch.engaged()) throw new Cancelled("kill_switch");
       const loaded = await loadStationDir(this.#o.home);
       const agent = loaded.agents.find((a) => a.id === run.agentId);
       sessions.transition(run.id, "start");
@@ -287,6 +340,12 @@ export class RunService {
 
       const maxSteps = this.#o.maxSteps ?? 12;
       for (let step = 1; step <= maxSteps; step++) {
+        const blocked = this.#budgetCheck(station.budgets, ids);
+        if (blocked) {
+          sessions.transition(run.id, "block_budget");
+          events.append({ type: "budget.blocked", ...ids, payload: { ...blocked } });
+          return sessions.getRun(run.id) as RunRecord;
+        }
         const history = sessions.messages(run.sessionId).map((m) => m.message);
         const prompt = assemblePrompt({
           documents: agent.documents,
@@ -294,7 +353,7 @@ export class RunService {
           history,
           budgetTokens: historyBudget(context),
         });
-        const result = await this.#callWithRetry(ids, signal, () =>
+        const result = await this.#callWithRetry(ids, agent.config.model, signal, () =>
           streamText({
             model,
             instructions: prompt.system,
@@ -319,7 +378,7 @@ export class RunService {
         }
         for (const call of result.toolCalls) {
           signal.throwIfAborted();
-          await this.#runTool(call, offered, registry, ids, signal);
+          await this.#runTool(call, offered, registry, ids, agent.config, signal);
         }
       }
       sessions.transition(run.id, "complete");
@@ -327,6 +386,10 @@ export class RunService {
       return sessions.getRun(run.id) as RunRecord;
     } catch (error) {
       const reason = signal.aborted ? signal.reason : error;
+      this.#o.consents.expireForRun(run.id);
+      // Already settled elsewhere (e.g. marked interrupted by a newer process): leave it as it is.
+      const settled = sessions.getRun(run.id);
+      if (settled && isTerminal(settled.state)) return settled;
       if (reason instanceof Cancelled) {
         sessions.transition(run.id, "cancel");
         events.append({ type: "run.cancelled", ...ids, payload: { by: reason.by } });
@@ -345,9 +408,37 @@ export class RunService {
     }
   }
 
+  /**
+   * Budgets before every model call (brief §15). Returns the cap that blocks, if any; sends each
+   * 80% warning once per run, agent-day, or station-day.
+   */
+  #budgetCheck(
+    budgets: Budgets,
+    ids: { agentId: string; sessionId: string; runId: string },
+  ): BudgetLine | undefined {
+    const day = utcDay(this.#now());
+    const check = checkBudget(budgets, {
+      run: this.#o.spend.forRun(ids.runId).costUsd,
+      agentToday: this.#o.spend.agentDay(ids.agentId, day),
+      stationToday: this.#o.spend.stationDay(day),
+    });
+    for (const w of check.warnings) {
+      const key = `${w.scope}:${w.scope === "run" ? ids.runId : w.scope === "agent" ? `${ids.agentId}:${day}` : day}`;
+      if (this.#warned.has(key)) continue;
+      this.#warned.add(key);
+      this.#o.events.append({ type: "budget.warning", ...ids, payload: { ...w } });
+    }
+    return check.blocked;
+  }
+
+  #now(): Date {
+    return this.#o.now ? this.#o.now() : new Date();
+  }
+
   /** One model call: streams deltas live; retries transient failures that happened before any text. */
   async #callWithRetry(
     ids: { agentId: string; sessionId: string; runId: string },
+    modelId: string,
     signal: AbortSignal,
     call: () => ReturnType<typeof streamText>,
   ): Promise<{ text: string; toolCalls: ToolCallRecord[] }> {
@@ -362,6 +453,19 @@ export class RunService {
             this.#o.events.publish({ type: "run.delta", ...ids, payload: { text: part.text } });
           } else if (part.type === "tool-call") {
             toolCalls.push({ id: part.toolCallId, name: part.toolName, input: part.input });
+          } else if (part.type === "finish-step") {
+            // Spend per model call: tokens, and OpenRouter's cost in USD when it reports one.
+            const cost = (
+              part.providerMetadata?.openrouter as { usage?: { cost?: unknown } } | undefined
+            )?.usage?.cost;
+            this.#o.spend.record({
+              ...ids,
+              model: modelId,
+              inputTokens: part.usage.inputTokens ?? 0,
+              outputTokens: part.usage.outputTokens ?? 0,
+              costUsd: typeof cost === "number" ? cost : null,
+              at: this.#now().toISOString(),
+            });
           } else if (part.type === "error") {
             throw part.error;
           }
@@ -400,6 +504,7 @@ export class RunService {
     offered: readonly { name: string; class: ToolClass }[],
     registry: Readonly<Record<string, ToolImpl>>,
     ids: { agentId: string; sessionId: string; runId: string },
+    agent: AgentConfig,
     signal: AbortSignal,
   ) {
     const { events, sessions } = this.#o;
@@ -433,6 +538,23 @@ export class RunService {
       ...ids,
       payload: { toolCallId: call.id, tool: call.name, input: call.input, class: grant.class },
     });
+    if (needsConsent(grant.class, agent.approvalMode)) {
+      const decision = await this.#askConsent(call, ids, signal);
+      if (decision === "denied") {
+        const summary = "the Commander denied this call";
+        events.append({
+          type: "run.tool_result",
+          ...ids,
+          payload: { toolCallId: call.id, tool: call.name, ok: false, summary },
+        });
+        sessions.appendMessage(
+          ids.sessionId,
+          ids.runId,
+          toolMessage(`${summary}. Do not retry it; ask what they want instead.`, true),
+        );
+        return;
+      }
+    }
     try {
       const output = await impl.execute(call.input, { ...ids, signal });
       events.append({
@@ -451,5 +573,50 @@ export class RunService {
       });
       sessions.appendMessage(ids.sessionId, ids.runId, toolMessage(summary, true));
     }
+  }
+
+  /**
+   * Pauses the run until the Commander decides (brief §6). There is no timeout: a request is only
+   * ever approved, denied, or expired by a cancel or a restart.
+   */
+  async #askConsent(
+    call: ToolCallRecord,
+    ids: { agentId: string; sessionId: string; runId: string },
+    signal: AbortSignal,
+  ): Promise<"approved" | "denied"> {
+    const { consents, sessions, events } = this.#o;
+    const consent = consents.create({
+      ...ids,
+      toolCallId: call.id,
+      tool: call.name,
+      input: call.input,
+    });
+    sessions.transition(ids.runId, "await_consent");
+    events.append({
+      type: "consent.requested",
+      ...ids,
+      payload: { consentId: consent.id, toolCallId: call.id, tool: call.name, input: call.input },
+    });
+    events.append({ type: "run.awaiting_consent", ...ids, payload: { consentId: consent.id } });
+    const decision = await new Promise<"approved" | "denied">((resolve, reject) => {
+      const abort = () => {
+        this.#waiting.delete(consent.id);
+        reject(signal.reason);
+      };
+      if (signal.aborted) return abort();
+      signal.addEventListener("abort", abort, { once: true });
+      this.#waiting.set(consent.id, (d) => {
+        signal.removeEventListener("abort", abort);
+        this.#waiting.delete(consent.id);
+        resolve(d);
+      });
+    });
+    sessions.transition(ids.runId, "resolve_consent");
+    events.append({
+      type: "consent.resolved",
+      ...ids,
+      payload: { consentId: consent.id, decision },
+    });
+    return decision;
   }
 }

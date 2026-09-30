@@ -3,17 +3,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   ApiKeyService,
-  CrewService,
   EventStore,
   MemorySecretStore,
   openDatabase,
-  RunService,
-  SessionStore,
-  scriptedModels,
 } from "@darthsaul/outerworld-ai-runtime";
 import { describe, expect, it } from "vitest";
 import { createApp } from "./app.js";
 import type { SessionDetail } from "./comms-routes.js";
+import { testServices } from "./test/services.js";
 
 const TOKEN = "d".repeat(64);
 const KEY = "sk-or-v1-abcdefabcdefabcdefabcdefabcdef";
@@ -22,30 +19,21 @@ const fixture = join(import.meta.dirname, "..", "..", "..", "fixtures", "demo-st
 const setup = (keyCheckStatus = 200) => {
   const home = join(mkdtempSync(join(tmpdir(), "ow-comms-")), "home");
   cpSync(fixture, home, { recursive: true });
-  const db = openDatabase(":memory:");
-  const events = new EventStore(db);
-  const sessions = new SessionStore(db);
+  const events = new EventStore(openDatabase(":memory:"));
   const apiKeys = new ApiKeyService({
     store: new MemorySecretStore(),
     env: {},
     fetch: (async () => new Response("{}", { status: keyCheckStatus })) as unknown as typeof fetch,
   });
-  const runs = new RunService({
-    home,
-    events,
-    sessions,
-    models: scriptedModels({ chunkDelayInMs: 0 }),
-  });
+  const services = testServices(home, events);
+  const { runs } = services;
   const app = createApp({
     token: TOKEN,
     allowedOrigins: ["http://127.0.0.1:4317"],
     allowedHosts: ["127.0.0.1:4317"],
     events,
-    crew: new CrewService({ home, events }),
-    runs,
-    sessions,
+    ...services,
     apiKeys,
-    modelMode: "fake",
     version: "test",
   });
   const call = async (method: string, path: string, body?: unknown) => {
