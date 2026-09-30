@@ -1,13 +1,14 @@
 import { readFile, realpath } from "node:fs/promises";
 import { extname, join, sep } from "node:path";
 import type { RuntimeEvent } from "@darthsaul/outerworld-ai-core";
-import type { ConnectorManager, EventStore } from "@darthsaul/outerworld-ai-runtime";
+import type { ConnectorManager, EventStore, MemoryService } from "@darthsaul/outerworld-ai-runtime";
 import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
 import { type CommsDeps, commsRoutes } from "./comms-routes.js";
 import { connectorRoutes, oauthCallback } from "./connector-routes.js";
 import { crewRoutes } from "./crew-routes.js";
 import { apiRequestRules } from "./http.js";
+import { memoryRoutes } from "./memory-routes.js";
 import { tokensMatch } from "./token.js";
 
 export interface AppOptions extends CommsDeps {
@@ -18,6 +19,7 @@ export interface AppOptions extends CommsDeps {
   readonly allowedHosts: readonly string[];
   readonly events: EventStore;
   readonly connectors: ConnectorManager;
+  readonly memory: MemoryService;
   readonly version: string;
   /** The built SPA (`apps/station/dist`). Absent in development, where Vite serves it. */
   readonly spaDir?: string;
@@ -131,6 +133,7 @@ export function createApp(options: AppOptions): Hono {
   app.route("/api", crewRoutes(options.crew));
   app.route("/api", commsRoutes(options));
   app.route("/api", connectorRoutes({ crew: options.crew, connectors: options.connectors }));
+  app.route("/api", memoryRoutes(options.memory));
   app.route("/", oauthCallback(options.connectors));
 
   app.all("/api/*", (c) => c.json({ error: "not found" }, 404));

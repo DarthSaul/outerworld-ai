@@ -54,6 +54,9 @@ allowed `Origin` and a `Sec-Fetch-Site` other than `cross-site`. Every `/api/*` 
 | `PATCH /api/connectors/:id` | `{ url?, name? }`; `DELETE` removes it (409 while any crew member is granted it). |
 | `POST /api/connectors/:id/connect` | `{ status, authorizationUrl? }`: when the server needs sign-in, open `authorizationUrl`; Notion returns to the callback below. |
 | `POST /api/connectors/:id/disconnect` | `{ forget? }`: `forget: true` also removes the stored sign-in from the keychain. |
+| `GET /api/agents/:id/memories` | `{ proposals, beliefs }`: `remember` proposals awaiting the Commander, and approved beliefs (own and station-wide, newest decided first) that go into every prompt. |
+| `POST /api/memories/:id/approve` | Optional `{ text }` to approve an edited version; `POST /api/memories/:id/reject` rejects. 409 once decided. |
+| `PATCH /api/memories/:id` | `{ text }` edits a stored belief; `DELETE` forgets it (204). |
 | `GET /oauth/callback/:id` | Where sign-in returns (no API token: the browser comes from Notion). Accepts only the one-time `state` of a sign-in in progress; shows a small page saying whether it worked. The only cross-site navigation allowed. |
 | `GET /api/settings` | `{ modelMode, openrouter: { configured, source } }`, never the key. |
 | `PUT /api/settings/openrouter` | `{ key }`: checked with OpenRouter's key endpoint (no model call), stored in the OS keychain → 204; a rejected key is 400. |

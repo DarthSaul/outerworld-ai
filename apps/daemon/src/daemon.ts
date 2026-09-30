@@ -15,6 +15,7 @@ import {
   KeychainSecretStore,
   KillSwitch,
   loadStationDir,
+  MemoryService,
   MemoryStore,
   openDatabase,
   openRouterModels,
@@ -77,6 +78,7 @@ export async function startDaemon(
   const consents = new ConsentStore(db);
   const spend = new SpendStore(db);
   const memories = new MemoryStore(db);
+  const memory = new MemoryService({ store: memories, events });
   const dispatches = new DispatchStore(db);
   // The OAuth redirect needs the bound port, known only once listening (set below).
   let boundPort = config.port;
@@ -94,6 +96,7 @@ export async function startDaemon(
     spend,
     killSwitch: new KillSwitch(db),
     connectors,
+    beliefs: (agentId) => memory.beliefsFor(agentId).map((m) => m.text),
     tools: {
       ...createFileTools({ workspacesDir: paths.workspacesDir }),
       web_fetch: createWebFetch(),
@@ -133,6 +136,7 @@ export async function startDaemon(
       connectorTools: () => connectors.catalog(),
     }),
     connectors,
+    memory,
     runs,
     sessions,
     consents,

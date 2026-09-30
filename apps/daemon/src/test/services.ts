@@ -8,6 +8,8 @@ import {
   type EventStore,
   KillSwitch,
   MemorySecretStore,
+  MemoryService,
+  MemoryStore,
   openDatabase,
   RunService,
   SessionStore,
@@ -16,7 +18,11 @@ import {
 } from "@darthsaul/outerworld-ai-runtime";
 import type { CommsDeps } from "../comms-routes.js";
 
-export type TestServices = CommsDeps & { connectors: ConnectorManager };
+export type TestServices = CommsDeps & {
+  connectors: ConnectorManager;
+  memory: MemoryService;
+  memoryStore: MemoryStore;
+};
 
 /** Runtime services for app tests: scripted model, in-memory keychain, no network. */
 export function testServices(
@@ -29,6 +35,8 @@ export function testServices(
   const consents = new ConsentStore(db);
   const spend = new SpendStore(db);
   const dispatches = new DispatchStore(db);
+  const memoryStore = new MemoryStore(db);
+  const memory = new MemoryService({ store: memoryStore, events });
   const connectors = new ConnectorManager({
     home,
     events,
@@ -51,6 +59,8 @@ export function testServices(
   return {
     crew: new CrewService({ home, events, connectorTools: () => connectors.catalog() }),
     connectors,
+    memory,
+    memoryStore,
     sessions,
     consents,
     spend,
