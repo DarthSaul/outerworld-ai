@@ -9,8 +9,7 @@
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "start": "node dist/main.js",
-    "dev": "node --watch --enable-source-maps dist/main.js"
+    "start": "node dist/main.js"
   },
   "dependencies": {
     "@darthsaul/outerworld-ai-core": "workspace:*",
