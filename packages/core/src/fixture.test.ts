@@ -8,7 +8,7 @@ import { parseStation } from "./schema/station.js";
 
 /** The fixture is the one dataset every test and screenshot uses. This test keeps it valid. */
 const here = dirname(fileURLToPath(import.meta.url));
-const fixtureDir = join(here, "..", "..", "..", "fixtures", "demo-station");
+const fixtureDir = join(here, "..", "..", "..", "fixtures", "map-demo");
 const AS_OF = "2026-09-27T15:00:00Z";
 
 function walk(dir: string, root = dir): LedgerFiles {
@@ -21,7 +21,7 @@ function walk(dir: string, root = dir): LedgerFiles {
   return out;
 }
 
-describe("fixtures/demo-station", () => {
+describe("fixtures/map-demo", () => {
   const station = parseStation(JSON.parse(readFileSync(join(fixtureDir, "station.json"), "utf8")));
 
   it("station.json validates with no issues", () => {
@@ -33,7 +33,7 @@ describe("fixtures/demo-station", () => {
     if (!station.ok) return;
     const state = parseLedger(station.value, walk(join(fixtureDir, "ledger")), {
       now: AS_OF,
-      sourcePath: "fixtures/demo-station/ledger",
+      sourcePath: "fixtures/map-demo/ledger",
     });
     expect(state.issues).toEqual([]);
     expect(state.teams["project-management"]).toMatchObject({

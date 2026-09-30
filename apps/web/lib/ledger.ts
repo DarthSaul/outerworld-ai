@@ -19,7 +19,7 @@ import {
  * Server-only: reads a ledger repo from disk into core's in-memory file map. The path comes from
  * OUTERWORLD_LEDGER_PATH or falls back to the demo fixture. No network, ever (docs/PRIVACY.md).
  */
-const FIXTURE_ROOT = resolve(process.cwd(), "..", "..", "fixtures", "demo-station");
+const FIXTURE_ROOT = resolve(process.cwd(), "..", "..", "fixtures", "map-demo");
 /** The fixture's own moment. Health is evaluated here for the fixture so the demo never rots into "stalled". */
 export const FIXTURE_AS_OF = "2026-09-27T15:00:00Z";
 /** Only `ledger/` and `status/` under the ledger root are read; nothing else is a ledger input. */

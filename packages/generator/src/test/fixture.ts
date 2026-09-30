@@ -12,7 +12,7 @@ export const FIXTURE_STATION_PATH = join(
   "..",
   "..",
   "fixtures",
-  "demo-station",
+  "map-demo",
   "station.json",
 );
 export const GENERATED_AT = "2026-09-27T15:00:00Z";

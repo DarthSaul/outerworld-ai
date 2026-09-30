@@ -1,7 +1,8 @@
-# Demo Station fixture
+# Map demo fixture (milestone 1)
 
-A fictional person's Station and a fake ledger repo. Every screenshot, test, gallery cell (`/dev`), and
-example in this repository uses this fixture. Nothing here is real: no real people, repos, sessions, or
+The milestone 1 model: a fictional person's Station and a fake ledger repo. Until Phase 9 adapts the
+map to rooms and crew (tasks/todo.md D14), the ui map's tests and the `/dev` gallery render this
+fixture. The v1 station data directory is `fixtures/demo-station/`. Nothing here is real: no real people, repos, sessions, or
 webhook URLs. When you need a new shape of data, extend this fixture rather than adding real data.
 
 - `station.json` — the Station document (two teams, three agents, one overseer named Ultron).

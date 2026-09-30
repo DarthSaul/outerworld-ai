@@ -82,7 +82,7 @@ describe("loadLedger on a generated ledger repo", () => {
     const { readFileSync: read } = await import("node:fs");
     const { dirname } = await import("node:path");
     const fixture = JSON.parse(
-      read(join(process.cwd(), "..", "..", "fixtures", "demo-station", "station.json"), "utf8"),
+      read(join(process.cwd(), "..", "..", "fixtures", "map-demo", "station.json"), "utf8"),
     );
     const dir = mkdtempSync(join(tmpdir(), "ow-generated-"));
     for (const f of emitLedger(fixture, { generatedAt: "2026-09-27T15:00:00Z" })) {
