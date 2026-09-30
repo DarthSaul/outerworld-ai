@@ -69,21 +69,21 @@ decisions made, open questions.
 ## Phase 0 — Housekeeping and decisions
 
 ### 0.1 Commit the brief
-- [ ] `docs/specs/BRIEF-station-runtime.md` committed as-is (`docs(specs): add the station runtime brief`).
-- [ ] This plan and the archived milestone-1 plans committed (`chore(tasks): archive milestone 1, plan v1`).
+- [x] `docs/specs/BRIEF-station-runtime.md` committed as-is (`docs(specs): add the station runtime brief`).
+- [x] This plan and the archived milestone-1 plans committed (`chore(tasks): archive milestone 1, plan v1`).
 
 ### 0.2 ADR-0010 Local station runtime
-- [ ] Context (the brief's §2 table), decision (daemon + SPA on 127.0.0.1, OpenRouter BYOK, local files + SQLite + keychain, runtime-enforced grants), consequences (laptop on, metered cost, generator archived, StarNet vocabulary to revisit).
-- [ ] 0004, 0006, 0008 marked `Superseded by ADR-0010`; 0009 carries a historical note; `docs/decisions/README.md` index updated.
+- [x] Context (the brief's §2 table), decision (daemon + SPA on 127.0.0.1, OpenRouter BYOK, local files + SQLite + keychain, runtime-enforced grants), consequences (laptop on, metered cost, generator archived, StarNet vocabulary to revisit).
+- [x] 0004, 0006, 0008 marked `Superseded by ADR-0010`; 0009 carries a historical note; `docs/decisions/README.md` index updated.
 
 ### 0.3 ADR-0011 Stack choices
-- [ ] Records the table above with versions, rejected alternatives (node:sqlite, keytar, Fastify/Express, react-router 8, AI SDK `toolApproval`), and D5/D7/D8.
+- [x] Records the table above with versions, rejected alternatives (node:sqlite, keytar, Fastify/Express, react-router 8, AI SDK `toolApproval`), and D5/D7/D8.
 
 ### 0.4 ADR-0012 Notion connector (decided by the owner 2026-09-29)
-- [ ] Hosted Notion MCP over Streamable HTTP with OAuth, connected once station-wide; no stdio fallback, no page scoping. Per-agent access is binary: granted or not.
-- [ ] Our read/write classification of Notion tools is authoritative and drives consent only (under *Ask first*, `write` calls pause); unknown tools default to `write`.
-- [ ] Rejected: local `@notionhq/notion-mcp-server` (unmaintained; page scoping not needed), direct REST (not MCP).
-- [ ] Brief amended in the same commit: §3 goal 5, §6 connector row, §12 grant editor, §16.2, §17 PM grants say "Notion granted" instead of presets; status line notes the amendment.
+- [x] Hosted Notion MCP over Streamable HTTP with OAuth, connected once station-wide; no stdio fallback, no page scoping. Per-agent access is binary: granted or not.
+- [x] Our read/write classification of Notion tools is authoritative and drives consent only (under *Ask first*, `write` calls pause); unknown tools default to `write`.
+- [x] Rejected: local `@notionhq/notion-mcp-server` (unmaintained; page scoping not needed), direct REST (not MCP).
+- [x] Brief amended in the same commit: §3 goal 5, §6 connector row, §12 grant editor, §16.2, §17 PM grants say "Notion granted" instead of presets; status line notes the amendment.
 
 ### 0.5 Archive the ledger template
 - [x] `templates/ledger-repo` removed (no tests, no dependents). CLAUDE.md/README references go in 0.8.
@@ -91,19 +91,19 @@ decisions made, open questions.
   imports it, and the pair is removed in one diff so the floor guard sees whole packages retired.
 
 ### 0.6 Floor guard: allow `lane` (D3)
-- [ ] `lane`/`lanes` removed from `THEMED` in `scripts/floor-guard.mjs` and from CLAUDE.md's banned list; separate commit.
+- [x] `lane`/`lanes` removed from `THEMED` in `scripts/floor-guard.mjs` and from CLAUDE.md's banned list; separate commit.
 
 ### 0.7 Glossary rename
-- [ ] `glossary` keys and strings follow brief §4: station (whole system), room/rooms, agent → "Crew member"/"Crew", lane → "Hallway", grant → "Prop", connector, user → "Commander", overseer, comms → "COMMS", session, run → "Run", dispatch, approvalMode ("Ask first"/"Full power"), memory ("Stored beliefs"/"Awaiting your decision"), notifications.
-- [ ] Removed keys: ledger/report/routine/system-report wording. ui call sites and the web dashboard use the new keys; glossary test lists every key; floor guard passes.
-- [ ] Schema identifiers (`Team`, `Handoff`) are *not* renamed here; they are replaced in Phase 1 (D11).
+- [x] `glossary` keys and strings follow brief §4: station (whole system), room/rooms, agent → "Crew member"/"Crew", lane → "Hallway", grant → "Prop", connector, user → "Commander", overseer, comms → "COMMS", session, run → "Run", dispatch, approvalMode ("Ask first"/"Full power"), memory ("Stored beliefs"/"Awaiting your decision"), notifications.
+- [x] Removed keys: ledger/report/routine/system-report wording. ui call sites and the web dashboard use the new keys; glossary test lists every key; floor guard passes.
+- [x] Schema identifiers (`Team`, `Handoff`) are *not* renamed here; they are replaced in Phase 1 (D11).
 
 ### 0.8 Docs rewrite
-- [ ] `docs/PRIVACY.md` per brief §11: what lives where (station dir, SQLite, keychain, browser), what leaves (OpenRouter model calls, Notion connector calls, `web_fetch` requests; nothing else), what never leaves the daemon (secrets never to SPA/logs/events/station dir).
-- [ ] `README.md`: what it is, status (v1 in progress; milestone 1 archived), quickstart (`pnpm install && pnpm dev`), OpenRouter key requirement.
-- [ ] `CLAUDE.md`: new layout, package boundaries, vocabulary table from brief §4, product law, rules from the kickoff prompt (runtime logic only in `packages/runtime`, pure logic in core, fictional fixtures, no network in tests/CI, secrets never logged/persisted/emitted/sent to SPA), < 200 lines.
-- [ ] `CONSTRAINTS.md`: token rule covers `apps/station`; runtime coverage row (D10); generator row removed; app-level axe targets the SPA routes; "no network in tests" as a floor item with how it is checked (Vitest setup that fails on real `fetch`/sockets to non-loopback).
-- [ ] `docs/ARCHITECTURE.md` and `docs/SCHEMA.md` become stubs pointing at the brief.
+- [x] `docs/PRIVACY.md` per brief §11: what lives where (station dir, SQLite, keychain, browser), what leaves (OpenRouter model calls, Notion connector calls, `web_fetch` requests; nothing else), what never leaves the daemon (secrets never to SPA/logs/events/station dir).
+- [x] `README.md`: what it is, status (v1 in progress; milestone 1 archived), quickstart (`pnpm install && pnpm dev`), OpenRouter key requirement.
+- [x] `CLAUDE.md`: new layout, package boundaries, vocabulary table from brief §4, product law, rules from the kickoff prompt (runtime logic only in `packages/runtime`, pure logic in core, fictional fixtures, no network in tests/CI, secrets never logged/persisted/emitted/sent to SPA), < 200 lines.
+- [x] `CONSTRAINTS.md`: token rule covers `apps/station` (bullet + guard). Rows that need code land with it in Phase 1 (1.2/1.4), because the guard treats an edited row as a removed rule: runtime coverage (D10), the no-network floor item and its Vitest check, app-level axe on the SPA routes, and retiring the generator row with the package.
+- [x] `docs/ARCHITECTURE.md` and `docs/SCHEMA.md` become stubs pointing at the brief.
 
 **CHECKPOINT 0** — plan, ADRs, archive diff, ADR-0012 decision.
 
@@ -116,7 +116,7 @@ decisions made, open questions.
 - [ ] Old ledger/status/StationState modules deleted (D11); core stays at 90/85.
 
 ### 1.2 runtime storage
-- [ ] `packages/runtime` created (README, strict tsconfig, 85/80 coverage).
+- [ ] `packages/runtime` created (README, strict tsconfig, 85/80 coverage); CONSTRAINTS.md gains the runtime coverage row and the no-network floor item, checked by a shared Vitest setup that fails any `fetch`/socket to a non-loopback host.
 - [ ] Station dir loader/writer: reads `station.json` + `agents/*/`, atomic writes (temp in same dir + fsync + rename), validates via core.
 - [ ] SQLite via better-sqlite3, numbered `.sql` migrations in a `schema_migrations` table; `events` append-only with `seq INTEGER PRIMARY KEY AUTOINCREMENT`; `append(event)` and `since(seq)`; an in-process bus for subscribers.
 - [ ] Tests: schema round-trip through disk, atomic write leaves no partial file on a simulated crash, replay from `seq`, migrations idempotent.
@@ -132,7 +132,7 @@ decisions made, open questions.
 - [ ] Vite + React SPA, routes: Station, COMMS, Crew, Memory, Notifications, Connectors, Settings (placeholders except Station renders the fixture map).
 - [ ] API client with the token header; SSE client (`fetch`-based so it can send the header) with reconnect + `Last-Event-ID`; TanStack Query cache invalidated by events.
 - [ ] Dev proxy to the daemon; Vite plugin for the token (D7).
-- [ ] `/dev` gallery moved from apps/web; `apps/web` and `packages/generator` removed in one diff (D4, D12); `browser:verify` targets the built SPA served by the daemon; CI step names and `turbo.json` `globalEnv` updated; root `package.json` description rewritten.
+- [ ] `/dev` gallery moved from apps/web; `apps/web` and `packages/generator` removed in one diff (D4, D12); `browser:verify` targets the built SPA served by the daemon; CONSTRAINTS.md app-level axe row and the ui/web budget rows point at the SPA, and the generator coverage row is retired (a reviewed CONSTRAINTS diff the guard will flag; owner approves at Checkpoint 1); CI step names and `turbo.json` `globalEnv` updated; root `package.json` description rewritten.
 
 ### 1.5 dev loop
 - [ ] `pnpm dev` runs daemon + Vite together against `fixtures/demo-station` (copied to `.outerworld/dev-home/` on first run so the fixture is never mutated); `OUTERWORLD_HOME=… pnpm dev` uses a real dir.
