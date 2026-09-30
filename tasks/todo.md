@@ -253,6 +253,14 @@ decisions made, open questions.
   (with the Settings → Budgets item in Phase 9), per-model guidance from real usage, and the
   overshoot (the check runs before each model call, so one call can pass a cap; consider a
   pre-call estimate from prompt size and a `max_tokens` bound).
+- **Confident memories skip approval (owner, 2026-09-30):** `remember` should let the agent say
+  whether it is confident in a belief. A confident one is stored as a belief at once (still shown
+  on the Memory screen, editable and forgettable); one that would benefit from the Commander's
+  judgment goes to *Awaiting your decision* as today. To design: the input (a `confidence` flag or
+  level vs. an explicit `needsApproval`), whether station-scope beliefs always need approval,
+  a per-agent or per-station setting to turn auto-store off, an event that marks a belief as
+  self-approved, and how this fits the brief §14 rule that nothing is remembered until approved
+  (amend the brief when it lands).
 - **Node engine:** establish the supported Node line. `.nvmrc` says 22 and `engines` says `>=22`,
   but local development runs Node 24, `react-router` 8 needs `>=22.22`, and `node:sqlite` is only a
   release candidate on 24.15+. Decide the pin, then align `.nvmrc`, `engines`, CI, and ADR-0011.
