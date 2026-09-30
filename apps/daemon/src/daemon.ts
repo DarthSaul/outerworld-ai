@@ -20,6 +20,8 @@ import {
   openDatabase,
   openRouterModels,
   RunService,
+  Scheduler,
+  ScheduleStore,
   type SecretStore,
   SessionStore,
   SpendStore,
@@ -106,6 +108,13 @@ export async function startDaemon(
     redact,
   });
   new DispatchService({ home: config.home, runs, sessions, events, dispatches });
+  const scheduler = new Scheduler({
+    home: config.home,
+    runs,
+    sessions,
+    events,
+    store: new ScheduleStore(db),
+  });
 
   const loaded = await loadStationDir(config.home);
   for (const issue of loaded.issues) warn(`${issue.level}: ${issue.path}: ${issue.message}`);
@@ -137,6 +146,7 @@ export async function startDaemon(
     }),
     connectors,
     memory,
+    scheduler,
     runs,
     sessions,
     consents,
@@ -155,6 +165,8 @@ export async function startDaemon(
   // Reconnect connectors that already have a sign-in, in the background: a slow or unreachable
   // server must not hold up the daemon. Their status arrives as connector.status events.
   void connectors.start().catch((error: unknown) => warn(`connectors: ${String(error)}`));
+  // After recovery, so an occurrence caught up on startup never meets a stale run.
+  await scheduler.start();
   const url = `http://127.0.0.1:${port}`;
   log(
     `outerworld daemon ${VERSION} on ${url} (station: ${config.home}, models: ${config.modelMode})`,
@@ -165,6 +177,7 @@ export async function startDaemon(
     app,
     async close(reason) {
       events.append({ type: "station.stopped", payload: { reason } });
+      scheduler.stop();
       await connectors.stop();
       const closed = new Promise<void>((r) => server.close(() => r()));
       // Open SSE streams would otherwise hold the server open forever.

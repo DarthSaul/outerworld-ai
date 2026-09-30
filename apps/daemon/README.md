@@ -54,6 +54,10 @@ allowed `Origin` and a `Sec-Fetch-Site` other than `cross-site`. Every `/api/*` 
 | `PATCH /api/connectors/:id` | `{ url?, name? }`; `DELETE` removes it (409 while any crew member is granted it). |
 | `POST /api/connectors/:id/connect` | `{ status, authorizationUrl? }`: when the server needs sign-in, open `authorizationUrl`; Notion returns to the callback below. |
 | `POST /api/connectors/:id/disconnect` | `{ forget? }`: `forget: true` also removes the stored sign-in from the keychain. |
+| `GET /api/agents/:id/schedules` | Each schedule: cron, the zone it runs in (`timezoneSet: false` means the machine's), prompt, `enabled`, `catchUp`, `nextRunAt`, its session, a cron `error`, and the last 10 fires (`fired` with the run's state, or `missed` with `down`, `busy`, `stopped`, `error`). |
+| `POST /api/agents/:id/schedules` | `{ cron, prompt, timezone?, catchUp?, enabled? }` → 201; the id comes from the prompt. A cron croner refuses is 409 with the reason. |
+| `PATCH /api/agents/:id/schedules/:scheduleId` | Any of those fields; `timezone: null` goes back to the machine's zone. `DELETE` removes it (204). The scheduler re-arms from the `agent.updated` that follows. |
+| `POST /api/agents/:id/schedules/:scheduleId/run` | Run now → 202 with the fire (`sessionId`, `runId`); 409 when the kill switch is on or the session is busy. |
 | `GET /api/agents/:id/memories` | `{ proposals, beliefs }`: `remember` proposals awaiting the Commander, and approved beliefs (own and station-wide, newest decided first) that go into every prompt. |
 | `POST /api/memories/:id/approve` | Optional `{ text }` to approve an edited version; `POST /api/memories/:id/reject` rejects. 409 once decided. |
 | `PATCH /api/memories/:id` | `{ text }` edits a stored belief; `DELETE` forgets it (204). |

@@ -12,6 +12,8 @@ import {
   MemoryStore,
   openDatabase,
   RunService,
+  Scheduler,
+  ScheduleStore,
   SessionStore,
   SpendStore,
   scriptedModels,
@@ -22,6 +24,7 @@ export type TestServices = CommsDeps & {
   connectors: ConnectorManager;
   memory: MemoryService;
   memoryStore: MemoryStore;
+  scheduler: Scheduler;
 };
 
 /** Runtime services for app tests: scripted model, in-memory keychain, no network. */
@@ -53,14 +56,18 @@ export function testServices(
     consents,
     spend,
     killSwitch: new KillSwitch(db),
+    beliefs: (agentId) => memory.beliefsFor(agentId).map((m) => m.text),
     models: scriptedModels({ chunkDelayInMs: 0 }),
   });
   new DispatchService({ home, runs, sessions, events, dispatches });
+  // Not started: tests read views and run now; timing is covered in the runtime's tests.
+  const scheduler = new Scheduler({ home, runs, sessions, events, store: new ScheduleStore(db) });
   return {
     crew: new CrewService({ home, events, connectorTools: () => connectors.catalog() }),
     connectors,
     memory,
     memoryStore,
+    scheduler,
     sessions,
     consents,
     spend,
