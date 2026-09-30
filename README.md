@@ -36,8 +36,8 @@ The full direction is [docs/specs/BRIEF-station-runtime.md](docs/specs/BRIEF-sta
 
 **v1 in progress** on the `runtime-pivot` branch; the plan is [tasks/todo.md](tasks/todo.md).
 Milestone 1 (a read-only dashboard for Claude Code Routines) is archived: see ADR-0010 and
-`tasks/archive/`. Until Phase 1 lands, `pnpm dev` still serves the milestone 1 dashboard on the
-demo fixture.
+`tasks/archive/`. Today `pnpm dev` runs the daemon and the SPA shell with a live event stream; the
+agent loop, COMMS, and the rest land phase by phase.
 
 ## Quickstart
 
@@ -50,10 +50,10 @@ pnpm install
 pnpm dev
 ```
 
-When v1's daemon lands, `pnpm dev` runs the daemon and the SPA against the fictional demo station
-in `fixtures/demo-station/` with a scripted fake model (no key, no network), and
-`OUTERWORLD_HOME=~/.outerworld pnpm dev` runs your own station. You add your OpenRouter key in
-Settings; it goes to your OS keychain, never to disk or the browser.
+`pnpm dev` starts the daemon on `127.0.0.1:4317` and the SPA on http://localhost:5173, against a
+copy of the fictional demo station (`fixtures/demo-station/`, copied to `.outerworld/dev-home/`).
+`OUTERWORLD_HOME=~/.outerworld pnpm dev` runs your own station. From Phase 3 you add your
+OpenRouter key in Settings; it goes to your OS keychain, never to disk or the browser.
 
 Other commands:
 
@@ -63,7 +63,7 @@ pnpm check:task   # lint, types, secrets, floor guard, tests
 pnpm browser:verify   # after pnpm build: screenshots, console errors, reduced motion, axe (Chromium)
 ```
 
-## Layout (v1 target)
+## Layout
 
 ```
 apps/daemon/             Node entry: config, HTTP API, SSE, auth, serves the built SPA
@@ -75,7 +75,7 @@ fixtures/demo-station/   a fictional station directory for dev, tests, and scree
 docs/                    ARCHITECTURE, SCHEMA, PRIVACY, design assets, ADRs, specs
 ```
 
-`apps/web` and `packages/generator` (milestone 1) are removed in Phase 1.
+`apps/web` and `packages/generator` (milestone 1) were removed in Phase 1; git history keeps them.
 
 ## Roadmap
 
@@ -83,9 +83,6 @@ docs/                    ARCHITECTURE, SCHEMA, PRIVACY, design assets, ADRs, spe
   prop, the Overseer editing crew, session compaction.
 - **v3**: more MCP connectors, channel and webhook triggers, visual station editing, embeddings
   memory, a desktop shell, npm publishing.
-- Flaky hydration mismatch (React #418) on `/` at 1280 px with motion, seen in about 1 of 4
-  `browser:verify` runs on the milestone 1 dashboard; not reproduced under `next dev` or CPU
-  throttling. Recheck once `browser:verify` targets the v1 SPA.
 - The on-screen vocabulary (Station, Room, Crew, Hallway, Prop, COMMS) is another product's and
   lives only in core's glossary; revisit it before a public release.
 

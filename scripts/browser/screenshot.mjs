@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Headless browser verification (this repo's stand-in for the Chrome DevTools MCP).
-// Builds nothing: run `pnpm build` first. Serves apps/web, then for every route × theme × width ×
+// Builds nothing: run `pnpm build` first. Starts the daemon serving the built SPA on a fresh copy of
+// fixtures/demo-station, then for every route × theme × width ×
 // reduced-motion combination captures a full-page screenshot into .outerworld/screenshots/,
 // records console errors and page errors, runs axe (WCAG 2.x A/AA; critical and serious block,
 // per CONSTRAINTS.md), and under reduced motion asserts that no running animation is longer
@@ -8,7 +9,7 @@
 //
 // Usage: node scripts/browser/screenshot.mjs [--routes /dev,/] [--port 3300] [--keep]
 import { spawn } from "node:child_process";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import AxeBuilder from "@axe-core/playwright";
 import { chromium } from "playwright";
@@ -22,14 +23,17 @@ const port = Number(arg("port", "3300"));
 const outDir = join(process.cwd(), ".outerworld", "screenshots");
 mkdirSync(outDir, { recursive: true });
 
-// Spawn next directly in its own process group so the whole tree dies with it: killing a pnpm
-// wrapper leaves the real server running and the next run then hits a stale instance.
-const webDir = join(process.cwd(), "apps", "web");
-const server = spawn(join(webDir, "node_modules", ".bin", "next"), ["start", "-p", String(port)], {
-  cwd: webDir,
+// A fresh copy of the fixture per run, so the daemon's token, database, and events never leak
+// between runs and the fixture itself is never written to.
+const home = join(process.cwd(), ".outerworld", "verify-home");
+rmSync(home, { recursive: true, force: true });
+cpSync(join(process.cwd(), "fixtures", "demo-station"), home, { recursive: true });
+
+// Spawn the daemon directly in its own process group so the whole tree dies with it.
+const server = spawn(process.execPath, [join(process.cwd(), "apps", "daemon", "dist", "main.js")], {
   stdio: ["ignore", "pipe", "pipe"],
   detached: true,
-  env: { ...process.env, NEXT_TELEMETRY_DISABLED: "1" },
+  env: { ...process.env, OUTERWORLD_HOME: home, OUTERWORLD_PORT: String(port) },
 });
 let serverLog = "";
 server.stdout.on("data", (d) => {
@@ -98,8 +102,14 @@ try {
           page.on("pageerror", (e) => errors.push(String(e)));
           const sep = route.includes("?") ? "&" : "?";
           await page.goto(`http://localhost:${port}${route}${sep}theme=${theme}`, {
-            waitUntil: "networkidle",
+            // Not "networkidle": the SPA keeps its SSE connection open for good.
+            waitUntil: "load",
           });
+          if (route === "/") {
+            await page
+              .waitForSelector('[data-connection="connected"]', { timeout: 5000 })
+              .catch(() => {});
+          }
           await page.waitForTimeout(300);
           const name = `${route.replace(/[^a-z0-9]+/gi, "_").replace(/^_|_$/g, "") || "home"}-${theme}-${reducedMotion === "reduce" ? "rm" : "motion"}-${width}.png`;
           await page.screenshot({ path: join(outDir, name), fullPage: true });
@@ -129,8 +139,10 @@ try {
               tall:
                 document.documentElement.scrollHeight > document.documentElement.clientHeight + 1,
               canScroll: getComputedStyle(document.body).overflowY !== "hidden",
-              // With no OUTERWORLD_LEDGER_PATH the served page must reflect the fixture ledger.
-              fixtureName: document.body.innerText.includes("Demo Station"),
+              // The served page must be connected to the daemon's live event stream.
+              connection:
+                document.querySelector("[data-connection]")?.getAttribute("data-connection") ??
+                null,
               hasHorizontalScroll:
                 document.documentElement.scrollWidth > document.documentElement.clientWidth,
             };
@@ -183,10 +195,9 @@ try {
             failures.push(
               `${name}: taller than the viewport but body overflow is hidden, so it cannot scroll`,
             );
-          // With a real ledger (OUTERWORLD_LEDGER_PATH set) check by hand that the nav shows your station's name.
-          if (route === "/" && !process.env.OUTERWORLD_LEDGER_PATH && !probe.fixtureName)
+          if (route === "/" && probe.connection !== "connected")
             failures.push(
-              `${name}: "Demo Station" is missing; the served page does not reflect the loaded ledger`,
+              `${name}: event stream is "${probe.connection}", expected connected (token, Origin, or SSE broken)`,
             );
           if (probe.theme !== theme)
             failures.push(`${name}: data-theme is ${probe.theme}, expected ${theme}`);

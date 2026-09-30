@@ -42,11 +42,11 @@ in the same change that was failing it. Tightening is silent; loosening is a rev
 | Tests | All Vitest suites green | `pnpm test` (`vitest run` per package via turbo) | task end, CI |
 | Coverage: core | lines >= 90%, branches >= 85% | `vitest run --coverage` in `packages/core` (thresholds in `vitest.config.ts`) | task end, CI |
 | Coverage: runtime | lines >= 85%, branches >= 80% | `vitest run --coverage` in `packages/runtime` (thresholds in `vitest.config.ts`) | task end, CI |
-| Coverage: generator | lines >= 90%, branches >= 85% | `vitest run --coverage` in `packages/generator` (thresholds in `vitest.config.ts`) | task end, CI |
+| Coverage: generator | lines >= 90%, branches >= 85% | Retired 2026-09-29: `packages/generator` archived (ADR-0010); nothing left to measure. Row stays until the owner removes it | n/a |
 | Accessibility: components | Zero axe violations of any impact in rendered component tests | `vitest-axe` assertions in `packages/ui` tests | task end, CI |
-| Accessibility: app | Zero critical or serious axe violations on `/` and `/dev` in both themes | `pnpm browser:verify` (`@axe-core/playwright` inside `scripts/browser/screenshot.mjs`, against the built app served locally) | CI (browser job); locally before a ui or web step closes |
+| Accessibility: app | Zero critical or serious axe violations on `/` and `/dev` in both themes | `pnpm browser:verify` (`@axe-core/playwright` inside `scripts/browser/screenshot.mjs`, against the built SPA served by the built daemon on a copy of the fixture) | CI (browser job); locally before a ui or SPA step closes |
 | Schema | Demo fixture validates against the current Station and StationState schemas; exported JSON Schema matches the committed copy | Vitest tests in `packages/core` | task end, CI |
-| Generator output | Emitted ledger files match committed snapshots for the demo fixture | Vitest snapshot tests in `packages/generator` | task end, CI |
+| Generator output | Emitted ledger files match committed snapshots for the demo fixture | Retired 2026-09-29 with `packages/generator` (ADR-0010). Row stays until the owner removes it | task end, CI |
 
 Every row names the command that produces the verdict. A dimension with a number and no command
 is an aspiration, not a constraint.
@@ -74,6 +74,7 @@ Why these numbers:
 |--------|-------|-----------|
 | Coverage: ui (lines) | 89.06 % (2026-09-27, `pnpm --filter @darthsaul/outerworld-ai-ui exec vitest run --coverage`, "All files" row: statements 86.42, branches 75.24, functions 87.83) | must not fall |
 | apps/web first-load JS | 990.8 KiB raw / 274.9 KiB gzip for `/` (2026-09-27; Next 16 prints no size table, so: `pnpm --filter web build`, `pnpm start`, sum every `<script src>` the served `/` HTML loads) | must not grow |
+| apps/station first-load JS | 410.6 kB raw / 127.0 kB gzip for `/` (2026-09-29, `pnpm --filter station build`: the entry chunk plus the runtime chunk in Vite's size table; `/dev` is a lazy chunk). Replaces the apps/web row above, which retired with `apps/web` (ADR-0010) | must not grow |
 
 ## Ranking by circularity
 

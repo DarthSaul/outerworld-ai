@@ -19,8 +19,8 @@ wins and this file gets fixed. The plan and progress are in `tasks/todo.md`.
 **Product law:** the interface never asserts state the runtime cannot prove. The map is a
 projection of events, never a simulation.
 
-Milestone 1 (a read-only dashboard for Claude Code Routines) is archived (ADR-0010). Until Phase 1
-lands, `apps/web` and `packages/generator` still exist; don't extend them.
+Milestone 1 (a read-only dashboard for Claude Code Routines) is archived (ADR-0010). Its map model
+stays in core and ui until Phase 9 adapts the map (D14); its fixture is `fixtures/map-demo/`.
 
 ## Vocabulary rule
 
@@ -59,6 +59,7 @@ packages/runtime/  @darthsaul/outerworld-ai-runtime — agent loop, dispatcher, 
 packages/ui/       @darthsaul/outerworld-ai-ui — React components, tokens, the rigged character,
                    the station map. Knows core, never runtime.
 fixtures/demo-station/  a fictional $OUTERWORLD_HOME. All tests, dev runs, screenshots use it.
+fixtures/map-demo/      the milestone 1 map fixture, for the ui map and /dev gallery until Phase 9.
 docs/              ARCHITECTURE.md, SCHEMA.md, PRIVACY.md, decisions/ (ADRs), specs/, design/
 ```
 
@@ -133,8 +134,8 @@ or traced. `rig/rig-parts-v0.svg` is the proportion target for the hand-drawn ri
 
 ```
 pnpm install
-pnpm dev            # Phase 1+: daemon + Vite on the fixture copy, fake model (OUTERWORLD_MODEL=fake)
-OUTERWORLD_HOME=~/.outerworld pnpm dev   # Phase 1+: a real station directory
+pnpm dev            # daemon + Vite (http://localhost:5173) on .outerworld/dev-home, a copy of the fixture
+OUTERWORLD_HOME=~/.outerworld pnpm dev   # a real station directory
 pnpm build          # turbo build across packages
 pnpm test           # vitest across packages; coverage thresholds in core and runtime
 pnpm lint           # biome check .   (pnpm lint:fix to apply)
@@ -145,8 +146,8 @@ pnpm browser:verify # Playwright: screenshots, console errors, reduced motion, a
 ```
 
 Use Node 22 (`nvm use`). Packages build with `tsc` to `dist/`; dependents typecheck against
-`dist/`, so run `pnpm build` once after pulling changes to a package. Until Phase 1, `pnpm dev`
-serves the milestone 1 dashboard.
+`dist/`, so run `pnpm build` once after pulling changes to a package (`pnpm dev` builds and
+watches them for you).
 
 Read `CONSTRAINTS.md` before writing code. Do not weaken it to make a change pass; it says where
 each check runs. Don't silence a check, skip a test, or lower a threshold to get green. If a gate
