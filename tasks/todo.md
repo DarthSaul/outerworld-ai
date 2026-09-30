@@ -215,6 +215,14 @@ decisions made, open questions.
 - ~~Intermittent React #418 hydration mismatch in `browser:verify`~~ gone with `apps/web` (Next.js
   SSR) in Phase 1; the SPA renders only on the client, so there is no hydration step to mismatch.
 
+- **Retired CONSTRAINTS rows** (generator coverage, generator output, apps/web first-load JS):
+  left in place by the owner 2026-09-29; revisit whether to delete them later.
+- **SPA browser/e2e tests:** deferred 2026-09-29 in favor of unit and component tests; revisit
+  once COMMS and the map exist (e.g. a Playwright flow per v1 acceptance criterion).
+- **Node engine:** establish the supported Node line. `.nvmrc` says 22 and `engines` says `>=22`,
+  but local development runs Node 24, `react-router` 8 needs `>=22.22`, and `node:sqlite` is only a
+  release candidate on 24.15+. Decide the pin, then align `.nvmrc`, `engines`, CI, and ADR-0011.
+
 ## Out of scope (stop and ask if any of these appears)
 Conveyor Lines / Bays / Inbox / Outbox / Logbook; webhooks, folder watchers, channel triggers;
 terminal/shell tools; recursive delegation; helper copies; agents creating/editing agents; desktop

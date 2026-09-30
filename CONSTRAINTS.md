@@ -42,6 +42,8 @@ in the same change that was failing it. Tightening is silent; loosening is a rev
 | Tests | All Vitest suites green | `pnpm test` (`vitest run` per package via turbo) | task end, CI |
 | Coverage: core | lines >= 90%, branches >= 85% | `vitest run --coverage` in `packages/core` (thresholds in `vitest.config.ts`) | task end, CI |
 | Coverage: runtime | lines >= 85%, branches >= 80% | `vitest run --coverage` in `packages/runtime` (thresholds in `vitest.config.ts`) | task end, CI |
+| Coverage: daemon | lines >= 85%, branches >= 80% | `vitest run --coverage` in `apps/daemon` (`src/main.ts`, the process entry, excluded) | task end, CI |
+| Coverage: station | lines >= 85%, branches >= 80% | `vitest run --coverage` in `apps/station` (`src/main.tsx` and `src/dev/`, the component gallery, excluded) | task end, CI |
 | Coverage: generator | lines >= 90%, branches >= 85% | Retired 2026-09-29: `packages/generator` archived (ADR-0010); nothing left to measure. Row stays until the owner removes it | n/a |
 | Accessibility: components | Zero axe violations of any impact in rendered component tests | `vitest-axe` assertions in `packages/ui` tests | task end, CI |
 | Accessibility: app | Zero critical or serious axe violations on `/` and `/dev` in both themes | `pnpm browser:verify` (`@axe-core/playwright` inside `scripts/browser/screenshot.mjs`, against the built SPA served by the built daemon on a copy of the fixture) | CI (browser job); locally before a ui or SPA step closes |
@@ -56,8 +58,9 @@ Rule configuration (not exceptions): Biome's `useSemanticElements` is off for SV
 are `<g role="button" tabIndex=0>` with keyboard handlers, and axe checks them in tests.
 
 Why these numbers:
-- **85 / 80 coverage on runtime.** Async, IO-heavy code with error paths that need fault
-  injection to reach; set by the owner 2026-09-29.
+- **85 / 80 coverage on runtime, daemon, and station.** Async, IO-heavy code with error paths that need fault
+  injection to reach; set by the owner 2026-09-29 (daemon and station the same day). Unit and
+  component tests carry the SPA; browser e2e stays a smoke check for now.
 - **90 / 85 coverage on core and generator.** Both are pure-function packages built test-first
   from an empty repo, so high coverage is the natural outcome rather than a stretch. `ui` and
   `apps/web` have no coverage number this milestone; component tests plus axe are their bar.
@@ -74,7 +77,7 @@ Why these numbers:
 |--------|-------|-----------|
 | Coverage: ui (lines) | 89.06 % (2026-09-27, `pnpm --filter @darthsaul/outerworld-ai-ui exec vitest run --coverage`, "All files" row: statements 86.42, branches 75.24, functions 87.83) | must not fall |
 | apps/web first-load JS | 990.8 KiB raw / 274.9 KiB gzip for `/` (2026-09-27; Next 16 prints no size table, so: `pnpm --filter web build`, `pnpm start`, sum every `<script src>` the served `/` HTML loads) | must not grow |
-| apps/station first-load JS | 410.6 kB raw / 127.0 kB gzip for `/` (2026-09-29, `pnpm --filter station build`: the entry chunk plus the runtime chunk in Vite's size table; `/dev` is a lazy chunk). Replaces the apps/web row above, which retired with `apps/web` (ADR-0010) | must not grow |
+| apps/station first-load JS | 410.6 kB raw / 127.0 kB gzip for `/` (2026-09-29, `pnpm --filter station build`: the entry chunk plus the runtime chunk in Vite's size table; `/dev` is a lazy chunk). Replaces the apps/web row above, which retired with `apps/web` (ADR-0010) | tracked; may grow during v1 (owner, 2026-09-29) |
 
 ## Ranking by circularity
 

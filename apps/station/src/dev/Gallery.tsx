@@ -14,9 +14,9 @@ import {
   type RunState,
   TeamEmblem,
 } from "@darthsaul/outerworld-ai-ui";
-import { Dashboard } from "../components/Dashboard.js";
-import { ThemeToggle } from "../components/ThemeToggle.js";
+import { Dashboard } from "./Dashboard.js";
 import { MapDemo } from "./MapDemo.js";
+import { ThemeToggle } from "./ThemeToggle.js";
 
 const STATES: RunState[] = ["idle", "working", "done", "failed"];
 const HEADS: RigHead[] = ["dome", "wedge"];

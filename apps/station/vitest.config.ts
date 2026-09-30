@@ -9,5 +9,12 @@ export default defineConfig({
     // CONSTRAINTS.md: no network in tests.
     setupFiles: ["../../packages/runtime/src/test/no-network.ts", "src/test/setup.ts"],
     css: false,
+    coverage: {
+      provider: "v8",
+      include: ["src/**/*.{ts,tsx}"],
+      exclude: ["src/**/*.test.{ts,tsx}", "src/test/**", "src/main.tsx", "src/dev/**"],
+      // CONSTRAINTS.md: lines >= 85, branches >= 80.
+      thresholds: { lines: 85, branches: 80 },
+    },
   },
 });
