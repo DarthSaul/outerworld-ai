@@ -12,6 +12,10 @@ in the same change that was failing it. Tightening is silent; loosening is a rev
 - No unimplemented stubs: `throw new Error("Not implemented")`, empty `catch {}`, `TODO` in place
   of an implementation
 - No skipped or deleted tests without a reason in the commit message
+- A test deleted in the same diff as its whole package (its `package.json`) or the module it tests
+  (`foo.test.ts` with `foo.ts`) is retired with that code, not made easier; the guard allows it,
+  and the commit message still names the reason (usually an ADR). Added 2026-09-29 by the owner's
+  decision for the ADR-0010 archive.
 - No secrets in source, generated files, fixtures, or docs. Fixture webhook URLs are obviously fake
 - No hardcoded design tokens in `packages/ui` or `apps/web`: no hex, `rgb()`, `hsl()`, pixel radius,
   or `ms` literal outside the token definitions

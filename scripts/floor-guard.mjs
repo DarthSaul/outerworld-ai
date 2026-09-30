@@ -133,7 +133,17 @@ for (const { file, text } of added) {
   }
 }
 
-for (const f of deleted) if (isTest(f)) flag("test-deleted", f, "file deleted");
+// A test retired together with what it tests is not a test made easier: its whole package is
+// deleted (package.json in the same diff), or the module it tests (foo.test.ts with foo.ts) is.
+// Deleting a test while its code stays is still flagged.
+const deletedPackages = deleted
+  .filter((f) => /(^|\/)package\.json$/.test(f))
+  .map((f) => f.replace(/package\.json$/, ""))
+  .filter((dir) => dir !== ""); // deleting the root package.json retires nothing
+const retired = (f) =>
+  deletedPackages.some((dir) => f.startsWith(dir)) ||
+  deleted.includes(f.replace(/\.(test|spec)(\.[cm]?[jt]sx?)$/, "$2"));
+for (const f of deleted) if (isTest(f) && !retired(f)) flag("test-deleted", f, "file deleted");
 for (const { file, text } of removed) {
   if (isTest(file) && !deleted.includes(file) && /\b(expect|assert)\b/.test(text)) {
     flag("assertion-removed", file, text);
