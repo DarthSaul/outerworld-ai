@@ -10,10 +10,13 @@
 // Sessions, runs, and settings HTTP contract (Phase 3)
 export {
   ApiKeyInput,
+  ConsentDecisionInput,
   CreateSessionInput,
+  KillSwitchInput,
   MAX_MESSAGE_CHARS,
   SendMessageInput,
   type SettingsView,
+  type SpendView,
   UpdateSessionInput,
 } from "./api/comms-api.js";
 // Crew and room HTTP contract (Phase 2)

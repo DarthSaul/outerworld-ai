@@ -1,9 +1,13 @@
 import {
   ApiKeyInput,
+  ConsentDecisionInput,
   CreateSessionInput,
+  KillSwitchInput,
   SendMessageInput,
   type SettingsView,
+  type SpendView,
   UpdateSessionInput,
+  utcDay,
 } from "@darthsaul/outerworld-ai-core";
 import {
   type ApiKeyService,
@@ -15,6 +19,7 @@ import {
   type SessionRecord,
   type SessionStore,
   type SpendStore,
+  type SpendTotal,
   type StoredMessage,
 } from "@darthsaul/outerworld-ai-runtime";
 import { Hono } from "hono";
@@ -25,6 +30,9 @@ export interface SessionDetail {
   readonly session: SessionRecord;
   readonly messages: readonly StoredMessage[];
   readonly runs: readonly RunRecord[];
+  /** Spend for the whole session, and per run (keyed by run id). */
+  readonly spend: SpendTotal;
+  readonly runSpend: Readonly<Record<string, SpendTotal>>;
 }
 
 export interface CommsDeps {
@@ -67,10 +75,13 @@ export function commsRoutes(deps: CommsDeps): Hono {
 
   app.get("/sessions/:id", (c) => {
     const s = session(c.req.param("id"));
+    const runList = sessions.runs(s.id);
     const detail: SessionDetail = {
       session: s,
       messages: sessions.messages(s.id),
-      runs: sessions.runs(s.id),
+      runs: runList,
+      spend: deps.spend.forSession(s.id),
+      runSpend: Object.fromEntries(runList.map((r) => [r.id, deps.spend.forRun(r.id)])),
     };
     return c.json(detail);
   });
@@ -90,6 +101,30 @@ export function commsRoutes(deps: CommsDeps): Hono {
   app.post("/runs/:id/cancel", async (c) => {
     await runs.cancel(c.req.param("id"));
     return c.body(null, 202);
+  });
+
+  app.get("/consents", (c) => c.json(deps.consents.pending()));
+  app.post("/consents/:id", async (c) => {
+    const { decision } = await readBody(c, ConsentDecisionInput);
+    return c.json(runs.resolveConsent(c.req.param("id"), decision));
+  });
+
+  app.get("/kill-switch", (c) => c.json({ engaged: runs.killSwitchEngaged() }));
+  app.put("/kill-switch", async (c) => {
+    const { engaged } = await readBody(c, KillSwitchInput);
+    runs.setKillSwitch(engaged);
+    return c.json({ engaged });
+  });
+
+  app.get("/spend", (c) => {
+    const day = c.req.query("day") ?? utcDay(new Date());
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return c.json({ error: "day must be YYYY-MM-DD" }, 400);
+    const view: SpendView = {
+      day,
+      stationUsd: deps.spend.stationDay(day),
+      agents: deps.spend.byAgent(day),
+    };
+    return c.json(view);
   });
 
   app.get("/settings", async (c) => {

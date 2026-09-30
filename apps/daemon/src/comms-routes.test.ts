@@ -121,6 +121,45 @@ describe("sessions and runs", () => {
   });
 });
 
+describe("consents, kill switch, and spend", () => {
+  it("lists nothing pending and refuses to decide an unknown request", async () => {
+    const { call } = setup();
+    expect((await call("GET", "/consents")).json).toEqual([]);
+    expect((await call("POST", "/consents/nope", { decision: "approved" })).status).toBe(404);
+    expect((await call("POST", "/consents/nope", { decision: "maybe" })).status).toBe(400);
+  });
+
+  it("turns the kill switch on and off; while on, sending is refused (409)", async () => {
+    const { call } = setup();
+    expect((await call("GET", "/kill-switch")).json).toEqual({ engaged: false });
+    expect((await call("PUT", "/kill-switch", { engaged: true })).json).toEqual({ engaged: true });
+    const s = await call("POST", "/agents/vesper/sessions", {});
+    const refused = await call("POST", `/sessions/${s.json.id}/messages`, { text: "hi" });
+    expect(refused.status).toBe(409);
+    expect(refused.json.error).toMatch(/kill switch/);
+    await call("PUT", "/kill-switch", { engaged: false });
+    expect((await call("POST", `/sessions/${s.json.id}/messages`, { text: "hi" })).status).toBe(
+      202,
+    );
+  });
+
+  it("reports today's spend and each session's spend", async () => {
+    const { call } = setup();
+    const today = (await call("GET", "/spend")).json;
+    expect(today).toEqual({
+      day: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+      stationUsd: 0,
+      agents: {},
+    });
+    expect((await call("GET", "/spend?day=yesterday")).status).toBe(400);
+    const s = await call("POST", "/agents/vesper/sessions", {});
+    await call("POST", `/sessions/${s.json.id}/messages`, { text: "hi" });
+    const detail = await untilSettled(call, s.json.id);
+    expect(detail.spend).toMatchObject({ calls: 1, unpriced: 1, costUsd: 0 });
+    expect(Object.keys(detail.runSpend)).toEqual([detail.runs[0]?.id]);
+  });
+});
+
 describe("settings", () => {
   it("reports the model mode and whether a key is configured, never the key", async () => {
     const { call } = setup();

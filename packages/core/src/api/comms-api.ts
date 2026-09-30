@@ -18,6 +18,20 @@ export const SendMessageInput = z.strictObject({
 /** The OpenRouter key goes in once and never comes back out. */
 export const ApiKeyInput = z.strictObject({ key: z.string().trim().min(1).max(500) });
 
+/** The Commander's answer to a consent request. */
+export const ConsentDecisionInput = z.strictObject({ decision: z.enum(["approved", "denied"]) });
+export const KillSwitchInput = z.strictObject({ engaged: z.boolean() });
+
+export type ConsentDecisionInput = z.infer<typeof ConsentDecisionInput>;
+export type KillSwitchInput = z.infer<typeof KillSwitchInput>;
+
+/** `GET /api/spend`: USD spent on one UTC day, station-wide and per agent. */
+export interface SpendView {
+  readonly day: string;
+  readonly stationUsd: number;
+  readonly agents: Readonly<Record<string, number>>;
+}
+
 export type CreateSessionInput = z.infer<typeof CreateSessionInput>;
 export type UpdateSessionInput = z.infer<typeof UpdateSessionInput>;
 export type SendMessageInput = z.infer<typeof SendMessageInput>;
