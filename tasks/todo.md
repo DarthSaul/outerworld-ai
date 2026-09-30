@@ -221,6 +221,7 @@ decisions made, open questions.
 ## Phase 9 — Station view, notifications, onboarding, seed crew
 - [ ] ui map adapted: rooms, crew in rooms, props, hallways (rendered only), live crew state (idle, running, awaiting consent, blocked) from events only.
 - [ ] Notifications: filtered event projection, unread state persisted.
+- [ ] Settings → Budgets: view and edit `station.json` budgets (per run, per agent daily, station daily) in the SPA, and decide whether a station with none gets defaults (owner, 2026-09-29). Today they are hand-edited.
 - [ ] Onboarding: key → Overseer (name, tone) in Command room with dispatch, read_session, Web, Memory → first chat. Project Manager template (Operations; Notion granted, Web, Memory, Files; daily briefing schedule disabled).
 - [ ] `fixtures/demo-station` rewritten as a fictional station dir exercising all of the above; `browser:verify` green against it.
 
