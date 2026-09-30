@@ -184,9 +184,16 @@ describe("dispatch", () => {
     const lead = t.service.createSession("vesper", "Chat");
     await t.service.settled((await t.service.send(lead.id, "Go")).runId);
     const [d] = t.dispatches.forLeadSession(lead.id);
+    // Cancel only once the worker has streamed something, so the report can keep it.
     await until(
-      () => d?.id !== undefined && t.dispatches.get(d.id)?.workerRunId !== undefined,
-      "the worker run",
+      () =>
+        t.live.some(
+          (e) =>
+            e.ephemeral &&
+            e.agentId === "quill" &&
+            e.runId === t.dispatches.get(d?.id ?? "")?.workerRunId,
+        ),
+      "the worker's first words",
     );
     await t.service.cancel(t.dispatches.get(d?.id ?? "")?.workerRunId ?? "");
     await until(() => t.dispatches.get(d?.id ?? "")?.status === "cancelled", "cancelled");
