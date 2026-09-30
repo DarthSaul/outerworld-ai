@@ -1,6 +1,7 @@
 # Constraints
 
-Last reviewed: 2026-09-27 by @darthsaul
+Last reviewed: 2026-09-29 by @darthsaul (v1 pivot, ADR-0010; rows for the runtime, the SPA, and
+the no-network rule land with their code in Phase 1)
 
 This file is the project's quality bar. Agents read it before writing code. It is never weakened
 in the same change that was failing it. Tightening is silent; loosening is a reviewed diff here.
@@ -22,6 +23,7 @@ in the same change that was failing it. Tightening is silent; loosening is a rev
 - No secrets in source, generated files, fixtures, or docs. Fixture webhook URLs are obviously fake
 - No hardcoded design tokens in `packages/ui` or `apps/web`: no hex, `rgb()`, `hsl()`, pixel radius,
   or `ms` literal outside the token definitions
+- The token rule above also covers `apps/station` (the v1 SPA, ADR-0010)
 - No themed vocabulary in identifiers, filenames, schema keys, or test names (see CLAUDE.md)
 - This file does not get weakened to make a change pass
 - Checked by: `node scripts/floor-guard.mjs` (diff-scoped, exit 0 clean / 1 violation / 2 could not run)

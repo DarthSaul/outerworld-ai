@@ -96,7 +96,7 @@ const isThisGuard = (f) => /scripts\/floor-guard\.mjs$/.test(f);
 const isDocs = (f) => /\.md$/.test(f) || /^docs\//.test(f) || /\.claude\//.test(f);
 // Token rule applies to component and app source, not to the token definitions themselves.
 const isTokenSource = (f) =>
-  /^(packages\/ui|apps\/web)\/.*\.(tsx?|css)$/.test(f) &&
+  /^(packages\/ui|apps\/web|apps\/station)\/.*\.(tsx?|css)$/.test(f) &&
   !/\/tokens\//.test(f) &&
   !isTest(f) &&
   !/\/dev\//.test(f);
