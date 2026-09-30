@@ -20,7 +20,7 @@ the package's own type definitions, and its official docs on 2026-09-29, not fro
 | Model SDK | `ai` (Vercel AI SDK) | 7.x | Streaming, tool calling, `abortSignal`, typed usage; provider-agnostic; ships `MockLanguageModelV4` for scripted tests. |
 | Provider | `@openrouter/ai-sdk-provider` | 3.1 | Official OpenRouter provider for `ai` 7; reports per-call cost in `providerMetadata.openrouter.usage.cost`. |
 | MCP | `@modelcontextprotocol/client` (tests: `@modelcontextprotocol/server`) | 2.2 | Official SDK, v2 packages; Streamable HTTP, OAuth with dynamic client registration, `InMemoryTransport` for a fake server. |
-| SQLite | `better-sqlite3` | 13 | Stable and synchronous; v13 ships prebuilt binaries with no install scripts, so pnpm 10 needs no build allowlist. |
+| SQLite | `better-sqlite3` | 13 | Stable and synchronous; v13 ships prebuilt binaries in the tarball. Its `binding.gyp` makes pnpm 10 see an implicit `node-gyp` build we don't need, so it is listed in root `package.json` `pnpm.ignoredBuiltDependencies` (corrected 2026-09-29 after install). |
 | Scheduler | `croner` | 10 | Cron with time zones, `nextRun()`, `previousRuns()` for catch-up; works under Vitest fake timers. |
 | Keychain | `@napi-rs/keyring` | 2.1 | Maintained, prebuilt for macOS, Linux, Windows. We pass `{ linux: { store: "secret-service" } }` so a Linux machine without Secret Service fails loudly instead of silently keeping secrets in a non-persistent kernel keyring; env vars are the fallback. |
 | SPA | `vite` + `@vitejs/plugin-react` | 8 / 6.1 | Fast dev server with a proxy to the daemon; static build the daemon serves. |

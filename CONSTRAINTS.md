@@ -25,6 +25,9 @@ in the same change that was failing it. Tightening is silent; loosening is a rev
   or `ms` literal outside the token definitions
 - The token rule above also covers `apps/station` (the v1 SPA, ADR-0010)
 - No themed vocabulary in identifiers, filenames, schema keys, or test names (see CLAUDE.md)
+- No network in tests or CI: any `fetch` or socket to a non-loopback host throws (Vitest setup
+  `packages/runtime/src/test/no-network.ts`, used by every package that does IO). Real OpenRouter
+  and Notion calls only in smoke tests run by hand with `OUTERWORLD_ALLOW_NETWORK=1`
 - This file does not get weakened to make a change pass
 - Checked by: `node scripts/floor-guard.mjs` (diff-scoped, exit 0 clean / 1 violation / 2 could not run)
 
@@ -38,6 +41,7 @@ in the same change that was failing it. Tightening is silent; loosening is a rev
 | Floor | Zero floor violations in the diff | `node scripts/floor-guard.mjs` | task end, CI |
 | Tests | All Vitest suites green | `pnpm test` (`vitest run` per package via turbo) | task end, CI |
 | Coverage: core | lines >= 90%, branches >= 85% | `vitest run --coverage` in `packages/core` (thresholds in `vitest.config.ts`) | task end, CI |
+| Coverage: runtime | lines >= 85%, branches >= 80% | `vitest run --coverage` in `packages/runtime` (thresholds in `vitest.config.ts`) | task end, CI |
 | Coverage: generator | lines >= 90%, branches >= 85% | `vitest run --coverage` in `packages/generator` (thresholds in `vitest.config.ts`) | task end, CI |
 | Accessibility: components | Zero axe violations of any impact in rendered component tests | `vitest-axe` assertions in `packages/ui` tests | task end, CI |
 | Accessibility: app | Zero critical or serious axe violations on `/` and `/dev` in both themes | `pnpm browser:verify` (`@axe-core/playwright` inside `scripts/browser/screenshot.mjs`, against the built app served locally) | CI (browser job); locally before a ui or web step closes |
@@ -52,6 +56,8 @@ Rule configuration (not exceptions): Biome's `useSemanticElements` is off for SV
 are `<g role="button" tabIndex=0>` with keyboard handlers, and axe checks them in tests.
 
 Why these numbers:
+- **85 / 80 coverage on runtime.** Async, IO-heavy code with error paths that need fault
+  injection to reach; set by the owner 2026-09-29.
 - **90 / 85 coverage on core and generator.** Both are pure-function packages built test-first
   from an empty repo, so high coverage is the natural outcome rather than a stretch. `ui` and
   `apps/web` have no coverage number this milestone; component tests plus axe are their bar.
