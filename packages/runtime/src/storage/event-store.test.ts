@@ -55,6 +55,17 @@ describe("EventStore", () => {
     expect(seen[0]?.payload).toEqual({ text: "key [redacted] and [redacted]" });
   });
 
+  it("publishes ephemeral events to subscribers without storing them", () => {
+    const s = store();
+    const seen: RuntimeEvent[] = [];
+    s.subscribe((e) => seen.push(e));
+    s.append({ type: "station.started", payload: {} });
+    s.publish(delta("He"));
+    expect(seen[1]).toMatchObject({ seq: 1, ephemeral: true, payload: { text: "He" } });
+    expect(s.since(0).map((e) => e.type)).toEqual(["station.started"]);
+    expect(s.latestSeq()).toBe(1);
+  });
+
   it("pages a replay with a limit", () => {
     const s = store();
     for (const t of ["a", "b", "c"]) s.append(delta(t));

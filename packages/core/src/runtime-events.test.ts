@@ -151,11 +151,17 @@ describe("runtime events", () => {
     expect(parseRuntimeEvent(noAgent).ok).toBe(false);
   });
 
-  it("rejects an unknown type, a non-positive seq, and a bad timestamp", () => {
+  it("marks an ephemeral event, which carries the last stored seq (possibly 0)", () => {
+    const r = parseRuntimeEvent({ ...stamp(samples["run.delta"], 0), ephemeral: true });
+    expect(r.ok && r.value.ephemeral).toBe(true);
+    expect(parseRuntimeEvent({ ...stamp(samples["run.delta"]), ephemeral: false }).ok).toBe(false);
+  });
+
+  it("rejects an unknown type, a negative seq, and a bad timestamp", () => {
     expect(
       parseRuntimeEvent({ ...stamp(samples["station.updated"]), type: "run.exploded" }).ok,
     ).toBe(false);
-    expect(parseRuntimeEvent(stamp(samples["station.updated"], 0)).ok).toBe(false);
+    expect(parseRuntimeEvent(stamp(samples["station.updated"], -1)).ok).toBe(false);
     expect(parseRuntimeEvent({ ...stamp(samples["station.updated"]), at: "yesterday" }).ok).toBe(
       false,
     );

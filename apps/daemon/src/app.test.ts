@@ -153,6 +153,18 @@ describe("GET /api/events", () => {
     expect(got.map((e) => e.seq)).toEqual([1, 2, 3]);
   });
 
+  it("streams ephemeral events live without an id, so replay is unaffected", async () => {
+    const { events, authed } = setup();
+    events.append(delta("a"));
+    const res = await authed("/api/events");
+    const reading = readEvents(res, 2);
+    await new Promise((r) => setTimeout(r, 10));
+    events.publish(delta("live"));
+    const { events: got, raw } = await reading;
+    expect(got[1]).toMatchObject({ ephemeral: true, payload: { text: "live" } });
+    expect(raw.match(/^id: /gm)).toHaveLength(1);
+  });
+
   it("sends a keepalive comment while idle", async () => {
     const { authed } = setup({ pingMs: 5 });
     const res = await authed("/api/events");

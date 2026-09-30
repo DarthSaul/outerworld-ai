@@ -11,7 +11,10 @@ import { Id, type Result, Timestamp, zodIssues } from "./schema/common.js";
 const Ref = z.string().min(1);
 
 const envelope = {
-  seq: z.number().int().positive(),
+  /** For an ephemeral event, the seq of the last stored event; it has no seq of its own. */
+  seq: z.number().int().nonnegative(),
+  /** Streamed to live subscribers only, never stored (token deltas, tasks/todo.md D18). */
+  ephemeral: z.literal(true).optional(),
   at: Timestamp,
   agentId: Id.optional(),
   sessionId: Ref.optional(),
@@ -77,7 +80,10 @@ export const RuntimeEvent = z.discriminatedUnion("type", [
     delayMs: z.number().nonnegative(),
     status: z.number().int().optional(),
   }),
-  event("run.completed", about.run, {}),
+  event("run.completed", about.run, {
+    /** Present when the run stopped for a reason other than a final answer. */
+    reason: z.enum(["max_steps"]).optional(),
+  }),
   event("run.failed", about.run, { error: z.string() }),
   event("run.cancelled", about.run, { by: z.enum(["user", "kill_switch", "budget"]) }),
   event("run.interrupted", about.run, {}),

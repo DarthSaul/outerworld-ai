@@ -85,15 +85,41 @@ export class EventStore {
       payload: JSON.stringify(e.payload),
     });
     const stored = { ...e, seq: Number(lastInsertRowid) } as RuntimeEvent;
+    this.#notify(stored);
+    return stored;
+  }
+
+  /**
+   * Sends an event to live subscribers without storing it (token deltas, D18). It carries the
+   * last stored seq and `ephemeral: true`, so replay and `Last-Event-ID` are unaffected.
+   */
+  publish(event: NewRuntimeEvent): RuntimeEvent {
+    const payload = this.#redact ? this.#redact.value(event.payload) : event.payload;
+    const parsed = parseRuntimeEvent({
+      ...event,
+      payload,
+      seq: this.latestSeq(),
+      at: this.#now().toISOString(),
+      ephemeral: true,
+    });
+    if (!parsed.ok) {
+      throw new Error(
+        `invalid ${event.type} event: ${parsed.issues.map((i) => `${i.path}: ${i.message}`).join("; ")}`,
+      );
+    }
+    this.#notify(parsed.value);
+    return parsed.value;
+  }
+
+  #notify(event: RuntimeEvent) {
     for (const listener of this.#listeners) {
       try {
-        listener(stored);
+        listener(event);
       } catch (error) {
         // A broken listener must not break the log or the other listeners.
         this.#onListenerError(error);
       }
     }
-    return stored;
   }
 
   /** Events with `seq` greater than the given one, oldest first. */

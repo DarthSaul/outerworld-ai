@@ -87,6 +87,11 @@ export function createApp(options: AppOptions): Hono {
         wake?.();
       });
       const send = async (e: RuntimeEvent) => {
+        // Ephemeral events have no id of their own, so they never move Last-Event-ID (D18).
+        if (e.ephemeral) {
+          await stream.writeSSE({ data: JSON.stringify(e) });
+          return;
+        }
         if (e.seq <= last) return;
         await stream.writeSSE({ id: String(e.seq), data: JSON.stringify(e) });
         last = e.seq;

@@ -65,6 +65,7 @@ export function DaemonProvider({
       token,
       onStatus: setStatus,
       onEvent: (e) => {
+        if (e.ephemeral) return;
         setRecent((prev) => [e, ...prev].slice(0, RECENT));
         invalidateFor(e, queryClient);
       },
