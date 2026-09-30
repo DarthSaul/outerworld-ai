@@ -143,4 +143,32 @@ export const MIGRATIONS: readonly Migration[] = [
       create index dispatches_status on dispatches (status);
     `,
   },
+  {
+    version: 5,
+    name: "schedule state and history",
+    sql: `
+      create table schedule_state (
+        agent_id text not null,
+        schedule_id text not null,
+        signature text not null,
+        last_scheduled_for text not null,
+        session_id text references sessions (id),
+        primary key (agent_id, schedule_id)
+      );
+      create table schedule_fires (
+        id integer primary key autoincrement,
+        agent_id text not null,
+        schedule_id text not null,
+        scheduled_for text not null,
+        at text not null,
+        outcome text not null check (outcome in ('fired', 'missed')),
+        reason text,
+        detail text,
+        manual integer not null default 0,
+        session_id text references sessions (id),
+        run_id text references runs (id)
+      );
+      create index schedule_fires_by_schedule on schedule_fires (agent_id, schedule_id, id);
+    `,
+  },
 ];

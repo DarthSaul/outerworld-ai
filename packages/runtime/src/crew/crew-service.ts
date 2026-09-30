@@ -2,11 +2,13 @@ import { lstat, rm } from "node:fs/promises";
 import {
   type AgentConfig,
   type AgentDocumentName,
+  type AgentSchedule,
   type AgentView,
   type Connector,
   type ConnectorToolCatalog,
   type CreateAgentInput,
   type CreateRoomInput,
+  type CreateScheduleInput,
   DEFAULT_MODEL,
   type Issue,
   parseAgentConfig,
@@ -19,7 +21,9 @@ import {
   stationCrewIssues,
   type UpdateAgentInput,
   type UpdateRoomInput,
+  type UpdateScheduleInput,
 } from "@darthsaul/outerworld-ai-core";
+import { cronIssue } from "../schedule/cron.js";
 import type { EventStore } from "../storage/event-store.js";
 import {
   type LoadedAgent,
@@ -127,6 +131,97 @@ export class CrewService {
       await saveAgentConfig(this.#home, id, config.value);
       this.#events.append({ type: "agent.updated", agentId: id, payload: { change: "updated" } });
       return this.#required(id);
+    });
+  }
+
+  /** Adds a schedule to agent.json; its id comes from the first words of the prompt. */
+  addSchedule(agentId: string, input: CreateScheduleInput): Promise<AgentSchedule> {
+    return this.#serial(async () => {
+      const loaded = await this.#loadWithStation();
+      const current = this.#find(loaded, agentId);
+      const schedules = current.config.schedules;
+      const id = slugify(
+        input.prompt.split(/\s+/).slice(0, 4).join(" "),
+        schedules.map((s) => s.id),
+      );
+      const schedule: AgentSchedule = {
+        id,
+        cron: input.cron,
+        ...(input.timezone !== undefined ? { timezone: input.timezone } : {}),
+        prompt: input.prompt,
+        catchUp: input.catchUp ?? false,
+        enabled: input.enabled ?? true,
+      };
+      await this.#saveSchedules(loaded, current, [...schedules, schedule]);
+      return schedule;
+    });
+  }
+
+  updateSchedule(
+    agentId: string,
+    scheduleId: string,
+    input: UpdateScheduleInput,
+  ): Promise<AgentSchedule> {
+    return this.#serial(async () => {
+      const loaded = await this.#loadWithStation();
+      const current = this.#find(loaded, agentId);
+      const existing = this.#findSchedule(current, scheduleId);
+      const { timezone, ...rest } = given(input);
+      const { timezone: _dropped, ...withoutZone } = existing;
+      const schedule: AgentSchedule = {
+        ...(timezone === null ? withoutZone : existing),
+        ...rest,
+        ...(typeof timezone === "string" ? { timezone } : {}),
+      };
+      await this.#saveSchedules(
+        loaded,
+        current,
+        current.config.schedules.map((s) => (s.id === scheduleId ? schedule : s)),
+      );
+      return schedule;
+    });
+  }
+
+  removeSchedule(agentId: string, scheduleId: string): Promise<void> {
+    return this.#serial(async () => {
+      const loaded = await this.#loadWithStation();
+      const current = this.#find(loaded, agentId);
+      this.#findSchedule(current, scheduleId);
+      await this.#saveSchedules(
+        loaded,
+        current,
+        current.config.schedules.filter((s) => s.id !== scheduleId),
+      );
+    });
+  }
+
+  #findSchedule(agent: LoadedAgent, scheduleId: string): AgentSchedule {
+    const found = agent.config.schedules.find((s) => s.id === scheduleId);
+    if (!found) throw new NotFoundError(`no schedule "${scheduleId}" for "${agent.id}"`);
+    return found;
+  }
+
+  /** Saves the schedules if agent.json stays valid and croner accepts every cron. */
+  async #saveSchedules(
+    loaded: LoadedStation & { station: StationConfig },
+    agent: LoadedAgent,
+    schedules: AgentSchedule[],
+  ): Promise<void> {
+    const config = parseAgentConfig({ ...agent.config, schedules });
+    if (!config.ok) throw new ConflictError("agent.json would be invalid", config.issues);
+    const cronIssues: Issue[] = config.value.schedules.flatMap((s, i) => {
+      const problem = cronIssue(s.cron, s.timezone);
+      return problem
+        ? [{ level: "error" as const, path: `schedules.${i}.cron`, message: problem }]
+        : [];
+    });
+    if (cronIssues.length) throw new ConflictError("the schedule's cron cannot run", cronIssues);
+    this.#checkCrew(loaded, { id: agent.id, config: config.value });
+    await saveAgentConfig(this.#home, agent.id, config.value);
+    this.#events.append({
+      type: "agent.updated",
+      agentId: agent.id,
+      payload: { change: "updated" },
     });
   }
 

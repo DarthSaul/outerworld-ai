@@ -22,8 +22,16 @@ imported by core, ui, or the SPA.
 ### Crew and rooms (Phase 2)
 | Export | Description |
 |--------|-------------|
-| `CrewService({ home, events, connectorTools? })` | `view()`, `agent(id)` (config, documents, effective tools from core's `resolveGrants`), `createAgent`, `updateAgent`, `putDocument`, `deleteAgent` (keeps the workspace), `createRoom`, `updateRoom`, `deleteRoom` (refused while crew or hallways use it). Reads from disk every call; writes run one at a time, are validated across the whole station, and emit `agent.updated` / `station.updated`. Refuses only errors a change would introduce. |
+| `CrewService({ home, events, connectorTools? })` | `view()`, `agent(id)` (config, documents, effective tools from core's `resolveGrants`), `createAgent`, `updateAgent`, `putDocument`, `deleteAgent` (keeps the workspace), `createRoom`, `updateRoom`, `deleteRoom` (refused while crew or hallways use it), `addSchedule` / `updateSchedule` / `removeSchedule` (every cron checked with croner). Reads from disk every call; writes run one at a time, are validated across the whole station, and emit `agent.updated` / `station.updated`. Refuses only errors a change would introduce. |
 | `NotFoundError`, `ConflictError` | What the daemon maps to 404 and 409; `ConflictError.issues` says why. |
+
+### Scheduler (Phase 8, brief §13)
+| Export | Description |
+|--------|-------------|
+| `Scheduler({ home, runs, sessions, events, store, clock?, timezone? })` | `start()` records or catches up (once, with `catchUp`) an occurrence missed while the daemon was down, arms every enabled schedule, and re-arms on `agent.updated` / `station.updated`; `reload()`, `stop()`, `idle()`, `view(agentId)` → `ScheduleView[]` (effective zone, next run, error, last 10 fires), `runNow(agentId, scheduleId)`. A run goes into the schedule's configured session or its own "Scheduled" session through `RunService`, so grants, approval mode, and budgets apply. An occurrence is `schedule.missed` (`down`, `busy`, `stopped`, `error`) when it cannot run. New, edited, and re-enabled schedules count from the moment they are armed. |
+| `ScheduleStore(db)` | Per schedule: the config it was armed with, the last occurrence accounted for, its session; and a history of fires joined to the run's state. |
+| `Clock`, `systemClock` | Time and timers; `systemClock` chains timeouts past setTimeout's 24.8-day cap. Tests pass a manual clock. |
+| `cronIssue(cron, timezone?)`, `machineTimeZone()` | croner's reason for refusing a cron or zone; the zone used when a schedule names none. |
 
 ### Database and event log
 | Export | Description |

@@ -54,6 +54,20 @@ export {
   type RunServiceOptions,
   type ToolImpl,
 } from "./run/run-service.js";
+export { cronIssue } from "./schedule/cron.js";
+export {
+  type MissedReason,
+  type ScheduleFire,
+  type ScheduleState,
+  ScheduleStore,
+} from "./schedule/schedule-store.js";
+export {
+  type Clock,
+  machineTimeZone,
+  Scheduler,
+  type ScheduleView,
+  systemClock,
+} from "./schedule/scheduler.js";
 export {
   ApiKeyService,
   type ApiKeyStatus,

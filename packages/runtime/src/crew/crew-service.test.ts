@@ -261,3 +261,73 @@ describe("CrewService: before onboarding", () => {
     expect(existsSync(stationPaths(join(tmpdir(), "x")).stationJson)).toBe(false);
   });
 });
+
+describe("CrewService: schedules", () => {
+  it("adds a schedule with an id from its prompt, defaults, and no time zone unless given", async () => {
+    const { crew, types } = setup();
+    const added = await crew.addSchedule("vesper", {
+      cron: "0 9 * * 1-5",
+      prompt: "Summarize the week so far for me.",
+    });
+    expect(added).toEqual({
+      id: "summarize-the-week-so",
+      cron: "0 9 * * 1-5",
+      prompt: "Summarize the week so far for me.",
+      catchUp: false,
+      enabled: true,
+    });
+    expect((await crew.agent("vesper"))?.config.schedules).toEqual([added]);
+    expect(types()).toEqual(["agent.updated:vesper"]);
+    const again = await crew.addSchedule("vesper", {
+      cron: "0 9 * * *",
+      prompt: "Summarize the week so far again.",
+    });
+    expect(again.id).toBe("summarize-the-week-so-2");
+  });
+
+  it("updates part of a schedule, and a null time zone clears it", async () => {
+    const { crew } = setup();
+    const updated = await crew.updateSchedule("quill", "daily-briefing", {
+      enabled: true,
+      timezone: null,
+    });
+    expect(updated).toEqual({
+      id: "daily-briefing",
+      cron: "0 8 * * 1-5",
+      prompt: "Write today's project briefing from the project hub.",
+      catchUp: false,
+      enabled: true,
+    });
+    const zoned = await crew.updateSchedule("quill", "daily-briefing", {
+      timezone: "Europe/Stockholm",
+    });
+    expect(zoned.timezone).toBe("Europe/Stockholm");
+  });
+
+  it("refuses a cron croner cannot run, naming the field", async () => {
+    const { crew } = setup();
+    const error = await crew
+      .addSchedule("quill", { cron: "61 * * * *", prompt: "Never." })
+      .catch((e) => e);
+    expect(error).toBeInstanceOf(ConflictError);
+    expect(error.issues).toEqual([
+      expect.objectContaining({
+        path: "schedules.1.cron",
+        message: expect.stringMatching(/minute/),
+      }),
+    ]);
+    expect((await crew.agent("quill"))?.config.schedules).toHaveLength(1);
+  });
+
+  it("removes a schedule; an unknown one is not found", async () => {
+    const { crew } = setup();
+    await crew.removeSchedule("quill", "daily-briefing");
+    expect((await crew.agent("quill"))?.config.schedules).toEqual([]);
+    await expect(crew.removeSchedule("quill", "daily-briefing")).rejects.toBeInstanceOf(
+      NotFoundError,
+    );
+    await expect(crew.updateSchedule("nobody", "x", { enabled: false })).rejects.toBeInstanceOf(
+      NotFoundError,
+    );
+  });
+});

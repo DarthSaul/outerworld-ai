@@ -11,6 +11,7 @@ import { DispatchStore } from "../dispatch/dispatch-store.js";
 import { MemoryService } from "../memory/memory-service.js";
 import { MemoryStore } from "../memory/memory-store.js";
 import { RunService, type RunServiceOptions } from "../run/run-service.js";
+import { ScheduleStore } from "../schedule/schedule-store.js";
 import { SessionStore } from "../sessions/session-store.js";
 import { openDatabase } from "../storage/database.js";
 import { EventStore } from "../storage/event-store.js";
@@ -119,6 +120,7 @@ export const setup = (model: MockLanguageModelV4, options: Partial<RunServiceOpt
   events.subscribe((e) => live.push(e));
   const stored = () => events.since(0).map((e) => e.type);
   return {
+    scheduleStore: new ScheduleStore(db),
     service,
     events,
     sessions,
