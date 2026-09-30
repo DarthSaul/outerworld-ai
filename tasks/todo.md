@@ -207,11 +207,12 @@ decisions made, open questions.
 - [x] Tests: fan-out to two workers running at once, results land in the lead's session, cancel one, a budget blocks one, auto review on and off, steer delivered at the next step, a daemon end-to-end dispatch through the fake model.
 
 ## Phase 6 — Notion MCP connector (per ADR-0012)
-- [ ] `runtime/mcp` connector manager on `@modelcontextprotocol/client`: install, connect, list tools, call, reconnect with backoff, `connector.*` status events.
-- [ ] Notion per ADR-0012: OAuth (DCR + PKCE) with a loopback callback on the daemon, tokens and client registration in the keychain, refresh on 401, reconnect flow in the Connectors screen; `docs/connectors/notion.md` (setup, "every granted agent acts as your Notion account").
-- [ ] Classification: our explicit Notion map authoritative; annotations seed unknown tools; unknown → `write`. Used for consent, shown on the Connectors screen.
-- [ ] Per-agent grant is a single toggle (`agent.json` `connectorGrants: ["notion"]`): granted → all the connector's tools resolve for that agent; not granted → none are sent or executable.
-- [ ] Fake MCP server (in-memory transport) for tests; env-gated smoke test `OUTERWORLD_SMOKE_NOTION=1`.
+- [x] `runtime/mcp` ConnectorManager on `@modelcontextprotocol/client` v2: connect over Streamable HTTP, list and classify tools, call, reconnect with capped backoff after a drop, reconnect signed-in connectors at startup, `connector.status` events (`connected`, `needs_auth`, `disconnected`, `error`).
+- [x] Notion per ADR-0012: OAuth (discovery, dynamic registration, PKCE, refresh by the SDK) with the loopback callback `GET /oauth/callback/:id` guarded by a one-time state; registration and tokens in the keychain; `docs/connectors/notion.md` (setup, "every granted crew member acts as your Notion account", dedicated-account advice).
+- [x] Classification: our explicit Notion map is authoritative; an unknown tool with a read-only (and no destructive) hint seeds read; every other unknown is write. Drives consent; shown on the Connectors screen.
+- [x] Per-agent grant is one toggle (`connectorGrants: ["notion"]`), already in the agent editor; granted crew get every tool, namespaced `notion__<tool>`; others get none.
+- [x] Fake MCP server (in-memory transport) for runtime and daemon tests; env-gated smoke test `src/mcp/notion.smoke.test.ts` (lists tools only).
+- [x] SPA Connectors screen: status, URL, tools with read/write, granted to, Connect / sign-in link / Disconnect / forget / remove, Add Notion.
 
 **CHECKPOINT 6** — you connect Notion and test the Project Manager.
 
