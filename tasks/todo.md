@@ -117,33 +117,33 @@ decisions made, open questions.
 ## Phase 1 — Skeleton: daemon, SPA, auth, event log
 
 ### 1.1 core schemas
-- [ ] `StationConfig` (`station.json`: schemaVersion, name, rooms, lanes, props-as-grants `{kind:"prop", roomId, prop:"web"|"files"|"memory"}`, connectors metadata without secrets, budgets, dispatch settings) and `AgentConfig` (`agent.json`: name, roomId, role `"overseer"|"crew"`, model, approvalMode `"ask"|"full"`, connectorGrants, schedules).
-- [ ] Cross-field validation returns `Issue[]` (unknown room, duplicate ids, >1 overseer, lane to self). JSON Schema exported and drift-tested (ADR-0009).
-- [ ] Event envelope `{ seq, type, at, agentId?, sessionId?, runId?, payload }` and the v1 union from brief §10 as a zod discriminated union; round-trip tests.
-- [ ] Old ledger/status/StationState modules deleted (D11); core stays at 90/85.
+- [x] `StationConfig` (`station.json`: schemaVersion, name, rooms, lanes, props placed as `rooms[].props: [{ kind: "web"|"files"|"memory" }]`, connectors metadata without secrets, budgets, dispatch settings) and `AgentConfig` (`agent.json`: name, roomId, role `"overseer"|"crew"`, model, approvalMode `"ask"|"full"`, connectorGrants, schedules).
+- [x] Cross-field validation returns `Issue[]` (unknown room, duplicate ids, >1 overseer, lane to self). JSON Schema exported and drift-tested (ADR-0009).
+- [x] Event envelope `{ seq, type, at, agentId?, sessionId?, runId?, payload }` and the v1 union from brief §10 as a zod discriminated union; round-trip tests.
+- [x] ~~Old ledger/status/StationState modules deleted (D11)~~ kept until Phase 9 (D14); core stays at 90/85 (98.5 / 93 today).
 
 ### 1.2 runtime storage
-- [ ] `packages/runtime` created (README, strict tsconfig, 85/80 coverage); CONSTRAINTS.md gains the runtime coverage row and the no-network floor item, checked by a shared Vitest setup that fails any `fetch`/socket to a non-loopback host.
-- [ ] Station dir loader/writer: reads `station.json` + `agents/*/`, atomic writes (temp in same dir + fsync + rename), validates via core.
-- [ ] SQLite via better-sqlite3, numbered `.sql` migrations in a `schema_migrations` table; `events` append-only with `seq INTEGER PRIMARY KEY AUTOINCREMENT`; `append(event)` and `since(seq)`; an in-process bus for subscribers.
-- [ ] Tests: schema round-trip through disk, atomic write leaves no partial file on a simulated crash, replay from `seq`, migrations idempotent.
+- [x] `packages/runtime` created (README, strict tsconfig, 85/80 coverage); CONSTRAINTS.md gains the runtime coverage row and the no-network floor item, checked by a shared Vitest setup that fails any `fetch`/socket to a non-loopback host.
+- [x] Station dir loader/writer: reads `station.json` + `agents/*/`, atomic writes (temp in same dir + fsync + rename), validates via core.
+- [x] SQLite via better-sqlite3, numbered `.sql` migrations in a `schema_migrations` table; `events` append-only with `seq INTEGER PRIMARY KEY AUTOINCREMENT`; `append(event)` and `since(seq)`; an in-process bus for subscribers.
+- [x] Tests: schema round-trip through disk, atomic write leaves no partial file on a simulated crash, replay from `seq`, migrations idempotent.
 
 ### 1.3 apps/daemon
-- [ ] Hono on `127.0.0.1`, port from `OUTERWORLD_PORT` (default 4317); `OUTERWORLD_HOME` default `~/.outerworld`; token generated on first start (32 random bytes, `daemon.token`, 0600).
-- [ ] Middleware: bearer token + Origin allowlist on every route except static assets; 401/403 bodies never echo the token.
-- [ ] `GET /health`; `GET /events` SSE with `id: seq`, `Last-Event-ID` replay, 15 s ping, cleanup on abort. `station.started`/`station.stopped` events.
-- [ ] Prod: serves `apps/station/dist` with the token injected (D7).
-- [ ] Tests (via `app.request`): missing token 401, wrong token 401, bad Origin 403, replay from `Last-Event-ID`, token file mode 0600.
+- [x] Hono on `127.0.0.1`, port from `OUTERWORLD_PORT` (default 4317); `OUTERWORLD_HOME` default `~/.outerworld`; token generated on first start (32 random bytes, `daemon.token`, 0600).
+- [x] Middleware: Host (DNS rebinding), Origin, and Sec-Fetch-Site checks on every route; bearer token on every `/api/*` route; 401/403 bodies never echo the token.
+- [x] `GET /api/health`; `GET /api/events` SSE (D13) with `id: seq`, `Last-Event-ID` replay, 15 s ping, cleanup on abort. `station.started`/`station.stopped` events.
+- [x] Prod: serves `apps/station/dist` with the token injected (D7).
+- [x] Tests (via `app.request`): missing token 401, wrong token 401, bad Origin 403, replay from `Last-Event-ID`, token file mode 0600.
 
 ### 1.4 apps/station
-- [ ] Vite + React SPA, routes: Station, COMMS, Crew, Memory, Notifications, Connectors, Settings (placeholders except Station renders the fixture map).
-- [ ] API client with the token header; SSE client (`fetch`-based so it can send the header) with reconnect + `Last-Event-ID`; TanStack Query cache invalidated by events.
-- [ ] Dev proxy to the daemon; Vite plugin for the token (D7).
-- [ ] `/dev` gallery moved from apps/web; `apps/web` and `packages/generator` removed in one diff (D4, D12); `browser:verify` targets the built SPA served by the daemon; CONSTRAINTS.md app-level axe row and the ui/web budget rows point at the SPA, and the generator coverage row is retired (a reviewed CONSTRAINTS diff the guard will flag; owner approves at Checkpoint 1); CI step names and `turbo.json` `globalEnv` updated; root `package.json` description rewritten.
+- [x] Vite + React SPA, routes: Station, COMMS, Crew, Memory, Notifications, Connectors, Settings (placeholders; Station shows the live event log, the map returns in Phase 9).
+- [x] API client with the token header; SSE client (`fetch`-based so it can send the header) with reconnect + `Last-Event-ID`. TanStack Query is wired; invalidation by event lands in Phase 2 with the first queries.
+- [x] Dev proxy to the daemon; Vite plugin for the token (D7).
+- [x] `/dev` gallery moved from apps/web; `apps/web` and `packages/generator` removed in one diff (D4, D12); `browser:verify` targets the built SPA served by the daemon; CONSTRAINTS.md app-level axe row and the ui/web budget rows point at the SPA, and the generator coverage and output rows are marked retired, kept for the owner to delete; CI step names and `turbo.json` `globalEnv` updated; root `package.json` description rewritten.
 
 ### 1.5 dev loop
-- [ ] `pnpm dev` runs daemon + Vite together against `fixtures/demo-station` (copied to `.outerworld/dev-home/` on first run so the fixture is never mutated); `OUTERWORLD_HOME=… pnpm dev` uses a real dir.
-- [ ] Fixture rewritten minimally to the new schema (full rewrite in Phase 9).
+- [x] `pnpm dev` runs daemon + Vite together against `fixtures/demo-station` (copied to `.outerworld/dev-home/` on first run so the fixture is never mutated); `OUTERWORLD_HOME=… pnpm dev` uses a real dir.
+- [x] Fixture rewritten minimally to the new schema (full rewrite in Phase 9).
 
 **CHECKPOINT 1**
 
