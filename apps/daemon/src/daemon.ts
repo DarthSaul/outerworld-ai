@@ -60,13 +60,15 @@ export async function startDaemon(
     env: options.env ?? process.env,
   });
   const db = openDatabase(paths.database);
-  const events = new EventStore(db, { redact: createRedactor(() => apiKeys.knownSecrets()) });
+  const redact = createRedactor(() => apiKeys.knownSecrets());
+  const events = new EventStore(db, { redact });
   const sessions = new SessionStore(db);
   const runs = new RunService({
     home: config.home,
     events,
     sessions,
     models: config.modelMode === "fake" ? scriptedModels() : openRouterModels(apiKeys),
+    redact,
   });
 
   const loaded = await loadStationDir(config.home);

@@ -5,6 +5,7 @@ import type { RuntimeEvent } from "@darthsaul/outerworld-ai-core";
 import { APICallError } from "ai";
 import { MockLanguageModelV4, simulateReadableStream } from "ai/test";
 import { describe, expect, it } from "vitest";
+import { createRedactor } from "../secrets/redact.js";
 import { SessionStore } from "../sessions/session-store.js";
 import { openDatabase } from "../storage/database.js";
 import { EventStore } from "../storage/event-store.js";
@@ -300,6 +301,22 @@ describe("RunService: cancel, errors, and retries", () => {
     const run = await t.service.settled((await t.service.send(session.id, "Hi")).runId);
     expect(run.state).toBe("failed");
     expect(t.sleeps).toEqual([100, 200, 400]);
+  });
+
+  it("keeps the provider's reason for a rejected request, redacted and short", async () => {
+    const bad = new APICallError({
+      message: "vendor/model-a is not a valid model ID (key sk-or-v1-abcdefghijklmnop)",
+      url: "https://openrouter.test/api",
+      requestBodyValues: {},
+      statusCode: 400,
+    });
+    const t = setup(scripted([bad]), { redact: createRedactor(() => []) });
+    const session = t.service.createSession("vesper");
+    const run = await t.service.settled((await t.service.send(session.id, "Hi")).runId);
+    expect(run.error).toBe(
+      "the model provider returned HTTP 400: vendor/model-a is not a valid model ID (key [redacted])",
+    );
+    expect(t.sleeps).toEqual([]);
   });
 
   it("never retries a 402 and explains it", async () => {

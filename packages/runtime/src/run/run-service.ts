@@ -52,10 +52,14 @@ export interface RunServiceOptions {
   readonly concurrency?: number;
   readonly retry?: RetryPolicy;
   readonly sleep?: (ms: number) => Promise<void>;
+  /** Applied to a failure message before it is stored (the event store redacts its own copy). */
+  readonly redact?: (text: string) => string;
 }
 
 const DEFAULT_RETRY: RetryPolicy = { attempts: 3, baseMs: 2000, maxMs: 60_000 };
 const DEFAULT_CONTEXT = 128_000;
+/** A provider's error message is kept this short in the run record. */
+const MAX_REASON_CHARS = 300;
 
 class Cancelled extends Error {
   constructor(readonly by: "user" | "kill_switch" | "budget") {
@@ -124,7 +128,10 @@ const describeError = (error: unknown): string => {
     return "OpenRouter says the account is out of credits (HTTP 402)";
   }
   if (APICallError.isInstance(error) && error.statusCode !== undefined) {
-    return `the model provider returned HTTP ${error.statusCode}`;
+    // The provider's own reason (e.g. "x is not a valid model ID") is what makes this fixable.
+    const reason = error.message.trim().slice(0, MAX_REASON_CHARS);
+    const detail = reason && reason !== `HTTP ${error.statusCode}` ? `: ${reason}` : "";
+    return `the model provider returned HTTP ${error.statusCode}${detail}`;
   }
   return error instanceof Error ? error.message : String(error);
 };
@@ -324,7 +331,8 @@ export class RunService {
         sessions.transition(run.id, "cancel");
         events.append({ type: "run.cancelled", ...ids, payload: { by: reason.by } });
       } else {
-        const message = describeError(error instanceof StreamBroken ? error.cause : error);
+        const described = describeError(error instanceof StreamBroken ? error.cause : error);
+        const message = this.#o.redact ? this.#o.redact(described) : described;
         const current = sessions.getRun(run.id);
         if (current?.state === "queued") sessions.transition(run.id, "start");
         sessions.transition(run.id, "fail", { error: message });
