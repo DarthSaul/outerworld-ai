@@ -23,6 +23,6 @@
       "transport": { "type": "http", "url": "https://mcp.notion.example/mcp" }
     }
   ],
-  "budgets": { "perRunUsd": 0.25, "perAgentDailyUsd": 1, "stationDailyUsd": 3 },
+  "budgets": { "perRunUsd": 5, "perAgentDailyUsd": 25, "stationDailyUsd": 50 },
   "dispatch": { "maxDepth": 1, "autoReview": true }
 }

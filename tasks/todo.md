@@ -246,6 +246,12 @@ decisions made, open questions.
   left in place by the owner 2026-09-29; revisit whether to delete them later.
 - **SPA browser/e2e tests:** deferred 2026-09-29 in favor of unit and component tests; revisit
   once COMMS and the map exist (e.g. a Playwright flow per v1 acceptance criterion).
+- **Budget limits (owner, 2026-09-30):** the demo and dev budgets were raised from $0.25 per run /
+  $1 per agent-day / $3 station-day to $5 / $25 / $50 after a real Notion task via dispatch cost
+  $0.39 and hit the per-run cap. Revisit in a later phase: sensible defaults for a new station
+  (with the Settings → Budgets item in Phase 9), per-model guidance from real usage, and the
+  overshoot (the check runs before each model call, so one call can pass a cap; consider a
+  pre-call estimate from prompt size and a `max_tokens` bound).
 - **Node engine:** establish the supported Node line. `.nvmrc` says 22 and `engines` says `>=22`,
   but local development runs Node 24, `react-router` 8 needs `>=22.22`, and `node:sqlite` is only a
   release candidate on 24.15+. Decide the pin, then align `.nvmrc`, `engines`, CI, and ADR-0011.
