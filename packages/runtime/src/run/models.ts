@@ -39,10 +39,19 @@ const lastUserText = (prompt: ReadonlyArray<{ role: string; content: unknown }>)
   return "";
 };
 
+/** `use <tool> {json}`: the fake model's one trick, so tools and consent can be tried for free. */
+const TOOL_REQUEST = /^use\s+([a-zA-Z0-9_-]+)\s*(\{[\s\S]*\})?\s*$/;
+
+const usage = {
+  inputTokens: { total: 0, noCache: 0, cacheRead: 0, cacheWrite: 0 },
+  outputTokens: { total: 0, text: 0, reasoning: 0 },
+};
+
 /**
  * The scripted fake model (`OUTERWORLD_MODEL=fake`, tasks/todo.md D8): streams a fixed reply word
- * by word so development and browser checks need no key and make no network calls. It never
- * calls tools and says plainly that it is not a real model.
+ * by word so development and browser checks need no key and make no network calls, and says
+ * plainly that it is not a real model. A message of the form `use <tool> {json}` makes it call
+ * that tool (if granted); after the result it reports what came back.
  */
 export function scriptedModels(options: { chunkDelayInMs?: number } = {}): ModelFactory {
   return (modelId) =>
@@ -50,10 +59,36 @@ export function scriptedModels(options: { chunkDelayInMs?: number } = {}): Model
       provider: "outerworld-fake",
       modelId,
       doStream: async ({ prompt }) => {
-        const said = lastUserText(prompt as ReadonlyArray<{ role: string; content: unknown }>);
-        const words = `Scripted reply (fake model, no API call). You said: “${said}”`.split(
-          /(?<= )/,
-        );
+        const messages = prompt as ReadonlyArray<{ role: string; content: unknown }>;
+        const said = lastUserText(messages);
+        const last = messages.at(-1);
+        const request = TOOL_REQUEST.exec(said);
+        if (request && last?.role === "user") {
+          return {
+            stream: simulateReadableStream({
+              chunkDelayInMs: options.chunkDelayInMs ?? 40,
+              chunks: [
+                { type: "stream-start", warnings: [] },
+                {
+                  type: "tool-call",
+                  toolCallId: `fake-${Date.now()}`,
+                  toolName: request[1],
+                  input: request[2] ?? "{}",
+                },
+                {
+                  type: "finish",
+                  finishReason: { unified: "tool-calls", raw: "tool_calls" },
+                  usage,
+                },
+              ],
+            }),
+          } as never;
+        }
+        const reply =
+          last?.role === "tool"
+            ? `Scripted reply (fake model, no API call). The tool returned: ${JSON.stringify(last.content).slice(0, 300)}`
+            : `Scripted reply (fake model, no API call). You said: “${said}”`;
+        const words = reply.split(/(?<= )/);
         return {
           stream: simulateReadableStream({
             chunkDelayInMs: options.chunkDelayInMs ?? 40,
@@ -62,14 +97,7 @@ export function scriptedModels(options: { chunkDelayInMs?: number } = {}): Model
               { type: "text-start", id: "t" },
               ...words.map((delta) => ({ type: "text-delta", id: "t", delta })),
               { type: "text-end", id: "t" },
-              {
-                type: "finish",
-                finishReason: { unified: "stop", raw: "stop" },
-                usage: {
-                  inputTokens: { total: 0, noCache: 0, cacheRead: 0, cacheWrite: 0 },
-                  outputTokens: { total: 0, text: 0, reasoning: 0 },
-                },
-              },
+              { type: "finish", finishReason: { unified: "stop", raw: "stop" }, usage },
             ],
           }),
         } as never;
