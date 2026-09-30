@@ -1,0 +1,271 @@
+import { lstat, rm } from "node:fs/promises";
+import {
+  type AgentConfig,
+  type AgentDocumentName,
+  type AgentView,
+  type ConnectorToolCatalog,
+  type CreateAgentInput,
+  type CreateRoomInput,
+  DEFAULT_MODEL,
+  type Issue,
+  parseAgentConfig,
+  parseStationConfig,
+  type Room,
+  resolveGrants,
+  type StationConfig,
+  type StationView,
+  slugify,
+  stationCrewIssues,
+  type UpdateAgentInput,
+  type UpdateRoomInput,
+} from "@darthsaul/outerworld-ai-core";
+import type { EventStore } from "../storage/event-store.js";
+import {
+  type LoadedAgent,
+  type LoadedStation,
+  loadStationDir,
+  saveAgentConfig,
+  saveAgentDocument,
+  saveStationConfig,
+  stationPaths,
+} from "../storage/station-dir.js";
+
+export class NotFoundError extends Error {}
+
+/** The change would make the station invalid. `issues` says how. */
+export class ConflictError extends Error {
+  constructor(
+    message: string,
+    readonly issues: readonly Issue[] = [],
+  ) {
+    super(message);
+  }
+}
+
+export interface CrewServiceOptions {
+  readonly home: string;
+  readonly events: EventStore;
+  /** Tools each connector exposes; empty until connectors connect (Phase 6). */
+  readonly connectorTools?: () => ConnectorToolCatalog;
+}
+
+/** An update's fields that were actually given; `undefined` never overwrites a stored value. */
+const given = <T extends object>(input: T): { [K in keyof T]?: Exclude<T[K], undefined> } =>
+  Object.fromEntries(Object.entries(input).filter(([, v]) => v !== undefined)) as {
+    [K in keyof T]?: Exclude<T[K], undefined>;
+  };
+
+const errorKeys = (issues: readonly Issue[]) =>
+  new Set(issues.filter((i) => i.level === "error").map((i) => `${i.path}\n${i.message}`));
+
+/**
+ * Crew and rooms as documents (Phase 2). Reads from disk on every call, so hand edits made while
+ * the daemon runs are honored. Writes run one at a time, are validated against the whole station,
+ * go to disk atomically, and then emit `agent.updated` or `station.updated`. A change is refused
+ * only for errors it would introduce, never for problems that were already there.
+ */
+export class CrewService {
+  readonly #home: string;
+  readonly #events: EventStore;
+  readonly #connectorTools: () => ConnectorToolCatalog;
+  #queue: Promise<unknown> = Promise.resolve();
+
+  constructor(options: CrewServiceOptions) {
+    this.#home = options.home;
+    this.#events = options.events;
+    this.#connectorTools = options.connectorTools ?? (() => ({}));
+  }
+
+  async view(): Promise<StationView> {
+    const loaded = await loadStationDir(this.#home);
+    return {
+      ...(loaded.station ? { station: loaded.station } : {}),
+      agents: loaded.agents.map((a) => ({ id: a.id, config: a.config })),
+      issues: loaded.issues,
+    };
+  }
+
+  async agent(id: string): Promise<AgentView | undefined> {
+    const loaded = await loadStationDir(this.#home);
+    const agent = loaded.agents.find((a) => a.id === id);
+    return agent && loaded.station ? this.#agentView(agent, loaded.station) : undefined;
+  }
+
+  createAgent(input: CreateAgentInput): Promise<AgentView> {
+    return this.#serial(async () => {
+      const loaded = await this.#loadWithStation();
+      const id = slugify(
+        input.name,
+        loaded.agents.map((a) => a.id),
+      );
+      const config: AgentConfig = {
+        schemaVersion: 1,
+        name: input.name,
+        roomId: input.roomId,
+        role: input.role ?? "crew",
+        model: input.model ?? DEFAULT_MODEL,
+        approvalMode: input.approvalMode ?? "ask",
+        connectorGrants: [],
+        schedules: [],
+      };
+      this.#checkCrew(loaded, { id, config });
+      await saveAgentConfig(this.#home, id, config);
+      await saveAgentDocument(this.#home, id, "identity", `# ${input.name}\n`);
+      this.#events.append({ type: "agent.updated", agentId: id, payload: { change: "created" } });
+      return this.#required(id);
+    });
+  }
+
+  updateAgent(id: string, input: UpdateAgentInput): Promise<AgentView> {
+    return this.#serial(async () => {
+      const loaded = await this.#loadWithStation();
+      const current = this.#find(loaded, id);
+      const config = parseAgentConfig({ ...current.config, ...given(input) });
+      if (!config.ok) throw new ConflictError("agent.json would be invalid", config.issues);
+      this.#checkCrew(loaded, { id, config: config.value });
+      await saveAgentConfig(this.#home, id, config.value);
+      this.#events.append({ type: "agent.updated", agentId: id, payload: { change: "updated" } });
+      return this.#required(id);
+    });
+  }
+
+  putDocument(id: string, name: AgentDocumentName, text: string): Promise<void> {
+    return this.#serial(async () => {
+      this.#find(await loadStationDir(this.#home), id);
+      await saveAgentDocument(this.#home, id, name, text);
+      this.#events.append({ type: "agent.updated", agentId: id, payload: { change: "updated" } });
+    });
+  }
+
+  /** Removes `agents/<id>/`. The agent's workspace files stay on disk. */
+  deleteAgent(id: string): Promise<void> {
+    return this.#serial(async () => {
+      this.#find(await loadStationDir(this.#home), id);
+      const dir = stationPaths(this.#home).agentDir(id);
+      if ((await lstat(dir)).isSymbolicLink()) throw new ConflictError(`agents/${id} is a link`);
+      await rm(dir, { recursive: true });
+      this.#events.append({ type: "agent.updated", agentId: id, payload: { change: "deleted" } });
+    });
+  }
+
+  createRoom(input: CreateRoomInput): Promise<Room> {
+    return this.#serial(async () => {
+      const loaded = await this.#loadWithStation();
+      const station = loaded.station;
+      const room: Room = {
+        id: slugify(
+          input.name,
+          station.rooms.map((r) => r.id),
+        ),
+        name: input.name,
+        ...(input.description !== undefined ? { description: input.description } : {}),
+        props: input.props ?? [],
+      };
+      await this.#saveStation(loaded, { ...station, rooms: [...station.rooms, room] });
+      return room;
+    });
+  }
+
+  updateRoom(id: string, input: UpdateRoomInput): Promise<Room> {
+    return this.#serial(async () => {
+      const loaded = await this.#loadWithStation();
+      const station = loaded.station;
+      const current = station.rooms.find((r) => r.id === id);
+      if (!current) throw new NotFoundError(`no room "${id}"`);
+      const room: Room = { ...current, ...given(input) };
+      await this.#saveStation(loaded, {
+        ...station,
+        rooms: station.rooms.map((r) => (r.id === id ? room : r)),
+      });
+      return room;
+    });
+  }
+
+  /** Refused while crew live in the room or a hallway touches it. */
+  deleteRoom(id: string): Promise<void> {
+    return this.#serial(async () => {
+      const loaded = await this.#loadWithStation();
+      const station = loaded.station;
+      if (!station.rooms.some((r) => r.id === id)) throw new NotFoundError(`no room "${id}"`);
+      const crew = loaded.agents.filter((a) => a.config.roomId === id).map((a) => a.id);
+      if (crew.length) throw new ConflictError(`room "${id}" still has crew: ${crew.join(", ")}`);
+      const lanes = station.lanes.filter((l) => l.from === id || l.to === id).map((l) => l.id);
+      if (lanes.length)
+        throw new ConflictError(`room "${id}" still has hallways: ${lanes.join(", ")}`);
+      await this.#saveStation(loaded, {
+        ...station,
+        rooms: station.rooms.filter((r) => r.id !== id),
+      });
+    });
+  }
+
+  /** Runs `task` after every earlier write has settled, so read-modify-write never interleaves. */
+  #serial<T>(task: () => Promise<T>): Promise<T> {
+    const run = this.#queue.then(task, task);
+    this.#queue = run.catch(() => undefined);
+    return run;
+  }
+
+  async #loadWithStation(): Promise<LoadedStation & { station: StationConfig }> {
+    const loaded = await loadStationDir(this.#home);
+    if (!loaded.station) {
+      throw new ConflictError("no valid station.json yet; onboarding creates it", loaded.issues);
+    }
+    return loaded as LoadedStation & { station: StationConfig };
+  }
+
+  #find(loaded: LoadedStation, id: string): LoadedAgent {
+    const agent = loaded.agents.find((a) => a.id === id);
+    if (!agent) throw new NotFoundError(`no agent "${id}"`);
+    return agent;
+  }
+
+  #checkCrew(
+    loaded: LoadedStation & { station: StationConfig },
+    next: { id: string; config: AgentConfig },
+  ) {
+    const before = stationCrewIssues(loaded.station, loaded.agents);
+    const crew = [...loaded.agents.filter((a) => a.id !== next.id), next];
+    const after = stationCrewIssues(loaded.station, crew);
+    const known = errorKeys(before);
+    const introduced = after.filter(
+      (i) => i.level === "error" && !known.has(`${i.path}\n${i.message}`),
+    );
+    if (introduced.length) {
+      throw new ConflictError(introduced.map((i) => i.message).join("; "), introduced);
+    }
+  }
+
+  async #saveStation(loaded: LoadedStation, station: StationConfig) {
+    const parsed = parseStationConfig(station);
+    const known = errorKeys(
+      loaded.issues.map((i) => ({ ...i, path: i.path.replace(/^station\.json\./, "") })),
+    );
+    const introduced = parsed.issues.filter(
+      (i) => i.level === "error" && !known.has(`${i.path}\n${i.message}`),
+    );
+    if (introduced.length) {
+      throw new ConflictError(
+        introduced.map((i) => `${i.path}: ${i.message}`).join("; "),
+        introduced,
+      );
+    }
+    await saveStationConfig(this.#home, station);
+    this.#events.append({ type: "station.updated", payload: {} });
+  }
+
+  async #required(id: string): Promise<AgentView> {
+    const view = await this.agent(id);
+    if (!view) throw new NotFoundError(`no agent "${id}"`);
+    return view;
+  }
+
+  #agentView(agent: LoadedAgent, station: StationConfig): AgentView {
+    return {
+      id: agent.id,
+      config: agent.config,
+      documents: agent.documents,
+      tools: resolveGrants(agent.config, station, this.#connectorTools()),
+    };
+  }
+}

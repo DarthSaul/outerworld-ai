@@ -19,6 +19,12 @@ imported by core, ui, or the SPA.
 | `AGENT_DOCUMENTS` | `identity`, `purpose`, `standing-orders`, `context`. |
 | `writeFileAtomic(path, data, { mode })` | Temp file in the same directory, fsync, rename, fsync the directory. Readers see the old file or the whole new one. |
 
+### Crew and rooms (Phase 2)
+| Export | Description |
+|--------|-------------|
+| `CrewService({ home, events, connectorTools? })` | `view()`, `agent(id)` (config, documents, effective tools from core's `resolveGrants`), `createAgent`, `updateAgent`, `putDocument`, `deleteAgent` (keeps the workspace), `createRoom`, `updateRoom`, `deleteRoom` (refused while crew or hallways use it). Reads from disk every call; writes run one at a time, are validated across the whole station, and emit `agent.updated` / `station.updated`. Refuses only errors a change would introduce. |
+| `NotFoundError`, `ConflictError` | What the daemon maps to 404 and 409; `ConflictError.issues` says why. |
+
 ### Database and event log
 | Export | Description |
 |--------|-------------|

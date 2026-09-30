@@ -5,6 +5,12 @@
  * dispatcher, scheduler, tools, MCP, memory, and budgets. All runtime logic lives here, never in
  * apps/*, so it can move into a desktop shell unchanged. Pure policy lives in core.
  */
+export {
+  ConflictError,
+  CrewService,
+  type CrewServiceOptions,
+  NotFoundError,
+} from "./crew/crew-service.js";
 export { type AtomicWriteOptions, writeFileAtomic } from "./storage/atomic-write.js";
 export { type Db, openDatabase } from "./storage/database.js";
 export { type EventListener, EventStore } from "./storage/event-store.js";
