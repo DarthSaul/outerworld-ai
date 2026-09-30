@@ -19,7 +19,8 @@ export class BadRequest extends Error {
 export async function readBody<S extends z.ZodType>(c: Context, schema: S): Promise<z.infer<S>> {
   let raw: unknown;
   try {
-    raw = await c.req.json();
+    // Read as text once (the JSON check may already have read it) and parse from that.
+    raw = JSON.parse(await c.req.text());
   } catch {
     throw new BadRequest("body is not valid JSON");
   }
@@ -34,29 +35,34 @@ export async function readBody<S extends z.ZodType>(c: Context, schema: S): Prom
 }
 
 /**
- * The shared rules for every JSON API router: bodies must be `application/json` (415, which also
- * blocks simple cross-site form posts) and at most 1 MiB (413); errors map to 400 (bad input or a
- * rejected key), 404 (unknown id), and 409 (the change would break the station).
+ * Request rules for every `/api` request, applied once by the app (applying them per router would
+ * run the size limiter again over a body already read): bodies at most 1 MiB (413), and a request
+ * with content must send JSON (415, which also blocks simple cross-site form posts). A bare POST
+ * (cancel, connect) has no content; over real HTTP it still has an empty body stream, so the check
+ * looks at the content, not the stream.
  */
-export function jsonApi(app: Hono): Hono {
-  app.use("*", async (c, next) => {
-    // Only requests that carry a body must be JSON; a bare POST (e.g. cancel) has none.
-    if (["POST", "PUT", "PATCH"].includes(c.req.method) && c.req.raw.body !== null) {
-      const type = c.req.header("content-type") ?? "";
-      if (!type.startsWith("application/json")) {
-        return c.json({ error: "request bodies must be application/json" }, 415);
-      }
-    }
-    await next();
-  });
+export function apiRequestRules(app: Hono, path: string): void {
   app.use(
-    "*",
+    path,
     bodyLimit({
       maxSize: MAX_BODY_BYTES,
       onError: (c) =>
         c.json({ error: `request bodies are limited to ${MAX_BODY_BYTES} bytes` }, 413),
     }),
   );
+  app.use(path, async (c, next) => {
+    if (["POST", "PUT", "PATCH"].includes(c.req.method)) {
+      const type = c.req.header("content-type") ?? "";
+      if (!type.startsWith("application/json") && (await c.req.text()).length > 0) {
+        return c.json({ error: "request bodies must be application/json" }, 415);
+      }
+    }
+    await next();
+  });
+}
+
+/** Error mapping for a JSON API router: 400 (bad input or a rejected key), 404, 409. */
+export function jsonApi(app: Hono): Hono {
   app.onError((error, c) => {
     if (error instanceof BadRequest) {
       return c.json({ error: error.message, issues: error.issues }, 400);

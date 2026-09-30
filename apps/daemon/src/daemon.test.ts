@@ -36,6 +36,31 @@ describe("startDaemon", () => {
     log.close();
   });
 
+  it("accepts a POST with no body over real HTTP (connect, cancel), and still refuses a non-JSON body", async () => {
+    const h = home();
+    const daemon = await startDaemon(
+      { home: h, port: 0, host: "127.0.0.1", modelMode: "fake" },
+      { quiet: true, secrets: new MemorySecretStore(), env: {} },
+    );
+    try {
+      const token = readFileSync(join(h, "daemon.token"), "utf8").trim();
+      const auth = { authorization: `Bearer ${token}` };
+      const empty = await fetch(`${daemon.url}/api/runs/nope/cancel`, {
+        method: "POST",
+        headers: auth,
+      });
+      expect(empty.status).toBe(404);
+      const form = await fetch(`${daemon.url}/api/runs/nope/cancel`, {
+        method: "POST",
+        headers: { ...auth, "content-type": "text/plain" },
+        body: "x",
+      });
+      expect(form.status).toBe(415);
+    } finally {
+      await daemon.close("shutdown");
+    }
+  });
+
   it("closes promptly while an SSE stream is still open", async () => {
     const h = home();
     const daemon = await startDaemon(

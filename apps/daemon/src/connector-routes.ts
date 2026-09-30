@@ -69,7 +69,10 @@ export function connectorRoutes(deps: { crew: CrewService; connectors: Connector
   });
 
   app.post("/connectors/:id/disconnect", async (c) => {
-    const { forget } = c.req.raw.body ? await readBody(c, DisconnectInput) : { forget: false };
+    // The body is optional: a bare POST disconnects without forgetting.
+    const { forget } = (await c.req.text()).trim()
+      ? await readBody(c, DisconnectInput)
+      : { forget: false };
     await connectors.disconnect(c.req.param("id"), { forget: forget ?? false });
     return c.body(null, 204);
   });

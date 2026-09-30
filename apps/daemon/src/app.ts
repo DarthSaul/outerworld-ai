@@ -7,6 +7,7 @@ import { streamSSE } from "hono/streaming";
 import { type CommsDeps, commsRoutes } from "./comms-routes.js";
 import { connectorRoutes, oauthCallback } from "./connector-routes.js";
 import { crewRoutes } from "./crew-routes.js";
+import { apiRequestRules } from "./http.js";
 import { tokensMatch } from "./token.js";
 
 export interface AppOptions extends CommsDeps {
@@ -72,6 +73,8 @@ export function createApp(options: AppOptions): Hono {
     if (!tokensMatch(given, options.token)) return c.json({ error: "unauthorized" }, 401);
     await next();
   });
+
+  apiRequestRules(app, "/api/*");
 
   app.get("/api/health", (c) =>
     c.json({ ok: true, version: options.version, latestSeq: options.events.latestSeq() }),
