@@ -156,11 +156,11 @@ decisions made, open questions.
 **CHECKPOINT 1**
 
 ## Phase 2 — Crew as documents
-- [ ] Agent CRUD (runtime service + `GET/POST/PATCH/DELETE /agents`), documents `identity.md`, `purpose.md`, `standing-orders.md`, `context.md`; atomic writes; ids from names (kebab, unique).
-- [ ] Room CRUD, prop placement (web, files, memory) in `station.json`.
-- [ ] core `resolveGrants(agent, station, connectorTools)` → `{ tool, class: "read"|"write", source: "role"|"prop"|"connector" }[]`; role grants (overseer: `dispatch`, `read_session`); exhaustive table tests (every role × prop × connector preset, unknown tool → write, worker never gets `dispatch`).
-- [ ] SPA: Crew list, agent editor (four markdown editors, model picker from `SUPPORTED_MODELS` in core, approval mode with *Full power* visibly flagged, resolved grants view), Room editor.
-- [ ] `agent.updated` / `station.updated` emitted on every change; SPA updates live (test: two query clients, one edits, other sees it).
+- [x] Agent CRUD (runtime `CrewService` + `GET /api/agents/:id`, `POST /api/agents`, `PATCH`/`DELETE /api/agents/:id`, `PUT /api/agents/:id/documents/:name`), documents `identity.md`, `purpose.md`, `standing-orders.md`, `context.md`; atomic writes; ids from names (kebab, unique). The station and crew list come from `GET /api/station`.
+- [x] Room CRUD (`POST /api/rooms`, `PATCH`/`DELETE /api/rooms/:id`), prop placement (web, files, memory) in `station.json`; a room with crew or hallways cannot be deleted.
+- [x] core `resolveGrants(agent, station, connectorTools)` → `{ name, class: "read"|"write", source: role|prop|connector }[]`; role grants (overseer: `dispatch`, `read_session`); table tests (roles × props × connectors, depth 0, unknown room, uninstalled connector, name limits; worker never gets `dispatch`). Connector tools are granted whole (ADR-0012) and namespaced (D16).
+- [x] SPA: Crew list with rooms and prop toggles, agent editor (four markdown editors with separate save state, model picker from `SUPPORTED_MODELS` (D17), approval mode with *Full power* visibly flagged, connector grants, effective tools view), room editing inline on the Crew screen.
+- [x] Every change emits `agent.updated` / `station.updated`; the SPA invalidates its queries from those events, tested by changing state "elsewhere" and emitting the event (two real tabs share the same path).
 
 ## Phase 3 — Agent loop and COMMS
 - [ ] Key: Settings stores the OpenRouter key in the keychain (`@napi-rs/keyring`, service `outerworld-ai`); env `OPENROUTER_API_KEY` fallback; validated via `GET /api/v1/key`; the API only ever returns `{ configured, source }`. Secret redaction helper used by logger and event writer (test: a key-shaped string never reaches events or logs).
