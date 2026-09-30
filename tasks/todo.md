@@ -59,6 +59,9 @@ decisions made, open questions.
 - **D10 Coverage.** core keeps 90/85. New row: `packages/runtime` lines >= 85, branches >= 80
   (async/IO-heavy). The generator row is removed with the package (the package is archived, not
   a loosening). ui unchanged. Recorded in CONSTRAINTS.md with the reasons.
+- **D12 Retired tests (owner-approved 2026-09-29).** The floor guard allows a test deleted in the
+  same diff as its package's `package.json` or its sibling module; a lone test deletion is still
+  flagged. Commit messages still give the reason.
 - **D11 Old core modules.** Ledger parsing, status schemas, StationState, health, and the demo
   timeline are Routines-specific; they are deleted in Phase 1 when the new schema lands (tests for
   them go with them; commit message says why).
@@ -82,9 +85,10 @@ decisions made, open questions.
 - [ ] Rejected: local `@notionhq/notion-mcp-server` (unmaintained; page scoping not needed), direct REST (not MCP).
 - [ ] Brief amended in the same commit: §3 goal 5, §6 connector row, §12 grant editor, §16.2, §17 PM grants say "Notion granted" instead of presets; status line notes the amendment.
 
-### 0.5 Archive generator and ledger template
-- [ ] `packages/generator` and `templates/ledger-repo` removed; `pnpm-lock.yaml` regenerated; root `package.json` description updated; CI coverage step names no longer mention generator; `turbo.json` `globalEnv` drops nothing yet (web still uses it until Phase 1).
-- [ ] `pnpm check:full` green.
+### 0.5 Archive the ledger template
+- [x] `templates/ledger-repo` removed (no tests, no dependents). CLAUDE.md/README references go in 0.8.
+- The generator is archived in Phase 1 together with `apps/web` (see D12): web's loader test
+  imports it, and the pair is removed in one diff so the floor guard sees whole packages retired.
 
 ### 0.6 Floor guard: allow `lane` (D3)
 - [ ] `lane`/`lanes` removed from `THEMED` in `scripts/floor-guard.mjs` and from CLAUDE.md's banned list; separate commit.
@@ -128,7 +132,7 @@ decisions made, open questions.
 - [ ] Vite + React SPA, routes: Station, COMMS, Crew, Memory, Notifications, Connectors, Settings (placeholders except Station renders the fixture map).
 - [ ] API client with the token header; SSE client (`fetch`-based so it can send the header) with reconnect + `Last-Event-ID`; TanStack Query cache invalidated by events.
 - [ ] Dev proxy to the daemon; Vite plugin for the token (D7).
-- [ ] `/dev` gallery moved from apps/web; `apps/web` removed (D4); `browser:verify` targets the built SPA served by the daemon.
+- [ ] `/dev` gallery moved from apps/web; `apps/web` and `packages/generator` removed in one diff (D4, D12); `browser:verify` targets the built SPA served by the daemon; CI step names and `turbo.json` `globalEnv` updated; root `package.json` description rewritten.
 
 ### 1.5 dev loop
 - [ ] `pnpm dev` runs daemon + Vite together against `fixtures/demo-station` (copied to `.outerworld/dev-home/` on first run so the fixture is never mutated); `OUTERWORLD_HOME=… pnpm dev` uses a real dir.

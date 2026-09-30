@@ -1,7 +1,0 @@
-# Never commit secrets or local env files to the ledger repo.
-.env
-.env.*
-*.pem
-*.key
-node_modules/
-.DS_Store
