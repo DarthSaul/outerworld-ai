@@ -53,9 +53,11 @@ decisions made, open questions.
 - **D8 Fake model in dev.** `OUTERWORLD_MODEL=fake` makes the daemon use the scripted provider
   from `packages/runtime/testing`, so `pnpm dev` on the fixture and `browser:verify` work with no
   key and no network. Real OpenRouter only when a key is present and the flag is unset.
-- **D9 web_fetch egress.** http(s) only; refuse loopback, private, link-local and `.local`
-  targets (after DNS resolution) so an agent cannot reach the daemon or LAN; size cap 1 MiB,
-  timeout 15 s, HTML → text.
+- **D9 web_fetch egress.** http(s) only; refuse loopback, private, link-local, CGNAT, multicast,
+  and `.local`/`.internal`/`localhost` targets after DNS resolution, re-checked on every redirect
+  (max 5), so an agent cannot reach the daemon or LAN; size cap 1 MiB, timeout 15 s, HTML → text,
+  binary refused. Known limit: DNS is resolved separately from the connection, so a rebinding
+  answer between the two could slip through; pinning the resolved address is a follow-up.
 - **D10 Coverage.** core keeps 90/85. New row: `packages/runtime` lines >= 85, branches >= 80
   (async/IO-heavy). The generator row is removed with the package (the package is archived, not
   a loosening). ui unchanged. Recorded in CONSTRAINTS.md with the reasons.

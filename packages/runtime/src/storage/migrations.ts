@@ -68,4 +68,54 @@ export const MIGRATIONS: readonly Migration[] = [
       );
     `,
   },
+  {
+    version: 3,
+    name: "memories, consents, spend, station state",
+    sql: `
+      create table memories (
+        id text primary key,
+        agent_id text not null,
+        scope text not null check (scope in ('agent', 'station')),
+        text text not null,
+        status text not null check (status in ('proposed', 'approved', 'rejected')),
+        source_run_id text,
+        created_at text not null,
+        decided_at text
+      );
+      create index memories_agent on memories (agent_id, status, created_at);
+      create table consents (
+        id text primary key,
+        run_id text not null references runs (id),
+        session_id text not null,
+        agent_id text not null,
+        tool_call_id text not null,
+        tool text not null,
+        input text not null,
+        status text not null check (status in ('pending', 'approved', 'denied', 'expired')),
+        created_at text not null,
+        decided_at text
+      );
+      create index consents_status on consents (status, created_at);
+      create table spend (
+        id integer primary key autoincrement,
+        run_id text not null references runs (id),
+        session_id text not null,
+        agent_id text not null,
+        model text not null,
+        input_tokens integer not null,
+        output_tokens integer not null,
+        cost_usd real,
+        day text not null,
+        at text not null
+      );
+      create index spend_run on spend (run_id);
+      create index spend_agent_day on spend (agent_id, day);
+      create index spend_day on spend (day);
+      create table station_state (
+        key text primary key,
+        value text not null,
+        updated_at text not null
+      );
+    `,
+  },
 ];

@@ -12,6 +12,13 @@ export {
   NotFoundError,
 } from "./crew/crew-service.js";
 export {
+  type MemoryRecord,
+  type MemoryScope,
+  type MemoryStatus,
+  MemoryStore,
+} from "./memory/memory-store.js";
+export { createRememberTool } from "./memory/remember.js";
+export {
   type ModelFactory,
   NoApiKeyError,
   openRouterModels,
@@ -58,3 +65,10 @@ export {
   saveStationConfig,
   stationPaths,
 } from "./storage/station-dir.js";
+export { createFileTools, MAX_READ_BYTES, MAX_WRITE_BYTES } from "./tools/files.js";
+export {
+  createWebFetch,
+  htmlToText,
+  isPublicAddress,
+  type WebFetchOptions,
+} from "./tools/web-fetch.js";
