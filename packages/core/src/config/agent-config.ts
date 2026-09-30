@@ -40,7 +40,8 @@ const Cron = z
 export const Schedule = z.looseObject({
   id: Id,
   cron: Cron,
-  timezone: z.string().refine(isTimeZone, "unknown time zone"),
+  /** IANA time zone; absent means the machine's own zone where the daemon runs. */
+  timezone: z.string().refine(isTimeZone, "unknown time zone").optional(),
   prompt: z.string().min(1),
   /** Session the run posts into; the runtime creates a per-schedule session when absent. */
   sessionId: z.string().min(1).optional(),

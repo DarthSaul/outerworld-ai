@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { AgentConfig } from "../config/agent-config.js";
-import { AgentRole, ApprovalMode } from "../config/agent-config.js";
+import { AgentRole, ApprovalMode, Schedule } from "../config/agent-config.js";
 import { Prop, type StationConfig } from "../config/station-config.js";
 import type { EffectiveTool } from "../policy/grants.js";
 import { Id, type Issue } from "../schema/common.js";
@@ -37,6 +37,27 @@ export const UpdateAgentInput = z.strictObject({
   rig: Rig.optional(),
 });
 
+/** A scheduled prompt is sent like a Commander's message, so it has the same practical limit. */
+const SchedulePrompt = z.string().trim().min(1).max(8000);
+
+/** `POST /api/agents/:id/schedules`: the id is made by the runtime. */
+export const CreateScheduleInput = z.strictObject({
+  cron: Schedule.shape.cron,
+  timezone: Schedule.shape.timezone,
+  prompt: SchedulePrompt,
+  catchUp: z.boolean().optional(),
+  enabled: z.boolean().optional(),
+});
+
+/** `PATCH /api/agents/:id/schedules/:scheduleId`; `timezone: null` goes back to the machine's zone. */
+export const UpdateScheduleInput = z.strictObject({
+  cron: Schedule.shape.cron.optional(),
+  timezone: Schedule.shape.timezone.unwrap().nullable().optional(),
+  prompt: SchedulePrompt.optional(),
+  catchUp: z.boolean().optional(),
+  enabled: z.boolean().optional(),
+});
+
 export const DocumentInput = z.strictObject({
   text: z
     .string()
@@ -61,6 +82,8 @@ export const UpdateRoomInput = z.strictObject({
 export type CreateAgentInput = z.infer<typeof CreateAgentInput>;
 export type UpdateAgentInput = z.infer<typeof UpdateAgentInput>;
 export type DocumentInput = z.infer<typeof DocumentInput>;
+export type CreateScheduleInput = z.infer<typeof CreateScheduleInput>;
+export type UpdateScheduleInput = z.infer<typeof UpdateScheduleInput>;
 export type CreateRoomInput = z.infer<typeof CreateRoomInput>;
 export type UpdateRoomInput = z.infer<typeof UpdateRoomInput>;
 

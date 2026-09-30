@@ -119,8 +119,22 @@ export const RuntimeEvent = z.discriminatedUnion("type", [
     change: z.enum(["edited", "deleted"]),
   }),
 
-  event("schedule.fired", about.agent, { scheduleId: Id, scheduledFor: Timestamp }),
-  event("schedule.missed", about.agent, { scheduleId: Id, scheduledFor: Timestamp }),
+  /** A schedule started a run; `sessionId` and `runId` say where. `manual` for Run now. */
+  event("schedule.fired", about.agent, {
+    scheduleId: Id,
+    scheduledFor: Timestamp,
+    manual: z.boolean().optional(),
+  }),
+  /**
+   * A schedule did not run: the daemon was down (`down`, without catch-up), the session was busy,
+   * the kill switch was on (`stopped`), or starting the run failed (`error`, with `detail`).
+   */
+  event("schedule.missed", about.agent, {
+    scheduleId: Id,
+    scheduledFor: Timestamp,
+    reason: z.enum(["down", "busy", "stopped", "error"]).optional(),
+    detail: z.string().optional(),
+  }),
 
   event("connector.status", about.nothing, {
     connectorId: Id,

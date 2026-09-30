@@ -31,12 +31,14 @@ export {
   type AgentView,
   CreateAgentInput,
   CreateRoomInput,
+  CreateScheduleInput,
   DocumentInput,
   MAX_DOCUMENT_BYTES,
   type StationView,
   slugify,
   UpdateAgentInput,
   UpdateRoomInput,
+  UpdateScheduleInput,
 } from "./api/crew-api.js";
 // Station runtime config (station.json, agent.json) — ADR-0010
 export {

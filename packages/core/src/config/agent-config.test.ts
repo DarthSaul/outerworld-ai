@@ -91,6 +91,12 @@ describe("parseAgentConfig", () => {
     expect(p).not.toContain("error schedules.2.cron");
   });
 
+  it("lets a schedule leave out its time zone (the machine's zone is used)", () => {
+    const input = valid();
+    input.schedules = [{ id: "a", cron: "0 9 * * *", prompt: "x" }];
+    expect(paths(input)).toEqual([]);
+  });
+
   it("reserves the overseer's rig parts (crest head, frame trace) for the overseer", () => {
     const input = { ...valid(), rig: { tintHue: 1, trimHue: 2, head: "crest", trace: "frame" } };
     const p = paths(input);

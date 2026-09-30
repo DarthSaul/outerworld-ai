@@ -3,10 +3,12 @@ import {
   AGENT_DOCUMENTS,
   CreateAgentInput,
   CreateRoomInput,
+  CreateScheduleInput,
   DocumentInput,
   slugify,
   UpdateAgentInput,
   UpdateRoomInput,
+  UpdateScheduleInput,
 } from "./crew-api.js";
 
 describe("slugify", () => {
@@ -58,5 +60,28 @@ describe("crew API inputs", () => {
     expect(
       CreateRoomInput.safeParse({ name: "R", description: "d", props: [{ kind: "web" }] }).success,
     ).toBe(true);
+  });
+
+  it("creates a schedule from cron and prompt; the time zone is optional and checked", () => {
+    expect(CreateScheduleInput.parse({ cron: "0 9 * * 1-5", prompt: " Brief me. " })).toEqual({
+      cron: "0 9 * * 1-5",
+      prompt: "Brief me.",
+    });
+    expect(
+      CreateScheduleInput.safeParse({ cron: "0 9 * * *", prompt: "x", timezone: "Nowhere/Land" })
+        .success,
+    ).toBe(false);
+    expect(CreateScheduleInput.safeParse({ cron: "daily", prompt: "x" }).success).toBe(false);
+    expect(CreateScheduleInput.safeParse({ cron: "0 9 * * *", prompt: "  " }).success).toBe(false);
+    expect(
+      CreateScheduleInput.safeParse({ cron: "0 9 * * *", prompt: "x", id: "mine" }).success,
+    ).toBe(false);
+  });
+
+  it("updates a schedule partly; a null time zone clears it", () => {
+    expect(UpdateScheduleInput.parse({ enabled: false })).toEqual({ enabled: false });
+    expect(UpdateScheduleInput.parse({ timezone: null })).toEqual({ timezone: null });
+    expect(UpdateScheduleInput.safeParse({ timezone: "Mars/Olympus" }).success).toBe(false);
+    expect(UpdateScheduleInput.safeParse({ sessionId: "s1" }).success).toBe(false);
   });
 });
