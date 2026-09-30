@@ -113,6 +113,11 @@ export const RuntimeEvent = z.discriminatedUnion("type", [
   }),
   event("memory.approved", about.agent, { memoryId: Ref }),
   event("memory.rejected", about.agent, { memoryId: Ref }),
+  /** The Commander edited or deleted a stored belief. */
+  event("memory.updated", about.agent, {
+    memoryId: Ref,
+    change: z.enum(["edited", "deleted"]),
+  }),
 
   event("schedule.fired", about.agent, { scheduleId: Id, scheduledFor: Timestamp }),
   event("schedule.missed", about.agent, { scheduleId: Id, scheduledFor: Timestamp }),

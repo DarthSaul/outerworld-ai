@@ -8,6 +8,8 @@ import { ConsentStore } from "../controls/consent-store.js";
 import { KillSwitch } from "../controls/kill-switch.js";
 import { SpendStore } from "../controls/spend-store.js";
 import { DispatchStore } from "../dispatch/dispatch-store.js";
+import { MemoryService } from "../memory/memory-service.js";
+import { MemoryStore } from "../memory/memory-store.js";
 import { RunService, type RunServiceOptions } from "../run/run-service.js";
 import { SessionStore } from "../sessions/session-store.js";
 import { openDatabase } from "../storage/database.js";
@@ -96,6 +98,8 @@ export const setup = (model: MockLanguageModelV4, options: Partial<RunServiceOpt
   const spend = new SpendStore(db);
   const killSwitch = new KillSwitch(db);
   const dispatches = new DispatchStore(db);
+  const memoryStore = new MemoryStore(db);
+  const memory = new MemoryService({ store: memoryStore, events });
   const sleeps: number[] = [];
   const service = new RunService({
     home,
@@ -104,6 +108,7 @@ export const setup = (model: MockLanguageModelV4, options: Partial<RunServiceOpt
     consents,
     spend,
     killSwitch,
+    beliefs: (agentId: string) => memory.beliefsFor(agentId).map((m) => m.text),
     models: () => model,
     sleep: async (ms) => {
       sleeps.push(ms);
@@ -121,6 +126,8 @@ export const setup = (model: MockLanguageModelV4, options: Partial<RunServiceOpt
     spend,
     killSwitch,
     dispatches,
+    memory,
+    memoryStore,
     model,
     live,
     stored,

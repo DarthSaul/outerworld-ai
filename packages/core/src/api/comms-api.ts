@@ -44,6 +44,15 @@ export type AddConnectorInput = z.infer<typeof AddConnectorInput>;
 export type UpdateConnectorInput = z.infer<typeof UpdateConnectorInput>;
 export type DisconnectInput = z.infer<typeof DisconnectInput>;
 
+/** Approving a memory proposal, optionally with the Commander's edit; editing a belief. */
+export const ApproveMemoryInput = z.strictObject({
+  text: z.string().trim().min(1).max(2000).optional(),
+});
+export const EditMemoryInput = z.strictObject({ text: z.string().trim().min(1).max(2000) });
+
+export type ApproveMemoryInput = z.infer<typeof ApproveMemoryInput>;
+export type EditMemoryInput = z.infer<typeof EditMemoryInput>;
+
 export type CreateSessionInput = z.infer<typeof CreateSessionInput>;
 export type UpdateSessionInput = z.infer<typeof UpdateSessionInput>;
 export type SendMessageInput = z.infer<typeof SendMessageInput>;

@@ -64,6 +64,40 @@ export class MemoryStore {
     return toMemory({ ...row, decided_at: null });
   }
 
+  get(id: string): MemoryRecord | undefined {
+    const row = this.#db.prepare("select * from memories where id = ?").get(id) as Row | undefined;
+    return row ? toMemory(row) : undefined;
+  }
+
+  decide(id: string, status: "approved" | "rejected", text?: string): MemoryRecord {
+    this.#db
+      .prepare(
+        "update memories set status = ?, text = coalesce(?, text), decided_at = ? where id = ?",
+      )
+      .run(status, text ?? null, this.#now().toISOString(), id);
+    return this.get(id) as MemoryRecord;
+  }
+
+  setText(id: string, text: string): MemoryRecord {
+    this.#db.prepare("update memories set text = ? where id = ?").run(text, id);
+    return this.get(id) as MemoryRecord;
+  }
+
+  remove(id: string): void {
+    this.#db.prepare("delete from memories where id = ?").run(id);
+  }
+
+  /** Approved beliefs for an agent: its own plus every station-wide one, newest decision first. */
+  beliefsFor(agentId: string): MemoryRecord[] {
+    return (
+      this.#db
+        .prepare(
+          "select * from memories where status = 'approved' and (agent_id = ? or scope = 'station') order by decided_at desc, rowid desc",
+        )
+        .all(agentId) as Row[]
+    ).map(toMemory);
+  }
+
   /** An agent's memories, newest first. */
   list(agentId: string): MemoryRecord[] {
     return (

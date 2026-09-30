@@ -11,9 +11,11 @@
 export {
   AddConnectorInput,
   ApiKeyInput,
+  ApproveMemoryInput,
   ConsentDecisionInput,
   CreateSessionInput,
   DisconnectInput,
+  EditMemoryInput,
   KillSwitchInput,
   MAX_MESSAGE_CHARS,
   SendMessageInput,

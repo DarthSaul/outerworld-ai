@@ -80,6 +80,8 @@ export interface RunServiceOptions {
   /** The model for an id; throws (e.g. no API key) to fail the run with that message. */
   readonly models: (modelId: string) => LanguageModel | Promise<LanguageModel>;
   readonly tools?: Readonly<Record<string, ToolImpl>>;
+  /** Approved beliefs to put in each run's prompt (brief §14). */
+  readonly beliefs?: (agentId: string) => readonly string[];
   /** Connected connectors; their tools are offered to agents granted the connector. */
   readonly connectors?: ConnectorBridge;
   readonly maxSteps?: number;
@@ -459,6 +461,7 @@ export class RunService {
         const prompt = assemblePrompt({
           documents: agent.documents,
           roleBriefing: briefing,
+          beliefs: this.#o.beliefs?.(agent.id) ?? [],
           history,
           budgetTokens: historyBudget(context),
         });

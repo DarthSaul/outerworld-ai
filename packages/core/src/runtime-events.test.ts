@@ -82,6 +82,11 @@ const samples: Record<RuntimeEvent["type"], NewRuntimeEvent> = {
   },
   "memory.approved": { type: "memory.approved", agentId: "pm", payload: { memoryId: "m1" } },
   "memory.rejected": { type: "memory.rejected", agentId: "pm", payload: { memoryId: "m1" } },
+  "memory.updated": {
+    type: "memory.updated",
+    agentId: "pm",
+    payload: { memoryId: "m1", change: "edited" },
+  },
   "schedule.fired": {
     type: "schedule.fired",
     agentId: "pm",
