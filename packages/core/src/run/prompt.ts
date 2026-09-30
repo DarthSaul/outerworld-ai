@@ -22,6 +22,14 @@ export const ChatMessage = z.discriminatedUnion("role", [
     text: z.string(),
     toolCalls: z.array(ToolCallRecord).optional(),
   }),
+  /** A dispatched worker's result, posted into the lead's session (brief §7). */
+  z.object({
+    role: z.literal("report"),
+    dispatchId: z.string().min(1),
+    from: z.string().min(1),
+    status: z.enum(["completed", "failed", "cancelled", "blocked", "interrupted"]),
+    text: z.string(),
+  }),
   z.object({
     role: z.literal("tool"),
     toolCallId: z.string().min(1),
@@ -102,10 +110,11 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
   sections.push(UNTRUSTED_DATA_NOTICE);
   const system = sections.join("\n\n");
 
-  // Turns start at each user message; tool messages before the first one have no call to pair with.
+  // Turns start at each user message or worker report; tool messages before the first one have no
+  // call to pair with.
   const turns: ChatMessage[][] = [];
   for (const m of input.history) {
-    if (m.role === "user") turns.push([m]);
+    if (m.role === "user" || m.role === "report") turns.push([m]);
     else turns.at(-1)?.push(m);
   }
   let remaining = input.budgetTokens - estimate(system);

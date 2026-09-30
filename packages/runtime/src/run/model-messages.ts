@@ -5,6 +5,13 @@ import type { ModelMessage } from "ai";
 export function toModelMessages(messages: readonly ChatMessage[]): ModelMessage[] {
   return messages.map((m): ModelMessage => {
     if (m.role === "user") return { role: "user", content: m.text };
+    if (m.role === "report") {
+      // A worker's result reaches the lead as input from outside, clearly labelled as such.
+      return {
+        role: "user",
+        content: `[Result of dispatch ${m.dispatchId} from ${m.from}: ${m.status}]\n${m.text}`,
+      };
+    }
     if (m.role === "assistant") {
       return {
         role: "assistant",

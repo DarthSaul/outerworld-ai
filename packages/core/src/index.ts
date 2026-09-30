@@ -104,6 +104,8 @@ export {
   type SpentSoFar,
   utcDay,
 } from "./policy/budget.js";
+// Dispatch (brief §7)
+export { checkDispatch, type DispatchCheck, dispatchTargets } from "./policy/dispatch.js";
 // Effective grants (brief §6)
 export {
   BUILTIN_TOOLS,

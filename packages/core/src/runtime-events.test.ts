@@ -43,6 +43,7 @@ const samples: Record<RuntimeEvent["type"], NewRuntimeEvent> = {
   },
   "run.awaiting_consent": { type: "run.awaiting_consent", ...ids, payload: { consentId: "k1" } },
   "run.retrying": { type: "run.retrying", ...ids, payload: { attempt: 1, delayMs: 2000 } },
+  "run.steered": { type: "run.steered", ...ids, payload: { text: "Focus on the summary." } },
   "run.completed": { type: "run.completed", ...ids, payload: {} },
   "run.failed": { type: "run.failed", ...ids, payload: { error: "provider error" } },
   "run.cancelled": { type: "run.cancelled", ...ids, payload: { by: "user" } },

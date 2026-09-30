@@ -100,6 +100,22 @@ describe("assemblePrompt: history window", () => {
     expect(out.messages).toEqual([user("z".repeat(10_000))]);
   });
 
+  it("starts a turn at a worker's report, like a message from the Commander", () => {
+    const history: ChatMessage[] = [
+      user("x".repeat(4000)),
+      {
+        role: "report",
+        dispatchId: "d1",
+        from: "quill",
+        status: "completed",
+        text: "Hub updated.",
+      },
+      assistant("Reviewed."),
+    ];
+    const out = assemblePrompt({ documents: docs, history, budgetTokens: 400 });
+    expect(out.messages.map((m) => m.role)).toEqual(["report", "assistant"]);
+  });
+
   it("drops tool messages that come before any user message rather than orphaning them", () => {
     const history: ChatMessage[] = [
       { role: "tool", toolCallId: "c0", name: "t", output: 1 },

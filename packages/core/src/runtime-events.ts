@@ -80,6 +80,8 @@ export const RuntimeEvent = z.discriminatedUnion("type", [
     delayMs: z.number().nonnegative(),
     status: z.number().int().optional(),
   }),
+  /** The Commander's direction to a running run, queued and injected at its next step. */
+  event("run.steered", about.run, { text: z.string().min(1) }),
   event("run.completed", about.run, {
     /** Present when the run stopped for a reason other than a final answer. */
     reason: z.enum(["max_steps"]).optional(),
