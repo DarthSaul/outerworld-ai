@@ -5,7 +5,8 @@
 // - Builds the daemon's and the SPA's workspace dependencies once, then keeps them rebuilt with
 //   `turbo watch`; the daemon restarts under `node --watch`; Vite serves the SPA with HMR and
 //   proxies /api to the daemon.
-// Usage: pnpm dev   (OUTERWORLD_HOME=~/.outerworld pnpm dev for a real station)
+// Usage: pnpm dev   (OUTERWORLD_HOME=~/.outerworld pnpm dev for a real station;
+//        OUTERWORLD_MODEL=openrouter pnpm dev to chat for real on the fixture copy)
 import { spawn, spawnSync } from "node:child_process";
 import { cpSync, existsSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -33,8 +34,13 @@ const build = spawnSync(
 );
 if (build.status !== 0) process.exit(build.status ?? 1);
 
+// The fixture copy uses the scripted fake model (no key, no network) unless told otherwise; a real
+// station directory defaults to OpenRouter.
+const modelMode =
+  process.env.OUTERWORLD_MODEL ?? (process.env.OUTERWORLD_HOME ? "openrouter" : "fake");
 const env = {
   ...process.env,
+  OUTERWORLD_MODEL: modelMode,
   OUTERWORLD_HOME: home,
   OUTERWORLD_PORT: port,
   OUTERWORLD_DEV_ORIGIN: devOrigin,
@@ -83,4 +89,4 @@ process.on("SIGTERM", () => stop(0));
 run("watch", "pnpm", ["turbo", "watch", "build", ...filters, "--output-logs=errors-only"]);
 run("daemon", "node", ["--watch", "--enable-source-maps", "apps/daemon/dist/main.js"]);
 run("vite", "pnpm", ["--filter", "station", "exec", "vite"]);
-console.log(`dev: station ${home}\ndev: open ${devOrigin}`);
+console.log(`dev: station ${home} (models: ${modelMode})\ndev: open ${devOrigin}`);

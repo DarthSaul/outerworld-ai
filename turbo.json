@@ -18,5 +18,5 @@
       "persistent": true
     }
   },
-  "globalEnv": ["CI", "GITHUB_ACTIONS", "OUTERWORLD_HOME", "OUTERWORLD_PORT"]
+  "globalEnv": ["CI", "GITHUB_ACTIONS", "OUTERWORLD_HOME", "OUTERWORLD_MODEL", "OUTERWORLD_PORT"]
 }

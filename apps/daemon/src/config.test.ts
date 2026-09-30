@@ -9,6 +9,7 @@ describe("resolveConfig", () => {
       home: "/Users/c/.outerworld",
       port: 4317,
       host: "127.0.0.1",
+      modelMode: "openrouter",
       spaDir: "/repo/apps/station/dist",
     });
   });
@@ -20,6 +21,7 @@ describe("resolveConfig", () => {
           OUTERWORLD_HOME: "~/stations/demo",
           OUTERWORLD_PORT: "5000",
           OUTERWORLD_DEV_ORIGIN: "http://localhost:5173",
+          OUTERWORLD_MODEL: "fake",
         },
         base,
       ),
@@ -27,6 +29,7 @@ describe("resolveConfig", () => {
       home: "/Users/c/stations/demo",
       port: 5000,
       host: "127.0.0.1",
+      modelMode: "fake",
       devOrigin: "http://localhost:5173",
     });
   });
@@ -41,6 +44,10 @@ describe("resolveConfig", () => {
     for (const p of ["abc", "70000", "-1", "1.5"]) {
       expect(() => resolveConfig({ OUTERWORLD_PORT: p }, base)).toThrow(/OUTERWORLD_PORT/);
     }
+  });
+
+  it("only accepts openrouter or fake as the model mode", () => {
+    expect(() => resolveConfig({ OUTERWORLD_MODEL: "gpt" }, base)).toThrow(/OUTERWORLD_MODEL/);
   });
 
   it("only accepts a loopback http dev origin", () => {

@@ -33,7 +33,12 @@ cpSync(join(process.cwd(), "fixtures", "demo-station"), home, { recursive: true 
 const server = spawn(process.execPath, [join(process.cwd(), "apps", "daemon", "dist", "main.js")], {
   stdio: ["ignore", "pipe", "pipe"],
   detached: true,
-  env: { ...process.env, OUTERWORLD_HOME: home, OUTERWORLD_PORT: String(port) },
+  env: {
+    ...process.env,
+    OUTERWORLD_HOME: home,
+    OUTERWORLD_PORT: String(port),
+    OUTERWORLD_MODEL: "fake",
+  },
 });
 let serverLog = "";
 server.stdout.on("data", (d) => {

@@ -47,6 +47,16 @@ describe("ApiKeyService", () => {
     expect(await svc.key()).toBe(KEY);
   });
 
+  it("remembers every key it has seen, and the env fallback, for redaction", async () => {
+    const svc = new ApiKeyService({
+      store: new MemorySecretStore(),
+      env: { OPENROUTER_API_KEY: "sk-or-env-value-123" },
+      fetch: fakeFetch(200).fetch,
+    });
+    await svc.setKey(KEY);
+    expect(svc.knownSecrets().sort()).toEqual([KEY, "sk-or-env-value-123"].sort());
+  });
+
   it("refuses a key OpenRouter rejects and stores nothing", async () => {
     const store = new MemorySecretStore();
     const svc = new ApiKeyService({ store, env: {}, fetch: fakeFetch(401).fetch });

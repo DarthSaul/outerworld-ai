@@ -1,10 +1,18 @@
 import { chmod, mkdir } from "node:fs/promises";
 import type { AddressInfo } from "node:net";
 import {
+  ApiKeyService,
   CrewService,
+  createRedactor,
   EventStore,
+  KeychainSecretStore,
   loadStationDir,
   openDatabase,
+  openRouterModels,
+  RunService,
+  type SecretStore,
+  SessionStore,
+  scriptedModels,
   stationPaths,
 } from "@darthsaul/outerworld-ai-runtime";
 import { serve } from "@hono/node-server";
@@ -24,6 +32,10 @@ export interface RunningDaemon {
 export interface StartOptions {
   readonly quiet?: boolean;
   readonly warn?: (message: string) => void;
+  /** Where the OpenRouter key lives; the OS keychain unless a test passes a memory store. */
+  readonly secrets?: SecretStore;
+  /** For the `OPENROUTER_API_KEY` development fallback; defaults to the process environment. */
+  readonly env?: Readonly<Record<string, string | undefined>>;
 }
 
 /**
@@ -43,7 +55,19 @@ export async function startDaemon(
   await mkdir(paths.logsDir, { recursive: true });
 
   const token = await ensureToken(paths.token);
-  const events = new EventStore(openDatabase(paths.database));
+  const apiKeys = new ApiKeyService({
+    store: options.secrets ?? new KeychainSecretStore(),
+    env: options.env ?? process.env,
+  });
+  const db = openDatabase(paths.database);
+  const events = new EventStore(db, { redact: createRedactor(() => apiKeys.knownSecrets()) });
+  const sessions = new SessionStore(db);
+  const runs = new RunService({
+    home: config.home,
+    events,
+    sessions,
+    models: config.modelMode === "fake" ? scriptedModels() : openRouterModels(apiKeys),
+  });
 
   const loaded = await loadStationDir(config.home);
   for (const issue of loaded.issues) warn(`${issue.level}: ${issue.path}: ${issue.message}`);
@@ -68,13 +92,22 @@ export async function startDaemon(
     allowedHosts: [...self, ...dev].map((o) => new URL(o).host),
     events,
     crew: new CrewService({ home: config.home, events }),
+    runs,
+    sessions,
+    apiKeys,
+    modelMode: config.modelMode,
     version: VERSION,
     ...(config.spaDir !== undefined ? { spaDir: config.spaDir } : {}),
   });
 
   events.append({ type: "station.started", payload: {} });
+  // Crash semantics (brief §8): runs the last process left unfinished are surfaced, never resumed.
+  const interrupted = runs.recover();
+  if (interrupted.length) warn(`${interrupted.length} unfinished run(s) marked interrupted`);
   const url = `http://127.0.0.1:${port}`;
-  log(`outerworld daemon ${VERSION} on ${url} (station: ${config.home})`);
+  log(
+    `outerworld daemon ${VERSION} on ${url} (station: ${config.home}, models: ${config.modelMode})`,
+  );
 
   return {
     url,

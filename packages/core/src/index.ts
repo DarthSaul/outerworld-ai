@@ -7,6 +7,15 @@
  * Contract: docs/SCHEMA.md. Versioning: docs/decisions/0009-schema-versioning.md.
  */
 
+// Sessions, runs, and settings HTTP contract (Phase 3)
+export {
+  ApiKeyInput,
+  CreateSessionInput,
+  MAX_MESSAGE_CHARS,
+  SendMessageInput,
+  type SettingsView,
+  UpdateSessionInput,
+} from "./api/comms-api.js";
 // Crew and room HTTP contract (Phase 2)
 export {
   AGENT_DOCUMENTS,

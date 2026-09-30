@@ -2,9 +2,10 @@ import { cpSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type AgentView, type StationView, SUPPORTED_MODELS } from "@darthsaul/outerworld-ai-core";
-import { CrewService, EventStore, openDatabase } from "@darthsaul/outerworld-ai-runtime";
+import { EventStore, openDatabase } from "@darthsaul/outerworld-ai-runtime";
 import { describe, expect, it } from "vitest";
 import { createApp } from "./app.js";
+import { testServices } from "./test/services.js";
 
 const TOKEN = "c".repeat(64);
 const fixture = join(import.meta.dirname, "..", "..", "..", "fixtures", "demo-station");
@@ -18,7 +19,7 @@ const setup = () => {
     allowedOrigins: ["http://127.0.0.1:4317"],
     allowedHosts: ["127.0.0.1:4317"],
     events,
-    crew: new CrewService({ home, events }),
+    ...testServices(home, events),
     version: "test",
   });
   const call = (

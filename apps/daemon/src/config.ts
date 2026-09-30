@@ -10,6 +10,8 @@ export interface DaemonConfig {
   readonly spaDir?: string;
   /** Development only: the Vite dev server's origin, allowed to call the API through its proxy. */
   readonly devOrigin?: string;
+  /** `openrouter` (real, needs a key) or `fake` (scripted, no network; tasks/todo.md D8). */
+  readonly modelMode: "openrouter" | "fake";
 }
 
 const LOOPBACK_ORIGIN = /^http:\/\/(localhost|127\.0\.0\.1):\d{1,5}$/;
@@ -18,7 +20,7 @@ const LOOPBACK_ORIGIN = /^http:\/\/(localhost|127\.0\.0\.1):\d{1,5}$/;
  * Daemon configuration from the environment:
  * `OUTERWORLD_HOME` (default `~/.outerworld`), `OUTERWORLD_PORT` (default 4317, 0 for any free
  * port), `OUTERWORLD_DEV_ORIGIN` (loopback http only; set by `pnpm dev`, which also drops the
- * built SPA).
+ * built SPA), `OUTERWORLD_MODEL` (`openrouter`, the default, or `fake`).
  */
 export function resolveConfig(
   env: Readonly<Record<string, string | undefined>>,
@@ -45,10 +47,16 @@ export function resolveConfig(
     throw new Error(`OUTERWORLD_DEV_ORIGIN must be a loopback http origin, got "${devOrigin}"`);
   }
 
+  const modelMode = env.OUTERWORLD_MODEL ?? "openrouter";
+  if (modelMode !== "openrouter" && modelMode !== "fake") {
+    throw new Error(`OUTERWORLD_MODEL must be "openrouter" or "fake", got "${modelMode}"`);
+  }
+
   return {
     home,
     port,
     host: "127.0.0.1",
+    modelMode,
     ...(devOrigin !== undefined
       ? { devOrigin }
       : context.defaultSpaDir !== undefined

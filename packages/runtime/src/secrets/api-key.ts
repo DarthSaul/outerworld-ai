@@ -22,6 +22,8 @@ export class ApiKeyService {
   readonly #store: SecretStore;
   readonly #env: Readonly<Record<string, string | undefined>>;
   readonly #fetch: typeof globalThis.fetch;
+  /** Every key value seen, for the redactor. Never leaves the runtime. */
+  readonly #seen = new Set<string>();
 
   constructor(options: {
     store: SecretStore;
@@ -44,7 +46,15 @@ export class ApiKeyService {
 
   /** The key for model calls, or undefined. Runtime-internal only. */
   async key(): Promise<string | undefined> {
-    return (await this.#fromKeychain()).key ?? (this.#env.OPENROUTER_API_KEY || undefined);
+    const key = (await this.#fromKeychain()).key ?? (this.#env.OPENROUTER_API_KEY || undefined);
+    if (key) this.#seen.add(key);
+    return key;
+  }
+
+  /** Key values this process has seen (including the env fallback), for redaction. */
+  knownSecrets(): string[] {
+    const env = this.#env.OPENROUTER_API_KEY;
+    return [...this.#seen, ...(env ? [env] : [])];
   }
 
   async status(): Promise<ApiKeyStatus> {
@@ -68,6 +78,7 @@ export class ApiKeyService {
       throw new InvalidKeyError("OpenRouter did not accept this key");
     }
     if (!res.ok) throw new Error(`OpenRouter's key check failed with HTTP ${res.status}`);
+    this.#seen.add(key);
     await this.#store.set(SECRET_NAME, key);
   }
 
