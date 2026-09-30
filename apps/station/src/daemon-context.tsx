@@ -42,9 +42,14 @@ export function invalidateFor(event: RuntimeEvent, client: QueryClient): void {
     void client.invalidateQueries({ queryKey: ["session", event.sessionId] });
   } else if (event.type.startsWith("run.") && !event.ephemeral) {
     void client.invalidateQueries({ queryKey: ["session", event.sessionId] });
+    void client.invalidateQueries({ queryKey: ["activity"] });
     void client.invalidateQueries({ queryKey: ["spend"] });
     // A run that ends while waiting expires its request; one that pauses creates one.
     void client.invalidateQueries({ queryKey: ["consents"] });
+  } else if (event.type.startsWith("dispatch.")) {
+    // The lead's session shows the dispatch card and, when it ends, the worker's report.
+    void client.invalidateQueries({ queryKey: ["session", event.sessionId] });
+    void client.invalidateQueries({ queryKey: ["activity"] });
   } else if (event.type.startsWith("consent.")) {
     void client.invalidateQueries({ queryKey: ["consents"] });
   } else if (event.type === "station.kill_switch") {

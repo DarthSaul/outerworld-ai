@@ -108,6 +108,8 @@ export interface RunRecord {
   readonly sessionId: string;
   readonly agentId: string;
   readonly state: RunState;
+  readonly trigger?: "user" | "dispatch" | "schedule" | "review";
+  readonly depth?: number;
   readonly model: string;
   readonly createdAt: string;
   readonly error?: string;
@@ -124,6 +126,24 @@ export interface SessionDetail {
   readonly runs: readonly RunRecord[];
   readonly spend: SpendTotal;
   readonly runSpend: Readonly<Record<string, SpendTotal>>;
+  readonly dispatches: readonly DispatchRecord[];
+}
+export interface DispatchRecord {
+  readonly id: string;
+  readonly leadAgentId: string;
+  readonly leadSessionId: string;
+  readonly leadRunId: string;
+  readonly workerAgentId: string;
+  readonly workerSessionId: string;
+  readonly workerRunId?: string;
+  readonly task: string;
+  readonly status: "running" | "completed" | "failed" | "cancelled" | "blocked" | "interrupted";
+  readonly summary?: string;
+  readonly createdAt: string;
+}
+export interface ActivityView {
+  readonly runs: readonly RunRecord[];
+  readonly dispatches: readonly DispatchRecord[];
 }
 export interface SpendTotal {
   readonly costUsd: number;
@@ -244,4 +264,17 @@ export function useSetKillSwitch() {
 export function useSpend() {
   const { api } = useDaemon();
   return useQuery({ queryKey: ["spend"], queryFn: () => api.get<SpendView>("/spend") });
+}
+
+export function useActivity() {
+  const { api } = useDaemon();
+  return useQuery({ queryKey: ["activity"], queryFn: () => api.get<ActivityView>("/activity") });
+}
+
+export function useSteer() {
+  const { api } = useDaemon();
+  return useMutation({
+    mutationFn: ({ runId, text }: { runId: string; text: string }) =>
+      api.send("POST", `/runs/${encodeURIComponent(runId)}/steer`, { text }),
+  });
 }

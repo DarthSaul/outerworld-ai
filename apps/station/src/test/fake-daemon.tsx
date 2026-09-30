@@ -20,6 +20,7 @@ import { type Api, ApiError } from "../lib/api.js";
 import type { ConnectOptions } from "../lib/event-stream.js";
 import type {
   ConsentRecord,
+  DispatchRecord,
   RunRecord,
   SessionDetail,
   SessionRecord,
@@ -88,13 +89,20 @@ export function fakeApi() {
   };
   const sessions = new Map<
     string,
-    { session: SessionRecord; messages: ChatMessage[]; runs: RunRecord[] }
+    {
+      session: SessionRecord;
+      messages: ChatMessage[];
+      runs: RunRecord[];
+      /** Run id per message index, when a test needs messages tied to runs. */
+      messageRuns?: Record<number, string>;
+    }
   >();
   const settings = {
     modelMode: "fake" as "fake" | "openrouter",
     openrouter: { configured: false, source: null as "keychain" | "env" | null },
   };
   const consents: ConsentRecord[] = [];
+  const dispatches: DispatchRecord[] = [];
   const control = { engaged: false };
   const spend = {
     stationUsd: 0,
@@ -173,10 +181,12 @@ export function fakeApi() {
             id: `${entry.session.id}-m${i}`,
             position: i + 1,
             message,
+            ...(entry.messageRuns?.[i] ? { runId: entry.messageRuns[i] } : {}),
           })),
           runs: [...entry.runs].reverse(),
           spend: spend.sessions[entry.session.id] ?? zero,
           runSpend: {},
+          dispatches: dispatches.filter((d) => d.leadSessionId === entry.session.id),
         };
         return detail;
       }
@@ -203,6 +213,13 @@ export function fakeApi() {
         return { runId: run.id };
       }
     }
+    if (path === "/activity") {
+      const runs = [...sessions.values()]
+        .flatMap((e) => e.runs)
+        .filter((r) => r.state === "running");
+      return { runs, dispatches: dispatches.filter((d) => d.status === "running") };
+    }
+    if (parts[0] === "runs" && parts[2] === "steer") return undefined;
     if (parts[0] === "runs" && parts[2] === "cancel") {
       for (const entry of sessions.values()) {
         entry.runs = entry.runs.map((r) => (r.id === parts[1] ? { ...r, state: "cancelled" } : r));
@@ -277,7 +294,31 @@ export function fakeApi() {
     send: async <T,>(method: "POST" | "PUT" | "PATCH" | "DELETE", path: string, body?: unknown) =>
       route(method, path, body) as T,
   };
-  return { api, calls, state, sessions, settings, consents, control, spend };
+  /** Seeds a session directly, for tests that need one without clicking through COMMS. */
+  const seedSession = (agentId: string, title = "Seeded") => {
+    const session: SessionRecord = {
+      id: nextId("s"),
+      agentId,
+      title,
+      createdAt: "2026-09-29T12:00:00.000Z",
+    };
+    sessions.set(session.id, { session, messages: [], runs: [] });
+    const entry = sessions.get(session.id);
+    if (!entry) throw new Error("seed failed");
+    return entry;
+  };
+  return {
+    api,
+    calls,
+    state,
+    sessions,
+    settings,
+    consents,
+    control,
+    spend,
+    dispatches,
+    seedSession,
+  };
 }
 
 /** Renders the whole app at `path` against the fake API, with an event stream the test drives. */

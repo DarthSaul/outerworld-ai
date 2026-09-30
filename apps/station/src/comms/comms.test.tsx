@@ -66,7 +66,7 @@ describe("COMMS", () => {
     );
   });
 
-  it("offers Cancel while a run is active, and sends nothing new until it ends", async () => {
+  it("offers Cancel while a run is active, and turns the message box into a direction", async () => {
     const { chat, user, calls, emit } = await startChat();
     await user.type(within(chat).getByRole("textbox"), "Go");
     await user.click(within(chat).getByRole("button", { name: term("comms.send") }));
@@ -78,7 +78,18 @@ describe("COMMS", () => {
       payload: { trigger: "user" },
     });
     const cancel = await within(chat).findByRole("button", { name: term("comms.cancel") });
-    expect(within(chat).getByRole("button", { name: term("comms.send") })).toBeDisabled();
+    expect(
+      within(chat).queryByRole("button", { name: term("comms.send") }),
+    ).not.toBeInTheDocument();
+    expect(within(chat).getByText(term("comms.direct.hint"))).toBeInTheDocument();
+    await user.type(within(chat).getByRole("textbox"), "Keep it short");
+    await user.click(within(chat).getByRole("button", { name: term("comms.direct") }));
+    expect(calls).toContainEqual({
+      method: "POST",
+      path: "/runs/r2/steer",
+      body: { text: "Keep it short" },
+    });
+    expect(calls.filter((c) => c.path.endsWith("/messages"))).toHaveLength(1);
     await user.click(cancel);
     expect(calls).toContainEqual({ method: "POST", path: "/runs/r2/cancel" });
   });
