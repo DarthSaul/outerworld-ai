@@ -1,7 +1,7 @@
 # ADR-0008: One Routine and one ledger per team; handoffs are read authorization
 
 ## Status
-Accepted
+Superseded by ADR-0010
 
 ## Date
 2026-09-27

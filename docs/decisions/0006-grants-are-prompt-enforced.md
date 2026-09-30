@@ -1,7 +1,7 @@
 # ADR-0006: Grants are prompt-enforced and shown as declared
 
 ## Status
-Accepted
+Superseded by ADR-0010
 
 ## Date
 2026-09-27

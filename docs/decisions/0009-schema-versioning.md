@@ -3,6 +3,9 @@
 ## Status
 Accepted
 
+The versioning rules apply to `station.json` and `agent.json` from ADR-0010 on. References to the
+ledger repo, status files, Routines, and the generator are historical (milestone 1).
+
 ## Date
 2026-09-27
 
