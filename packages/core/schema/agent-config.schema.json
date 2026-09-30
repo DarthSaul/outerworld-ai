@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://outerworld.ai/schema/v1/agent-config.schema.json",
+  "title": "AgentConfig",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "roomId": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "role": {
+      "default": "crew",
+      "type": "string",
+      "enum": [
+        "overseer",
+        "crew"
+      ]
+    },
+    "model": {
+      "type": "string",
+      "minLength": 1
+    },
+    "approvalMode": {
+      "default": "ask",
+      "type": "string",
+      "enum": [
+        "ask",
+        "full"
+      ]
+    },
+    "connectorGrants": {
+      "default": [],
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9-]*$"
+      }
+    },
+    "schedules": {
+      "default": [],
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          },
+          "cron": {
+            "type": "string"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "prompt": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sessionId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "catchUp": {
+            "default": false,
+            "type": "boolean"
+          },
+          "enabled": {
+            "default": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "cron",
+          "timezone",
+          "prompt",
+          "catchUp",
+          "enabled"
+        ],
+        "additionalProperties": {}
+      }
+    },
+    "rig": {
+      "type": "object",
+      "properties": {
+        "tintHue": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 360
+        },
+        "trimHue": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 360
+        },
+        "head": {
+          "type": "string",
+          "enum": [
+            "dome",
+            "wedge",
+            "crest"
+          ]
+        },
+        "trace": {
+          "type": "string",
+          "enum": [
+            "core",
+            "bar",
+            "chevron",
+            "split",
+            "frame",
+            "twin"
+          ]
+        }
+      },
+      "required": [
+        "tintHue",
+        "trimHue",
+        "head",
+        "trace"
+      ],
+      "additionalProperties": {}
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "name",
+    "roomId",
+    "role",
+    "model",
+    "approvalMode",
+    "connectorGrants",
+    "schedules"
+  ],
+  "additionalProperties": {}
+}

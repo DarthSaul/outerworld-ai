@@ -1,11 +1,36 @@
 /**
  * @darthsaul/outerworld-ai-core
  *
- * Headless: zero React, zero DOM, zero filesystem. The Station and StationState schemas
- * defined here are the product's real API; ui and generator both key off them.
+ * Headless: zero React, zero DOM, zero filesystem. The station runtime's schemas (station.json,
+ * agent.json, runtime events) and pure policy live here; runtime, daemon, SPA, and ui key off them.
+ * The milestone 1 map model (Station, StationState) stays until Phase 9 adapts the map.
  * Contract: docs/SCHEMA.md. Versioning: docs/decisions/0009-schema-versioning.md.
  */
 
+// Station runtime config (station.json, agent.json) — ADR-0010
+export {
+  AgentConfig,
+  AgentRole,
+  ApprovalMode,
+  agentConfigIssues,
+  parseAgentConfig,
+  Schedule as AgentSchedule,
+} from "./config/agent-config.js";
+export {
+  Budgets,
+  Connector,
+  ConnectorTransport,
+  DispatchPolicy,
+  Lane,
+  Prop,
+  PropKind,
+  parseStationConfig,
+  Room,
+  StationConfig,
+  stationConfigIssues,
+} from "./config/station-config.js";
+export { type CrewMember, stationCrewIssues } from "./config/station-crew.js";
+// Milestone 1 map model: the ui map renders it until Phase 9 adapts it to rooms and crew.
 // Events
 export {
   applyEvent,
@@ -44,6 +69,15 @@ export {
   type RigAccessory,
   type RigShoulder,
 } from "./rig.js";
+// Runtime event log (brief §10)
+export {
+  EVENT_TYPES,
+  type EventOf,
+  type EventType,
+  type NewRuntimeEvent,
+  parseRuntimeEvent,
+  RuntimeEvent,
+} from "./runtime-events.js";
 // Schema
 export { type Issue, type Result, SCHEMA_VERSION, versionIssues } from "./schema/common.js";
 export { JSON_SCHEMAS, type JsonSchemaName, jsonSchemaFor } from "./schema/jsonschema.js";
