@@ -1,9 +1,10 @@
 import { readFile, realpath } from "node:fs/promises";
 import { extname, join, sep } from "node:path";
 import type { RuntimeEvent } from "@darthsaul/outerworld-ai-core";
-import type { EventStore } from "@darthsaul/outerworld-ai-runtime";
+import type { CrewService, EventStore } from "@darthsaul/outerworld-ai-runtime";
 import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
+import { crewRoutes } from "./crew-routes.js";
 import { tokensMatch } from "./token.js";
 
 export interface AppOptions {
@@ -13,6 +14,7 @@ export interface AppOptions {
   /** `host:port` values the daemon answers to; anything else is DNS rebinding. */
   readonly allowedHosts: readonly string[];
   readonly events: EventStore;
+  readonly crew: CrewService;
   readonly version: string;
   /** The built SPA (`apps/station/dist`). Absent in development, where Vite serves it. */
   readonly spaDir?: string;
@@ -112,6 +114,8 @@ export function createApp(options: AppOptions): Hono {
       off();
     });
   });
+
+  app.route("/api", crewRoutes(options.crew));
 
   app.all("/api/*", (c) => c.json({ error: "not found" }, 404));
 

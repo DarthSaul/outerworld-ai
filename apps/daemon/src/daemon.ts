@@ -1,6 +1,7 @@
 import { chmod, mkdir } from "node:fs/promises";
 import type { AddressInfo } from "node:net";
 import {
+  CrewService,
   EventStore,
   loadStationDir,
   openDatabase,
@@ -66,6 +67,7 @@ export async function startDaemon(
     allowedOrigins: [...self, ...dev],
     allowedHosts: [...self, ...dev].map((o) => new URL(o).host),
     events,
+    crew: new CrewService({ home: config.home, events }),
     version: VERSION,
     ...(config.spaDir !== undefined ? { spaDir: config.spaDir } : {}),
   });

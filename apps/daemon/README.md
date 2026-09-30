@@ -27,6 +27,19 @@ allowed `Origin` and a `Sec-Fetch-Site` other than `cross-site`. Every `/api/*` 
 |-------|-------------|
 | `GET /api/health` | `{ ok, version, latestSeq }`. |
 | `GET /api/events` | SSE: every runtime event as `id: <seq>` + `data: <event JSON>`, replaying after `Last-Event-ID`, then live; a `: ping` comment every 15 s while idle. |
+| `GET /api/station` | `StationView`: station config, crew (`{ id, config }`), and every load issue. |
+| `GET /api/models` | The supported model list from core. |
+| `GET /api/agents/:id` | `AgentView`: config, the four documents, and the effective tools (core `resolveGrants`). |
+| `POST /api/agents` | `CreateAgentInput` → 201 `AgentView`; the id comes from the name. |
+| `PATCH /api/agents/:id` | `UpdateAgentInput` (strict) → `AgentView`. |
+| `PUT /api/agents/:id/documents/:name` | `{ text }` for `identity`, `purpose`, `standing-orders`, or `context` → 204. |
+| `DELETE /api/agents/:id` | 204; the agent's workspace files stay. |
+| `POST /api/rooms`, `PATCH /api/rooms/:id`, `DELETE /api/rooms/:id` | Rooms and their props; deleting a room with crew or hallways is 409. |
+
+Bodies must be `application/json` (else 415) and at most 1 MiB (else 413). Invalid input is 400
+with `issues`; an unknown id is 404; a change that would break the station is 409 with `issues`.
+Every change is logged as `agent.updated` or `station.updated`.
+
 | `GET /*` (built SPA only) | Static assets from `apps/station/dist`; any path without an extension gets `index.html` with the token injected as `<meta name="outerworld-token">`, `Cache-Control: no-store`. |
 
 Known limit: any process of any local user that can reach `127.0.0.1` can fetch `index.html` and

@@ -6,7 +6,7 @@ import {
   type NewRuntimeEvent,
   type RuntimeEvent,
 } from "@darthsaul/outerworld-ai-core";
-import { EventStore, openDatabase } from "@darthsaul/outerworld-ai-runtime";
+import { CrewService, EventStore, openDatabase } from "@darthsaul/outerworld-ai-runtime";
 import { describe, expect, it } from "vitest";
 import { createApp } from "./app.js";
 
@@ -39,6 +39,7 @@ const setup = (opts: { spa?: boolean; pingMs?: number } = {}) => {
     allowedOrigins: [ORIGIN, "http://localhost:4317"],
     allowedHosts: ["127.0.0.1:4317", "localhost:4317"],
     events,
+    crew: new CrewService({ home: mkdtempSync(join(tmpdir(), "ow-app-home-")), events }),
     version: "0.0.0-test",
     ...(opts.spa ? { spaDir: spaDir() } : {}),
     ...(opts.pingMs ? { pingMs: opts.pingMs } : {}),
