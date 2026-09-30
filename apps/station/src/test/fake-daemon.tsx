@@ -18,7 +18,13 @@ import { App } from "../App.js";
 import { type Connect, DaemonProvider } from "../daemon-context.js";
 import { type Api, ApiError } from "../lib/api.js";
 import type { ConnectOptions } from "../lib/event-stream.js";
-import type { RunRecord, SessionDetail, SessionRecord } from "../queries.js";
+import type {
+  ConsentRecord,
+  RunRecord,
+  SessionDetail,
+  SessionRecord,
+  SpendTotal,
+} from "../queries.js";
 
 export interface Call {
   readonly method: string;
@@ -88,6 +94,14 @@ export function fakeApi() {
     modelMode: "fake" as "fake" | "openrouter",
     openrouter: { configured: false, source: null as "keychain" | "env" | null },
   };
+  const consents: ConsentRecord[] = [];
+  const control = { engaged: false };
+  const spend = {
+    stationUsd: 0,
+    agents: {} as Record<string, number>,
+    sessions: {} as Record<string, SpendTotal>,
+  };
+  const zero: SpendTotal = { costUsd: 0, inputTokens: 0, outputTokens: 0, calls: 0, unpriced: 0 };
   let ids = 0;
   const nextId = (prefix: string) => `${prefix}${++ids}`;
   const calls: Call[] = [];
@@ -110,6 +124,20 @@ export function fakeApi() {
     }
     if (method === "GET" && path === "/models") return SUPPORTED_MODELS;
     if (path === "/settings") return settings;
+    if (path === "/consents") return consents.filter((c) => c.status === "pending");
+    if (parts[0] === "consents") {
+      const c = consents.find((x) => x.id === parts[1]);
+      if (!c) throw new ApiError(404, "no consent");
+      const decided = { ...c, status: b.decision as ConsentRecord["status"] };
+      consents.splice(consents.indexOf(c), 1, decided);
+      return decided;
+    }
+    if (path === "/kill-switch") {
+      if (method === "PUT") control.engaged = Boolean(b.engaged);
+      return { engaged: control.engaged };
+    }
+    if (path === "/spend")
+      return { day: "2026-09-29", stationUsd: spend.stationUsd, agents: spend.agents };
     if (path === "/settings/openrouter") {
       if (method === "PUT") {
         if (!String(b.key).startsWith("sk-or-"))
@@ -147,6 +175,8 @@ export function fakeApi() {
             message,
           })),
           runs: [...entry.runs].reverse(),
+          spend: spend.sessions[entry.session.id] ?? zero,
+          runSpend: {},
         };
         return detail;
       }
@@ -247,7 +277,7 @@ export function fakeApi() {
     send: async <T,>(method: "POST" | "PUT" | "PATCH" | "DELETE", path: string, body?: unknown) =>
       route(method, path, body) as T,
   };
-  return { api, calls, state, sessions, settings };
+  return { api, calls, state, sessions, settings, consents, control, spend };
 }
 
 /** Renders the whole app at `path` against the fake API, with an event stream the test drives. */

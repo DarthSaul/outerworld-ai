@@ -3,10 +3,12 @@ import { EmptyState } from "@darthsaul/outerworld-ai-ui";
 import { type FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { ErrorNote } from "../components/ErrorNote.js";
+import { formatUsd } from "../components/format.js";
 import {
   useCreateAgent,
   useCreateRoom,
   useDeleteRoom,
+  useSpend,
   useStationView,
   useUpdateRoom,
 } from "../queries.js";
@@ -27,6 +29,7 @@ function RoomSection({
 }) {
   const update = useUpdateRoom();
   const remove = useDeleteRoom();
+  const spend = useSpend();
   const placed = new Set(room.props.map((p) => p.kind));
   const toggle = (kind: PropKind) =>
     update.mutate({
@@ -88,6 +91,11 @@ function RoomSection({
             </Link>
             {a.role === "overseer" ? (
               <span className="font-mono text-mono text-ink-2">{term("overseer.role")}</span>
+            ) : null}
+            {spend.data?.agents[a.id] ? (
+              <span className="font-mono text-mono text-ink-2" data-agent-spend>
+                {term("spend.today")} {formatUsd(spend.data.agents[a.id] ?? 0)}
+              </span>
             ) : null}
             {a.approvalMode === "full" ? (
               <span

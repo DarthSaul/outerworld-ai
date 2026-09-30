@@ -3,9 +3,11 @@ import { EmptyState } from "@darthsaul/outerworld-ai-ui";
 import { lazy, Suspense } from "react";
 import { NavLink, Route, Routes } from "react-router";
 import { CommsPage } from "./comms/CommsPage.js";
+import { KillSwitchBanner, StationControls } from "./components/KillSwitch.js";
 import { useDaemon } from "./daemon-context.js";
 import { AgentPage } from "./pages/AgentPage.js";
 import { CrewPage } from "./pages/CrewPage.js";
+import { NotificationsPage } from "./pages/NotificationsPage.js";
 import { SettingsPage } from "./pages/SettingsPage.js";
 import { StationPage } from "./pages/StationPage.js";
 
@@ -17,7 +19,7 @@ export const SCREENS: ReadonlyArray<{ path: string; label: GlossaryKey; phase?: 
   { path: "/comms", label: "comms" },
   { path: "/crew", label: "agents" },
   { path: "/memory", label: "memory", phase: 7 },
-  { path: "/notifications", label: "notifications", phase: 9 },
+  { path: "/notifications", label: "notifications" },
   { path: "/connectors", label: "connectors", phase: 6 },
   { path: "/settings", label: "settings" },
 ];
@@ -65,7 +67,7 @@ export function App() {
       <Route
         path="*"
         element={
-          <div className="grid min-h-dvh grid-rows-[auto_1fr] gap-(--ow-space-4) p-(--ow-space-4)">
+          <div className="flex min-h-dvh flex-col gap-(--ow-space-4) p-(--ow-space-4)">
             <header className="flex flex-wrap items-center justify-between gap-(--ow-space-3) rounded-panel border border-border-subtle bg-surface-panel px-(--ow-space-4) py-(--ow-space-3)">
               <span className="font-mono text-label uppercase text-ink-1">Outerworld AI</span>
               <nav aria-label="Primary">
@@ -83,14 +85,19 @@ export function App() {
                   ))}
                 </ul>
               </nav>
-              <StatusBadge />
+              <div className="flex flex-wrap items-center gap-(--ow-space-3)">
+                <StationControls />
+                <StatusBadge />
+              </div>
             </header>
-            <main className="min-w-0 rounded-panel border border-border-subtle bg-surface-panel p-(--ow-space-4)">
+            <KillSwitchBanner />
+            <main className="min-w-0 flex-1 rounded-panel border border-border-subtle bg-surface-panel p-(--ow-space-4)">
               <Routes>
                 <Route path="/" element={<StationPage />} />
                 <Route path="/comms" element={<CommsPage />} />
                 <Route path="/crew" element={<CrewPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/notifications" element={<NotificationsPage />} />
                 <Route path="/crew/:id" element={<AgentPage />} />
                 {SCREENS.filter((s) => s.phase !== undefined).map((s) => (
                   <Route

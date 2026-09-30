@@ -7,6 +7,7 @@ import type {
   Room,
   RunState,
   SettingsView,
+  SpendView,
   StationView,
   SupportedModel,
   UpdateAgentInput,
@@ -121,6 +122,26 @@ export interface SessionDetail {
     message: ChatMessage;
   }[];
   readonly runs: readonly RunRecord[];
+  readonly spend: SpendTotal;
+  readonly runSpend: Readonly<Record<string, SpendTotal>>;
+}
+export interface SpendTotal {
+  readonly costUsd: number;
+  readonly inputTokens: number;
+  readonly outputTokens: number;
+  readonly calls: number;
+  readonly unpriced: number;
+}
+export interface ConsentRecord {
+  readonly id: string;
+  readonly runId: string;
+  readonly sessionId: string;
+  readonly agentId: string;
+  readonly toolCallId: string;
+  readonly tool: string;
+  readonly input: unknown;
+  readonly status: "pending" | "approved" | "denied" | "expired";
+  readonly createdAt: string;
 }
 
 export function useSessions(agentId: string | undefined) {
@@ -189,4 +210,38 @@ export function useSetApiKey() {
 export function useClearApiKey() {
   const { api } = useDaemon();
   return useMutation({ mutationFn: () => api.send("DELETE", "/settings/openrouter") });
+}
+
+export function useConsents() {
+  const { api } = useDaemon();
+  return useQuery({ queryKey: ["consents"], queryFn: () => api.get<ConsentRecord[]>("/consents") });
+}
+
+export function useDecideConsent() {
+  const { api } = useDaemon();
+  return useMutation({
+    mutationFn: ({ id, decision }: { id: string; decision: "approved" | "denied" }) =>
+      api.send<ConsentRecord>("POST", `/consents/${encodeURIComponent(id)}`, { decision }),
+  });
+}
+
+export function useKillSwitch() {
+  const { api } = useDaemon();
+  return useQuery({
+    queryKey: ["kill-switch"],
+    queryFn: () => api.get<{ engaged: boolean }>("/kill-switch"),
+  });
+}
+
+export function useSetKillSwitch() {
+  const { api } = useDaemon();
+  return useMutation({
+    mutationFn: (engaged: boolean) =>
+      api.send<{ engaged: boolean }>("PUT", "/kill-switch", { engaged }),
+  });
+}
+
+export function useSpend() {
+  const { api } = useDaemon();
+  return useQuery({ queryKey: ["spend"], queryFn: () => api.get<SpendView>("/spend") });
 }

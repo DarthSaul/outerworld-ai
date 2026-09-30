@@ -7,14 +7,17 @@ import {
 import { EmptyState } from "@darthsaul/outerworld-ai-ui";
 import { type FormEvent, useEffect, useState } from "react";
 import { ErrorNote } from "../components/ErrorNote.js";
+import { formatUsd } from "../components/format.js";
 import { useDaemon } from "../daemon-context.js";
 import {
   useCancelRun,
+  useConsents,
   useSendMessage,
   useSession,
   useStationView,
   useUpdateSession,
 } from "../queries.js";
+import { ConsentCard } from "./ConsentCard.js";
 
 const button =
   "h-(--ow-size-control-h-dense) rounded-control border border-border-subtle px-(--ow-size-control-pad-x) text-label text-ink-1 disabled:text-ink-3";
@@ -89,6 +92,7 @@ export function ChatWindow({
 }) {
   const detail = useSession(sessionId);
   const station = useStationView();
+  const consents = useConsents();
   const send = useSendMessage(sessionId);
   const cancel = useCancelRun();
   const update = useUpdateSession(sessionId);
@@ -149,12 +153,21 @@ export function ChatWindow({
           ) : null}
         </ol>
       )}
+      {consents.data
+        ?.filter((c) => c.sessionId === sessionId)
+        .map((c) => (
+          <ConsentCard key={c.id} consent={c} agentName={agentName} />
+        ))}
       {latest ? (
         <p className="flex flex-wrap items-center gap-(--ow-space-2) font-mono text-mono text-ink-2">
           <span role="status" aria-label="Run" data-run-state={latest.state}>
             {term(`runState.${latest.state}`)}
           </span>
           {latest.error ? <span>· {latest.error}</span> : null}
+          <span data-session-spend>
+            · {term("spend.session")} {formatUsd(detail.data.spend.costUsd)}
+            {detail.data.spend.unpriced > 0 ? ` (${term("spend.unpriced")})` : ""}
+          </span>
           {active ? (
             <button
               type="button"
