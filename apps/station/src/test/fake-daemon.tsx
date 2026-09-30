@@ -19,6 +19,7 @@ import { type Connect, DaemonProvider } from "../daemon-context.js";
 import { type Api, ApiError } from "../lib/api.js";
 import type { ConnectOptions } from "../lib/event-stream.js";
 import type {
+  ConnectorItem,
   ConsentRecord,
   DispatchRecord,
   RunRecord,
@@ -103,6 +104,14 @@ export function fakeApi() {
   };
   const consents: ConsentRecord[] = [];
   const dispatches: DispatchRecord[] = [];
+  const connectors: ConnectorItem[] = [];
+  const connectAnswer: {
+    status: ConnectorItem["status"];
+    authorizationUrl?: string;
+    detail?: string;
+  } = {
+    status: "connected",
+  };
   const control = { engaged: false };
   const spend = {
     stationUsd: 0,
@@ -213,6 +222,40 @@ export function fakeApi() {
         return { runId: run.id };
       }
     }
+    if (path === "/connectors") {
+      if (method === "GET") return connectors;
+      const added: ConnectorItem = {
+        id: "notion",
+        name: "Notion",
+        url: "https://mcp.notion.com/mcp",
+        status: "disconnected",
+        tools: [],
+        grantedTo: [],
+      };
+      connectors.push(added);
+      return added;
+    }
+    if (parts[0] === "connectors") {
+      const c = connectors.find((x) => x.id === parts[1]);
+      if (!c) throw new ApiError(404, "no connector");
+      const i = connectors.indexOf(c);
+      if (parts[2] === "connect") {
+        connectors[i] = { ...c, status: connectAnswer.status };
+        return connectAnswer;
+      }
+      if (parts[2] === "disconnect") {
+        connectors[i] = { ...c, status: "disconnected", tools: [] };
+        return undefined;
+      }
+      if (method === "PATCH") {
+        connectors[i] = { ...c, url: String(b.url) };
+        return connectors[i];
+      }
+      if (method === "DELETE") {
+        connectors.splice(i, 1);
+        return undefined;
+      }
+    }
     if (path === "/activity") {
       const runs = [...sessions.values()]
         .flatMap((e) => e.runs)
@@ -308,6 +351,8 @@ export function fakeApi() {
     return entry;
   };
   return {
+    connectors,
+    connectAnswer,
     api,
     calls,
     state,

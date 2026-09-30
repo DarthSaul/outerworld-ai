@@ -6,6 +6,7 @@ import { CommsPage } from "./comms/CommsPage.js";
 import { KillSwitchBanner, StationControls } from "./components/KillSwitch.js";
 import { useDaemon } from "./daemon-context.js";
 import { AgentPage } from "./pages/AgentPage.js";
+import { ConnectorsPage } from "./pages/ConnectorsPage.js";
 import { CrewPage } from "./pages/CrewPage.js";
 import { NotificationsPage } from "./pages/NotificationsPage.js";
 import { SettingsPage } from "./pages/SettingsPage.js";
@@ -20,7 +21,7 @@ export const SCREENS: ReadonlyArray<{ path: string; label: GlossaryKey; phase?: 
   { path: "/crew", label: "agents" },
   { path: "/memory", label: "memory", phase: 7 },
   { path: "/notifications", label: "notifications" },
-  { path: "/connectors", label: "connectors", phase: 6 },
+  { path: "/connectors", label: "connectors" },
   { path: "/settings", label: "settings" },
 ];
 
@@ -98,6 +99,7 @@ export function App() {
                 <Route path="/crew" element={<CrewPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/notifications" element={<NotificationsPage />} />
+                <Route path="/connectors" element={<ConnectorsPage />} />
                 <Route path="/crew/:id" element={<AgentPage />} />
                 {SCREENS.filter((s) => s.phase !== undefined).map((s) => (
                   <Route

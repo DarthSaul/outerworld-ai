@@ -37,6 +37,11 @@ export function invalidateFor(event: RuntimeEvent, client: QueryClient): void {
   } else if (event.type === "station.updated") {
     void client.invalidateQueries({ queryKey: ["station"] });
     void client.invalidateQueries({ queryKey: ["agent"] });
+    void client.invalidateQueries({ queryKey: ["connectors"] });
+  } else if (event.type === "connector.status") {
+    // A connector's tools change what granted crew members can use.
+    void client.invalidateQueries({ queryKey: ["connectors"] });
+    void client.invalidateQueries({ queryKey: ["agent"] });
   } else if (event.type.startsWith("session.")) {
     void client.invalidateQueries({ queryKey: ["sessions", event.agentId] });
     void client.invalidateQueries({ queryKey: ["session", event.sessionId] });

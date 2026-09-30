@@ -18,9 +18,10 @@ const arg = (name, fallback) => {
   const i = process.argv.indexOf(`--${name}`);
   return i > -1 ? process.argv[i + 1] : fallback;
 };
-const routes = arg("routes", "/dev,/,/crew,/crew/vesper,/comms,/settings,/notifications").split(
-  ",",
-);
+const routes = arg(
+  "routes",
+  "/dev,/,/crew,/crew/vesper,/comms,/settings,/notifications,/connectors",
+).split(",");
 const port = Number(arg("port", "3300"));
 const outDir = join(process.cwd(), ".outerworld", "screenshots");
 mkdirSync(outDir, { recursive: true });

@@ -278,3 +278,60 @@ export function useSteer() {
       api.send("POST", `/runs/${encodeURIComponent(runId)}/steer`, { text }),
   });
 }
+
+export interface ConnectorItem {
+  readonly id: string;
+  readonly name: string;
+  readonly url?: string;
+  readonly status: "disconnected" | "needs_auth" | "connected" | "error";
+  readonly detail?: string;
+  readonly tools: readonly { name: string; class: "read" | "write"; description: string }[];
+  readonly grantedTo: readonly string[];
+}
+
+export function useConnectors() {
+  const { api } = useDaemon();
+  return useQuery({
+    queryKey: ["connectors"],
+    queryFn: () => api.get<ConnectorItem[]>("/connectors"),
+  });
+}
+
+export function useAddNotion() {
+  const { api } = useDaemon();
+  return useMutation({ mutationFn: () => api.send("POST", "/connectors", { preset: "notion" }) });
+}
+
+export function useUpdateConnector() {
+  const { api } = useDaemon();
+  return useMutation({
+    mutationFn: ({ id, url }: { id: string; url: string }) =>
+      api.send("PATCH", `/connectors/${encodeURIComponent(id)}`, { url }),
+  });
+}
+
+export function useRemoveConnector() {
+  const { api } = useDaemon();
+  return useMutation({
+    mutationFn: (id: string) => api.send("DELETE", `/connectors/${encodeURIComponent(id)}`),
+  });
+}
+
+export function useConnect() {
+  const { api } = useDaemon();
+  return useMutation({
+    mutationFn: (id: string) =>
+      api.send<{ status: ConnectorItem["status"]; authorizationUrl?: string; detail?: string }>(
+        "POST",
+        `/connectors/${encodeURIComponent(id)}/connect`,
+      ),
+  });
+}
+
+export function useDisconnect() {
+  const { api } = useDaemon();
+  return useMutation({
+    mutationFn: ({ id, forget }: { id: string; forget: boolean }) =>
+      api.send("POST", `/connectors/${encodeURIComponent(id)}/disconnect`, { forget }),
+  });
+}
