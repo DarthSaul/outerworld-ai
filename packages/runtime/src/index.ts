@@ -12,6 +12,18 @@ export {
   NotFoundError,
 } from "./crew/crew-service.js";
 export {
+  type ModelFactory,
+  NoApiKeyError,
+  openRouterModels,
+  scriptedModels,
+} from "./run/models.js";
+export {
+  type RetryPolicy,
+  RunService,
+  type RunServiceOptions,
+  type ToolImpl,
+} from "./run/run-service.js";
+export {
   ApiKeyService,
   type ApiKeyStatus,
   InvalidKeyError,

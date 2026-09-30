@@ -1,0 +1,34 @@
+import { streamText } from "ai";
+import { describe, expect, it } from "vitest";
+import { ApiKeyService } from "../secrets/api-key.js";
+import { MemorySecretStore } from "../secrets/store.js";
+import { NoApiKeyError, openRouterModels, scriptedModels } from "./models.js";
+
+describe("scriptedModels", () => {
+  it("streams a reply that quotes the Commander and says it is fake", async () => {
+    const model = await scriptedModels({ chunkDelayInMs: 0 })("anthropic/claude-sonnet-5.5");
+    const result = streamText({ model, messages: [{ role: "user", content: "Status?" }] });
+    const deltas: string[] = [];
+    for await (const part of result.stream) if (part.type === "text-delta") deltas.push(part.text);
+    expect(deltas.length).toBeGreaterThan(3);
+    expect(deltas.join("")).toBe("Scripted reply (fake model, no API call). You said: “Status?”");
+  });
+});
+
+describe("openRouterModels", () => {
+  const keys = (env: Record<string, string>) =>
+    new ApiKeyService({ store: new MemorySecretStore(), env });
+
+  it("refuses to build a model without a key, with a message that says what to do", async () => {
+    await expect(openRouterModels(keys({}))("anthropic/claude-sonnet-5.5")).rejects.toBeInstanceOf(
+      NoApiKeyError,
+    );
+  });
+
+  it("builds an OpenRouter chat model for the id when a key is configured (no network)", async () => {
+    const model = await openRouterModels(keys({ OPENROUTER_API_KEY: "sk-or-test-0000000000" }))(
+      "anthropic/claude-sonnet-5.5",
+    );
+    expect(model).toMatchObject({ modelId: "anthropic/claude-sonnet-5.5" });
+  });
+});
