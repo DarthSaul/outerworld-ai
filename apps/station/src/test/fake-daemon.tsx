@@ -24,6 +24,8 @@ import type {
   DispatchRecord,
   MemoryItem,
   RunRecord,
+  ScheduleFireItem,
+  ScheduleItem,
   SessionDetail,
   SessionRecord,
   SpendTotal,
@@ -107,6 +109,7 @@ export function fakeApi() {
   const dispatches: DispatchRecord[] = [];
   const connectors: ConnectorItem[] = [];
   const memories: MemoryItem[] = [];
+  const scheduleHistory = new Map<string, ScheduleFireItem[]>();
   const connectAnswer: {
     status: ConnectorItem["status"];
     authorizationUrl?: string;
@@ -164,6 +167,59 @@ export function fakeApi() {
         settings.openrouter = { configured: true, source: "keychain" };
       } else settings.openrouter = { configured: false, source: null };
       return undefined;
+    }
+    if (parts[0] === "agents" && parts[2] === "schedules") {
+      const a = state.agents.get(parts[1] ?? "");
+      if (!a) throw new ApiError(404, `no agent "${parts[1]}"`);
+      const list = a.config.schedules;
+      const sid = parts[3];
+      if (method === "GET") {
+        return list.map(
+          (sc): ScheduleItem => ({
+            id: sc.id,
+            cron: sc.cron,
+            timezone: sc.timezone ?? "UTC",
+            timezoneSet: sc.timezone !== undefined,
+            prompt: sc.prompt,
+            enabled: sc.enabled,
+            catchUp: sc.catchUp,
+            ...(sc.enabled ? { nextRunAt: "2026-10-01T06:00:00.000Z" } : {}),
+            history: scheduleHistory.get(`${parts[1]}/${sc.id}`) ?? [],
+          }),
+        );
+      }
+      if (b.cron === "61 * * * *") {
+        throw new ApiError(409, "the schedule's cron cannot run", [
+          { path: "schedules.0.cron", message: "CronPattern: Invalid value for minute: 61" },
+        ]);
+      }
+      if (method === "POST" && parts[4] === "run") {
+        return {
+          scheduledFor: "2026-09-30T12:00:00.000Z",
+          at: "2026-09-30T12:00:00.000Z",
+          outcome: "fired",
+          manual: true,
+        };
+      }
+      if (method === "POST") {
+        const sc = {
+          id: nextId("sched"),
+          catchUp: false,
+          enabled: true,
+          ...(b as { cron: string; prompt: string }),
+        };
+        a.config = { ...a.config, schedules: [...list, sc] };
+        return sc;
+      }
+      if (method === "DELETE") {
+        a.config = { ...a.config, schedules: list.filter((x) => x.id !== sid) };
+        return undefined;
+      }
+      a.config = {
+        ...a.config,
+        schedules: list.map((x) => (x.id === sid ? { ...x, ...(b as object) } : x)),
+      };
+      return a.config.schedules.find((x) => x.id === sid);
     }
     if (parts[0] === "agents" && parts[2] === "memories") {
       const mine = (m: MemoryItem) => m.agentId === parts[1] || m.scope === "station";
@@ -375,6 +431,7 @@ export function fakeApi() {
     connectors,
     connectAnswer,
     memories,
+    scheduleHistory,
     api,
     calls,
     state,

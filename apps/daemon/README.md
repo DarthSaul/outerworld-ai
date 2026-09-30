@@ -67,7 +67,8 @@ allowed `Origin` and a `Sec-Fetch-Site` other than `cross-site`. Every `/api/*` 
 | `DELETE /api/settings/openrouter` | Removes the stored key → 204. |
 
 On startup the daemon marks every run the last process left unfinished as `interrupted`
-(brief §8) before it serves anything. Every event payload is redacted: known key values and
+(brief §8) before it serves anything, then starts the scheduler (which catches up or records an
+occurrence missed while it was down, D21). Every event payload is redacted: known key values and
 anything shaped like an OpenRouter key never reach the log or the SPA.
 
 Bodies with content must be `application/json` (else 415) and at most 1 MiB (else 413). Invalid input is 400

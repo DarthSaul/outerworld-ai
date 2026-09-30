@@ -1,9 +1,11 @@
 import type {
   AgentDocumentName,
+  AgentSchedule,
   AgentView,
   ChatMessage,
   CreateAgentInput,
   CreateRoomInput,
+  CreateScheduleInput,
   Room,
   RunState,
   SettingsView,
@@ -12,6 +14,7 @@ import type {
   SupportedModel,
   UpdateAgentInput,
   UpdateRoomInput,
+  UpdateScheduleInput,
 } from "@darthsaul/outerworld-ai-core";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useDaemon } from "./daemon-context.js";
@@ -394,5 +397,75 @@ export function useForgetMemory() {
   const { api } = useDaemon();
   return useMutation({
     mutationFn: (id: string) => api.send("DELETE", `/memories/${encodeURIComponent(id)}`),
+  });
+}
+
+/** A fire in a schedule's history (mirrors the runtime's ScheduleFire). */
+export interface ScheduleFireItem {
+  readonly scheduledFor: string;
+  readonly at: string;
+  readonly outcome: "fired" | "missed";
+  readonly reason?: "down" | "busy" | "stopped" | "error";
+  readonly detail?: string;
+  readonly manual: boolean;
+  readonly sessionId?: string;
+  readonly runId?: string;
+  readonly runState?: string;
+}
+
+/** `GET /api/agents/:id/schedules` (mirrors the runtime's ScheduleView). */
+export interface ScheduleItem {
+  readonly id: string;
+  readonly cron: string;
+  readonly timezone: string;
+  readonly timezoneSet: boolean;
+  readonly prompt: string;
+  readonly enabled: boolean;
+  readonly catchUp: boolean;
+  readonly sessionId?: string;
+  readonly nextRunAt?: string;
+  readonly error?: string;
+  readonly history: readonly ScheduleFireItem[];
+}
+
+const schedulePath = (agentId: string, scheduleId?: string) =>
+  `/agents/${encodeURIComponent(agentId)}/schedules${scheduleId ? `/${encodeURIComponent(scheduleId)}` : ""}`;
+
+export function useSchedules(agentId: string) {
+  const { api } = useDaemon();
+  return useQuery({
+    queryKey: ["schedules", agentId],
+    queryFn: () => api.get<ScheduleItem[]>(schedulePath(agentId)),
+  });
+}
+
+export function useAddSchedule(agentId: string) {
+  const { api } = useDaemon();
+  return useMutation({
+    mutationFn: (input: CreateScheduleInput) =>
+      api.send<AgentSchedule>("POST", schedulePath(agentId), input),
+  });
+}
+
+export function useUpdateSchedule(agentId: string) {
+  const { api } = useDaemon();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: UpdateScheduleInput }) =>
+      api.send<AgentSchedule>("PATCH", schedulePath(agentId, id), input),
+  });
+}
+
+export function useRemoveSchedule(agentId: string) {
+  const { api } = useDaemon();
+  return useMutation({
+    mutationFn: (id: string) => api.send("DELETE", schedulePath(agentId, id)),
+  });
+}
+
+export function useRunSchedule(agentId: string) {
+  const { api } = useDaemon();
+  return useMutation({
+    mutationFn: (id: string) =>
+      api.send<ScheduleFireItem>("POST", `${schedulePath(agentId, id)}/run`),
   });
 }

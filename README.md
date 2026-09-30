@@ -39,7 +39,8 @@ Working today: crew and rooms as documents (Crew screen); chat (COMMS) with stre
 saved sessions, cancel, and several windows at once; built-in tools (web, workspace files,
 memory proposals) with approval under *Ask first*; spend per call, budgets, and a kill switch; the Overseer dispatching work to crew, watching it
 live, steering it, and reviewing the results; Notion as a granted connector; and memory the
-Commander approves before it reaches a prompt. Schedules and the map come next.
+Commander approves before it reaches a prompt; and schedules that run a crew member's prompt
+while the daemon is up. The map, notifications feed, and onboarding come next.
 Milestone 1 (a read-only dashboard for Claude Code Routines) is archived: see ADR-0010 and
 `tasks/archive/`. Today `pnpm dev` runs the daemon and the SPA shell with a live event stream; the
 agent loop, COMMS, and the rest land phase by phase.

@@ -34,6 +34,7 @@ export function invalidateFor(event: RuntimeEvent, client: QueryClient): void {
   if (event.type === "agent.updated") {
     void client.invalidateQueries({ queryKey: ["station"] });
     void client.invalidateQueries({ queryKey: ["agent", event.agentId] });
+    void client.invalidateQueries({ queryKey: ["schedules", event.agentId] });
   } else if (event.type === "station.updated") {
     void client.invalidateQueries({ queryKey: ["station"] });
     void client.invalidateQueries({ queryKey: ["agent"] });
@@ -45,8 +46,13 @@ export function invalidateFor(event: RuntimeEvent, client: QueryClient): void {
   } else if (event.type.startsWith("session.")) {
     void client.invalidateQueries({ queryKey: ["sessions", event.agentId] });
     void client.invalidateQueries({ queryKey: ["session", event.sessionId] });
+  } else if (event.type.startsWith("schedule.")) {
+    void client.invalidateQueries({ queryKey: ["schedules", event.agentId] });
+    void client.invalidateQueries({ queryKey: ["sessions", event.agentId] });
   } else if (event.type.startsWith("run.") && !event.ephemeral) {
     void client.invalidateQueries({ queryKey: ["session", event.sessionId] });
+    // A schedule's history shows the state of the runs it started.
+    void client.invalidateQueries({ queryKey: ["schedules", event.agentId] });
     void client.invalidateQueries({ queryKey: ["activity"] });
     void client.invalidateQueries({ queryKey: ["spend"] });
     // A run that ends while waiting expires its request; one that pauses creates one.

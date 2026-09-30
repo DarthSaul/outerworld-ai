@@ -19,6 +19,7 @@ import {
   useStationView,
   useUpdateAgent,
 } from "../queries.js";
+import { SchedulesSection } from "./Schedules.js";
 
 const button =
   "h-(--ow-size-control-h-dense) rounded-control border border-border-subtle px-(--ow-size-control-pad-x) text-label text-ink-1 disabled:text-ink-3";
@@ -300,6 +301,7 @@ export function AgentPage() {
           </ul>
         )}
       </section>
+      <SchedulesSection agentId={a.id} />
       <section aria-label="Documents" className="flex flex-col gap-(--ow-space-4)">
         {AGENT_DOCUMENTS.map((name) => (
           <DocumentEditor key={name} agentId={a.id} name={name} saved={a.documents[name]} />

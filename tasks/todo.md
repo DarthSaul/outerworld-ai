@@ -93,6 +93,16 @@ decisions made, open questions.
   review turn starts as soon as its session is free (after its current run if it is busy). A
   direction (steer) is added to the worker's session as a message from the Commander right before
   its next model call. `read_session` returns at most 20k characters, from the start.
+- **D21 Scheduler mechanics (Phase 8, owner-approved 2026-09-30).** A schedule with no `timezone`
+  runs in the machine's zone. Each schedule posts into its configured session, else its own
+  "Scheduled: <id>" session. `catchUp` is off by default; on startup it runs the most recent
+  missed occurrence once, and without it that occurrence is recorded as missed (`down`). A new,
+  edited, disabled, or re-enabled schedule counts from the moment it is armed, so it never catches
+  up on earlier times. An occurrence whose session is still running is skipped (`busy`), never
+  stacked; the kill switch skips it too (`stopped`). A scheduled run needing consent waits with no
+  timeout and shows on Notifications like any other. DST follows croner: a skipped local time runs
+  at the first valid time after it, and a repeated one runs once. The schedule id comes from the
+  first words of its prompt.
 - **D11 Old core modules.** Ledger parsing, status schemas, StationState, health, and the demo
   timeline are Routines-specific; they are deleted in Phase 1 when the new schema lands (tests for
   them go with them; commit message says why).
@@ -222,9 +232,9 @@ decisions made, open questions.
 - [x] Daemon: `GET /api/agents/:id/memories`, approve (optionally edited), reject, edit, delete; a decided proposal is 409. The phase placeholders are gone: every v1 screen is real.
 
 ## Phase 8 — Scheduler
-- [ ] Schedules in `agent.json` (cron, timezone, prompt, target session defaulting to a per-schedule "Scheduled" session, `catchUp`); croner; `schedule.fired`/`schedule.missed`; catch-up once on startup when enabled (last fire persisted).
-- [ ] Scheduled runs obey grants, approval mode, budgets; pending consent raises a notification.
-- [ ] SPA schedule editor, next run, history. Tests with fake timers incl. DST boundary and missed-while-down.
+- [x] Schedules in `agent.json` (cron, timezone, prompt, target session defaulting to a per-schedule "Scheduled" session, `catchUp`); croner; `schedule.fired`/`schedule.missed`; catch-up once on startup when enabled (last fire persisted). D21.
+- [x] Scheduled runs obey grants, approval mode, budgets (they go through `RunService.send` with `trigger: "schedule"`); pending consent shows on Notifications like any other.
+- [x] SPA schedule editor on each crew member's page: on/off, next run in the schedule's zone, Run now, edit, remove, recent history, link to its session. Tests with a manual clock incl. DST (spring gap, autumn repeat) and missed-while-down, with and without catch-up.
 
 ## Phase 9 — Station view, notifications, onboarding, seed crew
 - [ ] ui map adapted: rooms, crew in rooms, props, hallways (rendered only), live crew state (idle, running, awaiting consent, blocked) from events only.
