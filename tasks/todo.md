@@ -171,13 +171,13 @@ decisions made, open questions.
 - [x] Every change emits `agent.updated` / `station.updated`; the SPA invalidates its queries from those events, tested by changing state "elsewhere" and emitting the event (two real tabs share the same path).
 
 ## Phase 3 — Agent loop and COMMS
-- [ ] Key: Settings stores the OpenRouter key in the keychain (`@napi-rs/keyring`, service `outerworld-ai`); env `OPENROUTER_API_KEY` fallback; validated via `GET /api/v1/key`; the API only ever returns `{ configured, source }`. Secret redaction helper used by logger and event writer (test: a key-shaped string never reaches events or logs).
-- [ ] core `assemblePrompt({ docs, roleBriefing, beliefs, history, input, budgetTokens })`: system = docs + briefing + beliefs; newest history turns that fit; token estimate function injectable; tests for windowing edges.
-- [ ] runtime run state machine (brief §8) as a pure transition table in core + the loop in runtime (D5): `maxSteps`, `AbortController`, backoff (429/408/5xx; `retry-after`), per-provider concurrency limit (default 4, queued runs wait). Events for every delta, tool call, state change; deltas coalesced into the stored message on completion.
-- [ ] Sessions: create, list, open, rename, archive; messages persisted; survive restart.
-- [ ] Startup: runs in `queued`/`running`/`awaiting_consent` → `interrupted` + event; never resumed.
-- [ ] SPA COMMS: per-agent session list, streaming chat, tool-call and run-state rendering, cancel, several windows open at once.
-- [ ] Tests (fake provider): streaming, multi-step tool loop, cancel mid-stream, max steps, retry then success, retry exhausted → failed, interrupted-on-restart, no duplicate messages after restart.
+- [x] Key: Settings stores the OpenRouter key in the keychain (`@napi-rs/keyring`, service `outerworld-ai`); env `OPENROUTER_API_KEY` fallback; validated via `GET https://openrouter.ai/api/v1/key` (no model call); the API only returns `{ configured, source }`. Every event payload is redacted (known key values and anything shaped like an OpenRouter key), tested.
+- [x] core `assemblePrompt({ documents, roleBriefing, beliefs, history, budgetTokens })`: documents under headings + role briefing (Overseer gets the crew roster) + beliefs (≤ 1/4 of budget) + untrusted-data notice; whole-turn windowing that never splits a tool call from its result (D19).
+- [x] Run state machine (brief §8) as a pure table in core; `RunService` in runtime (D5): one `streamText` per step, `maxSteps` (12, completes with `reason: max_steps`), `AbortController` cancel (queued or streaming; partial text kept), our retry/backoff (408/409/429/5xx, `retry-after`, 402 never), concurrency slots (default 4, queued runs wait). Deltas are ephemeral (D18); state changes and tool calls are events; one stored message per step.
+- [x] Sessions: create, list, open, rename, archive; messages persisted; survive restart. One active run per session.
+- [x] Startup: runs left `queued`/`running`/`awaiting_consent` become `interrupted` with an event, before the daemon serves; never resumed.
+- [x] SPA COMMS: per-agent session list, streaming chat, tool-call and run-state rendering, cancel, several windows at once; Settings for the key and model mode.
+- [x] Tests (fake provider): streaming, multi-step tool loop, forbidden call rejected at execution and never offered, cancel mid-stream and while queued, max steps, retry then success, retries exhausted, 402, no key, missing agent, concurrency, interrupted-on-restart (runtime and daemon), messages unchanged after restart.
 
 **CHECKPOINT 3** — you chat with the Overseer against the real API.
 

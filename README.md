@@ -35,6 +35,8 @@ The full direction is [docs/specs/BRIEF-station-runtime.md](docs/specs/BRIEF-sta
 ## Status
 
 **v1 in progress** on the `runtime-pivot` branch; the plan is [tasks/todo.md](tasks/todo.md).
+Working today: crew and rooms as documents (Crew screen), and chat (COMMS) with streamed replies,
+saved sessions, cancel, and several windows at once. Tools, consent, spend, and budgets are Phase 4.
 Milestone 1 (a read-only dashboard for Claude Code Routines) is archived: see ADR-0010 and
 `tasks/archive/`. Today `pnpm dev` runs the daemon and the SPA shell with a live event stream; the
 agent loop, COMMS, and the rest land phase by phase.
@@ -52,8 +54,14 @@ pnpm dev
 
 `pnpm dev` starts the daemon on `127.0.0.1:4317` and the SPA on http://localhost:5173, against a
 copy of the fictional demo station (`fixtures/demo-station/`, copied to `.outerworld/dev-home/`).
-`OUTERWORLD_HOME=~/.outerworld pnpm dev` runs your own station. From Phase 3 you add your
-OpenRouter key in Settings; it goes to your OS keychain, never to disk or the browser.
+On that copy, replies come from a scripted fake model (no key, no network). To chat for real:
+
+```
+OUTERWORLD_MODEL=openrouter pnpm dev   # then Settings → paste your OpenRouter key
+```
+
+The key is checked with OpenRouter and stored in your OS keychain, never on disk or in the
+browser. `OUTERWORLD_HOME=~/.outerworld pnpm dev` runs your own station directory instead.
 
 Other commands:
 
