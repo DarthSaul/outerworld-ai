@@ -127,3 +127,5 @@ export {
   runRecordIssues,
   TeamStatus,
 } from "./schema/status.js";
+// Server-sent events over fetch (the SPA sends the bearer token, so it cannot use EventSource)
+export { createSseParser, type SseMessage, type SseParser } from "./sse.js";
