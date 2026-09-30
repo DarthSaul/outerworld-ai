@@ -3,6 +3,7 @@ import {
   parseRuntimeEvent,
   type RuntimeEvent,
 } from "@darthsaul/outerworld-ai-core";
+import type { Redactor } from "../secrets/redact.js";
 import type { Db } from "./database.js";
 
 export type EventListener = (event: RuntimeEvent) => void;
@@ -38,14 +39,21 @@ export class EventStore {
   readonly #now: () => Date;
   readonly #listeners = new Set<EventListener>();
   readonly #onListenerError: (error: unknown) => void;
+  readonly #redact: Redactor | undefined;
   readonly #insert;
   readonly #since;
   readonly #latest;
 
   constructor(
     db: Db,
-    options: { now?: () => Date; onListenerError?: (error: unknown) => void } = {},
+    options: {
+      now?: () => Date;
+      onListenerError?: (error: unknown) => void;
+      /** Applied to every payload before it is stored or sent (brief §11). */
+      redact?: Redactor;
+    } = {},
   ) {
+    this.#redact = options.redact;
     this.#db = db;
     this.#now = options.now ?? (() => new Date());
     this.#onListenerError =
@@ -59,7 +67,8 @@ export class EventStore {
 
   append(event: NewRuntimeEvent): RuntimeEvent {
     const at = this.#now().toISOString();
-    const candidate = { ...event, seq: this.latestSeq() + 1, at };
+    const payload = this.#redact ? this.#redact.value(event.payload) : event.payload;
+    const candidate = { ...event, payload, seq: this.latestSeq() + 1, at };
     const parsed = parseRuntimeEvent(candidate);
     if (!parsed.ok) {
       throw new Error(

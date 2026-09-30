@@ -11,6 +11,19 @@ export {
   type CrewServiceOptions,
   NotFoundError,
 } from "./crew/crew-service.js";
+export {
+  ApiKeyService,
+  type ApiKeyStatus,
+  InvalidKeyError,
+  OPENROUTER_KEY_URL,
+} from "./secrets/api-key.js";
+export { createRedactor, type Redactor } from "./secrets/redact.js";
+export {
+  KEYCHAIN_SERVICE,
+  KeychainSecretStore,
+  MemorySecretStore,
+  type SecretStore,
+} from "./secrets/store.js";
 export { type AtomicWriteOptions, writeFileAtomic } from "./storage/atomic-write.js";
 export { type Db, openDatabase } from "./storage/database.js";
 export { type EventListener, EventStore } from "./storage/event-store.js";

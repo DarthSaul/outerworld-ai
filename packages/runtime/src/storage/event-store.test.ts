@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { NewRuntimeEvent, RuntimeEvent } from "@darthsaul/outerworld-ai-core";
 import { describe, expect, it } from "vitest";
+import { createRedactor } from "../secrets/redact.js";
 import { openDatabase } from "./database.js";
 import { EventStore } from "./event-store.js";
 
@@ -40,6 +41,18 @@ describe("EventStore", () => {
     expect(s.since(0)).toEqual(appended);
     expect(s.since(2)).toEqual(appended.slice(2));
     expect(s.since(4)).toEqual([]);
+  });
+
+  it("redacts secrets from payloads before storing or sending them", () => {
+    const seen: RuntimeEvent[] = [];
+    const s = new EventStore(openDatabase(":memory:"), {
+      now: fixedClock(),
+      redact: createRedactor(() => ["known-secret-value"]),
+    });
+    s.subscribe((e) => seen.push(e));
+    s.append(delta("key sk-or-v1-abcdefghijklmnop and known-secret-value"));
+    expect(s.since(0)[0]?.payload).toEqual({ text: "key [redacted] and [redacted]" });
+    expect(seen[0]?.payload).toEqual({ text: "key [redacted] and [redacted]" });
   });
 
   it("pages a replay with a limit", () => {
