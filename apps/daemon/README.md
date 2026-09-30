@@ -43,6 +43,10 @@ allowed `Origin` and a `Sec-Fetch-Site` other than `cross-site`. Every `/api/*` 
 | `PATCH /api/sessions/:id` | `{ title? , archived?: true }`. |
 | `POST /api/sessions/:id/messages` | `{ text }` → 202 `{ runId }`; the reply streams as events (deltas are ephemeral, D18). 409 while a run is active or the session is archived. |
 | `POST /api/runs/:id/cancel` | 202; a queued or running run becomes cancelled. |
+| `GET /api/consents` | Pending consent requests (write-class calls under *Ask first*). |
+| `POST /api/consents/:id` | `{ decision: "approved" \| "denied" }`; the paused run continues. 409 if already decided or expired. |
+| `GET /api/kill-switch`, `PUT /api/kill-switch` | `{ engaged }`. Engaging is persisted first, then cancels every queued, running, or waiting run; sends are 409 until cleared. |
+| `GET /api/spend?day=YYYY-MM-DD` | USD spent that UTC day (default today), station-wide and per agent. Session detail carries `spend` and `runSpend`. |
 | `GET /api/settings` | `{ modelMode, openrouter: { configured, source } }`, never the key. |
 | `PUT /api/settings/openrouter` | `{ key }`: checked with OpenRouter's key endpoint (no model call), stored in the OS keychain → 204; a rejected key is 400. |
 | `DELETE /api/settings/openrouter` | Removes the stored key → 204. |

@@ -184,12 +184,13 @@ decisions made, open questions.
 **CHECKPOINT 3** — you chat with the Overseer against the real API.
 
 ## Phase 4 — Tools, consent, spend, budgets
-- [ ] `web_fetch` (D9), `read_file`/`write_file`/`list_files` confined to `workspaces/<agentId>/` (realpath check, reject `..`, absolute paths, symlink escape; tests for each), `remember` (creates a proposal; wired fully in Phase 7).
-- [ ] Consent under *Ask first* for `write`-class calls: `consent.requested` → run `awaiting_consent` → approve/deny via API (inline in COMMS + Notifications); denial returned to the model as a tool result; no timeout. Test: pending consent survives SPA reconnect; restart marks it interrupted.
-- [ ] Double enforcement test: fake provider emits a call to a non-granted tool → rejected, returned as error result, `run.tool_call` event records the rejection; non-granted tools are absent from the request (`doStreamCalls` asserted).
-- [ ] Spend table per model call (tokens + cost from `providerMetadata.openrouter.usage.cost`, `null` when absent); aggregates per run/agent/day (UTC).
-- [ ] Budgets (per-run, per-agent daily, station daily) checked before every model call; `budget.warning` at 80 %; `budget.blocked` stops the run cleanly. Kill switch persisted before it acts, cancels all runs, refuses new ones until cleared.
-- [ ] SPA: spend on sessions, crew, station total; kill switch in the header.
+- [x] `web_fetch` (D9: public http(s) only, re-checked per redirect, 1 MiB, 15 s, HTML → text), `read_file` / `write_file` / `list_files` confined to `workspaces/<agentId>/` (absolute, NUL, traversal, and symlink escapes refused, each tested), `remember` (records a proposal; Phase 7 reviews them).
+- [x] Consent under *Ask first* for `write`-class calls: `consent.requested` + `run.awaiting_consent`, run paused until approve/deny (inline in COMMS and on Notifications); denial returned to the model as the tool's error result; no timeout. Cancel expires the request; a restart expires it and interrupts the run.
+- [x] Double enforcement: non-granted tools are never offered (asserted on the request) and a call to one is rejected at execution and never run (Phase 3 test, still green).
+- [x] Spend per model call (tokens + OpenRouter's `providerMetadata.openrouter.usage.cost`, `null` when absent), totals per run, session, agent-day, station-day (UTC).
+- [x] Budgets (per-run, per-agent daily, station daily) before every model call; `budget.warning` once at 80%; `budget.blocked` ends the run as `blocked_budget`. Kill switch persisted before it acts, cancels queued, running, and waiting runs, refuses new ones until cleared.
+- [x] SPA: spend on sessions, crew, and the header; kill switch in the header with a banner; pending approvals inline and on Notifications.
+- [x] Dev: the fake model calls a tool on `use <tool> {json}` so all of this can be tried with no key.
 
 ## Phase 5 — Overseer dispatch (depth 1)
 - [ ] core `canDispatch(holder, target, depth, station)`: holder has dispatch grant, depth < `maxDispatchDepth` (1), target reachable in the station graph (v1: overseer → all crew). Tests incl. worker attempts dispatch, self-dispatch, unknown target.
