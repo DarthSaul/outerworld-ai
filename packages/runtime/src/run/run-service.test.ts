@@ -155,7 +155,10 @@ describe("RunService: cancel, errors, and retries", () => {
     const t = setup(scripted([(s) => hanging(s)]));
     const session = t.service.createSession("vesper");
     const { runId } = await t.service.send(session.id, "Go");
-    await new Promise((r) => setTimeout(r, 20));
+    // Cancel once the model has streamed something, so there is text to keep.
+    for (let i = 0; i < 500 && !t.live.some((e) => e.ephemeral); i++) {
+      await new Promise((r) => setTimeout(r, 2));
+    }
     await t.service.cancel(runId);
     const run = await t.service.settled(runId);
     expect(run.state).toBe("cancelled");
