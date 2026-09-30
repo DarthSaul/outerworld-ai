@@ -199,12 +199,12 @@ decisions made, open questions.
 - [x] Dev: the fake model calls a tool on `use <tool> {json}` so all of this can be tried with no key.
 
 ## Phase 5 — Overseer dispatch (depth 1)
-- [ ] core `canDispatch(holder, target, depth, station)`: holder has dispatch grant, depth < `maxDispatchDepth` (1), target reachable in the station graph (v1: overseer → all crew). Tests incl. worker attempts dispatch, self-dispatch, unknown target.
-- [ ] runtime `dispatch({ to, task, inputs })` → new worker session (D6), run started, `{ dispatchId }` returned immediately; completion posts summary + workspace artifact refs into the lead's session, `dispatch.completed`; auto review turn (configurable).
-- [ ] `read_session` tool (read-only, size-capped, overseer only).
-- [ ] Steer (queued direction injected at the next step, visible) and stop.
-- [ ] SPA: dispatch cards inline in the Overseer's COMMS, expandable to the worker's live session; activity view.
-- [ ] Tests: fan-out to two workers concurrently, results land in the right session, cancel one, budget blocks one.
+- [x] core `checkDispatch` / `dispatchTargets`: holder must be the Overseer, depth below `maxDispatchDepth` (1), target from the station graph (v1: Overseer → every other crew member). Tests include a worker attempting dispatch, self, unknown target, depth 1, and delegation off.
+- [x] runtime `dispatch({ to, task, inputs })`: a new worker session per dispatch (D6), the worker's run at depth 1, `{ dispatchId }` returned at once; workers never receive `dispatch`. On completion a report (last reply + files written + why it stopped) is posted into the lead's session with `dispatch.completed` / `.cancelled` / `.failed`; the lead reviews automatically when its session is free (`dispatch.autoReview`, D20).
+- [x] `read_session` for the Overseer: read-only, 20k characters.
+- [x] Steer (`POST /api/runs/:id/steer`, `run.steered`, injected before the next model call) and stop (cancel).
+- [x] SPA: dispatch cards inline in the Overseer's COMMS that expand to the worker's live session (steerable there); report cards; Running now on the Station screen.
+- [x] Tests: fan-out to two workers running at once, results land in the lead's session, cancel one, a budget blocks one, auto review on and off, steer delivered at the next step, a daemon end-to-end dispatch through the fake model.
 
 ## Phase 6 — Notion MCP connector (per ADR-0012)
 - [ ] `runtime/mcp` connector manager on `@modelcontextprotocol/client`: install, connect, list tools, call, reconnect with backoff, `connector.*` status events.

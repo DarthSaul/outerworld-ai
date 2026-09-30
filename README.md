@@ -37,8 +37,9 @@ The full direction is [docs/specs/BRIEF-station-runtime.md](docs/specs/BRIEF-sta
 **v1 in progress** on the `runtime-pivot` branch; the plan is [tasks/todo.md](tasks/todo.md).
 Working today: crew and rooms as documents (Crew screen); chat (COMMS) with streamed replies,
 saved sessions, cancel, and several windows at once; built-in tools (web, workspace files,
-memory proposals) with approval under *Ask first*; spend per call, budgets, and a kill switch.
-Dispatch, Notion, the memory screen, schedules, and the map come next.
+memory proposals) with approval under *Ask first*; spend per call, budgets, and a kill switch; the Overseer dispatching work to crew, watching it
+live, steering it, and reviewing the results. Notion, the memory screen, schedules, and the map
+come next.
 Milestone 1 (a read-only dashboard for Claude Code Routines) is archived: see ADR-0010 and
 `tasks/archive/`. Today `pnpm dev` runs the daemon and the SPA shell with a live event stream; the
 agent loop, COMMS, and the rest land phase by phase.
