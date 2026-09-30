@@ -22,6 +22,10 @@ no telemetry, no analytics, and no error reporting.
 | Local scratch (`.outerworld/` in this checkout) | Your machine | Never (gitignored) | `pnpm dev`'s working copy of the fixture and `browser:verify` screenshots (of the fixture), which CI uploads as a build artifact. |
 | Theme preference | Your browser's `localStorage` | n/a | A per-viewer convenience; the SPA stores nothing else in the browser. |
 
+The daemon assumes a single-user machine: any local process that can reach `127.0.0.1` can load
+the SPA page and so obtain the daemon token. Other websites cannot (Host, Origin, and
+`Sec-Fetch-Site` checks).
+
 **Secrets never** enter the station directory (other than the 0600 daemon token), the SQLite
 database, logs, events, or anything sent to the SPA. The Settings screen only learns *whether* a
 key is configured and where it came from (keychain or environment).

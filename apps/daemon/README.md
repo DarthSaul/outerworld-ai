@@ -1,0 +1,42 @@
+# daemon
+
+The Outerworld AI daemon (ADR-0010): one Node process per station. Thin by design: it resolves
+config, prepares the station directory, and wires `@darthsaul/outerworld-ai-runtime` to HTTP.
+All runtime logic lives in the runtime package.
+
+## Run
+
+```
+pnpm --filter daemon build
+OUTERWORLD_HOME=~/.outerworld node apps/daemon/dist/main.js
+```
+
+| Variable | Default | Meaning |
+|----------|---------|---------|
+| `OUTERWORLD_HOME` | `~/.outerworld` | Station data directory (brief §9); relative paths resolve against the working directory. Created with mode 0700. |
+| `OUTERWORLD_PORT` | `4317` | Port on `127.0.0.1` (never another interface). `0` picks a free port. |
+| `OUTERWORLD_DEV_ORIGIN` | unset | Development only: the Vite dev server's loopback origin, allowed through its proxy. When set, the daemon does not serve the built SPA. |
+
+## HTTP surface
+
+Every request must carry an allowed `Host` (no DNS rebinding) and, when a browser sends them, an
+allowed `Origin` and a `Sec-Fetch-Site` other than `cross-site`. Every `/api/*` request also needs
+`Authorization: Bearer <token>`, the per-install token in `$OUTERWORLD_HOME/daemon.token` (0600).
+
+| Route | Description |
+|-------|-------------|
+| `GET /api/health` | `{ ok, version, latestSeq }`. |
+| `GET /api/events` | SSE: every runtime event as `id: <seq>` + `data: <event JSON>`, replaying after `Last-Event-ID`, then live; a `: ping` comment every 15 s while idle. |
+| `GET /*` (built SPA only) | Static assets from `apps/station/dist`; any path without an extension gets `index.html` with the token injected as `<meta name="outerworld-token">`, `Cache-Control: no-store`. |
+
+Known limit: any process of any local user that can reach `127.0.0.1` can fetch `index.html` and
+so the token. The daemon assumes a single-user machine (docs/PRIVACY.md).
+
+## Public API (for tests and a future desktop shell)
+
+| Export | Description |
+|--------|-------------|
+| `resolveConfig(env, { homedir, defaultSpaDir?, cwd? })` | Validated `DaemonConfig`. |
+| `startDaemon(config, { quiet?, warn? })` | Starts the daemon; returns `{ url, app, close(reason) }`. Logs `station.started` / `station.stopped`. |
+| `createApp(options)` | The Hono app alone, for `app.request()` tests. |
+| `ensureToken(path)`, `tokensMatch(a, b)` | Token file handling and constant-time comparison. |

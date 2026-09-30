@@ -62,6 +62,13 @@ decisions made, open questions.
 - **D12 Retired tests (owner-approved 2026-09-29).** The floor guard allows a test deleted in the
   same diff as its package's `package.json` or its sibling module; a lone test deletion is still
   flagged. Commit messages still give the reason.
+- **D13 API under `/api/` (Phase 1).** `GET /api/health` and `GET /api/events` rather than root
+  paths, so the SPA owns every other path and the Vite proxy forwards one prefix.
+- **D14 Legacy map model stays until Phase 9 (revises D11).** The ui map, its tests, and the gallery
+  still consume core's milestone 1 `Station`/`StationState` (and `parseLedger` for their fixture);
+  that fixture moves to `fixtures/map-demo/`. New schemas are `StationConfig`/`AgentConfig`.
+- **D15 Token exposure to local users.** Any local process can fetch the SPA's index.html from
+  127.0.0.1 and read the token; v1 assumes a single-user machine (documented in PRIVACY.md).
 - **D11 Old core modules.** Ledger parsing, status schemas, StationState, health, and the demo
   timeline are Routines-specific; they are deleted in Phase 1 when the new schema lands (tests for
   them go with them; commit message says why).
