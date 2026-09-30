@@ -16,3 +16,4 @@ supersedes the old one. Template: `0000-template.md`.
 | [0009](0009-schema-versioning.md) | Schema versioning strategy | Accepted |
 | [0010](0010-local-station-runtime.md) | Local station runtime | Accepted |
 | [0011](0011-runtime-stack.md) | Runtime stack | Accepted |
+| [0012](0012-notion-connector.md) | Notion connector over hosted MCP with OAuth; per-agent grant is on or off | Accepted |

@@ -1,6 +1,6 @@
 # Outerworld AI: Project Brief — Local Station Runtime
 
-**Status:** Accepted direction, 2026-09-30. Supersedes the Claude Code Routines + ledger-repo direction (milestone 1).
+**Status:** Accepted direction, 2026-09-30. Supersedes the Claude Code Routines + ledger-repo direction (milestone 1). Amended 2026-09-29: Notion connector per ADR-0012 (hosted OAuth, per-agent grant on or off).
 **Owner:** Saul (Commander)
 **Repo:** `DarthSaul/outerworld-ai` (MIT, public). This file lives at `docs/specs/BRIEF-station-runtime.md` and is the canonical statement of direction. Notion mirrors it.
 
@@ -37,7 +37,7 @@ StarNet (androoAGI/starnet) demonstrated the alternative: a local runtime ("side
 2. **Overseer delegation**: the Overseer dispatches tasks to crew members (depth 1); workers run concurrently in the background; results return to the Overseer's session; everything visible live.
 3. **Agents as documents**: identity, purpose, standing orders, context as markdown; model, approval mode, and grants as config. Edits in the UI take effect on the next run.
 4. **Capabilities**: Props (placed objects) grant base tools per Room; connector tools granted per agent; consent gates for side-effectful calls.
-5. **Notion MCP connector**: connected once, station-wide; per-agent tool allowlists (read-only vs read-write presets).
+5. **Notion MCP connector**: connected once, station-wide; each agent is either granted the connector or not.
 6. **Scheduler**: per-agent schedules (e.g. the Project Manager's daily briefing) while the daemon runs.
 7. **Memory**: agents propose memories; the Commander approves or rejects; approved memories are injected into future runs.
 8. **Notifications and spend**: a station-wide feed driven by the event log; per-run cost; budget caps enforced before model calls.
@@ -156,12 +156,12 @@ An agent's effective tool set is computed by the runtime from four sources, then
 |---|---|---|
 | **Role** | Per agent | Overseer: `dispatch`, `read_session` |
 | **Props** | Per room (all crew in the room) | Web prop → `web_fetch`; Files prop → workspace `read_file` / `write_file` / `list_files`; Memory prop → `remember` |
-| **Connector grants** | Per agent, per connector tool | Notion read-only preset (search, fetch) or read-write preset (+ create/update pages) |
+| **Connector grants** | Per agent, per connector (on or off) | Notion granted: all Notion tools; not granted: none |
 | **Approval mode** | Per agent | *Ask first*: side-effectful calls pause for consent. *Full power*: auto-approve |
 
 - Every tool is classified `read` or `write` (our mapping is authoritative; MCP `readOnlyHint` / `destructiveHint` annotations only seed defaults).
 - Consent requests are events; the SPA shows them inline in COMMS and in Notifications. Pending consent pauses the run; it never times out into approval.
-- All agents share the Station's single Notion identity; per-agent limits exist only in our runtime. Connect Notion with the narrowest page access that works.
+- All agents share the Station's single Notion identity and can reach whatever that identity can; the per-agent limit is the grant itself, enforced by our runtime. Read/write classification of connector tools decides which calls need consent under *Ask first*.
 
 ## 7. Orchestration model (v1)
 
@@ -288,9 +288,9 @@ Event families (v1): `session.*`, `run.*` (queued, started, delta, tool_call, to
 
 ## 12. Connectors: Notion MCP (v1)
 
-- The runtime is an MCP client (official TypeScript SDK). Connectors are installed once at the Station level; agents receive per-tool grants.
-- **Target:** Notion's hosted MCP server over Streamable HTTP with OAuth. **Fallback** if OAuth is disproportionately costly for v1: a local stdio Notion MCP server with an internal integration token scoped to specific pages. The implementer verifies current Notion docs before choosing and records the decision in an ADR.
-- UI: *Connectors* screen (connect, status, reconnect, tool list with read/write classification) and per-agent grant editor with *Read-only* / *Read-write* presets expanding to tool allowlists.
+- The runtime is an MCP client (official TypeScript SDK). Connectors are installed once at the Station level; each agent is granted a connector or not.
+- **Decided (ADR-0012):** Notion's hosted MCP server over Streamable HTTP with OAuth. No page scoping; no stdio fallback.
+- UI: *Connectors* screen (connect, status, reconnect, tool list with read/write classification) and a per-agent on/off grant in the agent editor.
 
 ## 13. Scheduler (v1)
 
@@ -315,7 +315,7 @@ Event families (v1): `session.*`, `run.*` (queued, started, delta, tool_call, to
 ### v1 — Station runtime (this brief)
 Everything in §3 goals. **Done when:**
 1. Fresh clone → `pnpm install && pnpm dev` → onboarding creates the Overseer, asks for the OpenRouter key, and the Commander can chat with streamed replies.
-2. A Project Manager crew member with Notion read-write grants can be created in the UI and, via Overseer dispatch, update a Notion page with consent under *Ask first*, and the whole exchange is visible live.
+2. A Project Manager crew member granted Notion can be created in the UI and, via Overseer dispatch, update a Notion page with consent under *Ask first*, and the whole exchange is visible live.
 3. The PM's daily-briefing schedule fires while the daemon runs, and its result appears in its session and in Notifications.
 4. Killing the daemon mid-run surfaces the run as *interrupted* on restart; nothing is lost or duplicated.
 5. Memory proposals appear for approval; approved beliefs demonstrably affect the next run.
@@ -333,7 +333,7 @@ More MCP connectors; channel, webhook, and watched-folder Inbox triggers; visual
 | Crew member | Room | Role | Grants | Notes |
 |---|---|---|---|---|
 | **Overseer** | Command | Overseer | dispatch, read_session, Web, Memory | Created at onboarding. Name TBD (naming-workshop candidates: Meridian, Lodestar, Vesper) |
-| **Project Manager** | Operations | Crew | Notion read-write, Web, Memory, Files | Owns project hubs in Notion; daily briefing schedule |
+| **Project Manager** | Operations | Crew | Notion, Web, Memory, Files | Owns project hubs in Notion; daily briefing schedule |
 
 ## 18. What happens to the existing repo
 
@@ -354,7 +354,7 @@ More MCP connectors; channel, webhook, and watched-folder Inbox triggers; visual
 | Runtime correctness under concurrency and restarts | Event log as source of truth; explicit run state machine; restart tests |
 | Tool safety on a real machine | Workspace confinement, no shell in v1, *Ask first* default, double enforcement |
 | Cost runaway from delegation | Depth 1, budgets before every call, kill switch |
-| Notion OAuth complexity | Stdio + integration-token fallback, decided by ADR |
+| Notion OAuth complexity | Hosted OAuth with the MCP SDK's built-in flow (ADR-0012); tokens in the keychain |
 | Model variance on OpenRouter (tool-calling quality) | Support a small tested model list in v1 |
 | Memory quality (noise, stale beliefs) | Human approval gate; token cap; iterate after use |
 | Context growth in long sessions | Windowing in v1; compaction in v2 |
