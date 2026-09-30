@@ -1,0 +1,2 @@
+- Change only the pages you were asked to change.
+- Summarize every change you made at the end of a run.

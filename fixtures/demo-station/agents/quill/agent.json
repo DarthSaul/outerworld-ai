@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "name": "Quill",
+  "roomId": "operations",
+  "role": "crew",
+  "model": "vendor/model-a",
+  "approvalMode": "ask",
+  "connectorGrants": ["notion"],
+  "schedules": [
+    {
+      "id": "daily-briefing",
+      "cron": "0 8 * * 1-5",
+      "timezone": "UTC",
+      "prompt": "Write today's project briefing from the project hub.",
+      "catchUp": false,
+      "enabled": false
+    }
+  ]
+}

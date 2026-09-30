@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "name": "Vesper",
+  "roomId": "command",
+  "role": "overseer",
+  "model": "vendor/model-a",
+  "approvalMode": "ask",
+  "connectorGrants": [],
+  "schedules": []
+}

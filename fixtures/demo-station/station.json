@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "name": "Demo Station",
+  "rooms": [
+    {
+      "id": "command",
+      "name": "Command",
+      "description": "Where the Overseer takes requests and hands out work.",
+      "props": [{ "kind": "web" }, { "kind": "memory" }]
+    },
+    {
+      "id": "operations",
+      "name": "Operations",
+      "description": "Keeps projects moving: plans, briefings, and the project hub.",
+      "props": [{ "kind": "web" }, { "kind": "files" }, { "kind": "memory" }]
+    }
+  ],
+  "lanes": [{ "id": "operations-to-command", "from": "operations", "to": "command" }],
+  "connectors": [
+    {
+      "id": "notion",
+      "name": "Notion",
+      "transport": { "type": "http", "url": "https://mcp.notion.example/mcp" }
+    }
+  ],
+  "budgets": { "perRunUsd": 0.25, "perAgentDailyUsd": 1, "stationDailyUsd": 3 },
+  "dispatch": { "maxDepth": 1, "autoReview": true }
+}
