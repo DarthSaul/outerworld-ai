@@ -49,6 +49,12 @@ allowed `Origin` and a `Sec-Fetch-Site` other than `cross-site`. Every `/api/*` 
 | `POST /api/consents/:id` | `{ decision: "approved" \| "denied" }`; the paused run continues. 409 if already decided or expired. |
 | `GET /api/kill-switch`, `PUT /api/kill-switch` | `{ engaged }`. Engaging is persisted first, then cancels every queued, running, or waiting run; sends are 409 until cleared. |
 | `GET /api/spend?day=YYYY-MM-DD` | USD spent that UTC day (default today), station-wide and per agent. Session detail carries `spend` and `runSpend`. |
+| `GET /api/connectors` | Each connector: status (`disconnected`, `needs_auth`, `connected`, `error`), its classified tools, and `grantedTo`. |
+| `POST /api/connectors` | `{ preset: "notion" }` installs Notion's hosted MCP server (ADR-0012). |
+| `PATCH /api/connectors/:id` | `{ url?, name? }`; `DELETE` removes it (409 while any crew member is granted it). |
+| `POST /api/connectors/:id/connect` | `{ status, authorizationUrl? }`: when the server needs sign-in, open `authorizationUrl`; Notion returns to the callback below. |
+| `POST /api/connectors/:id/disconnect` | `{ forget? }`: `forget: true` also removes the stored sign-in from the keychain. |
+| `GET /oauth/callback/:id` | Where sign-in returns (no API token: the browser comes from Notion). Accepts only the one-time `state` of a sign-in in progress; shows a small page saying whether it worked. The only cross-site navigation allowed. |
 | `GET /api/settings` | `{ modelMode, openrouter: { configured, source } }`, never the key. |
 | `PUT /api/settings/openrouter` | `{ key }`: checked with OpenRouter's key endpoint (no model call), stored in the OS keychain → 204; a rejected key is 400. |
 | `DELETE /api/settings/openrouter` | Removes the stored key → 204. |

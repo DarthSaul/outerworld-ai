@@ -208,6 +208,47 @@ describe("CrewService: rooms", () => {
   });
 });
 
+describe("CrewService: connectors", () => {
+  it("adds a connector, changes its URL, and reports station changes", async () => {
+    const { crew, types } = setup();
+    await crew.removeConnectorGrants("notion");
+    await crew.removeConnector("notion");
+    const added = await crew.addConnector({
+      id: "notion",
+      name: "Notion",
+      transport: { type: "http", url: "https://mcp.notion.example/mcp" },
+    });
+    expect(added.id).toBe("notion");
+    const changed = await crew.updateConnector("notion", { url: "https://mcp.example.test/v2" });
+    expect(changed.transport).toEqual({ type: "http", url: "https://mcp.example.test/v2" });
+    expect(types().filter((x) => x === "station.updated")).toHaveLength(3);
+  });
+
+  it("refuses a duplicate connector, a non-http URL, and removing one that crew still use", async () => {
+    const { crew } = setup();
+    await expect(
+      crew.addConnector({
+        id: "notion",
+        name: "N",
+        transport: { type: "http", url: "https://a.test" },
+      }),
+    ).rejects.toBeInstanceOf(ConflictError);
+    await expect(crew.updateConnector("notion", { url: "ftp://x" })).rejects.toBeInstanceOf(
+      ConflictError,
+    );
+    await expect(crew.removeConnector("notion")).rejects.toThrow(/quill/);
+    await expect(crew.updateConnector("ghost", { url: "https://a.test" })).rejects.toBeInstanceOf(
+      NotFoundError,
+    );
+  });
+
+  it("removes a connector's grants from every crew member", async () => {
+    const { crew } = setup();
+    await crew.removeConnectorGrants("notion");
+    expect((await crew.agent("quill"))?.config.connectorGrants).toEqual([]);
+  });
+});
+
 describe("CrewService: before onboarding", () => {
   it("reports that there is no station yet instead of creating one implicitly", async () => {
     const { crew } = setup(false);

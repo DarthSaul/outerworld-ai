@@ -19,6 +19,8 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@modelcontextprotocol/client": "^2.2.0",
+    "@modelcontextprotocol/server": "^2.2.0",
     "@types/node": "^22.20.4",
     "@vitest/coverage-v8": "^5.0.2",
     "vitest": "^5.0.2"

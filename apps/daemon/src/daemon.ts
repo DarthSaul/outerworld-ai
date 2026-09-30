@@ -2,6 +2,7 @@ import { chmod, mkdir } from "node:fs/promises";
 import type { AddressInfo } from "node:net";
 import {
   ApiKeyService,
+  ConnectorManager,
   ConsentStore,
   CrewService,
   createFileTools,
@@ -64,8 +65,9 @@ export async function startDaemon(
   await mkdir(paths.logsDir, { recursive: true });
 
   const token = await ensureToken(paths.token);
+  const secrets = options.secrets ?? new KeychainSecretStore();
   const apiKeys = new ApiKeyService({
-    store: options.secrets ?? new KeychainSecretStore(),
+    store: secrets,
     env: options.env ?? process.env,
   });
   const db = openDatabase(paths.database);
@@ -76,6 +78,14 @@ export async function startDaemon(
   const spend = new SpendStore(db);
   const memories = new MemoryStore(db);
   const dispatches = new DispatchStore(db);
+  // The OAuth redirect needs the bound port, known only once listening (set below).
+  let boundPort = config.port;
+  const connectors = new ConnectorManager({
+    home: config.home,
+    events,
+    secrets,
+    redirectUrl: (id) => `http://127.0.0.1:${boundPort}/oauth/callback/${encodeURIComponent(id)}`,
+  });
   const runs = new RunService({
     home: config.home,
     events,
@@ -83,6 +93,7 @@ export async function startDaemon(
     consents,
     spend,
     killSwitch: new KillSwitch(db),
+    connectors,
     tools: {
       ...createFileTools({ workspacesDir: paths.workspacesDir }),
       web_fetch: createWebFetch(),
@@ -108,6 +119,7 @@ export async function startDaemon(
     server.once("error", reject);
   });
   const port = (server.address() as AddressInfo).port;
+  boundPort = port;
   const self = [`http://127.0.0.1:${port}`, `http://localhost:${port}`];
   const dev = config.devOrigin !== undefined ? [config.devOrigin] : [];
   app = createApp({
@@ -115,7 +127,12 @@ export async function startDaemon(
     allowedOrigins: [...self, ...dev],
     allowedHosts: [...self, ...dev].map((o) => new URL(o).host),
     events,
-    crew: new CrewService({ home: config.home, events }),
+    crew: new CrewService({
+      home: config.home,
+      events,
+      connectorTools: () => connectors.catalog(),
+    }),
+    connectors,
     runs,
     sessions,
     consents,
@@ -131,6 +148,9 @@ export async function startDaemon(
   // Crash semantics (brief §8): runs the last process left unfinished are surfaced, never resumed.
   const interrupted = runs.recover();
   if (interrupted.length) warn(`${interrupted.length} unfinished run(s) marked interrupted`);
+  // Reconnect connectors that already have a sign-in, in the background: a slow or unreachable
+  // server must not hold up the daemon. Their status arrives as connector.status events.
+  void connectors.start().catch((error: unknown) => warn(`connectors: ${String(error)}`));
   const url = `http://127.0.0.1:${port}`;
   log(
     `outerworld daemon ${VERSION} on ${url} (station: ${config.home}, models: ${config.modelMode})`,
@@ -141,6 +161,7 @@ export async function startDaemon(
     app,
     async close(reason) {
       events.append({ type: "station.stopped", payload: { reason } });
+      await connectors.stop();
       const closed = new Promise<void>((r) => server.close(() => r()));
       // Open SSE streams would otherwise hold the server open forever.
       if ("closeAllConnections" in server) server.closeAllConnections();

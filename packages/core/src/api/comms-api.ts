@@ -32,6 +32,18 @@ export interface SpendView {
   readonly agents: Readonly<Record<string, number>>;
 }
 
+/** Connectors (ADR-0012): the Notion preset, a URL change, and disconnecting. */
+export const AddConnectorInput = z.strictObject({ preset: z.literal("notion") });
+export const UpdateConnectorInput = z.strictObject({
+  url: z.url({ protocol: /^https?$/ }).optional(),
+  name: z.string().trim().min(1).max(80).optional(),
+});
+export const DisconnectInput = z.strictObject({ forget: z.boolean().optional() });
+
+export type AddConnectorInput = z.infer<typeof AddConnectorInput>;
+export type UpdateConnectorInput = z.infer<typeof UpdateConnectorInput>;
+export type DisconnectInput = z.infer<typeof DisconnectInput>;
+
 export type CreateSessionInput = z.infer<typeof CreateSessionInput>;
 export type UpdateSessionInput = z.infer<typeof UpdateSessionInput>;
 export type SendMessageInput = z.infer<typeof SendMessageInput>;

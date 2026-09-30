@@ -3,6 +3,7 @@ import {
   type AgentConfig,
   type AgentDocumentName,
   type AgentView,
+  type Connector,
   type ConnectorToolCatalog,
   type CreateAgentInput,
   type CreateRoomInput,
@@ -197,6 +198,73 @@ export class CrewService {
         rooms: station.rooms.filter((r) => r.id !== id),
       });
     });
+  }
+
+  addConnector(connector: Connector): Promise<Connector> {
+    return this.#serial(async () => {
+      const loaded = await this.#loadWithStation();
+      const station = loaded.station;
+      if (station.connectors.some((c) => c.id === connector.id)) {
+        throw new ConflictError(`connector "${connector.id}" is already installed`);
+      }
+      await this.#saveStation(loaded, {
+        ...station,
+        connectors: [...station.connectors, connector],
+      });
+      return connector;
+    });
+  }
+
+  updateConnector(id: string, input: { url?: string; name?: string }): Promise<Connector> {
+    return this.#serial(async () => {
+      const loaded = await this.#loadWithStation();
+      const station = loaded.station;
+      const current = station.connectors.find((c) => c.id === id);
+      if (!current) throw new NotFoundError(`no connector "${id}"`);
+      const next: Connector = {
+        ...current,
+        ...(input.name !== undefined ? { name: input.name } : {}),
+        ...(input.url !== undefined
+          ? { transport: { type: "http" as const, url: input.url } }
+          : {}),
+      };
+      await this.#saveStation(loaded, {
+        ...station,
+        connectors: station.connectors.map((c) => (c.id === id ? next : c)),
+      });
+      return next;
+    });
+  }
+
+  /** Refused while any crew member is still granted it (their agent.json would break). */
+  removeConnector(id: string): Promise<void> {
+    return this.#serial(async () => {
+      const loaded = await this.#loadWithStation();
+      const station = loaded.station;
+      if (!station.connectors.some((c) => c.id === id))
+        throw new NotFoundError(`no connector "${id}"`);
+      const users = loaded.agents
+        .filter((a) => a.config.connectorGrants.includes(id))
+        .map((a) => a.id);
+      if (users.length) {
+        throw new ConflictError(`connector "${id}" is still granted to: ${users.join(", ")}`);
+      }
+      await this.#saveStation(loaded, {
+        ...station,
+        connectors: station.connectors.filter((c) => c.id !== id),
+      });
+    });
+  }
+
+  /** Takes a connector away from every crew member who has it. */
+  async removeConnectorGrants(id: string): Promise<void> {
+    const loaded = await loadStationDir(this.#home);
+    for (const a of loaded.agents) {
+      if (!a.config.connectorGrants.includes(id)) continue;
+      await this.updateAgent(a.id, {
+        connectorGrants: a.config.connectorGrants.filter((g) => g !== id),
+      });
+    }
   }
 
   /** Runs `task` after every earlier write has settled, so read-modify-write never interleaves. */

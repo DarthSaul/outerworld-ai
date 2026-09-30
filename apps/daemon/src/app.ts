@@ -1,10 +1,11 @@
 import { readFile, realpath } from "node:fs/promises";
 import { extname, join, sep } from "node:path";
 import type { RuntimeEvent } from "@darthsaul/outerworld-ai-core";
-import type { EventStore } from "@darthsaul/outerworld-ai-runtime";
+import type { ConnectorManager, EventStore } from "@darthsaul/outerworld-ai-runtime";
 import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
 import { type CommsDeps, commsRoutes } from "./comms-routes.js";
+import { connectorRoutes, oauthCallback } from "./connector-routes.js";
 import { crewRoutes } from "./crew-routes.js";
 import { tokensMatch } from "./token.js";
 
@@ -15,6 +16,7 @@ export interface AppOptions extends CommsDeps {
   /** `host:port` values the daemon answers to; anything else is DNS rebinding. */
   readonly allowedHosts: readonly string[];
   readonly events: EventStore;
+  readonly connectors: ConnectorManager;
   readonly version: string;
   /** The built SPA (`apps/station/dist`). Absent in development, where Vite serves it. */
   readonly spaDir?: string;
@@ -55,7 +57,10 @@ export function createApp(options: AppOptions): Hono {
     if (origin !== undefined && !origins.has(origin)) {
       return c.json({ error: "forbidden origin" }, 403);
     }
-    if (c.req.header("sec-fetch-site") === "cross-site") {
+    // The OAuth callback is a top-level navigation back from the connector's sign-in page, so
+    // it is cross-site by nature; it is guarded by a one-time state instead (connector-routes).
+    const callback = new URL(c.req.url).pathname.startsWith("/oauth/callback/");
+    if (!callback && c.req.header("sec-fetch-site") === "cross-site") {
       return c.json({ error: "forbidden origin" }, 403);
     }
     await next();
@@ -122,6 +127,8 @@ export function createApp(options: AppOptions): Hono {
 
   app.route("/api", crewRoutes(options.crew));
   app.route("/api", commsRoutes(options));
+  app.route("/api", connectorRoutes({ crew: options.crew, connectors: options.connectors }));
+  app.route("/", oauthCallback(options.connectors));
 
   app.all("/api/*", (c) => c.json({ error: "not found" }, 404));
 
