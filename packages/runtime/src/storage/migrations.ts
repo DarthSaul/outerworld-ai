@@ -118,4 +118,29 @@ export const MIGRATIONS: readonly Migration[] = [
       );
     `,
   },
+  {
+    version: 4,
+    name: "dispatches, run depth",
+    sql: `
+      alter table runs add column depth integer not null default 0;
+      alter table runs add column dispatch_id text;
+      create table dispatches (
+        id text primary key,
+        lead_agent_id text not null,
+        lead_session_id text not null references sessions (id),
+        lead_run_id text not null references runs (id),
+        worker_agent_id text not null,
+        worker_session_id text not null references sessions (id),
+        worker_run_id text references runs (id),
+        task text not null,
+        inputs text,
+        status text not null check (status in ('running', 'completed', 'failed', 'cancelled', 'blocked', 'interrupted')),
+        summary text,
+        created_at text not null,
+        ended_at text
+      );
+      create index dispatches_lead on dispatches (lead_session_id, created_at);
+      create index dispatches_status on dispatches (status);
+    `,
+  },
 ];

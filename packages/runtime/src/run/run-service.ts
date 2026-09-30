@@ -38,7 +38,14 @@ export interface ToolImpl {
   readonly class: ToolClass;
   execute(
     input: unknown,
-    context: { agentId: string; sessionId: string; runId: string; signal: AbortSignal },
+    context: {
+      agentId: string;
+      sessionId: string;
+      runId: string;
+      /** 0 for a top-level run, 1 for a dispatched worker's run. */
+      depth: number;
+      signal: AbortSignal;
+    },
   ): Promise<unknown>;
 }
 
@@ -167,11 +174,47 @@ export class RunService {
   readonly #waiting = new Map<string, (decision: "approved" | "denied") => void>();
   /** Budget warnings already sent (one per cap per run, agent-day, or station-day). */
   readonly #warned = new Set<string>();
+  /** Directions queued for running runs, injected before their next model call. */
+  readonly #directions = new Map<string, string[]>();
+  readonly #settledListeners = new Set<(run: RunRecord) => void>();
+  readonly #tools: Record<string, ToolImpl>;
 
   constructor(options: RunServiceOptions) {
     this.#o = options;
     this.#slots = new Slots(options.concurrency ?? 4);
     this.#sleep = options.sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms)));
+    this.#tools = { ...(options.tools ?? {}) };
+  }
+
+  /** Adds a tool implementation after construction (the dispatch tool needs this service). */
+  registerTool(name: string, impl: ToolImpl): void {
+    this.#tools[name] = impl;
+  }
+
+  /** Called with every run once it reaches a terminal state. Returns unsubscribe. */
+  onSettled(listener: (run: RunRecord) => void): () => void {
+    this.#settledListeners.add(listener);
+    return () => this.#settledListeners.delete(listener);
+  }
+
+  /**
+   * Queues the Commander's direction for a running run (brief §7, steer). It is added to the
+   * session as a message from the Commander right before the run's next model call.
+   */
+  steer(runId: string, text: string): void {
+    const run = this.#o.sessions.getRun(runId);
+    if (!run) throw new NotFoundError(`no run "${runId}"`);
+    if (!this.#active.has(runId) || isTerminal(run.state)) {
+      throw new ConflictError("that run is not running");
+    }
+    this.#directions.set(runId, [...(this.#directions.get(runId) ?? []), text]);
+    this.#o.events.append({
+      type: "run.steered",
+      agentId: run.agentId,
+      sessionId: run.sessionId,
+      runId,
+      payload: { text },
+    });
   }
 
   /** On startup: every run a crash left unfinished becomes interrupted (never resumed). */
@@ -225,20 +268,48 @@ export class RunService {
   async send(
     sessionId: string,
     text: string,
-    trigger: RunTrigger = "user",
+    options: { trigger?: RunTrigger; depth?: number; dispatchId?: string } = {},
   ): Promise<{ runId: string }> {
+    return this.#start(sessionId, text, options);
+  }
+
+  /**
+   * Starts a run with no new message, so the agent reacts to what is already in the session
+   * (the Overseer reviewing a worker's report).
+   */
+  async continueSession(
+    sessionId: string,
+    options: { trigger: RunTrigger; depth?: number },
+  ): Promise<{ runId: string }> {
+    return this.#start(sessionId, undefined, options);
+  }
+
+  async #start(
+    sessionId: string,
+    text: string | undefined,
+    options: { trigger?: RunTrigger; depth?: number; dispatchId?: string },
+  ): Promise<{ runId: string }> {
+    const trigger = options.trigger ?? "user";
     const session = this.#session(sessionId);
     if (this.#o.killSwitch.engaged()) {
       throw new ConflictError("the kill switch is on: clear it to run anything again");
     }
     if (session.archivedAt) throw new ConflictError("this session is archived");
-    if (this.#o.sessions.runs(sessionId).some((r) => !isTerminal(r.state))) {
+    if (this.hasActiveRun(sessionId)) {
       throw new ConflictError("a run is already running in this session");
     }
     const loaded = await loadStationDir(this.#o.home);
     const model = loaded.agents.find((a) => a.id === session.agentId)?.config.model ?? "unknown";
-    const run = this.#o.sessions.createRun({ sessionId, agentId: session.agentId, trigger, model });
-    this.#o.sessions.appendMessage(sessionId, run.id, { role: "user", text });
+    const run = this.#o.sessions.createRun({
+      sessionId,
+      agentId: session.agentId,
+      trigger,
+      model,
+      ...(options.depth !== undefined ? { depth: options.depth } : {}),
+      ...(options.dispatchId !== undefined ? { dispatchId: options.dispatchId } : {}),
+    });
+    if (text !== undefined)
+      this.#o.sessions.appendMessage(sessionId, run.id, { role: "user", text });
     this.#o.events.append({
       type: "run.queued",
       agentId: session.agentId,
@@ -250,6 +321,11 @@ export class RunService {
     this.#active.set(run.id, controller);
     this.#done.set(run.id, this.#execute(run, controller));
     return { runId: run.id };
+  }
+
+  /** True while a run in this session is queued, running, or waiting for consent. */
+  hasActiveRun(sessionId: string): boolean {
+    return this.#o.sessions.runs(sessionId).some((r) => !isTerminal(r.state));
   }
 
   /** Cancels a queued or running run. A finished run is left as it is. */
@@ -322,7 +398,7 @@ export class RunService {
       const station = loaded.station;
       const model = await this.#o.models(agent.config.model);
 
-      const registry = this.#o.tools ?? {};
+      const registry = this.#tools;
       const granted = resolveGrants(agent.config, station, {});
       const offered = granted.filter((t) => registry[t.name] !== undefined);
       const tools: ToolSet = Object.fromEntries(
@@ -346,6 +422,13 @@ export class RunService {
           events.append({ type: "budget.blocked", ...ids, payload: { ...blocked } });
           return sessions.getRun(run.id) as RunRecord;
         }
+        for (const direction of this.#directions.get(run.id) ?? []) {
+          sessions.appendMessage(run.sessionId, run.id, {
+            role: "user",
+            text: `[Direction from the Commander while you work] ${direction}`,
+          });
+        }
+        this.#directions.delete(run.id);
         const history = sessions.messages(run.sessionId).map((m) => m.message);
         const prompt = assemblePrompt({
           documents: agent.documents,
@@ -378,7 +461,7 @@ export class RunService {
         }
         for (const call of result.toolCalls) {
           signal.throwIfAborted();
-          await this.#runTool(call, offered, registry, ids, agent.config, signal);
+          await this.#runTool(call, offered, registry, ids, agent.config, run.depth, signal);
         }
       }
       sessions.transition(run.id, "complete");
@@ -405,6 +488,16 @@ export class RunService {
     } finally {
       if (holding) this.#slots.release();
       this.#active.delete(run.id);
+      this.#directions.delete(run.id);
+      const settled = sessions.getRun(run.id);
+      if (settled) {
+        for (const listener of this.#settledListeners) {
+          // A listener's failure must not change how this run ended.
+          Promise.resolve()
+            .then(() => listener(settled))
+            .catch(() => undefined);
+        }
+      }
     }
   }
 
@@ -505,6 +598,7 @@ export class RunService {
     registry: Readonly<Record<string, ToolImpl>>,
     ids: { agentId: string; sessionId: string; runId: string },
     agent: AgentConfig,
+    depth: number,
     signal: AbortSignal,
   ) {
     const { events, sessions } = this.#o;
@@ -556,7 +650,7 @@ export class RunService {
       }
     }
     try {
-      const output = await impl.execute(call.input, { ...ids, signal });
+      const output = await impl.execute(call.input, { ...ids, depth, signal });
       events.append({
         type: "run.tool_result",
         ...ids,

@@ -8,6 +8,7 @@ const ctx = (agentId = "quill") => ({
   agentId,
   sessionId: "s",
   runId: "r",
+  depth: 0,
   signal: new AbortController().signal,
 });
 

@@ -87,6 +87,12 @@ decisions made, open questions.
   estimated tokens (characters / 4), so 1M-token models do not send 1M-token prompts. Whole turns
   are dropped oldest first; a tool call is never separated from its result; the turn in progress
   is always kept. Beliefs may use at most a quarter of the budget.
+- **D20 Dispatch mechanics (Phase 5).** A new worker session per dispatch (D6). The report posted
+  to the lead is the worker's last reply (≤ 4000 chars) plus the files it wrote and why it stopped
+  if it did not complete; the model sees it as labelled input. With auto review on, the lead's
+  review turn starts as soon as its session is free (after its current run if it is busy). A
+  direction (steer) is added to the worker's session as a message from the Commander right before
+  its next model call. `read_session` returns at most 20k characters, from the start.
 - **D11 Old core modules.** Ledger parsing, status schemas, StationState, health, and the demo
   timeline are Routines-specific; they are deleted in Phase 1 when the new schema lands (tests for
   them go with them; commit message says why).

@@ -7,6 +7,7 @@ import { MockLanguageModelV4, simulateReadableStream } from "ai/test";
 import { ConsentStore } from "../controls/consent-store.js";
 import { KillSwitch } from "../controls/kill-switch.js";
 import { SpendStore } from "../controls/spend-store.js";
+import { DispatchStore } from "../dispatch/dispatch-store.js";
 import { RunService, type RunServiceOptions } from "../run/run-service.js";
 import { SessionStore } from "../sessions/session-store.js";
 import { openDatabase } from "../storage/database.js";
@@ -94,6 +95,7 @@ export const setup = (model: MockLanguageModelV4, options: Partial<RunServiceOpt
   const consents = new ConsentStore(db);
   const spend = new SpendStore(db);
   const killSwitch = new KillSwitch(db);
+  const dispatches = new DispatchStore(db);
   const sleeps: number[] = [];
   const service = new RunService({
     home,
@@ -118,10 +120,34 @@ export const setup = (model: MockLanguageModelV4, options: Partial<RunServiceOpt
     consents,
     spend,
     killSwitch,
+    dispatches,
     model,
     live,
     stored,
     sleeps,
     home,
   };
+};
+
+/**
+ * One model for several agents: each call is answered from the script of the agent whose
+ * identity ("You are <Name>") is in the system prompt. Unscripted calls fail the test loudly.
+ */
+export const byAgent = (scripts: Record<string, Step[]>) => {
+  const cursors: Record<string, number> = {};
+  return new MockLanguageModelV4({
+    doStream: async (options) => {
+      const system = String(options.prompt.find((m) => m.role === "system")?.content ?? "");
+      const name = Object.keys(scripts).find((n) => system.includes(`You are ${n}`));
+      if (!name) throw new Error(`no script for this agent: ${system.slice(0, 80)}`);
+      const i = cursors[name] ?? 0;
+      cursors[name] = i + 1;
+      const step = scripts[name]?.[i];
+      if (step === undefined) throw new Error(`${name}'s script is exhausted`);
+      if (step instanceof Error) throw step;
+      return (
+        typeof step === "function" ? step(options.abortSignal as AbortSignal) : step
+      ) as never;
+    },
+  });
 };

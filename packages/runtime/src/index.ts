@@ -19,6 +19,12 @@ export {
   type CrewServiceOptions,
   NotFoundError,
 } from "./crew/crew-service.js";
+export { DispatchService } from "./dispatch/dispatch-service.js";
+export {
+  type DispatchRecord,
+  type DispatchStatus,
+  DispatchStore,
+} from "./dispatch/dispatch-store.js";
 export {
   type MemoryRecord,
   type MemoryScope,

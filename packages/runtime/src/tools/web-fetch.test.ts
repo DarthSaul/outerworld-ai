@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { createWebFetch, htmlToText, isPublicAddress } from "./web-fetch.js";
 
-const ctx = { agentId: "a", sessionId: "s", runId: "r", signal: new AbortController().signal };
+const ctx = {
+  agentId: "a",
+  sessionId: "s",
+  runId: "r",
+  depth: 0,
+  signal: new AbortController().signal,
+};
 
 type Route = { status?: number; body?: string; type?: string; location?: string };
 

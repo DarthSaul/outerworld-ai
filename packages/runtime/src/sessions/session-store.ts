@@ -29,6 +29,9 @@ export interface RunRecord {
   readonly endedAt?: string;
   readonly error?: string;
   readonly steps: number;
+  /** 0 for a run the Commander (or a schedule) started; 1 for a dispatched worker's run. */
+  readonly depth: number;
+  readonly dispatchId?: string;
 }
 
 export interface StoredMessage {
@@ -57,6 +60,7 @@ const toRun = (r: Row): RunRecord => {
     startedAt: str(r.started_at),
     endedAt: str(r.ended_at),
     error: str(r.error),
+    dispatchId: str(r.dispatch_id),
   };
   return {
     id: String(r.id),
@@ -67,6 +71,7 @@ const toRun = (r: Row): RunRecord => {
     model: String(r.model),
     createdAt: String(r.created_at),
     steps: Number(r.steps),
+    depth: Number(r.depth),
     ...Object.fromEntries(Object.entries(optional).filter(([, v]) => v !== undefined)),
   };
 };
@@ -180,6 +185,8 @@ export class SessionStore {
     agentId: string;
     trigger: RunTrigger;
     model: string;
+    depth?: number;
+    dispatchId?: string;
   }): RunRecord {
     const row = {
       id: randomUUID(),
@@ -188,11 +195,13 @@ export class SessionStore {
       state: "queued",
       trigger: input.trigger,
       model: input.model,
+      depth: input.depth ?? 0,
+      dispatch_id: input.dispatchId ?? null,
       created_at: this.#at(),
     };
     this.#db
       .prepare(
-        "insert into runs (id, session_id, agent_id, state, trigger, model, created_at) values (@id, @session_id, @agent_id, @state, @trigger, @model, @created_at)",
+        "insert into runs (id, session_id, agent_id, state, trigger, model, depth, dispatch_id, created_at) values (@id, @session_id, @agent_id, @state, @trigger, @model, @depth, @dispatch_id, @created_at)",
       )
       .run(row);
     return this.getRun(row.id) as RunRecord;
