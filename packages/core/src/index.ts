@@ -100,6 +100,26 @@ export {
   type RigAccessory,
   type RigShoulder,
 } from "./rig.js";
+// Runs: lifecycle and prompt assembly (brief §8)
+export {
+  type AssembledPrompt,
+  assemblePrompt,
+  ChatMessage,
+  estimateTokens,
+  historyBudget,
+  type PromptInput,
+  roleBriefing,
+  ToolCallRecord,
+  UNTRUSTED_DATA_NOTICE,
+} from "./run/prompt.js";
+export {
+  isTerminal,
+  nextRunState,
+  RUN_EVENTS,
+  RUN_STATES,
+  type RunEvent,
+  type RunState,
+} from "./run/run-state.js";
 // Runtime event log (brief §10)
 export {
   EVENT_TYPES,

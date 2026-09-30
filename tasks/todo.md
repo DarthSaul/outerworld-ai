@@ -77,6 +77,14 @@ decisions made, open questions.
 - **D17 Supported models (Phase 2).** `anthropic/claude-sonnet-5.5` (default),
   `anthropic/claude-opus-5.5`, `openai/gpt-5.6-terra`, `google/gemini-3.8-flash`, checked against
   OpenRouter's model list on 2026-09-29. Other ids load with a warning, not an error.
+- **D18 Deltas are ephemeral (Phase 3).** Token deltas go to live subscribers (SSE without an
+  `id`) but are not written to the event log; the final message and `run.completed` are. A client
+  that reconnects mid-run misses in-flight text but never loses the stored message (brief §10:
+  "coalesced into the final message on completion, so the log stays compact").
+- **D19 History budget (Phase 3).** A prompt gets half the model's context window, capped at 32k
+  estimated tokens (characters / 4), so 1M-token models do not send 1M-token prompts. Whole turns
+  are dropped oldest first; a tool call is never separated from its result; the turn in progress
+  is always kept. Beliefs may use at most a quarter of the budget.
 - **D11 Old core modules.** Ledger parsing, status schemas, StationState, health, and the demo
   timeline are Routines-specific; they are deleted in Phase 1 when the new schema lands (tests for
   them go with them; commit message says why).
