@@ -16,6 +16,9 @@ in the same change that was failing it. Tightening is silent; loosening is a rev
   (`foo.test.ts` with `foo.ts`) is retired with that code, not made easier; the guard allows it,
   and the commit message still names the reason (usually an ADR). Added 2026-09-29 by the owner's
   decision for the ADR-0010 archive.
+- Assertion lines in a kept test file may change but not shrink: the guard flags a file whose
+  diff removes more `expect`/`assert` lines than it adds. A changed assertion is reviewed in the
+  diff (a weaker matcher is a review finding). Added 2026-09-29 by the owner's decision.
 - No secrets in source, generated files, fixtures, or docs. Fixture webhook URLs are obviously fake
 - No hardcoded design tokens in `packages/ui` or `apps/web`: no hex, `rgb()`, `hsl()`, pixel radius,
   or `ms` literal outside the token definitions

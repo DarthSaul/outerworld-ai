@@ -144,10 +144,24 @@ const retired = (f) =>
   deletedPackages.some((dir) => f.startsWith(dir)) ||
   deleted.includes(f.replace(/\.(test|spec)(\.[cm]?[jt]sx?)$/, "$2"));
 for (const f of deleted) if (isTest(f) && !retired(f)) flag("test-deleted", f, "file deleted");
-for (const { file, text } of removed) {
-  if (isTest(file) && !deleted.includes(file) && /\b(expect|assert)\b/.test(text)) {
-    flag("assertion-removed", file, text);
+// A changed assertion (one line out, one in) is reviewed in the diff; a net loss of assertion
+// lines in a kept test file is flagged.
+const ASSERTION = /\b(expect|assert)\b/;
+const assertionBalance = new Map();
+const tally = (lines, delta) => {
+  for (const { file, text } of lines) {
+    if (!isTest(file) || deleted.includes(file) || !ASSERTION.test(text)) continue;
+    const b = assertionBalance.get(file) ?? { net: 0, sample: text };
+    b.net += delta;
+    if (delta < 0) b.sample = text;
+    assertionBalance.set(file, b);
   }
+};
+tally(removed, -1);
+tally(added, 1);
+for (const [file, { net, sample }] of assertionBalance) {
+  if (net < 0)
+    flag("assertion-removed", file, `${-net} fewer assertion line(s), e.g. ${sample.trim()}`);
 }
 
 // Threshold loosening in CONSTRAINTS.md.
