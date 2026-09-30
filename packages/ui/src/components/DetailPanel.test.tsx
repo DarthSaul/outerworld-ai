@@ -29,7 +29,7 @@ describe("DetailPanel", () => {
         new RegExp(`2 ${term("grants")}`, "i"),
       );
       expect(panel.querySelector("[data-eyebrow]")).toHaveTextContent(
-        new RegExp(`2 ${term("handoffs")}`, "i"),
+        new RegExp(`2 ${term("lanes")}`, "i"),
       );
       const proof = panel.querySelector("[data-proof-line]");
       expect(proof).toHaveTextContent("2026-09-27T14:03:00Z");
@@ -68,7 +68,7 @@ describe("DetailPanel", () => {
     it("lists handoffs and agents, and clicking one changes the selection", async () => {
       const onSelect = vi.fn();
       render(<DetailPanel station={station} state={state} selection={sel} onSelect={onSelect} />);
-      const handoffs = screen.getByRole("region", { name: byTerm("report.handoffs") });
+      const handoffs = screen.getByRole("region", { name: byTerm("report.lanes") });
       expect(within(handoffs).getAllByRole("button")).toHaveLength(2);
       const agents = screen.getByRole("region", { name: byTerm("report.agents") });
       await userEvent.click(within(agents).getByRole("button", { name: /Scribe/ }));

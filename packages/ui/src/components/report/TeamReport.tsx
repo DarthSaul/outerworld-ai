@@ -163,7 +163,7 @@ export function TeamReport({
         <TeamEmblem name={team.name} hue={team.emblem.hue} mark={team.emblem.mark} scale={4} />
         <div className="flex min-w-0 flex-col gap-(--ow-space-1)">
           <Eyebrow>
-            {term("team")} · {grants} {term("grants")} · {handoffs.length} {term("handoffs")}
+            {term("room")} · {grants} {term("grants")} · {handoffs.length} {term("lanes")}
           </Eyebrow>
           <h2 className="text-title text-ink-1">{team.name}</h2>
           <p className="text-body text-ink-2">{team.mission}</p>
@@ -198,9 +198,9 @@ export function TeamReport({
           </Region>
         </>
       ) : null}
-      <Region title={term("report.handoffs")}>
+      <Region title={term("report.lanes")}>
         {handoffs.length === 0 ? (
-          <EmptyState title={term("empty.handoffs.title")} body={term("empty.handoffs.body")} />
+          <EmptyState title={term("empty.lanes.title")} body={term("empty.lanes.body")} />
         ) : (
           <LinkList
             items={handoffs}

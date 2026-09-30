@@ -218,7 +218,7 @@ export function Gallery({
       </Section>
 
       <Section title="Empty state">
-        <EmptyState title={term("empty.handoffs.title")} body={term("empty.handoffs.body")} />
+        <EmptyState title={term("empty.lanes.title")} body={term("empty.lanes.body")} />
       </Section>
 
       <Section title="Station map · fixture · click to select">

@@ -168,7 +168,7 @@ export const StationMap = memo(function StationMap({
         <svg
           className="ow-map-svg"
           viewBox={`0 0 ${LAYOUT_SIZE} ${LAYOUT_SIZE}`}
-          aria-label={term("handoffs")}
+          aria-label={term("lanes")}
         >
           <g className="ow-overseer-links">
             {station.teams.map((t) => {
