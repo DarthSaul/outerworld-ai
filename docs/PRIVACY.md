@@ -1,38 +1,54 @@
 # Privacy: the data map
 
-What lives where, and what leaves your machine. Keep this current whenever a data flow changes.
+What lives where, and what leaves your machine. Keep this current whenever a data flow changes;
+a change that adds a network destination updates this file in the same commit.
+
+Outerworld AI v1 is a local daemon plus a browser SPA (ADR-0010). There is no Outerworld server,
+no telemetry, no analytics, and no error reporting.
 
 ## Where data lives
 
 | Data | Lives in | Committed to this repo? | Notes |
 |------|----------|-------------------------|-------|
-| The demo Station and fake ledger | `fixtures/demo-station/` | Yes | Fictional user. Every screenshot, test, and example uses it. |
-| Your Station document (`station.json`) | Your private ledger repo, at its root | Never | The generator copies it there so one path serves config and state. |
-| Personas, skills, routine prompts, team ledgers | Your private ledger repo | Never | Emitted by `outerworld generate`. |
-| Run status and run history (`status/`) | Your private ledger repo | Never | Written by your Routines. The dashboard only reads them. |
-| The Discord digest text (`status/digest.md`) | Your private ledger repo | Never | Written by the overseer Routine; posted by `scripts/post-digest.sh`. |
-| Discord webhook URL, any token or secret | The Routine's cloud environment variables | Never, anywhere | The generator has no input for it and no emitted file contains it. gitleaks runs in CI. |
-| Per-routine HTTP trigger URLs | Not stored in milestone 1 | Never | Treated as secrets when trigger wiring lands. |
-| Local workspace (`.outerworld/`) | Your machine, inside this checkout | Never (gitignored) | Local scratch such as a checked-out ledger path. `browser:verify` writes its screenshots (of the fixture) to `.outerworld/screenshots/`, and CI uploads that directory as a build artifact. |
-| Theme preference | Your browser's `localStorage` | n/a | Only per-viewer convenience; nothing else is stored in the browser. |
+| Station config: name, rooms, hallways, props, connector metadata, budgets | `$OUTERWORLD_HOME/station.json` (default `~/.outerworld/`) | Never | Human-editable. Connector entries hold names and URLs only, no tokens. |
+| Crew documents and config: `identity.md`, `purpose.md`, `standing-orders.md`, `context.md`, `agent.json` | `$OUTERWORLD_HOME/agents/<id>/` | Never | Edited in the SPA or by hand. |
+| Sessions, messages, runs, tool calls and results, dispatches, memory, schedule history, spend, events | `$OUTERWORLD_HOME/station.db` (SQLite) | Never | Tool results include web pages and Notion content your agents fetched. |
+| Files your agents write | `$OUTERWORLD_HOME/workspaces/<agent-id>/` | Never | The only place Files-prop tools can read or write. |
+| Daemon logs | `$OUTERWORLD_HOME/logs/` | Never | Secrets are redacted before anything is written. |
+| Daemon access token | `$OUTERWORLD_HOME/daemon.token`, file mode 0600 | Never | Generated on first start; lets the SPA talk to the daemon. Given to the page the daemon (or the dev server) serves. |
+| OpenRouter API key | OS keychain | Never | `OPENROUTER_API_KEY` in the environment is a development fallback. Never written to the station directory. |
+| Connector OAuth tokens and client registration (Notion) | OS keychain | Never | Refreshed by the daemon. |
+| The demo station | `fixtures/demo-station/` | Yes | A fictional station. Every test, screenshot, and example uses it. |
+| Local scratch (`.outerworld/` in this checkout) | Your machine | Never (gitignored) | `pnpm dev`'s working copy of the fixture and `browser:verify` screenshots (of the fixture), which CI uploads as a build artifact. |
+| Theme preference | Your browser's `localStorage` | n/a | A per-viewer convenience; the SPA stores nothing else in the browser. |
+
+**Secrets never** enter the station directory (other than the 0600 daemon token), the SQLite
+database, logs, events, or anything sent to the SPA. The Settings screen only learns *whether* a
+key is configured and where it came from (keychain or environment).
 
 ## What leaves the machine
 
-**From this app: nothing.** The dashboard reads a ledger repo from a local path
-(`OUTERWORLD_LEDGER_PATH`) or the bundled fixture. It makes no network requests for data. Fonts
-are self-hosted (IBM Plex via Fontsource); there is no Google Fonts or CDN request. There is no
-telemetry, no analytics, no error reporting.
+Exactly three kinds of request, all made by the daemon, all caused by your configuration or by an
+agent you created:
 
-**From your Routines:** each Routine runs in Anthropic's cloud environment, clones your private
-ledger repo, uses the connectors you enabled on it, commits status back to the ledger repo, and,
-for the overseer only, posts the digest to the Discord webhook URL found in its environment.
-Which connectors a Routine has is configured by you on the Routine itself; this app can only
-emit a checklist. See the Claude Code docs on Routines and cloud environments for network access
-levels.
+1. **Model calls to OpenRouter** (`openrouter.ai`): the assembled prompt (the agent's documents,
+   its role briefing, approved memories, recent session history, and the new input), tool
+   definitions, and tool results. OpenRouter forwards them to the model provider you picked. One
+   extra call checks your key when you save it.
+2. **Connector calls to Notion** (`mcp.notion.com`) for agents granted Notion: searches, fetches,
+   and page changes the agent requests, plus the OAuth flow when you connect.
+3. **`web_fetch` requests** to public http(s) URLs an agent with the Web prop chooses. Loopback,
+   private-network, and link-local addresses are refused.
+
+Nothing else. The SPA talks only to the daemon on `127.0.0.1`. Fonts are self-hosted. Tests and CI
+make no network calls: they use a scripted fake model and a fake MCP server; a real-network smoke
+test runs only when you set its environment variable by hand.
 
 ## Rules
 
-- Never commit a real Station, real ledger output, real usernames, real repo names, or real
-  webhook URLs to this repo. Extend the fixture instead.
+- Never commit a real station, real agent documents, real session data, real usernames, real
+  Notion IDs, API keys, or tokens to this repo. Extend the fixture instead.
 - Never add a gitleaks allowlist entry to get CI green.
-- Never add a network call to `apps/web` without updating this file and asking first.
+- Never add a network destination to the daemon or the SPA without updating this file and asking
+  first.
+- Never log, persist, emit in an event, or send to the SPA any secret.
