@@ -8,6 +8,8 @@ import {
   createRedactor,
   createRememberTool,
   createWebFetch,
+  DispatchService,
+  DispatchStore,
   EventStore,
   KeychainSecretStore,
   KillSwitch,
@@ -73,6 +75,7 @@ export async function startDaemon(
   const consents = new ConsentStore(db);
   const spend = new SpendStore(db);
   const memories = new MemoryStore(db);
+  const dispatches = new DispatchStore(db);
   const runs = new RunService({
     home: config.home,
     events,
@@ -88,6 +91,7 @@ export async function startDaemon(
     models: config.modelMode === "fake" ? scriptedModels() : openRouterModels(apiKeys),
     redact,
   });
+  new DispatchService({ home: config.home, runs, sessions, events, dispatches });
 
   const loaded = await loadStationDir(config.home);
   for (const issue of loaded.issues) warn(`${issue.level}: ${issue.path}: ${issue.message}`);
@@ -116,6 +120,7 @@ export async function startDaemon(
     sessions,
     consents,
     spend,
+    dispatches,
     apiKeys,
     modelMode: config.modelMode,
     version: VERSION,

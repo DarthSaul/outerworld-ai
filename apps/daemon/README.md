@@ -43,6 +43,8 @@ allowed `Origin` and a `Sec-Fetch-Site` other than `cross-site`. Every `/api/*` 
 | `PATCH /api/sessions/:id` | `{ title? , archived?: true }`. |
 | `POST /api/sessions/:id/messages` | `{ text }` → 202 `{ runId }`; the reply streams as events (deltas are ephemeral, D18). 409 while a run is active or the session is archived. |
 | `POST /api/runs/:id/cancel` | 202; a queued or running run becomes cancelled. |
+| `POST /api/runs/:id/steer` | `{ text }` → 202: a direction for a running run, added before its next model call. 409 if the run is not running. |
+| `GET /api/activity` | `{ runs, dispatches }`: every run in flight and every dispatch still running. Session detail also carries `dispatches` made from that session. |
 | `GET /api/consents` | Pending consent requests (write-class calls under *Ask first*). |
 | `POST /api/consents/:id` | `{ decision: "approved" \| "denied" }`; the paused run continues. 409 if already decided or expired. |
 | `GET /api/kill-switch`, `PUT /api/kill-switch` | `{ engaged }`. Engaging is persisted first, then cancels every queued, running, or waiting run; sends are 409 until cleared. |

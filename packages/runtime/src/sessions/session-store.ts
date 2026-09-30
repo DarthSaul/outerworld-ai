@@ -247,6 +247,16 @@ export class SessionStore {
     return this.getRun(id) as RunRecord;
   }
 
+  /** Every queued, running, or waiting run on the station, oldest first. */
+  activeRuns(): RunRecord[] {
+    const placeholders = UNFINISHED.map(() => "?").join(", ");
+    return (
+      this.#db
+        .prepare(`select * from runs where state in (${placeholders}) order by created_at, rowid`)
+        .all(...UNFINISHED) as Row[]
+    ).map(toRun);
+  }
+
   countStep(id: string): void {
     this.#db.prepare("update runs set steps = steps + 1 where id = ?").run(id);
   }

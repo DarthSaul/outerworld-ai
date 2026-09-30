@@ -160,6 +160,49 @@ describe("consents, kill switch, and spend", () => {
   });
 });
 
+describe("dispatch, steering, and activity", () => {
+  it("runs a dispatch end to end with the fake model and shows it on the lead's session", async () => {
+    const { call } = setup();
+    const s = await call("POST", "/agents/vesper/sessions", {});
+    await call("POST", `/sessions/${s.json.id}/messages`, {
+      text: 'use dispatch {"to":"quill","task":"Summarize the hub"}',
+    });
+    let detail: SessionDetail | undefined;
+    for (let i = 0; i < 200; i++) {
+      detail = (await call("GET", `/sessions/${s.json.id}`)).json as SessionDetail;
+      if (detail.messages.some((m) => m.message.role === "report")) break;
+      await new Promise((r) => setTimeout(r, 5));
+    }
+    expect(detail?.dispatches).toEqual([
+      expect.objectContaining({
+        workerAgentId: "quill",
+        task: "Summarize the hub",
+        status: "completed",
+      }),
+    ]);
+    const report = detail?.messages.find((m) => m.message.role === "report")?.message;
+    expect(report).toMatchObject({
+      from: "quill",
+      status: "completed",
+      text: expect.stringContaining("Summarize the hub"),
+    });
+  });
+
+  it("steers only a running run (409 otherwise, 404 unknown) and lists activity", async () => {
+    const { call } = setup();
+    expect((await call("POST", "/runs/nope/steer", { text: "x" })).status).toBe(404);
+    const s = await call("POST", "/agents/vesper/sessions", {});
+    const sent = await call("POST", `/sessions/${s.json.id}/messages`, { text: "hi" });
+    const activity = (await call("GET", "/activity")).json;
+    expect(activity.runs.map((r: { id: string }) => r.id)).toContain(sent.json.runId);
+    await untilSettled(call, s.json.id);
+    expect((await call("POST", `/runs/${sent.json.runId}/steer`, { text: "late" })).status).toBe(
+      409,
+    );
+    expect((await call("GET", "/activity")).json).toEqual({ runs: [], dispatches: [] });
+  });
+});
+
 describe("settings", () => {
   it("reports the model mode and whether a key is configured, never the key", async () => {
     const { call } = setup();

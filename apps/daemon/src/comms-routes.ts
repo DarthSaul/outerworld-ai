@@ -13,6 +13,8 @@ import {
   type ApiKeyService,
   type ConsentStore,
   type CrewService,
+  type DispatchRecord,
+  type DispatchStore,
   NotFoundError,
   type RunRecord,
   type RunService,
@@ -33,6 +35,14 @@ export interface SessionDetail {
   /** Spend for the whole session, and per run (keyed by run id). */
   readonly spend: SpendTotal;
   readonly runSpend: Readonly<Record<string, SpendTotal>>;
+  /** Work this session's agent dispatched from here, oldest first. */
+  readonly dispatches: readonly DispatchRecord[];
+}
+
+/** `GET /api/activity`: every run in flight and every dispatch still running, station-wide. */
+export interface ActivityView {
+  readonly runs: readonly RunRecord[];
+  readonly dispatches: readonly DispatchRecord[];
 }
 
 export interface CommsDeps {
@@ -41,6 +51,7 @@ export interface CommsDeps {
   readonly sessions: SessionStore;
   readonly consents: ConsentStore;
   readonly spend: SpendStore;
+  readonly dispatches: DispatchStore;
   readonly apiKeys: ApiKeyService;
   readonly modelMode: "openrouter" | "fake";
 }
@@ -82,6 +93,7 @@ export function commsRoutes(deps: CommsDeps): Hono {
       runs: runList,
       spend: deps.spend.forSession(s.id),
       runSpend: Object.fromEntries(runList.map((r) => [r.id, deps.spend.forRun(r.id)])),
+      dispatches: deps.dispatches.forLeadSession(s.id),
     };
     return c.json(detail);
   });
@@ -96,6 +108,19 @@ export function commsRoutes(deps: CommsDeps): Hono {
   app.post("/sessions/:id/messages", async (c) => {
     const { text } = await readBody(c, SendMessageInput);
     return c.json(await runs.send(c.req.param("id"), text), 202);
+  });
+
+  app.post("/runs/:id/steer", async (c) => {
+    const { text } = await readBody(c, SendMessageInput);
+    runs.steer(c.req.param("id"), text);
+    return c.body(null, 202);
+  });
+  app.get("/activity", (c) => {
+    const view: ActivityView = {
+      runs: sessions.activeRuns(),
+      dispatches: deps.dispatches.running(),
+    };
+    return c.json(view);
   });
 
   app.post("/runs/:id/cancel", async (c) => {

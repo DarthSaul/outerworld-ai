@@ -111,6 +111,17 @@ describe("SessionStore: runs", () => {
     expect(after.getRun(done.id)?.state).toBe("completed");
     expect(after.messages(sessionId)).toHaveLength(1);
     expect(after.interruptUnfinished()).toEqual([]);
+    expect(after.activeRuns()).toEqual([]);
+  });
+
+  it("lists every unfinished run on the station", () => {
+    const s = store();
+    const { id: sessionId } = s.createSession("vesper", "Chat");
+    const a = s.createRun({ sessionId, agentId: "vesper", trigger: "user", model: "m" });
+    const b = s.createRun({ sessionId, agentId: "vesper", trigger: "user", model: "m" });
+    s.transition(b.id, "start");
+    s.transition(b.id, "complete");
+    expect(s.activeRuns().map((r) => r.id)).toEqual([a.id]);
   });
 
   it("lists a session's runs, newest first", () => {
