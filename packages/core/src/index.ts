@@ -95,6 +95,34 @@ export {
   stationConfigIssues,
 } from "./config/station-config.js";
 export { type CrewMember, stationCrewIssues } from "./config/station-crew.js";
+// Station dashboard: layout, hallway routes, status words, chatter (ADR-0013)
+export { type ChatterLine, type ChatterSnapshot, chatterLines } from "./dashboard/chatter.js";
+export {
+  BRIDGE_RECT,
+  BRIDGE_SECTOR,
+  laneLabel,
+  type Point,
+  placeRooms,
+  pointAlong,
+  type Rect,
+  type RoomPlacement,
+  routeBetween,
+  routeLength,
+  sectorFor,
+  tagPoint,
+} from "./dashboard/layout.js";
+export {
+  alertCount,
+  CREW_DISPLAY_STATUSES,
+  type CrewDisplayStatus,
+  crewDisplayStatus,
+  initials,
+  isLive,
+  RUN_DISPLAY_STATUSES,
+  type RunDisplayStatus,
+  runDisplayStatus,
+  sortRuns,
+} from "./dashboard/status.js";
 // Milestone 1 map model: the ui map renders it until Phase 9 adapts it to rooms and crew.
 // Events
 export {
