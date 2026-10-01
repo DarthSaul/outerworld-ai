@@ -152,7 +152,8 @@ decisions made, open questions.
     a route is an orthogonal polyline between the nearest pair of doors.
   - AA contrast (axe serious, a CONSTRAINTS gate) required a few changes from the design:
     - `--st-text-dim` is raised from L .55 to .6, and `--st-done` from .55 to .62.
-    - The ALERT tag uses ink on light red instead of white on red.
+    - The ALERT tag uses ink on light red instead of white on red, and floorplan hallway tags
+      get a lighter text color than the wall.
     - Text never blinks; only lamps, the LED, the cursor and borders blink. Text caught at low
       opacity mid-blink fails contrast.
   - Radio lines open where their notification points (the same targets as Notifications), which
@@ -328,7 +329,7 @@ Source: `docs/design/station-dashboard/`. Dark only; sprites replace the rig; ev
 - [x] 11.9 Restyle COMMS, Crew, Agent, Memory, Notifications, Connectors, Settings, Onboarding.
 - [x] 11.10 Remove the rig, the `--ow` tokens and the Reach map components; update the `/dev`
   gallery and the package READMEs.
-- [ ] 11.11 `browser:verify` dark only (reduced motion, 375 and 1280 widths, axe).
+- [x] 11.11 `browser:verify` dark only (reduced motion, 375 and 1280 widths, axe).
 
 **CHECKPOINT 11**
 

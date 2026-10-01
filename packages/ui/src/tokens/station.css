@@ -152,6 +152,8 @@
  * reference.
  */
 [data-map-style] {
+  /* Hallway tag text; the floorplan's wall color is too dark for text (AA, D26). */
+  --st-map-lane-tag: var(--st-map-lane-auth);
   --st-map-plane-transform: none;
   --st-map-room-border-width: 2px;
   --st-map-lane-thick: 12px;
@@ -185,6 +187,7 @@
   --st-map-lane-thick: 22px;
   --st-map-lane-border: 4px;
   --st-map-lane-auth: var(--st-map-wall);
+  --st-map-lane-tag: oklch(0.75 0.05 60);
 }
 [data-map-style="polygon"] {
   --st-map-grid: oklch(0.75 0.16 145 / 0.28);

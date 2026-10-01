@@ -263,7 +263,7 @@ function Lane({
             left: pct(lane.tag[0]),
             top: pct(lane.tag[1]),
             borderColor: color,
-            color,
+            color: selected ? color : "var(--st-map-lane-tag)",
           }}
         >
           {lane.label}
