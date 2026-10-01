@@ -77,6 +77,27 @@ export {
   type UsePanOptions,
   usePan,
 } from "./components/usePan.js";
+// Station dashboard primitives (ADR-0013)
+export { Avatar, type AvatarProps, overseerAvatarProps } from "./station/Avatar.js";
+export {
+  ChoiceButton,
+  type ChoiceButtonProps,
+  Diamond,
+  OutlineButton,
+  type OutlineButtonProps,
+  tabClass,
+} from "./station/buttons.js";
+export { Panel, PanelLabel, type PanelProps } from "./station/Panel.js";
+export { SegmentBar, type SegmentBarProps } from "./station/SegmentBar.js";
+export { Sprite, type SpriteProps } from "./station/Sprite.js";
+export { StatBox, type StatBoxProps } from "./station/StatBox.js";
+export {
+  CREW_STATUS_TONE,
+  lampBlink,
+  RUN_STATUS_TONE,
+  type Tone,
+  toneVar,
+} from "./station/tone.js";
 export { RunDigestButton, type RunDigestButtonProps } from "./timeline/RunDigestButton.js";
 export { runDigestTimeline, type TimelineStep } from "./timeline/runDigestTimeline.js";
 export { type Timeline, type UseTimelineOptions, useTimeline } from "./timeline/useTimeline.js";

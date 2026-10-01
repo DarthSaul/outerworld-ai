@@ -287,13 +287,48 @@ textarea::placeholder {
 .st-blink-alert {
   --st-blink-low: 0.35;
 }
+/*
+ * Segmented bar fill: --st-seg-color in --st-seg-on segments every --st-seg-period. A bar with no
+ * proven amount (a running mission has steps, not a total) marches instead (.st-segments-march).
+ */
+.st-segments {
+  --st-seg-on: 8px;
+  --st-seg-period: 10px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--st-seg-color) 0 var(--st-seg-on),
+    transparent var(--st-seg-on) var(--st-seg-period)
+  );
+}
+.st-segments-fine {
+  --st-seg-on: 6px;
+  --st-seg-period: 8px;
+}
+.st-segments-march {
+  animation: st-march var(--st-dur-blink) linear infinite;
+}
+@keyframes st-march {
+  to {
+    background-position: var(--st-seg-period) 0;
+  }
+}
+
+/* Selection ring: a gap in --st-ring-gap, then a ring in --st-ring-color (avatars, rooms). */
+.st-ring {
+  box-shadow:
+    0 0 0 3px var(--st-ring-gap, var(--st-room)),
+    0 0 0 5px var(--st-ring-color);
+}
+
 [data-paused] .st-blink,
-[data-paused] .st-blink-border {
+[data-paused] .st-blink-border,
+[data-paused] .st-segments-march {
   animation: none;
 }
 @media (prefers-reduced-motion: reduce) {
   .st-blink,
-  .st-blink-border {
+  .st-blink-border,
+  .st-segments-march {
     animation: none;
   }
 }
