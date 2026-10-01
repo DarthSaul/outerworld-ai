@@ -1,4 +1,3 @@
-import { RigSprite } from "@darthsaul/outerworld-ai-ui";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
@@ -16,7 +15,6 @@ const queryClient = new QueryClient();
 
 createRoot(root).render(
   <StrictMode>
-    <RigSprite />
     {token ? (
       <QueryClientProvider client={queryClient}>
         <DaemonProvider token={token}>

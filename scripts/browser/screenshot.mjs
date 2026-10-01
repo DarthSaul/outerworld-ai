@@ -4,8 +4,8 @@
 // fixtures/demo-station, then for every route × width × reduced-motion combination (the app is
 // dark only, ADR-0013) captures a full-page screenshot into .outerworld/screenshots/,
 // records console errors and page errors, runs axe (WCAG 2.x A/AA; critical and serious block,
-// per CONSTRAINTS.md), and under reduced motion asserts that no running animation is longer
-// than the reduced-motion token. Exit 1 on any failure.
+// per CONSTRAINTS.md), and under reduced motion asserts that no animation runs at all (the
+// station design stops blinking, packets and marching bars). Exit 1 on any failure.
 //
 // Before the screenshots, seed.mjs gives the station a little real history through the API and the
 // fake model (a memory proposal, a finished chat, a scheduled run, a pending approval), D25.
@@ -110,11 +110,8 @@ try {
         await page.screenshot({ path: join(outDir, name), fullPage: true });
 
         const probe = await page.evaluate(() => {
-          const root = getComputedStyle(document.documentElement);
-          const raw = root.getPropertyValue("--ow-dur-reduced").trim();
-          const reduced = raw.endsWith("ms")
-            ? Number.parseFloat(raw)
-            : Number.parseFloat(raw) * 1000 || 0;
+          // The station design stops every animation under reduced motion (ADR-0013).
+          const reduced = 0;
           const anims = document.getAnimations().map((a) => {
             const t = a.effect?.getComputedTiming?.() ?? {};
             return {

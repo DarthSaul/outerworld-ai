@@ -9,7 +9,6 @@ import {
   toResult,
   versionIssues,
 } from "../schema/common.js";
-import { Rig } from "../schema/station.js";
 import { isSupportedModel } from "./models.js";
 
 /**
@@ -60,8 +59,6 @@ export const AgentConfig = z.looseObject({
   /** Connector ids from station.json; granting one grants all of its tools (ADR-0012). */
   connectorGrants: z.array(Id).default([]),
   schedules: z.array(Schedule).default([]),
-  /** Superseded by `look` (ADR-0013); still parsed until the rig is removed. */
-  rig: Rig.optional(),
   /** Index into core's CHARACTERS: the pixel character this agent appears as (ADR-0013). */
   look: z
     .number()
@@ -100,22 +97,6 @@ export function agentConfigIssues(agent: AgentConfig): Issue[] {
     }
     seen.add(id);
   });
-  if (agent.rig && agent.role !== "overseer") {
-    if (agent.rig.head === "crest") {
-      issues.push({
-        level: "error",
-        path: "rig.head",
-        message: "crest is reserved for the overseer",
-      });
-    }
-    if (agent.rig.trace === "frame") {
-      issues.push({
-        level: "error",
-        path: "rig.trace",
-        message: "frame is reserved for the overseer",
-      });
-    }
-  }
   return issues;
 }
 

@@ -7,6 +7,5 @@
   "approvalMode": "full",
   "connectorGrants": [],
   "schedules": [],
-  "rig": { "tintHue": 300, "trimHue": 40, "head": "wedge", "trace": "chevron" },
   "look": 14
 }

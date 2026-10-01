@@ -111,6 +111,8 @@
 
   /* Geometry. No border radius anywhere except the A/B glyphs, the pause pill, and the pedestal. */
   --st-gap: 14px;
+  /* The one layout breakpoint: three columns from here up. theme.css repeats it as a literal. */
+  --st-breakpoint-desktop: 720px;
   --st-radius-pill: 5px;
   --st-radius-round: 50%;
   --st-shadow-panel: 4px 4px 0 var(--st-shadow);

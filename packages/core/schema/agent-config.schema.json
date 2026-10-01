@@ -88,47 +88,6 @@
         "additionalProperties": {}
       }
     },
-    "rig": {
-      "type": "object",
-      "properties": {
-        "tintHue": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 360
-        },
-        "trimHue": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 360
-        },
-        "head": {
-          "type": "string",
-          "enum": [
-            "dome",
-            "wedge",
-            "crest"
-          ]
-        },
-        "trace": {
-          "type": "string",
-          "enum": [
-            "core",
-            "bar",
-            "chevron",
-            "split",
-            "frame",
-            "twin"
-          ]
-        }
-      },
-      "required": [
-        "tintHue",
-        "trimHue",
-        "head",
-        "trace"
-      ],
-      "additionalProperties": {}
-    },
     "look": {
       "type": "integer",
       "minimum": 0,

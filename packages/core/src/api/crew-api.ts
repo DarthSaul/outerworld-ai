@@ -3,7 +3,6 @@ import { AgentConfig, AgentRole, ApprovalMode, Schedule } from "../config/agent-
 import { Prop, type StationConfig } from "../config/station-config.js";
 import type { EffectiveTool } from "../policy/grants.js";
 import { Id, type Issue } from "../schema/common.js";
-import { Rig } from "../schema/station.js";
 
 /**
  * The HTTP contract for crew and rooms (Phase 2), shared by the daemon (validation) and the SPA
@@ -33,7 +32,6 @@ export const UpdateAgentInput = z.strictObject({
   model: z.string().min(1).optional(),
   approvalMode: ApprovalMode.optional(),
   connectorGrants: z.array(Id).optional(),
-  rig: Rig.optional(),
   look: AgentConfig.shape.look,
 });
 

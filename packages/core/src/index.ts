@@ -136,7 +136,6 @@ export {
   runDisplayStatus,
   sortRuns,
 } from "./dashboard/status.js";
-// Milestone 1 map model: the ui map renders it until Phase 9 adapts it to rooms and crew.
 // Events
 export {
   applyEvent,
@@ -147,18 +146,6 @@ export {
 // Glossary
 export { GLOSSARY_KEYS, type GlossaryKey, glossary, term, termWith } from "./glossary.js";
 export { deriveHealth, type HealthInputs } from "./health.js";
-// Layout
-export {
-  type Box,
-  type HandoffGeometry,
-  handoffGeometry,
-  LAYOUT_SIZE,
-  type Layout,
-  layoutStation,
-  overseerLinkGeometry,
-  RINGS_MAX,
-  type TeamBox,
-} from "./layout.js";
 // Ledger
 export {
   DEGRADED_AFTER_MS,
@@ -167,7 +154,6 @@ export {
   parseLedger,
   parseLedgerMarkdown,
 } from "./ledger/parse.js";
-export { mapModelFor } from "./map-model.js";
 // Notifications: a projection of the event log (brief §10)
 export {
   NOTIFICATION_EVENT_TYPES,
@@ -207,14 +193,6 @@ export {
   type ToolSource,
   type ToolSpec,
 } from "./policy/grants.js";
-// Rig
-export {
-  type DerivedRig,
-  deriveRig,
-  overseerRig,
-  type RigAccessory,
-  type RigShoulder,
-} from "./rig.js";
 // Live crew state and the station map from runtime state (Phase 9, D24)
 export {
   activityOf,
