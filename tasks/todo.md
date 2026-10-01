@@ -277,8 +277,8 @@ decisions made, open questions.
 - [x] `fixtures/demo-station` rewritten as a fictional station dir exercising all of the above; `browser:verify` green against it (seeded with real runtime history, D25).
 
 ## Phase 10 — Close v1
-- [ ] `docs/specs/v1-acceptance.md`: each brief §16 criterion with the test or scripted manual steps that demonstrate it.
-- [ ] `docs/ARCHITECTURE.md`, `docs/SCHEMA.md` from what was built; README quickstart and status.
+- [x] `docs/specs/v1-acceptance.md`: each brief §16 criterion with the test or scripted manual steps that demonstrate it.
+- [x] `docs/ARCHITECTURE.md`, `docs/SCHEMA.md` from what was built; README quickstart and status.
 
 **CHECKPOINT 10**
 

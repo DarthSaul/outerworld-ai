@@ -20,7 +20,8 @@ wins and this file gets fixed. The plan and progress are in `tasks/todo.md`.
 projection of events, never a simulation.
 
 Milestone 1 (a read-only dashboard for Claude Code Routines) is archived (ADR-0010). Its map model
-stays in core and ui until Phase 9 adapts the map (D14); its fixture is `fixtures/map-demo/`.
+stays in core and ui: the station map draws the runtime through it via core's `mapModelFor` (D14, D24),
+and its own fixture `fixtures/map-demo/` feeds the ui tests and the `/dev` gallery.
 
 ## Vocabulary rule
 
@@ -59,7 +60,7 @@ packages/runtime/  @darthsaul/outerworld-ai-runtime — agent loop, dispatcher, 
 packages/ui/       @darthsaul/outerworld-ai-ui — React components, tokens, the rigged character,
                    the station map. Knows core, never runtime.
 fixtures/demo-station/  a fictional $OUTERWORLD_HOME. All tests, dev runs, screenshots use it.
-fixtures/map-demo/      the milestone 1 map fixture, for the ui map and /dev gallery until Phase 9.
+fixtures/map-demo/      the milestone 1 map fixture, for the ui map tests and the /dev gallery.
 docs/              ARCHITECTURE.md, SCHEMA.md, PRIVACY.md, decisions/ (ADRs), specs/, design/
 ```
 

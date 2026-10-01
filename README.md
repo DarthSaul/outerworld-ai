@@ -29,21 +29,24 @@ data stays on disk except for the model, connector, and web requests your agents
 - **Notion** over its hosted MCP server; each agent is granted it or not.
 - **Schedules** while the daemon runs, **memory** you approve, **notifications**, **spend** and
   **budgets** checked before every model call, and a kill switch.
+- **Station map**: rooms, their props and crew, hallways, and the Overseer, with each crew
+  member's live state (working, waiting for your approval, stopped) drawn from runtime events.
+- **Onboarding**: on a new station, your OpenRouter key, then your Overseer, then a first chat.
 
 The full direction is [docs/specs/BRIEF-station-runtime.md](docs/specs/BRIEF-station-runtime.md).
 
 ## Status
 
-**v1 in progress** on the `runtime-pivot` branch; the plan is [tasks/todo.md](tasks/todo.md).
-Working today: crew and rooms as documents (Crew screen); chat (COMMS) with streamed replies,
-saved sessions, cancel, and several windows at once; built-in tools (web, workspace files,
-memory proposals) with approval under *Ask first*; spend per call, budgets, and a kill switch; the Overseer dispatching work to crew, watching it
-live, steering it, and reviewing the results; Notion as a granted connector; and memory the
-Commander approves before it reaches a prompt; and schedules that run a crew member's prompt
-while the daemon is up. The map, notifications feed, and onboarding come next.
+**v1 is feature-complete** on the `runtime-pivot` branch, awaiting the owner's sign-off
+(CHECKPOINT 10). Every phase in [tasks/todo.md](tasks/todo.md) is done. How each acceptance
+criterion in the brief is shown, by test or by manual steps, is in
+[docs/specs/v1-acceptance.md](docs/specs/v1-acceptance.md). How it fits together is in
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), and the data in [docs/SCHEMA.md](docs/SCHEMA.md).
+Known limits and later work are under Follow-ups in `tasks/todo.md` (for example, a run can end a
+little over its budget cap, because caps are checked before each model call).
+
 Milestone 1 (a read-only dashboard for Claude Code Routines) is archived: see ADR-0010 and
-`tasks/archive/`. Today `pnpm dev` runs the daemon and the SPA shell with a live event stream; the
-agent loop, COMMS, and the rest land phase by phase.
+`tasks/archive/`.
 
 ## Quickstart
 
