@@ -87,10 +87,45 @@ export {
   type OutlineButtonProps,
   tabClass,
 } from "./station/buttons.js";
+export { CrewRoster, type CrewRosterProps } from "./station/CrewRoster.js";
+export {
+  CrewSelect,
+  type CrewSelectAgent,
+  type CrewSelectProps,
+} from "./station/CrewSelect.js";
+export {
+  DashboardMap,
+  type DashboardMapProps,
+  type DashboardSelection,
+  grantName,
+  MAP_STYLES,
+  type MapStyle,
+  roomColor,
+} from "./station/DashboardMap.js";
+export {
+  type CommsMessage,
+  OverseerComms,
+  type OverseerCommsProps,
+  useTypewriter,
+} from "./station/OverseerComms.js";
 export { Panel, PanelLabel, type PanelProps } from "./station/Panel.js";
+export { Scanner, type ScannerProps } from "./station/Scanner.js";
 export { SegmentBar, type SegmentBarProps } from "./station/SegmentBar.js";
 export { Sprite, type SpriteProps } from "./station/Sprite.js";
 export { StatBox, type StatBoxProps } from "./station/StatBox.js";
+export {
+  CrtToggle,
+  formatTokens,
+  formatUptime,
+  RadioChatter,
+  type RadioEntry,
+  StationHeader,
+  type StationHeaderProps,
+  StationVitals,
+  type StationVitalsProps,
+  StopButton,
+  useUptime,
+} from "./station/StationChrome.js";
 export {
   CREW_STATUS_TONE,
   lampBlink,
@@ -98,6 +133,7 @@ export {
   type Tone,
   toneVar,
 } from "./station/tone.js";
+export { useAnimationClock, useReducedMotion } from "./station/useClock.js";
 export { RunDigestButton, type RunDigestButtonProps } from "./timeline/RunDigestButton.js";
 export { runDigestTimeline, type TimelineStep } from "./timeline/runDigestTimeline.js";
 export { type Timeline, type UseTimelineOptions, useTimeline } from "./timeline/useTimeline.js";

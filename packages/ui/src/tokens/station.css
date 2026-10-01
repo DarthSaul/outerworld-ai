@@ -313,6 +313,95 @@ textarea::placeholder {
   }
 }
 
+/*
+ * Station map pieces. A room sets --st-room-color; data-selected, data-linking (the room a new
+ * hallway starts from) and data-alert change its ring and border per map style.
+ */
+.st-map-room {
+  --st-room-ring: none;
+  background: var(--st-map-room-bg);
+  border: var(--st-map-room-border-width) solid var(--st-room-color);
+}
+.st-map-room[data-selected] {
+  --st-room-ring:
+    0 0 0 2px var(--st-map-bg), 0 0 0 4px var(--st-room-color), 0 0 22px var(--st-room-color);
+}
+.st-map-room[data-linking] {
+  --st-room-ring:
+    0 0 0 2px var(--st-map-bg), 0 0 0 4px var(--st-amber), 0 0 22px var(--st-room-color);
+}
+.st-map-room[data-alert] {
+  --st-blink-a: var(--st-room-color);
+  --st-blink-b: var(--st-red);
+  animation: st-blink-border var(--st-dur-blink) step-end infinite;
+}
+[data-map-style="schematic"] .st-map-room {
+  box-shadow: var(--st-room-ring), var(--st-shadow-tile);
+}
+[data-map-style="schematic"] .st-map-room[data-bridge] {
+  background: var(--st-bridge-bg);
+  border: 3px double var(--st-white);
+}
+[data-map-style="floorplan"] .st-map-room {
+  border-color: var(--st-map-wall);
+  box-shadow:
+    var(--st-room-ring),
+    inset 0 0 0 2px var(--st-room-color),
+    0 6px 0 var(--st-map-wall-shade);
+}
+[data-map-style="floorplan"] .st-map-room[data-alert] {
+  animation: none;
+}
+[data-map-style="polygon"] .st-map-room {
+  box-shadow:
+    var(--st-room-ring),
+    0 0 14px var(--st-room-color),
+    0 12px 0 -2px var(--st-map-room-lift);
+}
+.st-map-room-alert {
+  display: none;
+}
+[data-map-style="floorplan"] .st-map-room-alert {
+  display: block;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border: 4px solid var(--st-red);
+}
+
+/* Hallway segments: two parallel borders in --st-lane-color along a strip of floor. */
+.st-lane {
+  position: absolute;
+  background: var(--st-map-seg-bg);
+  cursor: pointer;
+  border: 0 solid var(--st-lane-color);
+  padding: 0;
+}
+.st-lane-h {
+  height: var(--st-map-lane-thick);
+  margin-top: calc(var(--st-map-lane-thick) / -2);
+  border-top-width: var(--st-map-lane-border);
+  border-bottom-width: var(--st-map-lane-border);
+}
+.st-lane-v {
+  width: var(--st-map-lane-thick);
+  margin-left: calc(var(--st-map-lane-thick) / -2);
+  border-left-width: var(--st-map-lane-border);
+  border-right-width: var(--st-map-lane-border);
+}
+.st-packet {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  pointer-events: none;
+  background: var(--st-packet-color);
+  box-shadow: 0 0 8px var(--st-packet-color);
+}
+.st-map-scrim-title {
+  text-shadow: var(--st-shadow-pause);
+}
+
 /* Selection ring: a gap in --st-ring-gap, then a ring in --st-ring-color (avatars, rooms). */
 .st-ring {
   box-shadow:
@@ -322,13 +411,15 @@ textarea::placeholder {
 
 [data-paused] .st-blink,
 [data-paused] .st-blink-border,
-[data-paused] .st-segments-march {
+[data-paused] .st-segments-march,
+[data-paused] .st-map-room[data-alert] {
   animation: none;
 }
 @media (prefers-reduced-motion: reduce) {
   .st-blink,
   .st-blink-border,
-  .st-segments-march {
+  .st-segments-march,
+  .st-map-room[data-alert] {
     animation: none;
   }
 }
