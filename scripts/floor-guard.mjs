@@ -77,6 +77,7 @@ const renamedAway = [];
 const pathOf = (s) => s.replace(/^[ab]\//, "");
 let file = "";
 let oldFile = "";
+let hunk = 0;
 for (const line of diff.split("\n")) {
   if (line.startsWith("--- ")) oldFile = pathOf(line.slice(4));
   else if (line.startsWith("+++ ")) {
@@ -84,10 +85,11 @@ for (const line of diff.split("\n")) {
     file = newFile === "/dev/null" ? oldFile : newFile;
     if (newFile === "/dev/null") deleted.push(file);
     else if (oldFile !== "/dev/null" && oldFile !== newFile) renamedAway.push(oldFile);
-  } else if (line.startsWith("+") && !line.startsWith("+++"))
-    added.push({ file, text: line.slice(1) });
+  } else if (line.startsWith("@@")) hunk += 1;
+  else if (line.startsWith("+") && !line.startsWith("+++"))
+    added.push({ file, text: line.slice(1), hunk });
   else if (line.startsWith("-") && !line.startsWith("---"))
-    removed.push({ file, text: line.slice(1) });
+    removed.push({ file, text: line.slice(1), hunk });
 }
 
 const findings = [];
@@ -145,17 +147,122 @@ const deletedPackages = [...deleted, ...renamedAway]
   .filter((f) => /(^|\/)package\.json$/.test(f))
   .map((f) => f.replace(/package\.json$/, ""))
   .filter((dir) => dir !== ""); // deleting the root package.json retires nothing
+// The module a relative import names: the deleted or current file it resolves to.
+const dirOf = (f) => f.replace(/[^/]*$/, "");
+const normalize = (p) => {
+  const out = [];
+  for (const part of p.split("/")) {
+    if (part === "..") out.pop();
+    else if (part !== "." && part !== "") out.push(part);
+  }
+  return out.join("/");
+};
+const SOURCE_EXT = ["", ".ts", ".tsx", ".js", ".mjs", "/index.ts", "/index.tsx"];
+const resolveImport = (from, spec) => {
+  const stem = normalize(dirOf(from) + spec).replace(/\.[cm]?js$/, "");
+  for (const ext of SOURCE_EXT) {
+    const candidate = stem + ext;
+    if (deleted.includes(candidate) || existsSync(candidate)) return candidate;
+  }
+  return null;
+};
+// Named imports from relative modules: [{ module, names }].
+const relativeImports = (text) =>
+  [...text.matchAll(/import\s+(?:type\s+)?\{([^}]*)\}\s*from\s*"(\.{1,2}\/[^"]+)"/g)].map((m) => ({
+    spec: m[2] ?? "",
+    names: (m[1] ?? "")
+      .split(",")
+      .map((n) =>
+        n
+          .replace(/\btype\b/, "")
+          .split(/\s+as\s+/)[0]
+          .trim(),
+      )
+      .filter(Boolean),
+  }));
+const exportsName = (path, name) => {
+  if (!existsSync(path)) return false;
+  const src = readFileSync(path, "utf8");
+  const declared = new RegExp(
+    `export\\s+(?:declare\\s+)?(?:const|let|function|class|type|interface|enum)\\s+${name}\\b`,
+  );
+  const listed = new RegExp(`export\\s+(?:type\\s+)?\\{[^}]*\\b${name}\\b[^}]*\\}`);
+  return declared.test(src) || listed.test(src);
+};
+// A module import is gone when the module was deleted, or it no longer exports any imported name.
+const importGone = (from, { spec, names }) => {
+  const path = resolveImport(from, spec);
+  if (path === null) return false;
+  if (deleted.includes(path)) return true;
+  return names.length > 0 && names.every((n) => !exportsName(path, n));
+};
+const isHelper = (spec) => /(^|\/)test\//.test(spec);
+const baseText = (f) => git(["show", `${mergeBase}:${f}`]) ?? "";
+// Also retired: a test whose every non-helper relative import is gone (it tested several deleted
+// modules, or symbols its kept module no longer exports).
+const importsRetired = (f) => {
+  const imports = relativeImports(baseText(f)).filter((i) => !isHelper(i.spec));
+  return imports.length > 0 && imports.every((i) => importGone(f, i));
+};
 const retired = (f) =>
   deletedPackages.some((dir) => f.startsWith(dir)) ||
-  deleted.includes(f.replace(/\.(test|spec)(\.[cm]?[jt]sx?)$/, "$2"));
+  deleted.includes(f.replace(/\.(test|spec)(\.[cm]?[jt]sx?)$/, "$2")) ||
+  importsRetired(f);
 for (const f of deleted) if (isTest(f) && !retired(f)) flag("test-deleted", f, "file deleted");
+
+// In a kept test file, a removed assertion is retired when its hunk names something retired: an
+// import its module no longer exports, a constant read from a deleted file, or a removed helper
+// built on either. Assertions removed for any other reason still count.
+const retiredNamesFor = (f) => {
+  const names = new Set();
+  for (const i of relativeImports(baseText(f))) {
+    const path = resolveImport(f, i.spec);
+    if (path === null) continue;
+    for (const n of i.names) if (deleted.includes(path) || !exportsName(path, n)) names.add(n);
+  }
+  const definitions = removed
+    .filter((l) => l.file === f)
+    .map((l) => ({ text: l.text, name: /^(?:const|let|function)\s+(\w+)/.exec(l.text)?.[1] }))
+    .filter((d) => d.name);
+  const deletedNames = deleted.map((d) => d.replace(/^.*\//, ""));
+  let grew = true;
+  while (grew) {
+    grew = false;
+    for (const d of definitions) {
+      if (names.has(d.name)) continue;
+      const refersToRetired =
+        deletedNames.some((n) => d.text.includes(`"${n}"`)) ||
+        [...names].some((n) => new RegExp(`\\b${n}\\b`).test(d.text));
+      if (refersToRetired) {
+        names.add(d.name);
+        grew = true;
+      }
+    }
+  }
+  return names;
+};
+const retiredHunks = new Map();
+const hunkRetired = (f, hunkId) => {
+  if (!retiredHunks.has(f)) {
+    const names = [...retiredNamesFor(f)];
+    const ids = new Set(
+      removed
+        .filter((l) => l.file === f && names.some((n) => new RegExp(`\\b${n}\\b`).test(l.text)))
+        .map((l) => l.hunk),
+    );
+    retiredHunks.set(f, ids);
+  }
+  return retiredHunks.get(f).has(hunkId);
+};
+
 // A changed assertion (one line out, one in) is reviewed in the diff; a net loss of assertion
 // lines in a kept test file is flagged.
 const ASSERTION = /\b(expect|assert)\b/;
 const assertionBalance = new Map();
 const tally = (lines, delta) => {
-  for (const { file, text } of lines) {
+  for (const { file, text, hunk: hunkId } of lines) {
     if (!isTest(file) || deleted.includes(file) || !ASSERTION.test(text)) continue;
+    if (delta < 0 && hunkRetired(file, hunkId)) continue;
     const b = assertionBalance.get(file) ?? { net: 0, sample: text };
     b.net += delta;
     if (delta < 0) b.sample = text;
