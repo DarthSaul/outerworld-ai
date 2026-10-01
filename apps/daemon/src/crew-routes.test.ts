@@ -48,7 +48,7 @@ describe("crew and room routes", () => {
     const view = (await res.json()) as StationView;
     expect(res.status).toBe(200);
     expect(view.station?.name).toBe("Demo Station");
-    expect(view.agents.map((a) => a.id)).toEqual(["quill", "vesper"]);
+    expect(view.agents.map((a) => a.id)).toEqual(["quill", "vesper", "wren"]);
   });
 
   it("GET /models lists the supported models", async () => {
@@ -119,11 +119,11 @@ describe("crew and room routes", () => {
 
   it("creates, updates, and deletes rooms", async () => {
     const { call } = setup();
-    const created = await call("POST", "/rooms", { name: "Research", props: [{ kind: "web" }] });
+    const created = await call("POST", "/rooms", { name: "Archive", props: [{ kind: "web" }] });
     expect(created.status).toBe(201);
-    const patched = await call("PATCH", "/rooms/research", { props: [] });
-    expect(await patched.json()).toMatchObject({ id: "research", props: [] });
-    expect((await call("DELETE", "/rooms/research")).status).toBe(204);
+    const patched = await call("PATCH", "/rooms/archive", { props: [] });
+    expect(await patched.json()).toMatchObject({ id: "archive", props: [] });
+    expect((await call("DELETE", "/rooms/archive")).status).toBe(204);
     expect((await call("DELETE", "/rooms/operations")).status).toBe(409);
     expect((await call("PATCH", "/rooms/attic", { name: "x" })).status).toBe(404);
   });

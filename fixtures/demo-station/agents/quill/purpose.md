@@ -1,1 +1,2 @@
-Keep the fictional project hub current: next steps, owners, and dates.
+Own the project hubs in Notion: keep next steps, owners, and dates current, and write a short
+briefing when asked.

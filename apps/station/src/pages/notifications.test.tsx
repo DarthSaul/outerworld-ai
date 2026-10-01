@@ -28,6 +28,15 @@ const feed: Notification[] = [
   },
   { seq: 3, at, kind: "memory", level: "action", agentId: "vesper", detail: "Likes bullets." },
   { seq: 2, at, kind: "budget_blocked", level: "alert", subject: "run", detail: "$5.10 of $5.00" },
+  {
+    seq: 1,
+    at,
+    kind: "connector",
+    level: "alert",
+    subject: "notion",
+    reason: "error",
+    detail: "fetch failed",
+  },
 ];
 
 const withFeed = (readSeq = 3) => {
@@ -47,12 +56,20 @@ describe("Notifications feed", () => {
       "run_failed",
       "memory",
       "budget_blocked",
+      "connector",
     ]);
     expect(items[0]).toHaveTextContent("Quill finished a scheduled run.");
     expect(items[1]).toHaveTextContent("A run by Quill failed: HTTP 500");
     expect(items[2]).toHaveTextContent("Vesper wants to remember: Likes bullets.");
     expect(items[3]).toHaveTextContent("The run budget stopped a run: $5.10 of $5.00.");
-    expect(items.map((li) => li.dataset.unread)).toEqual(["true", "true", "false", "false"]);
+    expect(items[4]).toHaveTextContent("Notion needs attention: fetch failed");
+    expect(items.map((li) => li.dataset.unread)).toEqual([
+      "true",
+      "true",
+      "false",
+      "false",
+      "false",
+    ]);
     expect(
       within(items[0] as HTMLElement).getByText(term("notifications.new")),
     ).toBeInTheDocument();
@@ -90,7 +107,10 @@ describe("Notifications feed", () => {
     expect(within(list).getAllByRole("listitem")).toHaveLength(2);
     await user.click(screen.getByRole("button", { name: term("notifications.older") }));
     expect(await within(list).findAllByRole("listitem")).toHaveLength(4);
+    await user.click(screen.getByRole("button", { name: term("notifications.older") }));
+    expect(await within(list).findAllByRole("listitem")).toHaveLength(5);
     expect(calls.map((c) => c.path)).toContain("/notifications?before=6");
+    expect(calls.map((c) => c.path)).toContain("/notifications?before=2");
     expect(
       screen.queryByRole("button", { name: term("notifications.older") }),
     ).not.toBeInTheDocument();

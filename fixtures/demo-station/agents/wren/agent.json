@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "name": "Wren",
+  "roomId": "research",
+  "role": "crew",
+  "model": "anthropic/claude-sonnet-5.5",
+  "approvalMode": "full",
+  "connectorGrants": [],
+  "schedules": [],
+  "rig": { "tintHue": 300, "trimHue": 40, "head": "wedge", "trace": "chevron" }
+}

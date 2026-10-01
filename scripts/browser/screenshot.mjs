@@ -7,12 +7,15 @@
 // per CONSTRAINTS.md), and under reduced motion asserts that no running animation is longer
 // than the reduced-motion token. Exit 1 on any failure.
 //
+// Before the screenshots, seed.mjs gives the station a little real history through the API and the
+// fake model (a memory proposal, a finished chat, a scheduled run, a pending approval), D25.
 // Usage: node scripts/browser/screenshot.mjs [--routes /dev,/] [--port 3300] [--keep]
 import { spawn } from "node:child_process";
 import { cpSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import AxeBuilder from "@axe-core/playwright";
 import { chromium } from "playwright";
+import { seed } from "./seed.mjs";
 
 const arg = (name, fallback) => {
   const i = process.argv.indexOf(`--${name}`);
@@ -20,7 +23,7 @@ const arg = (name, fallback) => {
 };
 const routes = arg(
   "routes",
-  "/dev,/,/crew,/crew/vesper,/comms,/memory,/settings,/notifications,/connectors",
+  "/dev,/,/crew,/crew/vesper,/crew/quill,/comms,/memory,/memory?agent=wren,/settings,/notifications,/connectors",
 ).split(",");
 const port = Number(arg("port", "3300"));
 const outDir = join(process.cwd(), ".outerworld", "screenshots");
@@ -41,6 +44,8 @@ const server = spawn(process.execPath, [join(process.cwd(), "apps", "daemon", "d
     OUTERWORLD_HOME: home,
     OUTERWORLD_PORT: String(port),
     OUTERWORLD_MODEL: "fake",
+    // A throwaway station must not read the developer's keychain (sign-ins are per user, D25).
+    OUTERWORLD_SECRETS: "memory",
   },
 });
 let serverLog = "";
@@ -72,6 +77,7 @@ const report = [];
 
 try {
   await waitForServer();
+  await seed({ port, home });
   const browser = await chromium.launch();
   for (const route of routes) {
     for (const theme of ["light", "dark"]) {

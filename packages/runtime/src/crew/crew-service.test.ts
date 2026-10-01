@@ -22,7 +22,7 @@ describe("CrewService: reading", () => {
   it("returns the station and its crew with no issues", async () => {
     const view = await setup().crew.view();
     expect(view.station?.name).toBe("Demo Station");
-    expect(view.agents.map((a) => a.id)).toEqual(["quill", "vesper"]);
+    expect(view.agents.map((a) => a.id)).toEqual(["quill", "vesper", "wren"]);
     expect(view.issues).toEqual([]);
   });
 

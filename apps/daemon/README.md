@@ -16,6 +16,7 @@ OUTERWORLD_HOME=~/.outerworld node apps/daemon/dist/main.js
 | `OUTERWORLD_HOME` | `~/.outerworld` | Station data directory (brief §9); relative paths resolve against the working directory. Created with mode 0700. |
 | `OUTERWORLD_PORT` | `4317` | Port on `127.0.0.1` (never another interface). `0` picks a free port. |
 | `OUTERWORLD_MODEL` | `openrouter` | `openrouter` uses your key (keychain, or `OPENROUTER_API_KEY` as a dev fallback); `fake` streams a scripted reply with no key and no network. `pnpm dev` on the fixture copy and `browser:verify` use `fake`. |
+| `OUTERWORLD_SECRETS` | `keychain` | `memory` keeps secrets in memory only and never reads or writes the OS keychain: for throwaway stations (`browser:verify` uses it). |
 | `OUTERWORLD_DEV_ORIGIN` | unset | Development only: the Vite dev server's loopback origin, allowed through its proxy. When set, the daemon does not serve the built SPA. |
 
 ## HTTP surface

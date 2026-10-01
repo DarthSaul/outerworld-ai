@@ -128,6 +128,14 @@ decisions made, open questions.
   running → working, waiting or failed → needs attention, done → done. Clicking a crew member
   opens their page, the Overseer opens COMMS, a connector chip opens Connectors. A rig of its own
   for "waiting for consent" is a design follow-up.
+- **D25 Demo fixture and seeded verification (Phase 9).** `fixtures/demo-station` has three rooms
+  (Command, Operations, Research), two hallways into Command, the Overseer (Vesper), the Project
+  Manager (Quill, as the template makes it) and a researcher on *Full power* with a rig of its own
+  (Wren). It is configuration only; `browser:verify` gives a fresh copy real history through the
+  API and the fake model before screenshots (`scripts/browser/seed.mjs`: a memory proposal, a
+  finished chat, a scheduled run, a pending approval), and runs with `OUTERWORLD_SECRETS=memory`
+  so a throwaway station never reads the developer's keychain. Turbo now treats `fixtures/**` as a
+  global input, so a fixture change re-runs every test instead of replaying cached passes.
 - **D11 Old core modules.** Ledger parsing, status schemas, StationState, health, and the demo
   timeline are Routines-specific; they are deleted in Phase 1 when the new schema lands (tests for
   them go with them; commit message says why).
@@ -266,7 +274,7 @@ decisions made, open questions.
 - [x] Notifications: filtered event projection (core `notificationFor`: action / alert / info, incl. a scheduled run's result), unread state persisted as one read marker in `station_state`; feed with "Show older", "Mark all as read", and an unread count in the nav.
 - [x] Settings → Budgets: view and edit `station.json` budgets (per run, per agent daily, station daily) in the SPA (`PUT /api/budgets`); defaults for new stations per D22 (owner to confirm).
 - [x] Onboarding: key → Overseer (name, tone) in Command room with dispatch, read_session, Web, Memory → first chat. Project Manager template (Operations; Notion granted, Web, Memory, Files; daily briefing schedule disabled), at onboarding or from the Crew screen. D23.
-- [ ] `fixtures/demo-station` rewritten as a fictional station dir exercising all of the above; `browser:verify` green against it.
+- [x] `fixtures/demo-station` rewritten as a fictional station dir exercising all of the above; `browser:verify` green against it (seeded with real runtime history, D25).
 
 ## Phase 10 — Close v1
 - [ ] `docs/specs/v1-acceptance.md`: each brief §16 criterion with the test or scripted manual steps that demonstrate it.
@@ -298,6 +306,11 @@ decisions made, open questions.
   (amend the brief when it lands).
 - **A rig state for "waiting for consent" (D24):** today it borrows *working* plus a note and
   the room's attention dot. Give it its own glow/pose in the design spec first, then the tokens.
+- **Keychain entries are per user, not per station (found 2026-09-30):** accounts such as
+  `mcp.notion.tokens` are shared by every station directory on the machine, so a second station
+  with a `notion` connector uses the same sign-in. Scoping them per station (e.g. by a station id
+  in the account name) would ask the owner to sign in again; owner to decide. Throwaway stations
+  can already opt out with `OUTERWORLD_SECRETS=memory`.
 - **Node engine:** establish the supported Node line. `.nvmrc` says 22 and `engines` says `>=22`,
   but local development runs Node 24, `react-router` 8 needs `>=22.22`, and `node:sqlite` is only a
   release candidate on 24.15+. Decide the pin, then align `.nvmrc`, `engines`, CI, and ADR-0011.

@@ -6,23 +6,74 @@
       "id": "command",
       "name": "Command",
       "description": "Where the Overseer takes requests and hands out work.",
-      "props": [{ "kind": "web" }, { "kind": "memory" }]
+      "props": [
+        {
+          "kind": "web"
+        },
+        {
+          "kind": "memory"
+        }
+      ]
     },
     {
       "id": "operations",
       "name": "Operations",
       "description": "Keeps projects moving: plans, briefings, and the project hub.",
-      "props": [{ "kind": "web" }, { "kind": "files" }, { "kind": "memory" }]
+      "props": [
+        {
+          "kind": "web"
+        },
+        {
+          "kind": "files"
+        },
+        {
+          "kind": "memory"
+        }
+      ]
+    },
+    {
+      "id": "research",
+      "name": "Research",
+      "description": "Reads the web and reports back with sources.",
+      "props": [
+        {
+          "kind": "web"
+        },
+        {
+          "kind": "memory"
+        }
+      ]
     }
   ],
-  "lanes": [{ "id": "operations-to-command", "from": "operations", "to": "command" }],
+  "lanes": [
+    {
+      "id": "operations-to-command",
+      "from": "operations",
+      "to": "command"
+    },
+    {
+      "id": "research-to-command",
+      "from": "research",
+      "to": "command"
+    }
+  ],
   "connectors": [
     {
       "id": "notion",
       "name": "Notion",
-      "transport": { "type": "http", "url": "https://mcp.notion.example/mcp" }
+      "transport": {
+        "type": "http",
+        "url": "https://mcp.notion.example/mcp"
+      }
     }
   ],
-  "budgets": { "perRunUsd": 5, "perAgentDailyUsd": 25, "stationDailyUsd": 50 },
-  "dispatch": { "maxDepth": 1, "autoReview": true }
+  "budgets": {
+    "perRunUsd": 5,
+    "perAgentDailyUsd": 25,
+    "stationDailyUsd": 50
+  },
+  "dispatch": {
+    "maxDepth": 1,
+    "autoReview": true
+  }
 }

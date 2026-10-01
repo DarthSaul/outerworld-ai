@@ -17,9 +17,9 @@ no telemetry, no analytics, and no error reporting.
 | Daemon logs | `$OUTERWORLD_HOME/logs/` | Never | Secrets are redacted before anything is written. |
 | Daemon access token | `$OUTERWORLD_HOME/daemon.token`, file mode 0600 | Never | Generated on first start; lets the SPA talk to the daemon. Given to the page the daemon (or the dev server) serves. |
 | OpenRouter API key | OS keychain | Never | `OPENROUTER_API_KEY` in the environment is a development fallback. Never written to the station directory. |
-| Connector OAuth tokens and client registration (Notion) | OS keychain (service `outerworld-ai`, accounts `mcp.<id>.tokens` / `mcp.<id>.client`) | Never | Refreshed by the daemon; "Disconnect and forget sign-in" deletes them. The PKCE verifier and sign-in `state` exist only in memory. |
+| Connector OAuth tokens and client registration (Notion) | OS keychain (service `outerworld-ai`, accounts `mcp.<id>.tokens` / `mcp.<id>.client`) | Never | Refreshed by the daemon; "Disconnect and forget sign-in" deletes them. The PKCE verifier and sign-in `state` exist only in memory. Keychain entries belong to your OS user, not to one station directory: every station on the machine with a connector of the same id uses the same sign-in. `OUTERWORLD_SECRETS=memory` keeps a daemon off the keychain entirely (`browser:verify` uses it). |
 | The demo station | `fixtures/demo-station/` | Yes | A fictional station. Every test, screenshot, and example uses it. |
-| Local scratch (`.outerworld/` in this checkout) | Your machine | Never (gitignored) | `pnpm dev`'s working copy of the fixture and `browser:verify` screenshots (of the fixture), which CI uploads as a build artifact. |
+| Local scratch (`.outerworld/` in this checkout) | Your machine | Never (gitignored) | `pnpm dev`'s working copy of the fixture, `pnpm dev:fresh`'s empty station, and `browser:verify`'s seeded copy and screenshots (of the fixture, with history the fake model made), which CI uploads as a build artifact. |
 | Theme preference | Your browser's `localStorage` | n/a | A per-viewer convenience; the SPA stores nothing else in the browser. |
 
 The daemon assumes a single-user machine: any local process that can reach `127.0.0.1` can load

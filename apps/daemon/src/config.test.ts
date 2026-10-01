@@ -50,6 +50,11 @@ describe("resolveConfig", () => {
     expect(() => resolveConfig({ OUTERWORLD_MODEL: "gpt" }, base)).toThrow(/OUTERWORLD_MODEL/);
   });
 
+  it("keeps secrets in memory only when asked, and accepts nothing else", () => {
+    expect(resolveConfig({ OUTERWORLD_SECRETS: "memory" }, base).secrets).toBe("memory");
+    expect(() => resolveConfig({ OUTERWORLD_SECRETS: "file" }, base)).toThrow(/OUTERWORLD_SECRETS/);
+  });
+
   it("only accepts a loopback http dev origin", () => {
     expect(() => resolveConfig({ OUTERWORLD_DEV_ORIGIN: "https://evil.example" }, base)).toThrow(
       /OUTERWORLD_DEV_ORIGIN/,

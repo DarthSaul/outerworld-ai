@@ -15,6 +15,7 @@ import {
   KeychainSecretStore,
   KillSwitch,
   loadStationDir,
+  MemorySecretStore,
   MemoryService,
   MemoryStore,
   NotificationService,
@@ -69,7 +70,9 @@ export async function startDaemon(
   await mkdir(paths.logsDir, { recursive: true });
 
   const token = await ensureToken(paths.token);
-  const secrets = options.secrets ?? new KeychainSecretStore();
+  const secrets =
+    options.secrets ??
+    (config.secrets === "memory" ? new MemorySecretStore() : new KeychainSecretStore());
   const apiKeys = new ApiKeyService({
     store: secrets,
     env: options.env ?? process.env,

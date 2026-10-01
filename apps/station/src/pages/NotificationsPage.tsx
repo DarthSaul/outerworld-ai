@@ -42,14 +42,16 @@ function Line({
   n,
   unread,
   nameOf,
+  connectorName,
 }: {
   readonly n: Notification;
   readonly unread: boolean;
   readonly nameOf: (id: string) => string;
+  readonly connectorName: (id: string) => string;
 }) {
   const text = termWith(`notification.${n.kind}`, {
     agent: n.agentId ? nameOf(n.agentId) : "",
-    subject: n.subject ?? "",
+    subject: n.kind === "connector" && n.subject ? connectorName(n.subject) : (n.subject ?? ""),
     detail: n.detail ?? n.reason ?? "",
     reason: reasonWords(n),
   });
@@ -89,6 +91,8 @@ export function NotificationsPage() {
   const feed = useNotifications();
   const markRead = useMarkRead();
   const nameOf = (id: string) => station.data?.agents.find((a) => a.id === id)?.config.name ?? id;
+  const connectorName = (id: string) =>
+    station.data?.station?.connectors.find((c) => c.id === id)?.name ?? id;
   const pending = consents.data ?? [];
   const pages = feed.data?.pages ?? [];
   const items = pages.flatMap((p) => p.items);
@@ -132,7 +136,13 @@ export function NotificationsPage() {
       ) : feed.isSuccess ? (
         <ul aria-labelledby="feed-title" className="flex flex-col gap-(--ow-space-2)">
           {items.map((n) => (
-            <Line key={n.seq} n={n} unread={n.seq > readSeq} nameOf={nameOf} />
+            <Line
+              key={n.seq}
+              n={n}
+              unread={n.seq > readSeq}
+              nameOf={nameOf}
+              connectorName={connectorName}
+            />
           ))}
         </ul>
       ) : null}

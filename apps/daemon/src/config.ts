@@ -12,6 +12,11 @@ export interface DaemonConfig {
   readonly devOrigin?: string;
   /** `openrouter` (real, needs a key) or `fake` (scripted, no network; tasks/todo.md D8). */
   readonly modelMode: "openrouter" | "fake";
+  /**
+   * `keychain` (the OS keychain, the default) or `memory` (kept in memory only, never reading or
+   * writing the keychain): for throwaway stations such as `browser:verify`'s.
+   */
+  readonly secrets?: "keychain" | "memory";
 }
 
 const LOOPBACK_ORIGIN = /^http:\/\/(localhost|127\.0\.0\.1):\d{1,5}$/;
@@ -20,7 +25,8 @@ const LOOPBACK_ORIGIN = /^http:\/\/(localhost|127\.0\.0\.1):\d{1,5}$/;
  * Daemon configuration from the environment:
  * `OUTERWORLD_HOME` (default `~/.outerworld`), `OUTERWORLD_PORT` (default 4317, 0 for any free
  * port), `OUTERWORLD_DEV_ORIGIN` (loopback http only; set by `pnpm dev`, which also drops the
- * built SPA), `OUTERWORLD_MODEL` (`openrouter`, the default, or `fake`).
+ * built SPA), `OUTERWORLD_MODEL` (`openrouter`, the default, or `fake`), `OUTERWORLD_SECRETS`
+ * (`keychain`, the default, or `memory`).
  */
 export function resolveConfig(
   env: Readonly<Record<string, string | undefined>>,
@@ -52,11 +58,17 @@ export function resolveConfig(
     throw new Error(`OUTERWORLD_MODEL must be "openrouter" or "fake", got "${modelMode}"`);
   }
 
+  const secrets = env.OUTERWORLD_SECRETS ?? "keychain";
+  if (secrets !== "keychain" && secrets !== "memory") {
+    throw new Error(`OUTERWORLD_SECRETS must be "keychain" or "memory", got "${secrets}"`);
+  }
+
   return {
     home,
     port,
     host: "127.0.0.1",
     modelMode,
+    ...(secrets === "memory" ? { secrets } : {}),
     ...(devOrigin !== undefined
       ? { devOrigin }
       : context.defaultSpaDir !== undefined
