@@ -8,6 +8,8 @@ export interface AgentCardProps {
   readonly rig: RigChoice;
   readonly derived: RigDerived;
   readonly state: RunState;
+  /** Shown in place of the run word when present, e.g. "waiting for your approval". */
+  readonly note?: string;
   readonly selected?: boolean;
   readonly dimmed?: boolean;
   readonly blinkDelayMs?: number;
@@ -25,6 +27,7 @@ export function AgentCard({
   rig,
   derived,
   state,
+  note,
   selected,
   dimmed,
   blinkDelayMs,
@@ -57,7 +60,7 @@ export function AgentCard({
       <span className="flex min-w-0 flex-col gap-(--ow-space-1)">
         <span className="text-label text-ink-1">{name}</span>
         <span className="line-clamp-2 text-caption text-ink-2">{mandate}</span>
-        <span className="font-mono text-mono text-ink-3">{state}</span>
+        <span className="font-mono text-mono text-ink-3">{note ?? state}</span>
       </span>
     </button>
   );

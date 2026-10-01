@@ -33,6 +33,11 @@ imported by core, ui, or the SPA.
 | `Clock`, `systemClock` | Time and timers; `systemClock` chains timeouts past setTimeout's 24.8-day cap. Tests pass a manual clock. |
 | `cronIssue(cron, timezone?)`, `machineTimeZone()` | croner's reason for refusing a cron or zone; the zone used when a schedule names none. |
 
+### Crew activity (Phase 9, D24)
+| Export | Description |
+|--------|-------------|
+| `crewActivity(events)` | What each crew member is doing now: the last 5000 run events folded with core's `foldCrewActivity`, as `{ [agentId]: CrewActivityEntry }`. The station map renders it. |
+
 ### Notifications (Phase 9, brief §10)
 | Export | Description |
 |--------|-------------|

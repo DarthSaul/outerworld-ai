@@ -6,6 +6,7 @@ import type {
   CreateAgentInput,
   CreateRoomInput,
   CreateScheduleInput,
+  CrewActivityEntry,
   Notification,
   OnboardInput,
   Room,
@@ -150,6 +151,8 @@ export interface DispatchRecord {
 export interface ActivityView {
   readonly runs: readonly RunRecord[];
   readonly dispatches: readonly DispatchRecord[];
+  /** What each crew member is doing now (D24); absent means idle. */
+  readonly crew: Readonly<Record<string, CrewActivityEntry>>;
 }
 export interface SpendTotal {
   readonly costUsd: number;

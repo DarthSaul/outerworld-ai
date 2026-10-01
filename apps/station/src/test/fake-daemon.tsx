@@ -4,6 +4,7 @@ import {
   type AgentDocumentName,
   type AgentView,
   type ChatMessage,
+  type CrewActivityEntry,
   type Notification,
   type RuntimeEvent,
   resolveGrants,
@@ -117,6 +118,7 @@ export function fakeApi() {
   /** Newest first, as the daemon pages them. */
   const notifications: Notification[] = [];
   const notificationState = { readSeq: 0, pageSize: 50 };
+  const crewActivity: Record<string, CrewActivityEntry> = {};
   const connectAnswer: {
     status: ConnectorItem["status"];
     authorizationUrl?: string;
@@ -398,7 +400,11 @@ export function fakeApi() {
       const runs = [...sessions.values()]
         .flatMap((e) => e.runs)
         .filter((r) => r.state === "running");
-      return { runs, dispatches: dispatches.filter((d) => d.status === "running") };
+      return {
+        runs,
+        dispatches: dispatches.filter((d) => d.status === "running"),
+        crew: crewActivity,
+      };
     }
     if (parts[0] === "runs" && parts[2] === "steer") return undefined;
     if (parts[0] === "runs" && parts[2] === "cancel") {
@@ -495,6 +501,7 @@ export function fakeApi() {
     scheduleHistory,
     notifications,
     notificationState,
+    crewActivity,
     api,
     calls,
     state,

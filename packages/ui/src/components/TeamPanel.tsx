@@ -24,6 +24,7 @@ export interface TeamPanelAgent {
   readonly rig: RigChoice;
   readonly derived: RigDerived;
   readonly state: RunState;
+  readonly note?: string;
 }
 
 export interface TeamPanelProps {

@@ -6,6 +6,7 @@
  * apps/*, so it can move into a desktop shell unchanged. Pure policy lives in core.
  */
 
+export { crewActivity } from "./activity/crew-activity.js";
 export {
   type ConsentRecord,
   type ConsentStatus,

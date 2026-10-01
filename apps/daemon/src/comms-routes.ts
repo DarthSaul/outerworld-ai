@@ -2,6 +2,7 @@ import {
   ApiKeyInput,
   ConsentDecisionInput,
   CreateSessionInput,
+  type CrewActivityEntry,
   KillSwitchInput,
   SendMessageInput,
   type SettingsView,
@@ -13,8 +14,10 @@ import {
   type ApiKeyService,
   type ConsentStore,
   type CrewService,
+  crewActivity,
   type DispatchRecord,
   type DispatchStore,
+  type EventStore,
   machineTimeZone,
   NotFoundError,
   type RunRecord,
@@ -44,6 +47,8 @@ export interface SessionDetail {
 export interface ActivityView {
   readonly runs: readonly RunRecord[];
   readonly dispatches: readonly DispatchRecord[];
+  /** What each crew member is doing now, folded from the event log (D24); absent means idle. */
+  readonly crew: Readonly<Record<string, CrewActivityEntry>>;
 }
 
 export interface CommsDeps {
@@ -55,6 +60,7 @@ export interface CommsDeps {
   readonly dispatches: DispatchStore;
   readonly apiKeys: ApiKeyService;
   readonly modelMode: "openrouter" | "fake";
+  readonly events: EventStore;
 }
 
 /**
@@ -120,6 +126,7 @@ export function commsRoutes(deps: CommsDeps): Hono {
     const view: ActivityView = {
       runs: sessions.activeRuns(),
       dispatches: deps.dispatches.running(),
+      crew: crewActivity(deps.events),
     };
     return c.json(view);
   });

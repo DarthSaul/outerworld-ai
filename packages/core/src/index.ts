@@ -109,6 +109,7 @@ export {
   parseLedger,
   parseLedgerMarkdown,
 } from "./ledger/parse.js";
+export { mapModelFor } from "./map-model.js";
 // Notifications: a projection of the event log (brief §10)
 export {
   NOTIFICATION_EVENT_TYPES,
@@ -156,6 +157,15 @@ export {
   type RigAccessory,
   type RigShoulder,
 } from "./rig.js";
+// Live crew state and the station map from runtime state (Phase 9, D24)
+export {
+  activityOf,
+  CREW_ACTIVITY_EVENT_TYPES,
+  type CrewActivity,
+  type CrewActivityEntry,
+  type CrewActivityState,
+  foldCrewActivity,
+} from "./run/crew-activity.js";
 // Runs: lifecycle and prompt assembly (brief §8)
 export {
   type AssembledPrompt,

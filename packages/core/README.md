@@ -23,6 +23,8 @@ from the zod source (regenerate with `pnpm build && node scripts/write-schemas.m
 | Export | Description |
 |--------|-------------|
 | `RuntimeEvent`, `parseRuntimeEvent(input)` | The v1 event union: envelope `{ seq, type, at, agentId?, sessionId?, runId?, payload }`, with the ids each family requires (run, dispatch, and consent events carry agent, session, and run). Payloads keep unknown fields. |
+| `foldCrewActivity(state, event)`, `activityOf(state, agentId)`, `CREW_ACTIVITY_EVENT_TYPES` | What each crew member is doing, folded from run events: `idle`, `running`, `awaiting_consent`, `done`, `failed`, `blocked` (budget or kill switch); several runs at once aggregate, waiting for consent first. |
+| `mapModelFor(config, crew, activity, asOf)` | The station map from runtime state (D24): rooms → panels, props and granted connectors → chips, hallways → handoffs, the Overseer → the core, live state from crew activity. Returns the map model `{ station, state }` the ui renders. |
 | `notificationFor(event)`, `NOTIFICATION_EVENT_TYPES`, `Notification` | The Notifications projection: `action` (consent, memory proposals), `alert` (failed, interrupted, max steps, budget stop, missed schedule, connector sign-in or error, kill switch), `info` (a scheduled run's result, a finished dispatch, a budget warning). Ids and details only; the words are glossary keys `notification.<kind>`. |
 | `EVENT_TYPES`, `EventType`, `EventOf<T>`, `NewRuntimeEvent` | Every type; one event by type; an event before the store assigns `seq` and `at`. |
 

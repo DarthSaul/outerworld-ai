@@ -21,7 +21,7 @@ import {
 } from "@darthsaul/outerworld-ai-runtime";
 import type { CommsDeps } from "../comms-routes.js";
 
-export type TestServices = CommsDeps & {
+export type TestServices = Omit<CommsDeps, "events"> & {
   connectors: ConnectorManager;
   memory: MemoryService;
   memoryStore: MemoryStore;

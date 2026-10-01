@@ -68,6 +68,8 @@ export function invalidateFor(event: RuntimeEvent, client: QueryClient): void {
     void client.invalidateQueries({ queryKey: ["activity"] });
   } else if (event.type.startsWith("consent.")) {
     void client.invalidateQueries({ queryKey: ["consents"] });
+    // A decision puts a waiting crew member back to work on the map.
+    void client.invalidateQueries({ queryKey: ["activity"] });
   } else if (event.type === "station.kill_switch") {
     void client.invalidateQueries({ queryKey: ["kill-switch"] });
   } else if (event.type.startsWith("memory.")) {

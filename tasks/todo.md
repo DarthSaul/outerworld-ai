@@ -116,6 +116,18 @@ decisions made, open questions.
   when missing. `pnpm dev` stays on the demo fixture copy; `pnpm dev:fresh` starts an empty
   station (wiped each time) so acceptance 1 can be walked through; a real first run is
   `OUTERWORLD_HOME=~/.outerworld pnpm dev` (OpenRouter, asks for the key).
+- **D24 Station map from runtime state (Phase 9).** The ui map keeps its milestone 1 model (D14);
+  core's `mapModelFor` adapts the runtime to it: rooms → panels (mission = room description),
+  props and granted connectors → chips (web and memory read, files and connectors write),
+  hallways → handoffs (never carrying in v1), the Overseer → the core at the edge (not repeated in
+  its room), other crew → cards (subtitle = approval mode). Live state is folded from run events
+  (`foldCrewActivity`; several runs at once aggregate, waiting for consent first) and mapped onto
+  existing visuals without new tokens: running → working; waiting for consent → working with the
+  note "waiting for your approval" and its room "needs attention"; failed → failed; blocked
+  (budget or kill switch) → failed with the reason and its room "stalled". The Overseer core:
+  running → working, waiting or failed → needs attention, done → done. Clicking a crew member
+  opens their page, the Overseer opens COMMS, a connector chip opens Connectors. A rig of its own
+  for "waiting for consent" is a design follow-up.
 - **D11 Old core modules.** Ledger parsing, status schemas, StationState, health, and the demo
   timeline are Routines-specific; they are deleted in Phase 1 when the new schema lands (tests for
   them go with them; commit message says why).
@@ -250,7 +262,7 @@ decisions made, open questions.
 - [x] SPA schedule editor on each crew member's page: on/off, next run in the schedule's zone, Run now, edit, remove, recent history, link to its session. Tests with a manual clock incl. DST (spring gap, autumn repeat) and missed-while-down, with and without catch-up.
 
 ## Phase 9 — Station view, notifications, onboarding, seed crew
-- [ ] ui map adapted: rooms, crew in rooms, props, hallways (rendered only), live crew state (idle, running, awaiting consent, blocked) from events only.
+- [x] ui map adapted: rooms, crew in rooms, props, hallways (rendered only), live crew state (idle, running, awaiting consent, blocked) from events only. D24.
 - [x] Notifications: filtered event projection (core `notificationFor`: action / alert / info, incl. a scheduled run's result), unread state persisted as one read marker in `station_state`; feed with "Show older", "Mark all as read", and an unread count in the nav.
 - [x] Settings → Budgets: view and edit `station.json` budgets (per run, per agent daily, station daily) in the SPA (`PUT /api/budgets`); defaults for new stations per D22 (owner to confirm).
 - [x] Onboarding: key → Overseer (name, tone) in Command room with dispatch, read_session, Web, Memory → first chat. Project Manager template (Operations; Notion granted, Web, Memory, Files; daily briefing schedule disabled), at onboarding or from the Crew screen. D23.
@@ -284,6 +296,8 @@ decisions made, open questions.
   a per-agent or per-station setting to turn auto-store off, an event that marks a belief as
   self-approved, and how this fits the brief §14 rule that nothing is remembered until approved
   (amend the brief when it lands).
+- **A rig state for "waiting for consent" (D24):** today it borrows *working* plus a note and
+  the room's attention dot. Give it its own glow/pose in the design spec first, then the tokens.
 - **Node engine:** establish the supported Node line. `.nvmrc` says 22 and `engines` says `>=22`,
   but local development runs Node 24, `react-router` 8 needs `>=22.22`, and `node:sqlite` is only a
   release candidate on 24.15+. Decide the pin, then align `.nvmrc`, `engines`, CI, and ADR-0011.

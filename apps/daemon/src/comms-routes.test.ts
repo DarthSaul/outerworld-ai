@@ -199,7 +199,11 @@ describe("dispatch, steering, and activity", () => {
     expect((await call("POST", `/runs/${sent.json.runId}/steer`, { text: "late" })).status).toBe(
       409,
     );
-    expect((await call("GET", "/activity")).json).toEqual({ runs: [], dispatches: [] });
+    expect((await call("GET", "/activity")).json).toEqual({
+      runs: [],
+      dispatches: [],
+      crew: { vesper: expect.objectContaining({ state: "done", runs: 0, sessionId: s.json.id }) },
+    });
   });
 });
 
