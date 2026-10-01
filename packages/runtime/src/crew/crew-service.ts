@@ -8,12 +8,14 @@ import {
   type Connector,
   type ConnectorToolCatalog,
   type CreateAgentInput,
+  type CreateLaneInput,
   type CreateRoomInput,
   type CreateScheduleInput,
   type CrewTemplate,
   DEFAULT_BUDGETS,
   DEFAULT_MODEL,
   type Issue,
+  type Lane,
   NOTION_PRESET,
   type OnboardInput,
   parseAgentConfig,
@@ -400,6 +402,51 @@ export class CrewService {
       await this.#saveStation(loaded, {
         ...station,
         rooms: station.rooms.filter((r) => r.id !== id),
+      });
+    });
+  }
+
+  /**
+   * Opens a hallway between two rooms (ADR-0013 #8). Config only: hallways are drawn in v1 and
+   * enforced in v2. Refused when the rooms are the same or already linked in either direction.
+   */
+  createLane(input: CreateLaneInput): Promise<Lane> {
+    return this.#serial(async () => {
+      const loaded = await this.#loadWithStation();
+      const station = loaded.station;
+      for (const end of [input.from, input.to]) {
+        if (!station.rooms.some((r) => r.id === end)) throw new NotFoundError(`no room "${end}"`);
+      }
+      if (input.from === input.to) throw new ConflictError("a hallway needs two different rooms");
+      const linked = station.lanes.find(
+        (l) =>
+          (l.from === input.from && l.to === input.to) ||
+          (l.from === input.to && l.to === input.from),
+      );
+      if (linked) throw new ConflictError(`rooms already linked by hallway "${linked.id}"`);
+      const lane: Lane = {
+        id: slugify(
+          `${input.from} to ${input.to}`,
+          station.lanes.map((l) => l.id),
+        ),
+        from: input.from,
+        to: input.to,
+        ...(input.note !== undefined ? { note: input.note } : {}),
+      };
+      await this.#saveStation(loaded, { ...station, lanes: [...station.lanes, lane] });
+      return lane;
+    });
+  }
+
+  /** Closes a hallway. */
+  deleteLane(id: string): Promise<void> {
+    return this.#serial(async () => {
+      const loaded = await this.#loadWithStation();
+      const station = loaded.station;
+      if (!station.lanes.some((l) => l.id === id)) throw new NotFoundError(`no hallway "${id}"`);
+      await this.#saveStation(loaded, {
+        ...station,
+        lanes: station.lanes.filter((l) => l.id !== id),
       });
     });
   }

@@ -51,6 +51,15 @@ export interface ActivityView {
   readonly crew: Readonly<Record<string, CrewActivityEntry>>;
 }
 
+/**
+ * `GET /api/runs?limit=`: the station's latest runs, newest first (the dashboard's missions,
+ * ADR-0013). `title` is the dispatched task for a dispatch, else the run's session title.
+ */
+export type RecentRun = RunRecord & { readonly title: string };
+
+const RECENT_RUNS_DEFAULT = 40;
+const RECENT_RUNS_MAX = 200;
+
 export interface CommsDeps {
   readonly crew: CrewService;
   readonly runs: RunService;
@@ -131,6 +140,19 @@ export function commsRoutes(deps: CommsDeps): Hono {
     return c.json(view);
   });
 
+  app.get("/runs", (c) => {
+    const raw = c.req.query("limit");
+    const limit = raw === undefined ? RECENT_RUNS_DEFAULT : Number(raw);
+    if (!Number.isInteger(limit) || limit < 1 || limit > RECENT_RUNS_MAX) {
+      return c.json({ error: `limit must be an integer from 1 to ${RECENT_RUNS_MAX}` }, 400);
+    }
+    const view: RecentRun[] = sessions.recentRuns(limit).map(({ run, sessionTitle }) => ({
+      ...run,
+      title: (run.dispatchId && deps.dispatches.get(run.dispatchId)?.task) || sessionTitle,
+    }));
+    return c.json(view);
+  });
+
   app.post("/runs/:id/cancel", async (c) => {
     await runs.cancel(c.req.param("id"));
     return c.body(null, 202);
@@ -152,10 +174,12 @@ export function commsRoutes(deps: CommsDeps): Hono {
   app.get("/spend", (c) => {
     const day = c.req.query("day") ?? utcDay(new Date());
     if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return c.json({ error: "day must be YYYY-MM-DD" }, 400);
+    const total = deps.spend.stationDayTotal(day);
     const view: SpendView = {
       day,
-      stationUsd: deps.spend.stationDay(day),
+      stationUsd: total.costUsd,
       agents: deps.spend.byAgent(day),
+      tokens: total.inputTokens + total.outputTokens,
     };
     return c.json(view);
   });

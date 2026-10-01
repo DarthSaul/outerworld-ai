@@ -247,6 +247,16 @@ export class SessionStore {
     return this.getRun(id) as RunRecord;
   }
 
+  /** The station's most recent runs, newest first, each with its session's title. */
+  recentRuns(limit: number): { run: RunRecord; sessionTitle: string }[] {
+    const rows = this.#db
+      .prepare(
+        "select runs.*, sessions.title as session_title from runs join sessions on sessions.id = runs.session_id order by runs.created_at desc, runs.rowid desc limit ?",
+      )
+      .all(limit) as (Row & { session_title: string })[];
+    return rows.map((row) => ({ run: toRun(row), sessionTitle: row.session_title }));
+  }
+
   /** Every queued, running, or waiting run on the station, oldest first. */
   activeRuns(): RunRecord[] {
     const placeholders = UNFINISHED.map(() => "?").join(", ");

@@ -79,6 +79,14 @@ export const UpdateRoomInput = z.strictObject({
   props: z.array(Prop).optional(),
 });
 
+/** `POST /api/lanes`: opens a hallway between two rooms (ADR-0013 #8); the id is made by the runtime. */
+export const CreateLaneInput = z.strictObject({
+  from: Id,
+  to: Id,
+  note: z.string().trim().min(1).max(200).optional(),
+});
+export type CreateLaneInput = z.infer<typeof CreateLaneInput>;
+
 /** `PUT /api/budgets`: each cap in USD, or `null` for no cap. Missing fields keep their value. */
 const Cap = z.number().positive().max(100_000).nullable().optional();
 export const UpdateBudgetsInput = z.strictObject({

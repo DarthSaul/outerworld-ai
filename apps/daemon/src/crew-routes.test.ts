@@ -84,6 +84,35 @@ describe("crew and room routes", () => {
     expect((await call("PATCH", "/agents/quill", { look: 24 })).status).toBe(400);
   });
 
+  it("POST /lanes opens a hallway (201) and DELETE /lanes/:id closes it (204), each logged", async () => {
+    const { call, events } = setup();
+    const created = await call("POST", "/lanes", {
+      from: "research",
+      to: "operations",
+      note: "Findings for the project hub",
+    });
+    expect(created.status).toBe(201);
+    expect(await created.json()).toEqual({
+      id: "research-to-operations",
+      from: "research",
+      to: "operations",
+      note: "Findings for the project hub",
+    });
+    const view = (await (await call("GET", "/station")).json()) as StationView;
+    expect(view.station?.lanes.map((l) => l.id)).toContain("research-to-operations");
+    expect((await call("DELETE", "/lanes/research-to-operations")).status).toBe(204);
+    expect(events.since(0).map((e) => e.type)).toEqual(["station.updated", "station.updated"]);
+  });
+
+  it("refuses a hallway to the same room (409), a second one between linked rooms (409), unknown rooms and lanes (404)", async () => {
+    const { call } = setup();
+    expect((await call("POST", "/lanes", { from: "research", to: "research" })).status).toBe(409);
+    expect((await call("POST", "/lanes", { from: "command", to: "research" })).status).toBe(409);
+    expect((await call("POST", "/lanes", { from: "research", to: "nowhere" })).status).toBe(404);
+    expect((await call("DELETE", "/lanes/nowhere")).status).toBe(404);
+    expect((await call("POST", "/lanes", { from: "research" })).status).toBe(400);
+  });
+
   it("PUT /agents/:id/documents/:name writes a document; unknown names are 404", async () => {
     const { call } = setup();
     const res = await call("PUT", "/agents/quill/documents/context", { text: "New context.\n" });
