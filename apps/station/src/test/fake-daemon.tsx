@@ -74,6 +74,8 @@ const emptyDocs = (): Record<AgentDocumentName, string> =>
  */
 export function fakeApi() {
   const state = {
+    /** True for a station with no station.json yet (onboarding). */
+    fresh: false,
     station: station(),
     agents: new Map<string, { config: AgentConfig; documents: Record<AgentDocumentName, string> }>([
       [
@@ -142,12 +144,36 @@ export function fakeApi() {
     const parts = path.split("/").filter(Boolean);
     const b = (body ?? {}) as Record<string, unknown>;
     if (method === "GET" && path === "/station") {
-      const v: StationView = {
-        station: state.station,
-        agents: [...state.agents].map(([id, a]) => ({ id, config: a.config })),
-        issues: [],
-      };
+      const v: StationView = state.fresh
+        ? {
+            agents: [],
+            issues: [{ level: "error", path: "station.json", message: "missing" }],
+          }
+        : {
+            station: state.station,
+            agents: [...state.agents].map(([id, a]) => ({ id, config: a.config })),
+            issues: [],
+          };
       return v;
+    }
+    if (path === "/onboarding") {
+      if (!state.fresh) throw new ApiError(409, "this station is already set up");
+      state.fresh = false;
+      const id = slugify(String(b.overseerName), [...state.agents.keys()]);
+      state.agents.set(id, {
+        config: agent({ name: String(b.overseerName), role: "overseer" }),
+        documents: { ...emptyDocs(), identity: `# ${b.overseerName}\n` },
+      });
+      return view(id);
+    }
+    if (path === "/templates/project-manager") {
+      const name = String(b.name ?? "Project Manager");
+      const id = slugify(name, [...state.agents.keys()]);
+      state.agents.set(id, {
+        config: agent({ name, roomId: "operations", connectorGrants: ["notion"] }),
+        documents: emptyDocs(),
+      });
+      return view(id);
     }
     if (method === "GET" && path === "/models") return SUPPORTED_MODELS;
     if (path === "/settings") return settings;

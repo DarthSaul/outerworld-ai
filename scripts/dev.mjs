@@ -5,20 +5,27 @@
 // - Builds the daemon's and the SPA's workspace dependencies once, then keeps them rebuilt with
 //   `turbo watch`; the daemon restarts under `node --watch`; Vite serves the SPA with HMR and
 //   proxies /api to the daemon.
+// - `--fresh` (pnpm dev:fresh): an empty station at .outerworld/fresh-home/, wiped each time, so
+//   onboarding runs from the start (D23).
 // Usage: pnpm dev   (OUTERWORLD_HOME=~/.outerworld pnpm dev for a real station;
-//        OUTERWORLD_MODEL=openrouter pnpm dev to chat for real on the fixture copy)
+//        OUTERWORLD_MODEL=openrouter pnpm dev to chat for real on the fixture copy;
+//        pnpm dev:fresh to try onboarding)
 import { spawn, spawnSync } from "node:child_process";
-import { cpSync, existsSync } from "node:fs";
+import { cpSync, existsSync, rmSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
 const port = process.env.OUTERWORLD_PORT ?? "4317";
 const devOrigin = "http://localhost:5173";
+const fresh = process.argv.includes("--fresh");
 const home = process.env.OUTERWORLD_HOME
   ? resolve(process.env.OUTERWORLD_HOME)
-  : join(root, ".outerworld", "dev-home");
+  : join(root, ".outerworld", fresh ? "fresh-home" : "dev-home");
 
-if (!process.env.OUTERWORLD_HOME && !existsSync(home)) {
+if (fresh && !process.env.OUTERWORLD_HOME) {
+  rmSync(home, { recursive: true, force: true });
+  console.log(`dev: starting an empty station at ${home} (onboarding)`);
+} else if (!process.env.OUTERWORLD_HOME && !existsSync(home)) {
   cpSync(join(root, "fixtures", "demo-station"), home, { recursive: true });
   console.log(`dev: copied fixtures/demo-station to ${home}`);
 }

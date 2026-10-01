@@ -135,6 +135,7 @@ or traced. `rig/rig-parts-v0.svg` is the proportion target for the hand-drawn ri
 ```
 pnpm install
 pnpm dev            # daemon + Vite (http://localhost:5173) on .outerworld/dev-home, a copy of the fixture
+pnpm dev:fresh      # the same on an empty station, wiped each time: onboarding from the start
 OUTERWORLD_HOME=~/.outerworld pnpm dev   # a real station directory
 pnpm build          # turbo build across packages
 pnpm test           # vitest across packages; coverage thresholds in core and runtime

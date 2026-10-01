@@ -7,6 +7,7 @@ import type {
   CreateRoomInput,
   CreateScheduleInput,
   Notification,
+  OnboardInput,
   Room,
   RunState,
   SettingsView,
@@ -506,5 +507,19 @@ export function useMarkRead() {
   return useMutation({
     mutationFn: (seq: number) =>
       api.send<{ readSeq: number; unread: number }>("POST", "/notifications/read", { seq }),
+  });
+}
+
+export function useOnboard() {
+  const { api } = useDaemon();
+  return useMutation({
+    mutationFn: (input: OnboardInput) => api.send<AgentView>("POST", "/onboarding", input),
+  });
+}
+
+export function useAddProjectManager() {
+  const { api } = useDaemon();
+  return useMutation({
+    mutationFn: () => api.send<AgentView>("POST", "/templates/project-manager", {}),
   });
 }

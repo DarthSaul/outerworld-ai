@@ -343,3 +343,76 @@ describe("CrewService: budgets", () => {
     expect(types()).toEqual(["station.updated"]);
   });
 });
+
+describe("CrewService: onboarding and templates", () => {
+  it("sets up an empty station with the Command room, default budgets, and the Overseer", async () => {
+    const { crew, types, home } = setup(false);
+    const overseer = await crew.onboard({ overseerName: "Lodestar", tone: "warm" });
+    expect(overseer.id).toBe("lodestar");
+    expect(overseer.config).toMatchObject({
+      role: "overseer",
+      roomId: "command",
+      approvalMode: "ask",
+      model: "anthropic/claude-sonnet-5.5",
+    });
+    expect(overseer.documents.identity).toMatch(/You are Lodestar, the Overseer.*warm/s);
+    expect(overseer.tools.map((t) => t.name)).toEqual([
+      "dispatch",
+      "read_session",
+      "web_fetch",
+      "remember",
+    ]);
+    const view = await crew.view();
+    expect(view.station).toMatchObject({
+      name: "My Station",
+      rooms: [expect.objectContaining({ id: "command" })],
+      budgets: { perRunUsd: 5, perAgentDailyUsd: 25, stationDailyUsd: 50 },
+    });
+    expect(view.issues).toEqual([]);
+    expect(types()).toEqual(["station.updated", "agent.updated:lodestar"]);
+    expect(existsSync(join(home, "agents", "lodestar", "context.md"))).toBe(false);
+    await expect(crew.onboard({ overseerName: "Again", tone: "calm" })).rejects.toBeInstanceOf(
+      ConflictError,
+    );
+  });
+
+  it("adds a Project Manager with Operations, a hallway, Notion, and a disabled briefing", async () => {
+    const { crew } = setup(false);
+    await crew.onboard({ overseerName: "Lodestar", tone: "calm", stationName: "Home Base" });
+    const pm = await crew.addFromTemplate("project-manager", {});
+    expect(pm.id).toBe("project-manager");
+    expect(pm.config).toMatchObject({
+      name: "Project Manager",
+      roomId: "operations",
+      connectorGrants: ["notion"],
+      schedules: [{ id: "daily-briefing", cron: "0 8 * * 1-5", enabled: false, catchUp: false }],
+    });
+    expect(pm.config.schedules[0]?.timezone).toBeUndefined();
+    expect(pm.tools.map((t) => t.name).sort()).toEqual([
+      "list_files",
+      "read_file",
+      "remember",
+      "web_fetch",
+      "write_file",
+    ]);
+    const station = (await crew.view()).station;
+    expect(station?.name).toBe("Home Base");
+    expect(station?.rooms.map((r) => r.id)).toEqual(["command", "operations"]);
+    expect(station?.lanes).toEqual([
+      { id: "operations-to-command", from: "operations", to: "command" },
+    ]);
+    expect(station?.connectors.map((c) => c.id)).toEqual(["notion"]);
+    const second = await crew.addFromTemplate("project-manager", { name: "Ledger" });
+    expect(second.id).toBe("ledger");
+    expect((await crew.view()).station?.lanes).toHaveLength(1);
+  });
+
+  it("needs a station before a template, and knows only its templates", async () => {
+    await expect(setup(false).crew.addFromTemplate("project-manager", {})).rejects.toBeInstanceOf(
+      ConflictError,
+    );
+    await expect(
+      setup().crew.addFromTemplate("pilot" as "project-manager", {}),
+    ).rejects.toBeInstanceOf(NotFoundError);
+  });
+});

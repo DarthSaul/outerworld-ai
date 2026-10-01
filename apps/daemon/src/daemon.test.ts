@@ -114,6 +114,46 @@ describe("startDaemon", () => {
     expect(warnings.join("\n")).toMatch(/station\.json: missing/);
   });
 
+  it("onboards a fresh home over HTTP and the new Overseer answers in COMMS", async () => {
+    const h = home();
+    const daemon = await startDaemon(
+      { home: h, port: 0, host: "127.0.0.1", modelMode: "fake" },
+      { quiet: true, warn: () => {}, secrets: new MemorySecretStore(), env: {} },
+    );
+    try {
+      const token = readFileSync(join(h, "daemon.token"), "utf8").trim();
+      const call = async (method: string, path: string, body?: unknown) => {
+        const res = await fetch(`${daemon.url}/api${path}`, {
+          method,
+          headers: {
+            authorization: `Bearer ${token}`,
+            ...(body !== undefined ? { "content-type": "application/json" } : {}),
+          },
+          ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+        });
+        return { status: res.status, json: (await res.json()) as unknown };
+      };
+      type Detail = { runs: { state: string }[]; messages: { message: { role: string } }[] };
+      expect((await call("GET", "/station")).json).not.toHaveProperty("station");
+      const overseer = await call("POST", "/onboarding", {
+        overseerName: "Meridian",
+        tone: "brisk",
+      });
+      expect(overseer.status).toBe(201);
+      const session = (await call("POST", "/agents/meridian/sessions", {})).json as { id: string };
+      await call("POST", `/sessions/${session.id}/messages`, { text: "Hello." });
+      let detail = (await call("GET", `/sessions/${session.id}`)).json as Detail;
+      for (let i = 0; i < 200 && detail.runs[0]?.state !== "completed"; i++) {
+        await new Promise((r) => setTimeout(r, 10));
+        detail = (await call("GET", `/sessions/${session.id}`)).json as Detail;
+      }
+      expect(detail.runs[0]?.state).toBe("completed");
+      expect(detail.messages.at(-1)?.message.role).toBe("assistant");
+    } finally {
+      await daemon.close("shutdown");
+    }
+  });
+
   it("answers to the Vite dev server's host and origin when a dev origin is set", async () => {
     const h = home();
     const daemon = await startDaemon(

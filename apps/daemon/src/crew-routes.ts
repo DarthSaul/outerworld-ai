@@ -2,8 +2,11 @@ import {
   AgentDocumentName,
   CreateAgentInput,
   CreateRoomInput,
+  CrewTemplate,
   DocumentInput,
+  OnboardInput,
   SUPPORTED_MODELS,
+  TemplateInput,
   UpdateAgentInput,
   UpdateBudgetsInput,
   UpdateRoomInput,
@@ -54,6 +57,17 @@ export function crewRoutes(crew: CrewService): Hono {
   app.delete("/rooms/:id", async (c) => {
     await crew.deleteRoom(c.req.param("id"));
     return c.body(null, 204);
+  });
+
+  app.post("/onboarding", async (c) =>
+    c.json(await crew.onboard(await readBody(c, OnboardInput)), 201),
+  );
+  app.post("/templates/:template", async (c) => {
+    const template = CrewTemplate.safeParse(c.req.param("template"));
+    if (!template.success)
+      return c.json({ error: `no template "${c.req.param("template")}"` }, 404);
+    const body = (await c.req.text()).trim() ? await readBody(c, TemplateInput) : {};
+    return c.json(await crew.addFromTemplate(template.data, body), 201);
   });
 
   app.put("/budgets", async (c) =>

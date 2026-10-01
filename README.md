@@ -65,7 +65,10 @@ OUTERWORLD_MODEL=openrouter pnpm dev   # then Settings → paste your OpenRouter
 ```
 
 The key is checked with OpenRouter and stored in your OS keychain, never on disk or in the
-browser. `OUTERWORLD_HOME=~/.outerworld pnpm dev` runs your own station directory instead.
+browser. `OUTERWORLD_HOME=~/.outerworld pnpm dev` runs your own station directory instead; on a
+new directory, onboarding asks for the key, creates your Overseer, and opens a first chat.
+`pnpm dev:fresh` walks through the same onboarding on an empty throwaway station with the fake
+model.
 
 Other commands:
 

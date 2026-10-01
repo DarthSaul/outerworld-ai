@@ -87,7 +87,31 @@ export const UpdateBudgetsInput = z.strictObject({
   stationDailyUsd: Cap,
 });
 
+/** Overseer tones offered at onboarding; the runtime turns each into a line of its identity. */
+export const OVERSEER_TONES = ["calm", "warm", "brisk"] as const;
+export const OverseerTone = z.enum(OVERSEER_TONES);
+
+/** `POST /api/onboarding`: creates station.json and the Overseer on an empty station. */
+export const OnboardInput = z.strictObject({
+  stationName: z.string().trim().min(1).max(80).optional(),
+  overseerName: z.string().trim().min(1).max(80),
+  tone: OverseerTone,
+});
+
+/** Crew templates (brief §17). */
+export const CREW_TEMPLATES = ["project-manager"] as const;
+export const CrewTemplate = z.enum(CREW_TEMPLATES);
+
+/** `POST /api/templates/:template`: adds a crew member from a template, with a name of your own. */
+export const TemplateInput = z.strictObject({
+  name: z.string().trim().min(1).max(80).optional(),
+});
+
 export type CreateAgentInput = z.infer<typeof CreateAgentInput>;
+export type OverseerTone = z.infer<typeof OverseerTone>;
+export type OnboardInput = z.infer<typeof OnboardInput>;
+export type CrewTemplate = z.infer<typeof CrewTemplate>;
+export type TemplateInput = z.infer<typeof TemplateInput>;
 export type UpdateBudgetsInput = z.infer<typeof UpdateBudgetsInput>;
 export type UpdateAgentInput = z.infer<typeof UpdateAgentInput>;
 export type DocumentInput = z.infer<typeof DocumentInput>;

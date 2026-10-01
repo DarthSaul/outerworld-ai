@@ -5,7 +5,9 @@ import {
   CreateRoomInput,
   CreateScheduleInput,
   DocumentInput,
+  OnboardInput,
   slugify,
+  TemplateInput,
   UpdateAgentInput,
   UpdateBudgetsInput,
   UpdateRoomInput,
@@ -94,5 +96,16 @@ describe("crew API inputs", () => {
     expect(UpdateBudgetsInput.safeParse({ perRunUsd: 0 }).success).toBe(false);
     expect(UpdateBudgetsInput.safeParse({ perRunUsd: -1 }).success).toBe(false);
     expect(UpdateBudgetsInput.safeParse({ monthlyUsd: 10 }).success).toBe(false);
+  });
+
+  it("onboards with an Overseer name and one of the offered tones", () => {
+    expect(OnboardInput.parse({ overseerName: " Vesper ", tone: "calm" })).toEqual({
+      overseerName: "Vesper",
+      tone: "calm",
+    });
+    expect(OnboardInput.safeParse({ overseerName: "V", tone: "sarcastic" }).success).toBe(false);
+    expect(OnboardInput.safeParse({ tone: "calm" }).success).toBe(false);
+    expect(TemplateInput.parse({})).toEqual({});
+    expect(TemplateInput.safeParse({ room: "x" }).success).toBe(false);
   });
 });

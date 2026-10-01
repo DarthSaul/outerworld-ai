@@ -5,6 +5,7 @@ import { Link, useNavigate } from "react-router";
 import { ErrorNote } from "../components/ErrorNote.js";
 import { formatUsd } from "../components/format.js";
 import {
+  useAddProjectManager,
   useCreateAgent,
   useCreateRoom,
   useDeleteRoom,
@@ -117,6 +118,7 @@ export function CrewPage() {
   const station = useStationView();
   const createAgent = useCreateAgent();
   const createRoom = useCreateRoom();
+  const addPm = useAddProjectManager();
   const navigate = useNavigate();
   const [agentName, setAgentName] = useState("");
   const [agentRoom, setAgentRoom] = useState("");
@@ -203,6 +205,19 @@ export function CrewPage() {
         </button>
         <ErrorNote error={createAgent.error} />
       </form>
+      <div className="flex flex-wrap items-center gap-(--ow-space-2)">
+        <button
+          type="button"
+          className={button}
+          disabled={addPm.isPending}
+          onClick={() =>
+            addPm.mutate(undefined, { onSuccess: (pm) => void navigate(`/crew/${pm.id}`) })
+          }
+        >
+          {term("template.projectManager")}
+        </button>
+        <ErrorNote error={addPm.error} />
+      </div>
       <form
         aria-label={term("room.verb")}
         onSubmit={addRoom}

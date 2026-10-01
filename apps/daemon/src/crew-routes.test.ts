@@ -136,6 +136,25 @@ describe("crew and room routes", () => {
     expect((await call("PUT", "/budgets", { weeklyUsd: 3 })).status).toBe(400);
   });
 
+  it("adds a Project Manager from its template; an unknown template is 404", async () => {
+    const { call } = setup();
+    const res = await call("POST", "/templates/project-manager", { name: "Ledger" });
+    expect(res.status).toBe(201);
+    expect(await res.json()).toMatchObject({ id: "ledger", config: { roomId: "operations" } });
+    expect((await call("POST", "/templates/project-manager")).status).toBe(201);
+    expect((await call("POST", "/templates/pilot", {})).status).toBe(404);
+  });
+
+  it("onboarding is refused once the station exists", async () => {
+    const { call } = setup();
+    expect((await call("POST", "/onboarding", { overseerName: "X", tone: "calm" })).status).toBe(
+      409,
+    );
+    expect((await call("POST", "/onboarding", { overseerName: "X", tone: "rude" })).status).toBe(
+      400,
+    );
+  });
+
   it("still needs the token", async () => {
     const { call } = setup();
     expect((await call("GET", "/station", undefined, { authorization: "" })).status).toBe(401);

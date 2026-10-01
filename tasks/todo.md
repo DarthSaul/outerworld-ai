@@ -108,6 +108,14 @@ decisions made, open questions.
   owner tested with real Notion work). A station whose `station.json` has no budgets has no caps;
   it is not given any silently. Settings → Budgets shows each cap, "empty means no cap", and
   today's station spend; `null` removes a cap.
+- **D23 Onboarding and dev homes (Phase 9; flag at checkpoint).** The SPA shows onboarding whenever
+  the station has no `station.json`: the key (skipped for the fake model, or "add it later"), then
+  the Overseer's name and one of three tones (calm, warm, brisk), optionally the Project Manager,
+  ending in a new COMMS session with the Overseer. Onboarding writes only the Command room;
+  the Project Manager template adds Operations, a hallway to Command, and the Notion connector
+  when missing. `pnpm dev` stays on the demo fixture copy; `pnpm dev:fresh` starts an empty
+  station (wiped each time) so acceptance 1 can be walked through; a real first run is
+  `OUTERWORLD_HOME=~/.outerworld pnpm dev` (OpenRouter, asks for the key).
 - **D11 Old core modules.** Ledger parsing, status schemas, StationState, health, and the demo
   timeline are Routines-specific; they are deleted in Phase 1 when the new schema lands (tests for
   them go with them; commit message says why).
@@ -245,7 +253,7 @@ decisions made, open questions.
 - [ ] ui map adapted: rooms, crew in rooms, props, hallways (rendered only), live crew state (idle, running, awaiting consent, blocked) from events only.
 - [x] Notifications: filtered event projection (core `notificationFor`: action / alert / info, incl. a scheduled run's result), unread state persisted as one read marker in `station_state`; feed with "Show older", "Mark all as read", and an unread count in the nav.
 - [x] Settings → Budgets: view and edit `station.json` budgets (per run, per agent daily, station daily) in the SPA (`PUT /api/budgets`); defaults for new stations per D22 (owner to confirm).
-- [ ] Onboarding: key → Overseer (name, tone) in Command room with dispatch, read_session, Web, Memory → first chat. Project Manager template (Operations; Notion granted, Web, Memory, Files; daily briefing schedule disabled).
+- [x] Onboarding: key → Overseer (name, tone) in Command room with dispatch, read_session, Web, Memory → first chat. Project Manager template (Operations; Notion granted, Web, Memory, Files; daily briefing schedule disabled), at onboarding or from the Crew screen. D23.
 - [ ] `fixtures/demo-station` rewritten as a fictional station dir exercising all of the above; `browser:verify` green against it.
 
 ## Phase 10 — Close v1

@@ -22,7 +22,7 @@ imported by core, ui, or the SPA.
 ### Crew and rooms (Phase 2)
 | Export | Description |
 |--------|-------------|
-| `CrewService({ home, events, connectorTools? })` | `view()`, `agent(id)` (config, documents, effective tools from core's `resolveGrants`), `createAgent`, `updateAgent`, `putDocument`, `deleteAgent` (keeps the workspace), `createRoom`, `updateRoom`, `deleteRoom` (refused while crew or hallways use it), `addSchedule` / `updateSchedule` / `removeSchedule` (every cron checked with croner). Reads from disk every call; writes run one at a time, are validated across the whole station, and emit `agent.updated` / `station.updated`. Refuses only errors a change would introduce. |
+| `CrewService({ home, events, connectorTools? })` | `view()`, `agent(id)` (config, documents, effective tools from core's `resolveGrants`), `createAgent`, `updateAgent`, `putDocument`, `deleteAgent` (keeps the workspace), `createRoom`, `updateRoom`, `deleteRoom` (refused while crew or hallways use it), `addSchedule` / `updateSchedule` / `removeSchedule` (every cron checked with croner), `updateBudgets`, `onboard({ overseerName, tone, stationName? })` (an empty station only: station.json with the Command room and `DEFAULT_BUDGETS`, and the Overseer), `addFromTemplate("project-manager", { name? })` (adds the Operations room, a hallway to Command, and the Notion connector when missing; daily briefing disabled). Reads from disk every call; writes run one at a time, are validated across the whole station, and emit `agent.updated` / `station.updated`. Refuses only errors a change would introduce. |
 | `NotFoundError`, `ConflictError` | What the daemon maps to 404 and 409; `ConflictError.issues` says why. |
 
 ### Scheduler (Phase 8, brief §13)

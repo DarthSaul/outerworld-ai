@@ -64,6 +64,8 @@ allowed `Origin` and a `Sec-Fetch-Site` other than `cross-site`. Every `/api/*` 
 | `GET /oauth/callback/:id` | Where sign-in returns (no API token: the browser comes from Notion). Accepts only the one-time `state` of a sign-in in progress; shows a small page saying whether it worked. The only cross-site navigation allowed. |
 | `GET /api/notifications?before=&limit=` | A page of the Notifications feed, newest first: `{ items, unread, readSeq, nextBefore? }` (core's `notificationFor` over the event log; limit 50, at most 200). |
 | `POST /api/notifications/read` | `{ seq }` marks everything up to it read (the marker never moves back) → `{ readSeq, unread }`. |
+| `POST /api/onboarding` | `{ overseerName, tone: "calm" \| "warm" \| "brisk", stationName? }` → 201 `AgentView` of the new Overseer, on a station with no `station.json` only (409 after). Writes the Command room and the default budgets (D22). |
+| `POST /api/templates/project-manager` | Optional `{ name }` → 201 `AgentView`: the Project Manager (brief §17), adding the Operations room, a hallway to Command, and the Notion connector when missing. Unknown template: 404. |
 | `PUT /api/budgets` | `{ perRunUsd?, perAgentDailyUsd?, stationDailyUsd? }`: USD caps in `station.json`; `null` removes one, a missing field keeps it. Current caps are in `GET /api/station`. |
 | `GET /api/settings` | `{ modelMode, timezone, openrouter: { configured, source } }` (`timezone`: the machine's zone, used by schedules without one), never the key. |
 | `PUT /api/settings/openrouter` | `{ key }`: checked with OpenRouter's key endpoint (no model call), stored in the OS keychain → 204; a rejected key is 400. |

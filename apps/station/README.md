@@ -33,6 +33,7 @@ daemon.
 | `src/pages/Schedules.tsx` | A crew member's schedules on their page: on/off, next run in the schedule's own zone, Run now, add/edit with a live plain-English preview and the next three runs, a time zone picker grouped by region (first choice: this computer's zone, from `/settings`), remove, recent fires, and a link to the schedule's session. |
 | `src/lib/cron-preview.ts`, `src/lib/time-zones.ts` | `previewCron` (cronstrue for the words, croner, as in the daemon, for validity and next runs); `zoneGroups` / `zoneLabel` ("Stockholm (GMT+2)") from `Intl`. |
 | `src/pages/NotificationsPage.tsx` | Notifications: pending approvals first, then the feed (words from glossary `notification.<kind>`, New marks past the read marker, a link to where to look, Show older, Mark all as read). The nav shows the unread count. |
+| `src/pages/OnboardingPage.tsx` | Shown instead of the screens while the station has no `station.json`: the OpenRouter key (skipped for the fake model, or later), then the Overseer's name and tone and optionally the Project Manager; ends in a first COMMS session. |
 | `src/pages/MemoryPage.tsx` | Memory: pick a crew member (`?agent=`), approve (as written or edited) or discard proposals, edit or forget stored beliefs. |
 | `src/test/fake-daemon.tsx` | An in-memory fake of the crew API and a hand-driven event stream for component tests. |
 

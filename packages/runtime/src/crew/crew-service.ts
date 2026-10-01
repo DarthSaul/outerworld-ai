@@ -10,8 +10,12 @@ import {
   type CreateAgentInput,
   type CreateRoomInput,
   type CreateScheduleInput,
+  type CrewTemplate,
+  DEFAULT_BUDGETS,
   DEFAULT_MODEL,
   type Issue,
+  NOTION_PRESET,
+  type OnboardInput,
   parseAgentConfig,
   parseStationConfig,
   type Room,
@@ -20,6 +24,7 @@ import {
   type StationView,
   slugify,
   stationCrewIssues,
+  type TemplateInput,
   type UpdateAgentInput,
   type UpdateBudgetsInput,
   type UpdateRoomInput,
@@ -36,6 +41,13 @@ import {
   saveStationConfig,
   stationPaths,
 } from "../storage/station-dir.js";
+import {
+  COMMAND_ROOM,
+  OPERATIONS_ROOM,
+  overseerDocuments,
+  projectManagerConfig,
+  projectManagerDocuments,
+} from "./templates.js";
 
 export class NotFoundError extends Error {}
 
@@ -244,6 +256,101 @@ export class CrewService {
       await rm(dir, { recursive: true });
       this.#events.append({ type: "agent.updated", agentId: id, payload: { change: "deleted" } });
     });
+  }
+
+  /**
+   * Onboarding (brief §17): on a station with no station.json yet, writes one with the Command
+   * room and the default budgets (D22), and creates the Overseer there. Refused once a station
+   * exists.
+   */
+  onboard(input: OnboardInput): Promise<AgentView> {
+    return this.#serial(async () => {
+      const loaded = await loadStationDir(this.#home);
+      if (loaded.station) throw new ConflictError("this station is already set up");
+      const station: StationConfig = {
+        schemaVersion: 1,
+        name: input.stationName ?? "My Station",
+        rooms: [COMMAND_ROOM],
+        lanes: [],
+        connectors: [],
+        budgets: { ...DEFAULT_BUDGETS },
+        dispatch: { maxDepth: 1, autoReview: true },
+      };
+      const parsed = parseStationConfig(station);
+      if (!parsed.ok) throw new ConflictError("station.json would be invalid", parsed.issues);
+      const id = slugify(
+        input.overseerName,
+        loaded.agents.map((a) => a.id),
+      );
+      const config: AgentConfig = {
+        schemaVersion: 1,
+        name: input.overseerName,
+        roomId: COMMAND_ROOM.id,
+        role: "overseer",
+        model: DEFAULT_MODEL,
+        approvalMode: "ask",
+        connectorGrants: [],
+        schedules: [],
+      };
+      await saveStationConfig(this.#home, parsed.value);
+      await this.#writeAgent(id, config, overseerDocuments(input.overseerName, input.tone));
+      this.#events.append({ type: "station.updated", payload: {} });
+      this.#events.append({ type: "agent.updated", agentId: id, payload: { change: "created" } });
+      return this.#required(id);
+    });
+  }
+
+  /**
+   * Adds a crew member from a template (brief §17). The Project Manager brings what it needs:
+   * the Operations room (with a hallway to Command when that room exists) and the Notion
+   * connector, each only when missing. Its daily briefing starts disabled.
+   */
+  addFromTemplate(template: CrewTemplate, input: TemplateInput): Promise<AgentView> {
+    return this.#serial(async () => {
+      if (template !== "project-manager") throw new NotFoundError(`no template "${template}"`);
+      const loaded = await this.#loadWithStation();
+      const station = loaded.station;
+      const name = input.name ?? "Project Manager";
+      const rooms = station.rooms.some((r) => r.id === OPERATIONS_ROOM.id)
+        ? station.rooms
+        : [...station.rooms, OPERATIONS_ROOM];
+      const addLane =
+        !station.rooms.some((r) => r.id === OPERATIONS_ROOM.id) &&
+        station.rooms.some((r) => r.id === COMMAND_ROOM.id);
+      const lanes = addLane
+        ? [
+            ...station.lanes,
+            { id: "operations-to-command", from: OPERATIONS_ROOM.id, to: COMMAND_ROOM.id },
+          ]
+        : station.lanes;
+      const connectors = station.connectors.some((c) => c.id === NOTION_PRESET.id)
+        ? station.connectors
+        : [...station.connectors, NOTION_PRESET];
+      const id = slugify(
+        name,
+        loaded.agents.map((a) => a.id),
+      );
+      const config = projectManagerConfig(name, DEFAULT_MODEL);
+      const next = { ...station, rooms, lanes, connectors };
+      if (rooms !== station.rooms || lanes !== station.lanes || connectors !== station.connectors) {
+        await this.#saveStation(loaded, next);
+      }
+      this.#checkCrew({ ...loaded, station: next }, { id, config });
+      await this.#writeAgent(id, config, projectManagerDocuments(name));
+      this.#events.append({ type: "agent.updated", agentId: id, payload: { change: "created" } });
+      return this.#required(id);
+    });
+  }
+
+  async #writeAgent(
+    id: string,
+    config: AgentConfig,
+    documents: Record<AgentDocumentName, string>,
+  ): Promise<void> {
+    await saveAgentConfig(this.#home, id, config);
+    for (const [name, text] of Object.entries(documents) as [AgentDocumentName, string][]) {
+      if (text) await saveAgentDocument(this.#home, id, name, text);
+    }
   }
 
   createRoom(input: CreateRoomInput): Promise<Room> {
