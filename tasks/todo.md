@@ -103,12 +103,12 @@ decisions made, open questions.
   timeout and shows on Notifications like any other. DST follows croner: a skipped local time runs
   at the first valid time after it, and a repeated one runs once. The schedule id comes from the
   first words of its prompt.
-- **D22 Budget defaults (Phase 9; owner to confirm).** A station created by onboarding starts with
+- **D22 Budget defaults (Phase 9; confirmed by the owner 2026-09-30).** A station created by onboarding starts with
   `DEFAULT_BUDGETS` ($5 per run, $25 per crew member per day, $50 station per day: the values the
   owner tested with real Notion work). A station whose `station.json` has no budgets has no caps;
   it is not given any silently. Settings → Budgets shows each cap, "empty means no cap", and
   today's station spend; `null` removes a cap.
-- **D23 Onboarding and dev homes (Phase 9; flag at checkpoint).** The SPA shows onboarding whenever
+- **D23 Onboarding and dev homes (Phase 9; accepted by the owner 2026-09-30).** The SPA shows onboarding whenever
   the station has no `station.json`: the key (skipped for the fake model, or "add it later"), then
   the Overseer's name and one of three tones (calm, warm, brisk), optionally the Project Manager,
   ending in a new COMMS session with the Overseer. Onboarding writes only the Command room;
@@ -272,7 +272,7 @@ decisions made, open questions.
 ## Phase 9 — Station view, notifications, onboarding, seed crew
 - [x] ui map adapted: rooms, crew in rooms, props, hallways (rendered only), live crew state (idle, running, awaiting consent, blocked) from events only. D24.
 - [x] Notifications: filtered event projection (core `notificationFor`: action / alert / info, incl. a scheduled run's result), unread state persisted as one read marker in `station_state`; feed with "Show older", "Mark all as read", and an unread count in the nav.
-- [x] Settings → Budgets: view and edit `station.json` budgets (per run, per agent daily, station daily) in the SPA (`PUT /api/budgets`); defaults for new stations per D22 (owner to confirm).
+- [x] Settings → Budgets: view and edit `station.json` budgets (per run, per agent daily, station daily) in the SPA (`PUT /api/budgets`); defaults for new stations per D22 (confirmed).
 - [x] Onboarding: key → Overseer (name, tone) in Command room with dispatch, read_session, Web, Memory → first chat. Project Manager template (Operations; Notion granted, Web, Memory, Files; daily briefing schedule disabled), at onboarding or from the Crew screen. D23.
 - [x] `fixtures/demo-station` rewritten as a fictional station dir exercising all of the above; `browser:verify` green against it (seeded with real runtime history, D25).
 
@@ -304,13 +304,15 @@ decisions made, open questions.
   a per-agent or per-station setting to turn auto-store off, an event that marks a belief as
   self-approved, and how this fits the brief §14 rule that nothing is remembered until approved
   (amend the brief when it lands).
-- **A rig state for "waiting for consent" (D24):** today it borrows *working* plus a note and
-  the room's attention dot. Give it its own glow/pose in the design spec first, then the tokens.
+- **A rig state for "waiting for consent" (D24):** it borrows *working* plus a note and the room's
+  attention dot. The owner accepted this look for v1 (2026-09-30); a pose of its own is optional
+  later work (design spec first, then tokens).
 - **Keychain entries are per user, not per station (found 2026-09-30):** accounts such as
   `mcp.notion.tokens` are shared by every station directory on the machine, so a second station
   with a `notion` connector uses the same sign-in. Scoping them per station (e.g. by a station id
-  in the account name) would ask the owner to sign in again; owner to decide. Throwaway stations
-  can already opt out with `OUTERWORLD_SECRETS=memory`.
+  in the account name) would ask the owner to sign in again. **Decided 2026-09-30: keep it** —
+  every station shares one sign-in by design. Throwaway stations opt out with
+  `OUTERWORLD_SECRETS=memory`.
 - **Node engine:** establish the supported Node line. `.nvmrc` says 22 and `engines` says `>=22`,
   but local development runs Node 24, `react-router` 8 needs `>=22.22`, and `node:sqlite` is only a
   release candidate on 24.15+. Decide the pin, then align `.nvmrc`, `engines`, CI, and ADR-0011.
