@@ -1,8 +1,10 @@
 import { term } from "@darthsaul/outerworld-ai-core";
-import { type FormEvent, useId, useState } from "react";
+import { type FormEvent, useId, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { ErrorNote } from "../components/ErrorNote.js";
 import { formatWhen } from "../components/format.js";
+import { previewCron } from "../lib/cron-preview.js";
+import { zoneGroups, zoneLabel } from "../lib/time-zones.js";
 import {
   type ScheduleFireItem,
   type ScheduleItem,
@@ -10,6 +12,7 @@ import {
   useRemoveSchedule,
   useRunSchedule,
   useSchedules,
+  useSettings,
   useUpdateSchedule,
 } from "../queries.js";
 
@@ -29,8 +32,78 @@ interface Draft {
 }
 
 /** Add or edit. An empty zone means the machine's: omitted on add, `null` when clearing one. */
+/**
+ * The zone picker: this computer's zone first (an empty value, so the schedule follows the
+ * machine), then every zone grouped by region with its current offset.
+ */
+function ZonePicker({
+  value,
+  machineZone,
+  onChange,
+}: {
+  readonly value: string;
+  readonly machineZone: string;
+  readonly onChange: (zone: string) => void;
+}) {
+  const groups = useMemo(() => zoneGroups(new Date(), value || undefined), [value]);
+  return (
+    <label className={label}>
+      {term("schedule.timezone")}
+      <select className={input} value={value} onChange={(e) => onChange(e.target.value)}>
+        <option value="">
+          {term("schedule.timezone.machine")}: {zoneLabel(machineZone)}
+        </option>
+        {groups.map((g) => (
+          <optgroup key={g.region} label={g.region}>
+            {g.zones.map((z) => (
+              <option key={z.id} value={z.id}>
+                {z.label}
+              </option>
+            ))}
+          </optgroup>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+/** What the cron means and when it runs next, as it is typed. */
+function CronPreviewLine({
+  id,
+  cron,
+  zone,
+}: {
+  readonly id: string;
+  readonly cron: string;
+  readonly zone: string;
+}) {
+  const preview = previewCron(cron, zone);
+  return (
+    <div id={id} aria-live="polite" className="flex flex-col gap-(--ow-space-1)">
+      {preview === undefined ? (
+        <p className="text-label text-ink-2">{term("schedule.cron.hint")}</p>
+      ) : preview.ok ? (
+        <>
+          <p className="text-body text-ink-1" data-cron-description>
+            {preview.description}
+          </p>
+          <p className="text-label text-ink-2">
+            {term("schedule.preview.next")}:{" "}
+            {preview.nextRuns.map((d) => formatWhen(d.toISOString(), zone)).join(" · ")}
+          </p>
+        </>
+      ) : (
+        <p className="text-label text-ink-1" data-cron-error>
+          {term("schedule.preview.invalid")}: {preview.error}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function ScheduleForm({
   title,
+  machineZone,
   initial,
   pending,
   error,
@@ -38,6 +111,7 @@ function ScheduleForm({
   onCancel,
 }: {
   readonly title: string;
+  readonly machineZone: string;
   readonly initial: Draft;
   readonly pending: boolean;
   readonly error: Error | null;
@@ -53,7 +127,7 @@ function ScheduleForm({
   };
   return (
     <form aria-label={title} onSubmit={submit} className="flex flex-col gap-(--ow-space-2)">
-      <div className="flex flex-wrap gap-(--ow-space-2)">
+      <div className="flex flex-wrap items-end gap-(--ow-space-2)">
         <label className={label}>
           {term("schedule.cron")}
           <input
@@ -64,22 +138,13 @@ function ScheduleForm({
             onChange={(e) => set({ cron: e.target.value })}
           />
         </label>
-        <label className={label}>
-          {term("schedule.timezone")}
-          <input
-            className={input}
-            value={draft.timezone}
-            aria-describedby={`${hint}-zone`}
-            onChange={(e) => set({ timezone: e.target.value })}
-          />
-        </label>
+        <ZonePicker
+          value={draft.timezone}
+          machineZone={machineZone}
+          onChange={(timezone) => set({ timezone })}
+        />
       </div>
-      <p id={`${hint}-cron`} className="text-label text-ink-2">
-        {term("schedule.cron.hint")}
-      </p>
-      <p id={`${hint}-zone`} className="text-label text-ink-2">
-        {term("schedule.timezone.hint")}
-      </p>
+      <CronPreviewLine id={`${hint}-cron`} cron={draft.cron} zone={draft.timezone || machineZone} />
       <label className={label}>
         {term("schedule.prompt")}
         <textarea
@@ -126,10 +191,13 @@ function FireLine({ fire }: { readonly fire: ScheduleFireItem }) {
 function ScheduleCard({
   agentId,
   schedule,
+  machineZone,
 }: {
   readonly agentId: string;
   readonly schedule: ScheduleItem;
+  readonly machineZone: string;
 }) {
+  const preview = previewCron(schedule.cron, schedule.timezone);
   const update = useUpdateSchedule(agentId);
   const remove = useRemoveSchedule(agentId);
   const run = useRunSchedule(agentId);
@@ -162,6 +230,7 @@ function ScheduleCard({
       {editing ? (
         <ScheduleForm
           title={term("schedule.edit")}
+          machineZone={machineZone}
           initial={{
             cron: schedule.cron,
             timezone: schedule.timezoneSet ? schedule.timezone : "",
@@ -192,7 +261,10 @@ function ScheduleCard({
         />
       ) : (
         <>
-          <p className="font-mono text-mono text-ink-1">{schedule.cron}</p>
+          <p className="text-body text-ink-1">
+            <span className="font-mono text-mono">{schedule.cron}</span>
+            {preview?.ok ? ` · ${preview.description}` : ""}
+          </p>
           <p className="text-body text-ink-1">{schedule.prompt}</p>
           <p className="text-label text-ink-2">
             {schedule.error
@@ -252,6 +324,8 @@ function ScheduleCard({
 /** A crew member's schedules (brief §13): what runs when, next run, recent fires, and editing. */
 export function SchedulesSection({ agentId }: { readonly agentId: string }) {
   const schedules = useSchedules(agentId);
+  const settings = useSettings();
+  const machineZone = settings.data?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
   const add = useAddSchedule(agentId);
   const [adding, setAdding] = useState(false);
   const list = schedules.data ?? [];
@@ -266,11 +340,12 @@ export function SchedulesSection({ agentId }: { readonly agentId: string }) {
         <p className="text-body text-ink-2">{term("schedule.none")}</p>
       ) : null}
       {list.map((s) => (
-        <ScheduleCard key={s.id} agentId={agentId} schedule={s} />
+        <ScheduleCard key={s.id} agentId={agentId} schedule={s} machineZone={machineZone} />
       ))}
       {adding ? (
         <ScheduleForm
           title={term("schedule.add")}
+          machineZone={machineZone}
           initial={{ cron: "", timezone: "", prompt: "", catchUp: false }}
           pending={add.isPending}
           error={add.error}

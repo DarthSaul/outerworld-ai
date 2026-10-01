@@ -204,10 +204,11 @@ describe("dispatch, steering, and activity", () => {
 });
 
 describe("settings", () => {
-  it("reports the model mode and whether a key is configured, never the key", async () => {
+  it("reports the model mode, the machine's zone, and whether a key is configured, never the key", async () => {
     const { call } = setup();
     expect((await call("GET", "/settings")).json).toEqual({
       modelMode: "fake",
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       openrouter: { configured: false, source: null },
     });
     const put = await call("PUT", "/settings/openrouter", { key: KEY });

@@ -15,6 +15,7 @@ import {
   type CrewService,
   type DispatchRecord,
   type DispatchStore,
+  machineTimeZone,
   NotFoundError,
   type RunRecord,
   type RunService,
@@ -155,6 +156,7 @@ export function commsRoutes(deps: CommsDeps): Hono {
   app.get("/settings", async (c) => {
     const view: SettingsView = {
       modelMode: deps.modelMode,
+      timezone: machineTimeZone(),
       openrouter: await deps.apiKeys.status(),
     };
     return c.json(view);

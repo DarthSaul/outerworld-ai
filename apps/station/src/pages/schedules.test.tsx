@@ -51,6 +51,7 @@ describe("Schedules on a crew member's page", () => {
     const { container } = renderApp("/crew/quill", withBriefing());
     const c = await card();
     expect(within(c).getByText("0 8 * * 1-5")).toBeInTheDocument();
+    expect(within(c).getByText(/At 8:00 AM, Monday through Friday/)).toBeInTheDocument();
     expect(within(c).getByText("Write the briefing.")).toBeInTheDocument();
     expect(
       within(c).getByText(
@@ -109,7 +110,9 @@ describe("Schedules on a crew member's page", () => {
     const c = await card();
     await user.click(within(c).getByRole("button", { name: term("schedule.edit") }));
     const form = within(c).getByRole("form", { name: term("schedule.edit") });
-    await user.clear(within(form).getByLabelText(term("schedule.timezone")));
+    const zone = within(form).getByLabelText(term("schedule.timezone"));
+    expect(zone).toHaveValue("Europe/Stockholm");
+    await user.selectOptions(zone, "");
     await user.click(within(form).getByRole("button", { name: term("schedule.save") }));
     expect(calls).toContainEqual({
       method: "PATCH",
@@ -123,6 +126,46 @@ describe("Schedules on a crew member's page", () => {
     });
   });
 
+  it("says what a cron means and when it runs next, as it is typed", async () => {
+    const user = userEvent.setup();
+    renderApp("/crew/vesper");
+    await user.click(await screen.findByRole("button", { name: term("schedule.add") }));
+    const form = screen.getByRole("form", { name: term("schedule.add") });
+    const cron = within(form).getByLabelText(term("schedule.cron"));
+    expect(within(form).getByText(term("schedule.cron.hint"))).toBeInTheDocument();
+    await user.type(cron, "0 9 * * 1-5");
+    expect(within(form).getByText("At 9:00 AM, Monday through Friday")).toBeInTheDocument();
+    expect(
+      within(form).getByText(new RegExp(`^${term("schedule.preview.next")}:`)),
+    ).toHaveTextContent(/ · .* · /);
+    await user.clear(cron);
+    await user.type(cron, "61 * * * *");
+    expect(within(form).getByText(new RegExp(term("schedule.preview.invalid")))).toHaveTextContent(
+      /minute/i,
+    );
+  });
+
+  it("picks a time zone from a grouped list; the first choice is this computer's", async () => {
+    const user = userEvent.setup();
+    const { calls } = renderApp("/crew/vesper");
+    await user.click(await screen.findByRole("button", { name: term("schedule.add") }));
+    const form = screen.getByRole("form", { name: term("schedule.add") });
+    const zone = within(form).getByLabelText(term("schedule.timezone"));
+    expect(await within(zone).findByRole("option", { selected: true })).toHaveTextContent(
+      new RegExp(`^${term("schedule.timezone.machine")}: Stockholm \\(GMT\\+\\d\\)`),
+    );
+    expect(within(zone).getByRole("group", { name: "Asia" })).toBeInTheDocument();
+    await user.selectOptions(zone, "Asia/Tokyo");
+    await user.type(within(form).getByLabelText(term("schedule.cron")), "0 9 * * *");
+    await user.type(within(form).getByLabelText(term("schedule.prompt")), "Tokyo morning.");
+    await user.click(within(form).getByRole("button", { name: term("schedule.save") }));
+    expect(calls).toContainEqual({
+      method: "POST",
+      path: "/agents/vesper/schedules",
+      body: { cron: "0 9 * * *", prompt: "Tokyo morning.", catchUp: false, timezone: "Asia/Tokyo" },
+    });
+  });
+
   it("shows why the daemon refused a cron", async () => {
     const user = userEvent.setup();
     renderApp("/crew/vesper");
@@ -131,7 +174,7 @@ describe("Schedules on a crew member's page", () => {
     await user.type(within(form).getByLabelText(term("schedule.cron")), "61 * * * *");
     await user.type(within(form).getByLabelText(term("schedule.prompt")), "Never.");
     await user.click(within(form).getByRole("button", { name: term("schedule.save") }));
-    expect(await within(form).findByRole("alert")).toHaveTextContent(/minute/);
+    expect(await within(form).findByRole("alert")).toHaveTextContent(/Invalid value for minute/);
   });
 
   it("refreshes when a schedule fires", async () => {

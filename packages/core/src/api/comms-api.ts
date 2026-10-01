@@ -61,6 +61,8 @@ export type ApiKeyInput = z.infer<typeof ApiKeyInput>;
 /** `GET /api/settings`: which models runs use, and whether a key is configured (never the key). */
 export interface SettingsView {
   readonly modelMode: "openrouter" | "fake";
+  /** The machine's IANA zone: where a schedule with no zone of its own runs. */
+  readonly timezone: string;
   readonly openrouter: {
     readonly configured: boolean;
     readonly source: "keychain" | "env" | null;

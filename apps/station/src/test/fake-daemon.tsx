@@ -103,6 +103,7 @@ export function fakeApi() {
   >();
   const settings = {
     modelMode: "fake" as "fake" | "openrouter",
+    timezone: "Europe/Stockholm",
     openrouter: { configured: false, source: null as "keychain" | "env" | null },
   };
   const consents: ConsentRecord[] = [];

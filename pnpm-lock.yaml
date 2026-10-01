@@ -69,6 +69,12 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.104.0
         version: 5.104.0(react@19.3.0)
+      croner:
+        specifier: 10.0.1
+        version: 10.0.1
+      cronstrue:
+        specifier: 3.27.0
+        version: 3.27.0
       react:
         specifier: ^19.3.0
         version: 19.3.0
@@ -889,6 +895,10 @@ packages:
   croner@10.0.1:
     resolution: {integrity: sha512-ixNtAJndqh173VQ4KodSdJEI6nuioBWI0V1ITNKhZZsO0pEMoDxz539T4FTTbSZ/xIOSuDnzxLVRqBVSvPNE2g==}
     engines: {node: '>=18.0'}
+
+  cronstrue@3.27.0:
+    resolution: {integrity: sha512-AKhV4ilvx73NmicrZCGASdszUIf2ew0A/6jQQTh4pu3lIUzgWOGjT3Gv3CGIcTQ/p8Qy/tZuCmlaOftj8PXaNg==}
+    hasBin: true
 
   cross-spawn@7.0.6:
     resolution: {integrity: sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==}
@@ -1898,6 +1908,8 @@ snapshots:
   cookie@1.1.1: {}
 
   croner@10.0.1: {}
+
+  cronstrue@3.27.0: {}
 
   cross-spawn@7.0.6:
     dependencies:
