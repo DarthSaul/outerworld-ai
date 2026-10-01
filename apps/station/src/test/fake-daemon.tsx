@@ -159,6 +159,15 @@ export function fakeApi() {
       if (method === "PUT") control.engaged = Boolean(b.engaged);
       return { engaged: control.engaged };
     }
+    if (path === "/budgets") {
+      const budgets: Record<string, unknown> = { ...state.station.budgets };
+      for (const [k, v] of Object.entries(b)) {
+        if (v === null) delete budgets[k];
+        else budgets[k] = v;
+      }
+      state.station = { ...state.station, budgets };
+      return budgets;
+    }
     if (path === "/spend")
       return { day: "2026-09-29", stationUsd: spend.stationUsd, agents: spend.agents };
     if (path === "/settings/openrouter") {

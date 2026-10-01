@@ -13,6 +13,7 @@ import type {
   StationView,
   SupportedModel,
   UpdateAgentInput,
+  UpdateBudgetsInput,
   UpdateRoomInput,
   UpdateScheduleInput,
 } from "@darthsaul/outerworld-ai-core";
@@ -467,5 +468,12 @@ export function useRunSchedule(agentId: string) {
   return useMutation({
     mutationFn: (id: string) =>
       api.send<ScheduleFireItem>("POST", `${schedulePath(agentId, id)}/run`),
+  });
+}
+
+export function useUpdateBudgets() {
+  const { api } = useDaemon();
+  return useMutation({
+    mutationFn: (input: UpdateBudgetsInput) => api.send("PUT", "/budgets", input),
   });
 }

@@ -4,6 +4,7 @@ import {
   type AgentDocumentName,
   type AgentSchedule,
   type AgentView,
+  type Budgets,
   type Connector,
   type ConnectorToolCatalog,
   type CreateAgentInput,
@@ -20,6 +21,7 @@ import {
   slugify,
   stationCrewIssues,
   type UpdateAgentInput,
+  type UpdateBudgetsInput,
   type UpdateRoomInput,
   type UpdateScheduleInput,
 } from "@darthsaul/outerworld-ai-core";
@@ -292,6 +294,20 @@ export class CrewService {
         ...station,
         rooms: station.rooms.filter((r) => r.id !== id),
       });
+    });
+  }
+
+  /** Sets each cap given; `null` removes it. Takes effect before the next model call. */
+  updateBudgets(input: UpdateBudgetsInput): Promise<Budgets> {
+    return this.#serial(async () => {
+      const loaded = await this.#loadWithStation();
+      const budgets: Record<string, unknown> = { ...loaded.station.budgets };
+      for (const [k, v] of Object.entries(input)) {
+        if (v === null) delete budgets[k];
+        else if (v !== undefined) budgets[k] = v;
+      }
+      await this.#saveStation(loaded, { ...loaded.station, budgets: budgets as Budgets });
+      return budgets as Budgets;
     });
   }
 

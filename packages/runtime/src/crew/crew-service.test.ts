@@ -331,3 +331,15 @@ describe("CrewService: schedules", () => {
     );
   });
 });
+
+describe("CrewService: budgets", () => {
+  it("sets and clears caps in station.json, keeping the ones not given", async () => {
+    const { crew, types } = setup();
+    expect(await crew.updateBudgets({ perRunUsd: 2, stationDailyUsd: null })).toEqual({
+      perRunUsd: 2,
+      perAgentDailyUsd: 25,
+    });
+    expect((await crew.view()).station?.budgets).toEqual({ perRunUsd: 2, perAgentDailyUsd: 25 });
+    expect(types()).toEqual(["station.updated"]);
+  });
+});

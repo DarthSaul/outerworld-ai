@@ -148,6 +148,16 @@ export const glossary = {
   "runState.cancelled": "cancelled",
   "runState.interrupted": "interrupted: the daemon stopped mid-run",
   "runState.blocked_budget": "stopped by a budget",
+  budgets: "Budgets",
+  "budgets.hint":
+    "Checked before every model call. A run that would go over stops cleanly and says why.",
+  "budgets.perRun": "Per run (USD)",
+  "budgets.perAgentDaily": "Per crew member per day (USD)",
+  "budgets.stationDaily": "Whole station per day (USD)",
+  "budgets.none": "Empty means no cap.",
+  "budgets.today": "Spent today, whole station",
+  "budgets.save": "Save budgets",
+  "budgets.saved": "Saved.",
   "settings.models": "Models",
   "settings.model.openrouter": "Runs use OpenRouter with your key.",
   "settings.model.fake":

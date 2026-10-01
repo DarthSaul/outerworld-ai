@@ -2,12 +2,94 @@ import { term } from "@darthsaul/outerworld-ai-core";
 import { useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 import { ErrorNote } from "../components/ErrorNote.js";
-import { useClearApiKey, useSetApiKey, useSettings } from "../queries.js";
+import { formatUsd } from "../components/format.js";
+import {
+  useClearApiKey,
+  useSetApiKey,
+  useSettings,
+  useSpend,
+  useStationView,
+  useUpdateBudgets,
+} from "../queries.js";
 
 const button =
   "h-(--ow-size-control-h-dense) rounded-control border border-border-subtle px-(--ow-size-control-pad-x) text-label text-ink-1 disabled:text-ink-3";
 
-/** Settings: which models runs use, and the OpenRouter key (set once, never shown). */
+const CAPS = [
+  ["perRunUsd", "budgets.perRun"],
+  ["perAgentDailyUsd", "budgets.perAgentDaily"],
+  ["stationDailyUsd", "budgets.stationDaily"],
+] as const;
+type Cap = (typeof CAPS)[number][0];
+
+/** The three spend caps in station.json (brief §15). Empty means no cap. */
+function BudgetsSection() {
+  const station = useStationView();
+  const spend = useSpend();
+  const update = useUpdateBudgets();
+  const client = useQueryClient();
+  const saved = station.data?.station?.budgets;
+  const [draft, setDraft] = useState<Partial<Record<Cap, string>>>({});
+  const value = (cap: Cap) => draft[cap] ?? (saved?.[cap] !== undefined ? String(saved[cap]) : "");
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    const input = Object.fromEntries(
+      CAPS.map(([cap]) => [cap, value(cap).trim() === "" ? null : Number(value(cap))]),
+    ) as Record<Cap, number | null>;
+    update.mutate(input, {
+      onSuccess: () => {
+        setDraft({});
+        void client.invalidateQueries({ queryKey: ["station"] });
+      },
+    });
+  };
+  if (!station.data?.station) return null;
+  return (
+    <section aria-labelledby="budgets-title" className="flex flex-col gap-(--ow-space-2)">
+      <h2 id="budgets-title" className="font-mono text-eyebrow uppercase text-ink-3">
+        {term("budgets")}
+      </h2>
+      <p className="text-label text-ink-2">{term("budgets.hint")}</p>
+      <form onSubmit={submit} className="flex flex-col gap-(--ow-space-2)">
+        <div className="flex flex-wrap items-end gap-(--ow-space-3)">
+          {CAPS.map(([cap, label]) => (
+            <label key={cap} className="flex flex-col gap-(--ow-space-1) text-label text-ink-2">
+              {term(label)}
+              <input
+                type="number"
+                inputMode="decimal"
+                min="0.01"
+                step="any"
+                className="h-(--ow-size-control-h-dense) rounded-control border border-border-subtle bg-surface-raised px-(--ow-space-2) font-mono text-mono text-ink-1"
+                value={value(cap)}
+                onChange={(e) => setDraft((d) => ({ ...d, [cap]: e.target.value }))}
+              />
+            </label>
+          ))}
+        </div>
+        <p className="text-caption text-ink-2">{term("budgets.none")}</p>
+        {spend.data ? (
+          <p className="font-mono text-mono text-ink-1">
+            {term("budgets.today")}: {formatUsd(spend.data.stationUsd)}
+          </p>
+        ) : null}
+        <div className="flex items-center gap-(--ow-space-2)">
+          <button type="submit" className={button} disabled={update.isPending}>
+            {term("budgets.save")}
+          </button>
+          {update.isSuccess && Object.keys(draft).length === 0 ? (
+            <span role="status" className="text-label text-ink-2">
+              {term("budgets.saved")}
+            </span>
+          ) : null}
+        </div>
+        <ErrorNote error={update.error} />
+      </form>
+    </section>
+  );
+}
+
+/** Settings: which models runs use, the OpenRouter key (set once, never shown), and budgets. */
 export function SettingsPage() {
   const settings = useSettings();
   const setKey = useSetApiKey();
@@ -89,6 +171,7 @@ export function SettingsPage() {
         <p className="text-caption text-ink-2">{term("settings.key.hint")}</p>
         <ErrorNote error={setKey.error ?? clearKey.error} />
       </section>
+      <BudgetsSection />
     </section>
   );
 }

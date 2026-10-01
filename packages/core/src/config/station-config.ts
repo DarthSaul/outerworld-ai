@@ -63,6 +63,16 @@ export const Budgets = z.looseObject({
   stationDailyUsd: Usd.optional(),
 });
 
+/**
+ * Budgets a new station starts with (onboarding, D22). A station without budgets has no caps;
+ * Settings says so plainly.
+ */
+export const DEFAULT_BUDGETS = {
+  perRunUsd: 5,
+  perAgentDailyUsd: 25,
+  stationDailyUsd: 50,
+} as const satisfies z.infer<typeof Budgets>;
+
 /** v1 allows depth 1 at most (brief §7); 0 turns delegation off. */
 export const DispatchPolicy = z.looseObject({
   maxDepth: z.number().int().min(0).max(1).default(1),

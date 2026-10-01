@@ -79,7 +79,16 @@ export const UpdateRoomInput = z.strictObject({
   props: z.array(Prop).optional(),
 });
 
+/** `PUT /api/budgets`: each cap in USD, or `null` for no cap. Missing fields keep their value. */
+const Cap = z.number().positive().max(100_000).nullable().optional();
+export const UpdateBudgetsInput = z.strictObject({
+  perRunUsd: Cap,
+  perAgentDailyUsd: Cap,
+  stationDailyUsd: Cap,
+});
+
 export type CreateAgentInput = z.infer<typeof CreateAgentInput>;
+export type UpdateBudgetsInput = z.infer<typeof UpdateBudgetsInput>;
 export type UpdateAgentInput = z.infer<typeof UpdateAgentInput>;
 export type DocumentInput = z.infer<typeof DocumentInput>;
 export type CreateScheduleInput = z.infer<typeof CreateScheduleInput>;

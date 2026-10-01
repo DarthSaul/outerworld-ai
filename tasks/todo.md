@@ -103,6 +103,11 @@ decisions made, open questions.
   timeout and shows on Notifications like any other. DST follows croner: a skipped local time runs
   at the first valid time after it, and a repeated one runs once. The schedule id comes from the
   first words of its prompt.
+- **D22 Budget defaults (Phase 9; owner to confirm).** A station created by onboarding starts with
+  `DEFAULT_BUDGETS` ($5 per run, $25 per crew member per day, $50 station per day: the values the
+  owner tested with real Notion work). A station whose `station.json` has no budgets has no caps;
+  it is not given any silently. Settings → Budgets shows each cap, "empty means no cap", and
+  today's station spend; `null` removes a cap.
 - **D11 Old core modules.** Ledger parsing, status schemas, StationState, health, and the demo
   timeline are Routines-specific; they are deleted in Phase 1 when the new schema lands (tests for
   them go with them; commit message says why).
@@ -239,7 +244,7 @@ decisions made, open questions.
 ## Phase 9 — Station view, notifications, onboarding, seed crew
 - [ ] ui map adapted: rooms, crew in rooms, props, hallways (rendered only), live crew state (idle, running, awaiting consent, blocked) from events only.
 - [ ] Notifications: filtered event projection, unread state persisted.
-- [ ] Settings → Budgets: view and edit `station.json` budgets (per run, per agent daily, station daily) in the SPA, and decide whether a station with none gets defaults (owner, 2026-09-29). Today they are hand-edited.
+- [x] Settings → Budgets: view and edit `station.json` budgets (per run, per agent daily, station daily) in the SPA (`PUT /api/budgets`); defaults for new stations per D22 (owner to confirm).
 - [ ] Onboarding: key → Overseer (name, tone) in Command room with dispatch, read_session, Web, Memory → first chat. Project Manager template (Operations; Notion granted, Web, Memory, Files; daily briefing schedule disabled).
 - [ ] `fixtures/demo-station` rewritten as a fictional station dir exercising all of the above; `browser:verify` green against it.
 

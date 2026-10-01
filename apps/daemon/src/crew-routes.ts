@@ -5,6 +5,7 @@ import {
   DocumentInput,
   SUPPORTED_MODELS,
   UpdateAgentInput,
+  UpdateBudgetsInput,
   UpdateRoomInput,
 } from "@darthsaul/outerworld-ai-core";
 import type { CrewService } from "@darthsaul/outerworld-ai-runtime";
@@ -54,6 +55,10 @@ export function crewRoutes(crew: CrewService): Hono {
     await crew.deleteRoom(c.req.param("id"));
     return c.body(null, 204);
   });
+
+  app.put("/budgets", async (c) =>
+    c.json(await crew.updateBudgets(await readBody(c, UpdateBudgetsInput))),
+  );
 
   return app;
 }

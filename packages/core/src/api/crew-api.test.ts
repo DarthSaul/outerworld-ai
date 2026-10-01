@@ -7,6 +7,7 @@ import {
   DocumentInput,
   slugify,
   UpdateAgentInput,
+  UpdateBudgetsInput,
   UpdateRoomInput,
   UpdateScheduleInput,
 } from "./crew-api.js";
@@ -83,5 +84,15 @@ describe("crew API inputs", () => {
     expect(UpdateScheduleInput.parse({ timezone: null })).toEqual({ timezone: null });
     expect(UpdateScheduleInput.safeParse({ timezone: "Mars/Olympus" }).success).toBe(false);
     expect(UpdateScheduleInput.safeParse({ sessionId: "s1" }).success).toBe(false);
+  });
+
+  it("sets, clears, or keeps each budget cap", () => {
+    expect(UpdateBudgetsInput.parse({ perRunUsd: 2, stationDailyUsd: null })).toEqual({
+      perRunUsd: 2,
+      stationDailyUsd: null,
+    });
+    expect(UpdateBudgetsInput.safeParse({ perRunUsd: 0 }).success).toBe(false);
+    expect(UpdateBudgetsInput.safeParse({ perRunUsd: -1 }).success).toBe(false);
+    expect(UpdateBudgetsInput.safeParse({ monthlyUsd: 10 }).success).toBe(false);
   });
 });

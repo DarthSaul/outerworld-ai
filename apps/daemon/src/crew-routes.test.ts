@@ -128,6 +128,14 @@ describe("crew and room routes", () => {
     expect((await call("PATCH", "/rooms/attic", { name: "x" })).status).toBe(404);
   });
 
+  it("PUT /budgets sets and clears caps; zero or an unknown cap is 400", async () => {
+    const { call } = setup();
+    const res = await call("PUT", "/budgets", { perRunUsd: 1.5, stationDailyUsd: null });
+    expect(await res.json()).toEqual({ perRunUsd: 1.5, perAgentDailyUsd: 25 });
+    expect((await call("PUT", "/budgets", { perRunUsd: 0 })).status).toBe(400);
+    expect((await call("PUT", "/budgets", { weeklyUsd: 3 })).status).toBe(400);
+  });
+
   it("still needs the token", async () => {
     const { call } = setup();
     expect((await call("GET", "/station", undefined, { authorization: "" })).status).toBe(401);

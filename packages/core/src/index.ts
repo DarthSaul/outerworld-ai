@@ -37,6 +37,7 @@ export {
   type StationView,
   slugify,
   UpdateAgentInput,
+  UpdateBudgetsInput,
   UpdateRoomInput,
   UpdateScheduleInput,
 } from "./api/crew-api.js";
@@ -59,6 +60,7 @@ export {
   Budgets,
   Connector,
   ConnectorTransport,
+  DEFAULT_BUDGETS,
   DispatchPolicy,
   Lane,
   Prop,
