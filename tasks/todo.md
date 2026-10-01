@@ -326,7 +326,7 @@ Source: `docs/design/station-dashboard/`. Dark only; sprites replace the rig; ev
   - scanner: room, crew and hallway views
 - [x] 11.8 Crew Select: agent picker, stage, 6×4 grid with keyboard control, assign and random.
 - [x] 11.9 Restyle COMMS, Crew, Agent, Memory, Notifications, Connectors, Settings, Onboarding.
-- [ ] 11.10 Remove the rig, the `--ow` tokens and the Reach map components; update the `/dev`
+- [x] 11.10 Remove the rig, the `--ow` tokens and the Reach map components; update the `/dev`
   gallery and the package READMEs.
 - [ ] 11.11 `browser:verify` dark only (reduced motion, 375 and 1280 widths, axe).
 

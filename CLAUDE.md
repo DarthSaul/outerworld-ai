@@ -19,9 +19,9 @@ wins and this file gets fixed. The plan and progress are in `tasks/todo.md`.
 **Product law:** the interface never asserts state the runtime cannot prove. The map is a
 projection of events, never a simulation.
 
-Milestone 1 (a read-only dashboard for Claude Code Routines) is archived (ADR-0010). Its map model
-stays in core and ui: the station map draws the runtime through it via core's `mapModelFor` (D14, D24),
-and its own fixture `fixtures/map-demo/` feeds the ui tests and the `/dev` gallery.
+Milestone 1 (a read-only dashboard for Claude Code Routines) is archived (ADR-0010); its schemas
+and ledger parsing stay in core, tested against `fixtures/map-demo/`. The station dashboard
+(ADR-0013) draws the runtime through core's `dashboardModel`.
 
 ## Vocabulary rule
 
@@ -57,10 +57,10 @@ packages/core/     @darthsaul/outerworld-ai-core — zod schemas (station.json, 
                    prompt assembly, run state transitions, layout math. No IO, no React.
 packages/runtime/  @darthsaul/outerworld-ai-runtime — agent loop, dispatcher, scheduler, tools,
                    MCP client, memory, budgets, storage (files, SQLite, keychain).
-packages/ui/       @darthsaul/outerworld-ai-ui — React components, tokens, the rigged character,
-                   the station map. Knows core, never runtime.
+packages/ui/       @darthsaul/outerworld-ai-ui — React components and --st-* tokens of the station
+                   dashboard (map, roster, comms, scanner, Crew Select). Knows core, never runtime.
 fixtures/demo-station/  a fictional $OUTERWORLD_HOME. All tests, dev runs, screenshots use it.
-fixtures/map-demo/      the milestone 1 map fixture, for the ui map tests and the /dev gallery.
+fixtures/map-demo/      the milestone 1 ledger fixture, for core's archived ledger tests.
 docs/              ARCHITECTURE.md, SCHEMA.md, PRIVACY.md, decisions/ (ADRs), specs/, design/
 ```
 

@@ -89,7 +89,7 @@ The run states and their allowed transitions are in core's `run/run-state.ts`
 log are:
 - `notificationFor`: Notifications;
 - `foldCrewActivity` / `activityOf`: what each crew member is doing now;
-- `mapModelFor`: the station map from config plus activity (D24).
+- `dashboardModel`: the station dashboard from config, activity, recent runs and dispatches (ADR-0013).
 
 ## SQLite (`station.db`)
 

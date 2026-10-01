@@ -88,7 +88,7 @@ apps/daemon/             Node entry: config, HTTP API, SSE, auth, serves the bui
 apps/station/            Vite + React SPA
 packages/core/           schemas, glossary, event types, pure policy and prompt assembly
 packages/runtime/        agent loop, dispatcher, scheduler, tools, MCP, memory, budgets, storage
-packages/ui/             React components, design tokens, the rigged character, the station map
+packages/ui/             React components and design tokens of the station dashboard (ADR-0013)
 fixtures/demo-station/   a fictional station directory for dev, tests, and screenshots
 docs/                    ARCHITECTURE, SCHEMA, PRIVACY, design assets, ADRs, specs
 ```
