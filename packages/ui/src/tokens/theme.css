@@ -50,9 +50,75 @@
   --color-emblem-shade: var(--ow-emblem-shade);
   --color-emblem-glow: var(--ow-emblem-glow);
   --color-emblem-mark: var(--ow-emblem-mark);
+  /* Station dashboard (ADR-0013): --st-* colors; the text-* family is named fg-*. */
+  --color-shadow: var(--st-shadow);
+  --color-track: var(--st-track);
+  --color-map-bg: var(--st-map-bg);
+  --color-chip-bg: var(--st-chip-bg);
+  --color-bg: var(--st-bg);
+  --color-well: var(--st-well);
+  --color-input-row: var(--st-input-row);
+  --color-well-2: var(--st-well-2);
+  --color-room: var(--st-room);
+  --color-panel: var(--st-panel);
+  --color-bar: var(--st-bar);
+  --color-bridge-bg: var(--st-bridge-bg);
+  --color-btn-hover: var(--st-btn-hover);
+  --color-hover: var(--st-hover);
+  --color-panel-head: var(--st-panel-head);
+  --color-active-bg: var(--st-active-bg);
+  --color-pedestal: var(--st-pedestal);
+  --color-tile: var(--st-tile);
+  --color-tile-hover: var(--st-tile-hover);
+  --color-tile-line: var(--st-tile-line);
+  --color-portrait-a: var(--st-portrait-a);
+  --color-portrait-b: var(--st-portrait-b);
+  --color-approve-hover: var(--st-approve-hover);
+  --color-deny-hover: var(--st-deny-hover);
+  --color-random-hover: var(--st-random-hover);
+  --color-scrim: var(--st-scrim);
+  --color-line-strong: var(--st-line-strong);
+  --color-line: var(--st-line);
+  --color-line-soft: var(--st-line-soft);
+  --color-line-faint: var(--st-line-faint);
+  --color-fg-hi: var(--st-text-hi);
+  --color-fg: var(--st-text);
+  --color-fg-chip: var(--st-text-chip);
+  --color-fg-log: var(--st-text-log);
+  --color-fg-grant: var(--st-text-grant);
+  --color-fg-soft: var(--st-text-soft);
+  --color-fg-quiet: var(--st-text-quiet);
+  --color-fg-mute: var(--st-text-mute);
+  --color-fg-dim: var(--st-text-dim);
+  --color-ink: var(--st-ink);
+  --color-on-red: var(--st-on-red);
+  --color-title: var(--st-title);
+  --color-subtitle: var(--st-subtitle);
+  --color-panel-title: var(--st-panel-title);
+  --color-link-hover: var(--st-link-hover);
+  --color-star: var(--st-star);
+  --color-cyan: var(--st-cyan);
+  --color-violet: var(--st-violet);
+  --color-amber: var(--st-amber);
+  --color-amber-hi: var(--st-amber-hi);
+  --color-green: var(--st-green);
+  --color-red: var(--st-red);
+  --color-red-text: var(--st-red-text);
+  --color-white: var(--st-white);
+  --color-lane-auth: var(--st-lane-auth);
+  --color-lane-selected: var(--st-lane-selected);
+  --color-done: var(--st-done);
+  --color-room-0: var(--st-room-0);
+  --color-room-1: var(--st-room-1);
+  --color-room-2: var(--st-room-2);
+  --color-room-3: var(--st-room-3);
+  --color-room-4: var(--st-room-4);
+  --color-room-5: var(--st-room-5);
 
   --font-sans: var(--ow-font-sans);
   --font-mono: var(--ow-font-mono);
+  --font-display: var(--st-font-display);
+  --font-body: var(--st-font-body);
 
   --text-*: initial;
   --text-display: var(--ow-text-display-size);
@@ -80,6 +146,55 @@
   --text-eyebrow--line-height: var(--ow-text-eyebrow-line);
   --text-eyebrow--font-weight: var(--ow-text-eyebrow-weight);
   --text-eyebrow--letter-spacing: var(--ow-text-eyebrow-tracking);
+  --text-d6: var(--st-d6);
+  --text-d6--line-height: var(--st-display-line-height);
+  --text-d7: var(--st-d7);
+  --text-d7--line-height: var(--st-display-line-height);
+  --text-d8: var(--st-d8);
+  --text-d8--line-height: var(--st-display-line-height);
+  --text-d9: var(--st-d9);
+  --text-d9--line-height: var(--st-display-line-height);
+  --text-d10: var(--st-d10);
+  --text-d10--line-height: var(--st-display-line-height);
+  --text-d11: var(--st-d11);
+  --text-d11--line-height: var(--st-display-line-height);
+  --text-d12: var(--st-d12);
+  --text-d12--line-height: var(--st-display-line-height);
+  --text-d14: var(--st-d14);
+  --text-d14--line-height: var(--st-display-line-height);
+  --text-d18: var(--st-d18);
+  --text-d18--line-height: var(--st-display-line-height);
+  --text-d30: var(--st-d30);
+  --text-d30--line-height: var(--st-display-line-height);
+  --text-b14: var(--st-b14);
+  --text-b14--line-height: var(--st-line-height);
+  --text-b15: var(--st-b15);
+  --text-b15--line-height: var(--st-line-height);
+  --text-b16: var(--st-b16);
+  --text-b16--line-height: var(--st-line-height);
+  --text-b17: var(--st-b17);
+  --text-b17--line-height: var(--st-line-height);
+  --text-b18: var(--st-b18);
+  --text-b18--line-height: var(--st-line-height);
+  --text-b19: var(--st-b19);
+  --text-b19--line-height: var(--st-line-height);
+  --text-b20: var(--st-b20);
+  --text-b20--line-height: var(--st-line-height);
+  --text-b21: var(--st-b21);
+  --text-b21--line-height: var(--st-line-height);
+  --text-b22: var(--st-b22);
+  --text-b22--line-height: var(--st-line-height);
+
+  --tracking-*: initial;
+  --tracking-st-1: var(--st-tracking-1);
+  --tracking-st-2: var(--st-tracking-2);
+  --tracking-st-4: var(--st-tracking-4);
+
+  --shadow-*: initial;
+  --shadow-panel: var(--st-shadow-panel);
+  --shadow-tile: var(--st-shadow-tile);
+  --shadow-bar-down: var(--st-shadow-bar-down);
+  --shadow-bar-up: var(--st-shadow-bar-up);
 
   /* Spacing: Tailwind's default multiplier is already 4px (0.25rem), matching the 4px base.
      Named steps exist for the design doc's vocabulary. */
@@ -99,6 +214,8 @@
   --radius-control: var(--ow-radius-control);
   --radius-chip: var(--ow-radius-chip);
   --radius-full: var(--ow-radius-full);
+  --radius-pill: var(--st-radius-pill);
+  --radius-round: var(--st-radius-round);
 
   /* Media queries cannot read custom properties, so this is the one literal in the theme. It
      must equal --ow-breakpoint-mobile in tokens.css; tokens.test.ts enforces that. */
