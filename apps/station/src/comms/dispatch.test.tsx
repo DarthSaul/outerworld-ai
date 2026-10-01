@@ -107,18 +107,30 @@ describe("dispatch in COMMS", () => {
   });
 });
 
-describe("Running now", () => {
-  it("lists work in flight, marks dispatched work, and links to its session", async () => {
-    const { fake, worker } = withDispatch();
-    renderApp("/", fake);
-    const section = await screen.findByRole("region", { name: term("activity.title") });
-    const link = await within(section).findByRole("link", { name: "Quill" });
-    expect(link).toHaveAttribute("href", `/comms?agent=quill&open=${worker.session.id}`);
-    expect(within(section).getByText(/task from Vesper: Update the hub/)).toBeInTheDocument();
+describe("dispatch on the Station", () => {
+  it("lists the dispatched mission on the Bridge and runs packets down its hallway", async () => {
+    const { fake } = withDispatch();
+    fake.state.station = {
+      ...fake.state.station,
+      lanes: [{ id: "command-to-operations", from: "command", to: "operations" }],
+    };
+    const { container } = renderApp("/", fake);
+    const scanner = await screen.findByRole("region", { name: term("scanner.title") });
+    expect(await within(scanner).findByText("From Vesper: Update the hub")).toBeInTheDocument();
+    expect(within(scanner).getByText(term("missionStatus.running"))).toBeInTheDocument();
+    await expect
+      .poll(() => container.querySelectorAll('[data-packet="command-to-operations"]').length)
+      .toBe(1);
   });
 
-  it("says when nothing is running", async () => {
-    renderApp("/");
-    expect(await screen.findByText(term("activity.none"))).toBeInTheDocument();
+  it("runs no packets once the dispatch is done", async () => {
+    const { fake } = withDispatch("completed");
+    fake.state.station = {
+      ...fake.state.station,
+      lanes: [{ id: "command-to-operations", from: "command", to: "operations" }],
+    };
+    const { container } = renderApp("/", fake);
+    await screen.findByRole("region", { name: term("map.title") });
+    expect(container.querySelectorAll("[data-packet]")).toHaveLength(0);
   });
 });

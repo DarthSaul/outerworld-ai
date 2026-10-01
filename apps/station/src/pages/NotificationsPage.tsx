@@ -1,9 +1,10 @@
-import { type Notification, term, termWith } from "@darthsaul/outerworld-ai-core";
+import { type Notification, term } from "@darthsaul/outerworld-ai-core";
 import { EmptyState } from "@darthsaul/outerworld-ai-ui";
 import { Link } from "react-router";
 import { ConsentCard } from "../comms/ConsentCard.js";
 import { ErrorNote } from "../components/ErrorNote.js";
 import { formatWhen } from "../components/format.js";
+import { notificationText } from "../components/notification-text.js";
 import { useConsents, useMarkRead, useNotifications, useStationView } from "../queries.js";
 
 const button =
@@ -33,11 +34,6 @@ function linkFor(n: Notification): string | undefined {
   }
 }
 
-const reasonWords = (n: Notification) =>
-  n.kind === "schedule_missed" && n.reason
-    ? term(`schedule.missed.${n.reason}` as "schedule.missed.down")
-    : (n.reason ?? "");
-
 function Line({
   n,
   unread,
@@ -49,12 +45,7 @@ function Line({
   readonly nameOf: (id: string) => string;
   readonly connectorName: (id: string) => string;
 }) {
-  const text = termWith(`notification.${n.kind}`, {
-    agent: n.agentId ? nameOf(n.agentId) : "",
-    subject: n.kind === "connector" && n.subject ? connectorName(n.subject) : (n.subject ?? ""),
-    detail: n.detail ?? n.reason ?? "",
-    reason: reasonWords(n),
-  });
+  const text = notificationText(n, nameOf, connectorName);
   const to = linkFor(n);
   return (
     <li

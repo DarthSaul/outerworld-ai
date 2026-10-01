@@ -48,6 +48,19 @@ describe("OverseerComms", () => {
     expect(onNext).toHaveBeenCalledTimes(1);
   });
 
+  it("holds a reply while it is still streaming, then moves on after the reply hold", () => {
+    const onNext = vi.fn();
+    const reply: CommsMessage = { key: "r1", speaker: "Vesper", text: "On it", kind: "reply" };
+    const { rerender } = render(
+      <OverseerComms message={{ ...reply, streaming: true }} onNext={onNext} />,
+    );
+    act(() => vi.advanceTimersByTime(60_000));
+    expect(onNext).not.toHaveBeenCalled();
+    rerender(<OverseerComms message={reply} onNext={onNext} />);
+    act(() => vi.advanceTimersByTime(STATION_MS["reply-hold"]));
+    expect(onNext).toHaveBeenCalledTimes(1);
+  });
+
   it("offers (A) approve and (B) deny for an approval, Next otherwise", () => {
     const onApprove = vi.fn();
     const onDeny = vi.fn();

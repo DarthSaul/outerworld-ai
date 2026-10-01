@@ -37,7 +37,7 @@ describe("StationHeader", () => {
         controls={<StopButton stopped={false} onToggle={() => {}} />}
       />,
     );
-    expect(screen.getByRole("heading", { level: 1, name: "Demo Station" })).toBeInTheDocument();
+    expect(screen.getByRole("banner")).toHaveTextContent("Demo Station");
     expect(screen.getByText("Overseer console · 3 rooms · 3 crew")).toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "Primary" })).toBeInTheDocument();
     expect(screen.getByText("Alerts").parentElement).toHaveClass("st-blink-border");

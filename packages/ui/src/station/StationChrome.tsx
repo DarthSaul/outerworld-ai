@@ -122,9 +122,9 @@ export function StationHeader(p: StationHeaderProps) {
           className="size-8.5 bg-cyan [clip-path:polygon(50%_0,100%_100%,50%_78%,0_100%)]"
         />
         <div className="flex flex-col gap-1.5">
-          <h1 className="m-0 font-display font-normal text-d14 text-title uppercase tracking-st-2">
+          <div className="font-display text-d14 text-title uppercase tracking-st-2">
             {p.stationName}
-          </h1>
+          </div>
           <div className="text-b17 text-subtitle uppercase tracking-st-1">
             {termWith("dashboard.subtitle", { rooms: String(p.rooms), crew: String(p.crew) })}
           </div>

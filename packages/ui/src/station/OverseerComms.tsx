@@ -14,6 +14,8 @@ export interface CommsMessage {
   readonly text: string;
   /** An approval waits for A or B; a reply or chatter moves on by itself after a hold. */
   readonly kind: "approval" | "reply" | "chatter";
+  /** A reply still streaming in: it never moves on by itself until the run ends. */
+  readonly streaming?: boolean;
 }
 
 /**
@@ -68,7 +70,9 @@ export function OverseerComms({
 
   // Chatter and replies move on by themselves once typed, after the design's hold.
   useEffect(() => {
-    if (!finished || !message || message.kind === "approval" || !onNext) return;
+    if (!finished || !message || message.kind === "approval" || message.streaming || !onNext) {
+      return;
+    }
     const hold = message.kind === "reply" ? STATION_MS["reply-hold"] : STATION_MS["chatter-hold"];
     const timer = setTimeout(onNext, hold);
     return () => clearTimeout(timer);
