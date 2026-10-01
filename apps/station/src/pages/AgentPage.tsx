@@ -5,9 +5,11 @@ import {
   type AgentView,
   type ApprovalMode,
   type EffectiveTool,
+  lookFor,
   type StationConfig,
   term,
 } from "@darthsaul/outerworld-ai-core";
+import { Sprite } from "@darthsaul/outerworld-ai-ui";
 import { type FormEvent, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { ErrorNote } from "../components/ErrorNote.js";
@@ -21,11 +23,14 @@ import {
 } from "../queries.js";
 import { SchedulesSection } from "./Schedules.js";
 
+/** The design's quiet outline button, as a class so submit buttons can use it too. */
 const button =
-  "h-(--ow-size-control-h-dense) rounded-control border border-border-subtle px-(--ow-size-control-pad-x) text-label text-ink-1 disabled:text-ink-3";
-const input =
-  "h-(--ow-size-control-h-dense) rounded-control border border-border-subtle bg-surface-raised px-(--ow-space-2) text-body text-ink-1";
-const field = "flex flex-col gap-(--ow-space-1) text-label text-ink-2";
+  "cursor-pointer border-2 border-line bg-transparent px-2.5 py-1.5 font-display text-d7 text-panel-title uppercase hover:border-cyan disabled:cursor-not-allowed disabled:opacity-50";
+const input = "border-2 border-line-soft bg-well px-2 py-1 font-body text-b19 text-fg-hi";
+const field = "flex flex-col gap-1 font-display text-d7 text-fg-mute uppercase";
+const label = "font-display text-d7 text-fg-mute uppercase";
+/** A panel around one part of the page. */
+const panel = "flex flex-col gap-3 border-2 border-line bg-panel p-3 shadow-panel";
 
 const sourceLabel = (t: EffectiveTool) =>
   t.source.kind === "role"
@@ -60,18 +65,18 @@ function DocumentEditor({
   const dirty = draft !== null && draft !== saved;
   const id = `doc-${name}`;
   return (
-    <div className="flex flex-col gap-(--ow-space-1)" data-document={name}>
-      <label htmlFor={id} className="font-mono text-eyebrow uppercase text-ink-3">
+    <div className="flex flex-col gap-1.5" data-document={name}>
+      <label htmlFor={id} className={label}>
         {term(`document.${name}`)}
       </label>
       <textarea
         id={id}
-        className="rounded-control border border-border-subtle bg-surface-raised p-(--ow-space-2) font-mono text-mono text-ink-1"
+        className="border-2 border-line-soft bg-well p-2 font-body text-b17 text-fg-hi"
         value={text}
         rows={8}
         onChange={(e) => setDraft(e.target.value)}
       />
-      <div className="flex items-center gap-(--ow-space-2)">
+      <div className="flex items-center gap-2">
         <button
           type="button"
           className={button}
@@ -80,7 +85,7 @@ function DocumentEditor({
         >
           Save {term(`document.${name}`).toLowerCase()}
         </button>
-        <span className="font-mono text-mono text-ink-3" aria-live="polite">
+        <span className="text-b17 text-fg-mute" aria-live="polite">
           {save.isPending ? "saving…" : dirty ? "unsaved" : "saved"}
         </span>
       </div>
@@ -115,8 +120,8 @@ function ConfigForm({
   const grants = new Set(value.connectorGrants);
 
   return (
-    <form aria-label="Configuration" onSubmit={submit} className="flex flex-col gap-(--ow-space-3)">
-      <div className="flex flex-wrap gap-(--ow-space-3)">
+    <form aria-label="Configuration" onSubmit={submit} className={panel}>
+      <div className="flex flex-wrap gap-3">
         <label className={field}>
           Name
           <input
@@ -168,14 +173,12 @@ function ConfigForm({
           </select>
         </label>
       </div>
-      <fieldset className="flex flex-col gap-(--ow-space-1)">
-        <legend className="mb-(--ow-space-1) font-mono text-eyebrow uppercase text-ink-3">
-          {term("approvalMode")}
-        </legend>
+      <fieldset className="m-0 flex flex-col gap-1.5 border-0 p-0">
+        <legend className={`mb-1.5 ${label}`}>{term("approvalMode")}</legend>
         {(["ask", "full"] as const satisfies readonly ApprovalMode[]).map((mode) => (
           <label
             key={mode}
-            className="flex items-start gap-(--ow-space-2) text-label text-ink-1"
+            className="flex items-start gap-2 text-b19 text-fg"
             {...(mode === "full" ? { "data-flag": "full-power" } : {})}
           >
             <input
@@ -189,27 +192,22 @@ function ConfigForm({
               <span
                 className={
                   mode === "full"
-                    ? "self-start rounded-control border border-health-attention px-(--ow-space-1) text-ink-1"
+                    ? "self-start border border-amber px-1.5 font-display text-d7 text-amber uppercase"
                     : undefined
                 }
               >
                 {term(`approvalMode.${mode}`)}
               </span>
-              <span className="text-caption text-ink-2">{term(`approvalMode.${mode}.hint`)}</span>
+              <span className="text-b17 text-fg-mute">{term(`approvalMode.${mode}.hint`)}</span>
             </span>
           </label>
         ))}
       </fieldset>
       {station.connectors.length > 0 ? (
-        <fieldset className="flex flex-wrap gap-(--ow-space-3)">
-          <legend className="mb-(--ow-space-1) font-mono text-eyebrow uppercase text-ink-3">
-            {term("connectors")}
-          </legend>
+        <fieldset className="m-0 flex flex-wrap gap-3 border-0 p-0">
+          <legend className={`mb-1.5 ${label}`}>{term("connectors")}</legend>
           {station.connectors.map((c) => (
-            <label
-              key={c.id}
-              className="flex items-center gap-(--ow-space-1) text-label text-ink-1"
-            >
+            <label key={c.id} className="flex items-center gap-1.5 text-b19 text-fg">
               <input
                 type="checkbox"
                 checked={grants.has(c.id)}
@@ -226,7 +224,7 @@ function ConfigForm({
           ))}
         </fieldset>
       ) : null}
-      <div className="flex items-center gap-(--ow-space-2)">
+      <div className="flex items-center gap-2">
         <button type="submit" className={button} disabled={!dirty || update.isPending}>
           Save changes
         </button>
@@ -249,21 +247,35 @@ export function AgentPage() {
   const remove = useDeleteAgent();
   const navigate = useNavigate();
 
-  if (agent.isPending || station.isPending) return <p className="text-body text-ink-2">Loading…</p>;
+  if (agent.isPending || station.isPending)
+    return <p className="text-b19 text-fg-mute">Loading…</p>;
   if (agent.error) return <ErrorNote error={agent.error} />;
   if (station.error || !station.data.station) return <ErrorNote error={station.error} />;
   const a = agent.data;
 
   return (
-    <section aria-labelledby="screen-title" className="flex flex-col gap-(--ow-space-5)">
-      <header className="flex flex-wrap items-baseline justify-between gap-(--ow-space-2)">
-        <div className="flex flex-col gap-(--ow-space-1)">
-          <Link to="/crew" className="text-label text-ink-2 underline">
-            {term("agents")}
+    <section aria-labelledby="screen-title" className="flex flex-col gap-3.5">
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <Link
+            to="/crew-select"
+            aria-label={term("tab.crewSelect")}
+            title={term("tab.crewSelect")}
+            className="flex border-2 border-cyan bg-tile p-1 hover:bg-tile-hover"
+          >
+            <Sprite look={lookFor(a.id, a.config.look)} scale={4} />
           </Link>
-          <h1 id="screen-title" className="text-heading text-ink-1">
-            {a.config.name}
-          </h1>
+          <div className="flex flex-col gap-1.5">
+            <Link to="/crew" className="font-display text-d7 uppercase">
+              ◀ {term("agents")}
+            </Link>
+            <h1
+              id="screen-title"
+              className="m-0 font-display font-normal text-d14 text-title uppercase tracking-st-2"
+            >
+              {a.config.name}
+            </h1>
+          </div>
         </div>
         <button
           type="button"
@@ -280,19 +292,19 @@ export function AgentPage() {
       </header>
       <ErrorNote error={remove.error} />
       <ConfigForm key={a.id} agent={a} station={station.data.station} />
-      <section aria-labelledby="tools-title" className="flex flex-col gap-(--ow-space-2)">
-        <h2 id="tools-title" className="font-mono text-eyebrow uppercase text-ink-3">
+      <section aria-labelledby="tools-title" className={panel}>
+        <h2 id="tools-title" className={`m-0 font-normal ${label}`}>
           {term("tools.effective")}
         </h2>
         {pendingConnectors(a, station.data.station).map((name) => (
-          <p key={name} className="text-body text-ink-2" data-connector-pending>
+          <p key={name} className="m-0 text-b17 text-amber" data-connector-pending>
             {name} {term("tools.connector.pending")}
           </p>
         ))}
         {a.tools.length === 0 ? (
-          <p className="text-body text-ink-2">{term("tools.none")}</p>
+          <p className="m-0 text-b17 text-fg-mute">{term("tools.none")}</p>
         ) : (
-          <ul className="flex flex-col gap-(--ow-space-1) font-mono text-mono text-ink-1">
+          <ul className="m-0 flex list-none flex-col gap-1 p-0 text-b17 text-fg">
             {a.tools.map((t) => (
               <li key={t.name} data-tool={t.name} data-class={t.class}>
                 {t.name} · {term(`grant.${t.class}`)} · {sourceLabel(t)}
@@ -302,7 +314,7 @@ export function AgentPage() {
         )}
       </section>
       <SchedulesSection agentId={a.id} />
-      <section aria-label="Documents" className="flex flex-col gap-(--ow-space-4)">
+      <section aria-label="Documents" className={panel}>
         {AGENT_DOCUMENTS.map((name) => (
           <DocumentEditor key={name} agentId={a.id} name={name} saved={a.documents[name]} />
         ))}

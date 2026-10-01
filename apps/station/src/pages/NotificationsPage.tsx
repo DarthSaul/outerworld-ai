@@ -8,7 +8,7 @@ import { linkFor, notificationText } from "../components/notification-text.js";
 import { useConsents, useMarkRead, useNotifications, useStationView } from "../queries.js";
 
 const button =
-  "h-(--ow-size-control-h-dense) rounded-control border border-border-subtle px-(--ow-size-control-pad-x) text-label text-ink-1 disabled:text-ink-3";
+  "cursor-pointer border-2 border-line bg-transparent px-2.5 py-1.5 font-display text-d7 text-panel-title uppercase no-underline hover:border-cyan disabled:cursor-not-allowed disabled:opacity-50";
 
 function Line({
   n,
@@ -28,19 +28,19 @@ function Line({
       data-kind={n.kind}
       data-level={n.level}
       data-unread={unread}
-      className={`flex flex-wrap items-baseline gap-(--ow-space-2) rounded-control border p-(--ow-space-2) ${
-        unread ? "border-border-strong" : "border-border-subtle"
+      className={`flex flex-wrap items-baseline gap-2 border bg-well-2 p-2 ${
+        unread ? "border-cyan" : "border-line-faint"
       }`}
     >
       {unread ? (
-        <span className="font-mono text-eyebrow uppercase text-ink-1">
+        <span className="font-display text-d7 text-amber uppercase">
           {term("notifications.new")}
         </span>
       ) : null}
-      <span className="min-w-0 flex-1 text-body text-ink-1">{text}</span>
-      <span className="font-mono text-mono text-ink-2">{formatWhen(n.at)}</span>
+      <span className="min-w-0 flex-1 text-b19 text-fg-hi">{text}</span>
+      <span className="text-b17 text-fg-mute">{formatWhen(n.at)}</span>
       {to ? (
-        <Link to={to} className="text-label text-ink-1 underline">
+        <Link to={to} className="font-display text-d7 text-cyan uppercase underline">
           {term("notification.open")}
         </Link>
       ) : null}
@@ -66,11 +66,14 @@ export function NotificationsPage() {
   const readSeq = pages[0]?.readSeq ?? 0;
   const newest = items[0]?.seq;
   return (
-    <section aria-labelledby="screen-title" className="flex flex-col gap-(--ow-space-4)">
-      <h1 id="screen-title" className="text-heading text-ink-1">
+    <section aria-labelledby="screen-title" className="flex flex-col gap-4">
+      <h1
+        id="screen-title"
+        className="m-0 font-display font-normal text-d14 text-title uppercase leading-[1.4] tracking-st-2"
+      >
         {term("notifications")}
       </h1>
-      <h2 className="font-mono text-eyebrow uppercase text-ink-3">
+      <h2 className="m-0 font-display font-normal text-d7 text-fg-mute uppercase">
         {term("notifications.approvals")}
       </h2>
       <ErrorNote error={consents.error} />
@@ -79,8 +82,8 @@ export function NotificationsPage() {
       ) : (
         pending.map((c) => <ConsentCard key={c.id} consent={c} agentName={nameOf(c.agentId)} />)
       )}
-      <div className="flex flex-wrap items-baseline justify-between gap-(--ow-space-2)">
-        <h2 id="feed-title" className="font-mono text-eyebrow uppercase text-ink-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 id="feed-title" className="m-0 font-display font-normal text-d7 text-fg-mute uppercase">
           {term("notifications.feed")}
         </h2>
         {newest !== undefined && newest > readSeq ? (
@@ -101,7 +104,7 @@ export function NotificationsPage() {
           body={term("notifications.none.body")}
         />
       ) : feed.isSuccess ? (
-        <ul aria-labelledby="feed-title" className="flex flex-col gap-(--ow-space-2)">
+        <ul aria-labelledby="feed-title" className="m-0 flex list-none flex-col gap-2 p-0">
           {items.map((n) => (
             <Line
               key={n.seq}

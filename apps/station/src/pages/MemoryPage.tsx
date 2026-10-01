@@ -1,5 +1,5 @@
 import { term } from "@darthsaul/outerworld-ai-core";
-import { EmptyState } from "@darthsaul/outerworld-ai-ui";
+import { EmptyState, OutlineButton, Panel, tabClass } from "@darthsaul/outerworld-ai-ui";
 import { useState } from "react";
 import { useSearchParams } from "react-router";
 import { ErrorNote } from "../components/ErrorNote.js";
@@ -12,12 +12,10 @@ import {
   useStationView,
 } from "../queries.js";
 
-const button =
-  "h-(--ow-size-control-h-dense) rounded-control border border-border-subtle px-(--ow-size-control-pad-x) text-label text-ink-1 disabled:text-ink-3";
 const textarea =
-  "min-h-(--ow-size-control-h) w-full rounded-control border border-border-subtle bg-surface-raised p-(--ow-space-2) text-body text-ink-1";
-const card =
-  "flex flex-col gap-(--ow-space-2) rounded-panel border border-border-subtle p-(--ow-space-3)";
+  "min-h-20 w-full border-2 border-line-soft bg-well p-2 font-body text-b19 text-fg-hi";
+const card = "flex flex-col gap-2 border border-line-faint bg-well-2 p-3";
+const label = "flex flex-col gap-1 font-display text-d7 text-fg-mute uppercase";
 
 function Proposal({ memory }: { readonly memory: MemoryItem }) {
   const decide = useDecideMemory();
@@ -25,14 +23,13 @@ function Proposal({ memory }: { readonly memory: MemoryItem }) {
   const edited = text.trim() !== memory.text;
   return (
     <li className={card} data-memory={memory.id}>
-      <label className="flex flex-col gap-(--ow-space-1) text-label text-ink-2">
+      <label className={label}>
         {term("memory.text")}
         <textarea className={textarea} value={text} onChange={(e) => setText(e.target.value)} />
       </label>
-      <div className="flex flex-wrap gap-(--ow-space-2)">
-        <button
-          type="button"
-          className={button}
+      <div className="flex flex-wrap gap-2">
+        <OutlineButton
+          tone="green"
           disabled={decide.isPending || !text.trim()}
           onClick={() =>
             decide.mutate({
@@ -43,15 +40,14 @@ function Proposal({ memory }: { readonly memory: MemoryItem }) {
           }
         >
           {term("memory.approve")}
-        </button>
-        <button
-          type="button"
-          className={button}
+        </OutlineButton>
+        <OutlineButton
+          tone="red"
           disabled={decide.isPending}
           onClick={() => decide.mutate({ id: memory.id, decision: "reject" })}
         >
           {term("memory.reject")}
-        </button>
+        </OutlineButton>
       </div>
       <ErrorNote error={decide.error} />
     </li>
@@ -69,44 +65,40 @@ function Belief({ memory }: { readonly memory: MemoryItem }) {
   return (
     <li className={card} data-memory={memory.id}>
       {draft === null ? (
-        <p className="text-body text-ink-1">{memory.text}</p>
+        <p className="m-0 text-b19 text-fg-hi">{memory.text}</p>
       ) : (
-        <label className="flex flex-col gap-(--ow-space-1) text-label text-ink-2">
+        <label className={label}>
           {term("memory.text")}
           <textarea className={textarea} value={draft} onChange={(e) => setDraft(e.target.value)} />
         </label>
       )}
-      <div className="flex flex-wrap items-center gap-(--ow-space-2)">
+      <div className="flex flex-wrap items-center gap-2">
         {memory.scope === "station" ? (
-          <span className="font-mono text-mono text-ink-2">{term("memory.scope.station")}</span>
+          <span className="font-display text-d7 text-cyan uppercase">
+            {term("memory.scope.station")}
+          </span>
         ) : null}
         {draft === null ? (
           <>
-            <button type="button" className={button} onClick={() => setDraft(memory.text)}>
+            <OutlineButton tone="line" onClick={() => setDraft(memory.text)}>
               {term("memory.edit")}
-            </button>
-            <button
-              type="button"
-              className={button}
+            </OutlineButton>
+            <OutlineButton
+              tone="red"
               disabled={forget.isPending}
               onClick={() => forget.mutate(memory.id)}
             >
               {term("memory.forget")}
-            </button>
+            </OutlineButton>
           </>
         ) : (
           <>
-            <button
-              type="button"
-              className={button}
-              disabled={edit.isPending || !draft.trim()}
-              onClick={save}
-            >
+            <OutlineButton tone="green" disabled={edit.isPending || !draft.trim()} onClick={save}>
               {term("memory.save")}
-            </button>
-            <button type="button" className={button} onClick={() => setDraft(null)}>
+            </OutlineButton>
+            <OutlineButton tone="line" onClick={() => setDraft(null)}>
               {term("memory.cancel")}
-            </button>
+            </OutlineButton>
           </>
         )}
       </div>
@@ -129,18 +121,21 @@ export function MemoryPage() {
   const beliefs = memories.data?.beliefs ?? [];
 
   return (
-    <section aria-labelledby="screen-title" className="flex flex-col gap-(--ow-space-4)">
-      <h1 id="screen-title" className="text-heading text-ink-1">
+    <section aria-labelledby="screen-title" className="flex flex-col gap-3.5">
+      <h1
+        id="screen-title"
+        className="m-0 font-display font-normal text-d14 text-title uppercase tracking-st-2"
+      >
         {term("memory")}
       </h1>
       <nav aria-label={term("agents")}>
-        <ul className="flex flex-wrap gap-(--ow-space-2)">
+        <ul className="m-0 flex list-none flex-wrap gap-1.5 p-0">
           {station.data?.agents.map((a) => (
             <li key={a.id}>
               <button
                 type="button"
                 aria-pressed={a.id === agentId}
-                className={`${button} aria-pressed:border-border-strong`}
+                className={tabClass(a.id === agentId)}
                 onClick={() => setParams({ agent: a.id })}
               >
                 {a.config.name}
@@ -151,44 +146,42 @@ export function MemoryPage() {
       </nav>
       <ErrorNote error={station.error ?? memories.error} />
       {agentId === undefined ? (
-        <p className="text-body text-ink-2">{term("memory.pick")}</p>
+        <p className="m-0 text-b19 text-fg-soft">{term("memory.pick")}</p>
       ) : memories.isSuccess ? (
         <>
-          <section aria-labelledby="memory-proposals" className="flex flex-col gap-(--ow-space-2)">
-            <h2 id="memory-proposals" className="font-mono text-eyebrow uppercase text-ink-3">
-              {term("memory.proposals")}
-            </h2>
-            {proposals.length === 0 ? (
-              <EmptyState
-                title={term("memory.none.proposals.title")}
-                body={term("memory.none.proposals.body")}
-              />
-            ) : (
-              <ul className="flex flex-col gap-(--ow-space-2)">
-                {proposals.map((m) => (
-                  <Proposal key={m.id} memory={m} />
-                ))}
-              </ul>
-            )}
-          </section>
-          <section aria-labelledby="memory-beliefs" className="flex flex-col gap-(--ow-space-2)">
-            <h2 id="memory-beliefs" className="font-mono text-eyebrow uppercase text-ink-3">
-              {term("memory.beliefs")}
-            </h2>
-            <p className="text-label text-ink-2">{term("memory.hint")}</p>
-            {beliefs.length === 0 ? (
-              <EmptyState
-                title={term("memory.none.beliefs.title")}
-                body={term("memory.none.beliefs.body")}
-              />
-            ) : (
-              <ul className="flex flex-col gap-(--ow-space-2)">
-                {beliefs.map((m) => (
-                  <Belief key={m.id} memory={m} />
-                ))}
-              </ul>
-            )}
-          </section>
+          <Panel title={term("memory.proposals")}>
+            <div className="flex flex-col gap-2 p-3">
+              {proposals.length === 0 ? (
+                <EmptyState
+                  title={term("memory.none.proposals.title")}
+                  body={term("memory.none.proposals.body")}
+                />
+              ) : (
+                <ul className="m-0 flex list-none flex-col gap-2 p-0">
+                  {proposals.map((m) => (
+                    <Proposal key={m.id} memory={m} />
+                  ))}
+                </ul>
+              )}
+            </div>
+          </Panel>
+          <Panel title={term("memory.beliefs")}>
+            <div className="flex flex-col gap-2 p-3">
+              <p className="m-0 text-b17 text-fg-soft">{term("memory.hint")}</p>
+              {beliefs.length === 0 ? (
+                <EmptyState
+                  title={term("memory.none.beliefs.title")}
+                  body={term("memory.none.beliefs.body")}
+                />
+              ) : (
+                <ul className="m-0 flex list-none flex-col gap-2 p-0">
+                  {beliefs.map((m) => (
+                    <Belief key={m.id} memory={m} />
+                  ))}
+                </ul>
+              )}
+            </div>
+          </Panel>
         </>
       ) : null}
     </section>

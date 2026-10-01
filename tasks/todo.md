@@ -150,6 +150,15 @@ decisions made, open questions.
     "manifest".
   - Lane routes come from core layout math: each room has a door at the middle of each side, and
     a route is an orthogonal polyline between the nearest pair of doors.
+  - AA contrast (axe serious, a CONSTRAINTS gate) required a few changes from the design:
+    - `--st-text-dim` is raised from L .55 to .6, and `--st-done` from .55 to .62.
+    - The ALERT tag uses ink on light red instead of white on red.
+    - Text never blinks; only lamps, the LED, the cursor and borders blink. Text caught at low
+      opacity mid-blink fails contrast.
+  - Radio lines open where their notification points (the same targets as Notifications), which
+    also gives the scroll area keyboard access.
+  - The roster shows each crew member's room where the design shows a role: crew have no role
+    text.
 
 ## Phase 0 — Housekeeping and decisions
 
@@ -296,9 +305,9 @@ decisions made, open questions.
 ## Phase 11 — Station dashboard redesign (ADR-0013)
 Source: `docs/design/station-dashboard/`. Dark only; sprites replace the rig; every screen restyled.
 - [x] 11.1 Docs: spec moved under `docs/design/`, ADR-0013, CLAUDE.md, CONSTRAINTS, D26.
-- [ ] 11.2 Tokens: `--st-*` replaces `--ow-*` (dark only), the Tailwind theme mapping, Fontsource
+- [x] 11.2 Tokens: `--st-*` replaces `--ow-*` (dark only), the Tailwind theme mapping, Fontsource
   fonts, CRT overlay, and blink/packet/typing motion with reduced motion respected.
-- [ ] 11.3 core:
+- [x] 11.3 core:
   - character specs and the grid generator
   - `look` replaces `rig` in agent.json
   - room presentation: color, sector, layout rect, Bridge = the Overseer's room
@@ -306,17 +315,17 @@ Source: `docs/design/station-dashboard/`. Dark only; sprites replace the rig; ev
   - mission and crew status mapping
   - chatter templates
   - glossary keys
-- [ ] 11.4 daemon/runtime: open and close hallway endpoints (config only), today's tokens on
+- [x] 11.4 daemon/runtime: open and close hallway endpoints (config only), today's tokens on
   `/api/spend`, `startedAt` on `/api/health`.
-- [ ] 11.5 ui primitives: Panel, StatBox, SegmentBar, Avatar, Sprite, buttons, chips.
-- [ ] 11.6 Shell: header (tabs, stats, radio chatter, stop/resume, CRT toggle), footer vitals.
-- [ ] 11.7 Station page:
+- [x] 11.5 ui primitives: Panel, StatBox, SegmentBar, Avatar, Sprite, buttons, chips.
+- [x] 11.6 Shell: header (tabs, stats, radio chatter, stop/resume, CRT toggle), footer vitals.
+- [x] 11.7 Station page:
   - crew roster
   - map: 3 styles, rooms, Bridge, hallways, packets, draw and close hallway
   - Overseer comms: approvals, order input, typed replies, templated chatter
   - scanner: room, crew and hallway views
-- [ ] 11.8 Crew Select: agent picker, stage, 6×4 grid with keyboard control, assign and random.
-- [ ] 11.9 Restyle COMMS, Crew, Agent, Memory, Notifications, Connectors, Settings, Onboarding.
+- [x] 11.8 Crew Select: agent picker, stage, 6×4 grid with keyboard control, assign and random.
+- [x] 11.9 Restyle COMMS, Crew, Agent, Memory, Notifications, Connectors, Settings, Onboarding.
 - [ ] 11.10 Remove the rig, the `--ow` tokens and the Reach map components; update the `/dev`
   gallery and the package READMEs.
 - [ ] 11.11 `browser:verify` dark only (reduced motion, 375 and 1280 widths, axe).

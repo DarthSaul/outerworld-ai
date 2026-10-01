@@ -15,6 +15,8 @@ export function tabClass(active: boolean, size: "page" | "map" = "page"): string
 
 type ButtonProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "type" | "children"> & {
   readonly children: ReactNode;
+  /** `submit` inside a form; a plain button otherwise. */
+  readonly type?: "button" | "submit";
 };
 
 export interface OutlineButtonProps extends ButtonProps {
@@ -26,6 +28,7 @@ export interface OutlineButtonProps extends ButtonProps {
 
 /** A transparent button with a 2px colored outline, in the display face. */
 export function OutlineButton({
+  type = "button",
   tone = "cyan",
   filled = false,
   className = "",
@@ -43,7 +46,7 @@ export function OutlineButton({
   } as CSSProperties;
   return (
     <button
-      type="button"
+      type={type}
       className={`cursor-pointer border-2 px-2.5 py-1.5 font-display text-d7 uppercase hover:brightness-125 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
       style={look}
       {...rest}
