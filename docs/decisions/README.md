@@ -8,9 +8,12 @@ supersedes the old one. Template: `0000-template.md`.
 | [0001](0001-monorepo-with-pnpm-and-turborepo.md) | Monorepo with pnpm workspaces and Turborepo | Accepted |
 | [0002](0002-neutral-vocabulary-in-code.md) | Neutral vocabulary in code, themed strings in one glossary | Accepted |
 | [0003](0003-css-variable-tokens-under-tailwind-v4.md) | Design tokens as CSS custom properties under Tailwind v4 | Accepted |
-| [0004](0004-claude-code-routines-as-runtime.md) | Claude Code Routines as the agent runtime | Accepted |
+| [0004](0004-claude-code-routines-as-runtime.md) | Claude Code Routines as the agent runtime | Superseded by ADR-0010 |
 | [0005](0005-clone-and-run-distribution.md) | Clone-and-run distribution, npm publishing deferred | Accepted |
-| [0006](0006-grants-are-prompt-enforced.md) | Grants are prompt-enforced and shown as declared | Accepted |
+| [0006](0006-grants-are-prompt-enforced.md) | Grants are prompt-enforced and shown as declared | Superseded by ADR-0010 |
 | [0007](0007-pin-typescript-5.md) | Pin TypeScript 5.9 for milestone 1 | Accepted |
-| [0008](0008-one-routine-and-one-ledger-per-team.md) | One Routine and one ledger per team; handoffs are read authorization | Accepted |
+| [0008](0008-one-routine-and-one-ledger-per-team.md) | One Routine and one ledger per team; handoffs are read authorization | Superseded by ADR-0010 |
 | [0009](0009-schema-versioning.md) | Schema versioning strategy | Accepted |
+| [0010](0010-local-station-runtime.md) | Local station runtime | Accepted |
+| [0011](0011-runtime-stack.md) | Runtime stack | Accepted |
+| [0012](0012-notion-connector.md) | Notion connector over hosted MCP with OAuth; per-agent grant is on or off | Accepted |

@@ -4,157 +4,171 @@ Read this before touching anything. Keep it under 200 lines; update it when a de
 
 ## What this is
 
-A dashboard that renders a person's AI agents and how they are allowed to work together as a
-space-themed map. Teams of agents are stations, stations have governed permissions, authorized
-handoffs are drawn as wires, and one overseer at the right edge reads everything and reports outward.
+A local-first agent runtime with a space-station interface. The source of truth for direction is
+`docs/specs/BRIEF-station-runtime.md` (the brief); if this file and the brief disagree, the brief
+wins and this file gets fixed. The plan and progress are in `tasks/todo.md`.
 
-The agents do **not** run here. They run as Claude Code Routines (Anthropic's cloud-scheduled
-Claude Code sessions, Pro/Max+ subscription required). This app has exactly two jobs:
+- A Node **daemon** (`apps/daemon`) owns agents, model calls (OpenRouter, bring your own key),
+  tools, MCP connectors, persistence, scheduling, and an append-only event log. It binds
+  `127.0.0.1` only; every request needs the per-install bearer token and an allowed `Origin`.
+- A React **SPA** (`apps/station`) renders the station and COMMS from runtime state over one SSE
+  stream plus plain POST commands.
+- Station and agent config are files in `$OUTERWORLD_HOME` (default `~/.outerworld/`); sessions,
+  runs, events, memory, and spend are in SQLite beside them; secrets are in the OS keychain.
 
-1. **Configuration editor** — editing a Station produces files the user commits to a separate,
-   private *ledger repo*: `CLAUDE.md`, persona files, skills, routine prompts, a Discord webhook
-   script. A Routine clones that repo and runs the prompt.
-2. **State renderer** — reads the ledger repo (status files, run history) and shows the last known
-   state. Never streams live activity. Never asserts state it cannot prove from ledger files.
+**Product law:** the interface never asserts state the runtime cannot prove. The map is a
+projection of events, never a simulation.
 
-Hard constraints from the brief:
-- A Routine starts with zero context, so the ledger repo must carry everything an agent needs.
-- There is no API to create Routines (only a per-routine HTTP trigger). We generate the prompt and
-  guide the user to create it at claude.ai/code/routines or with `/schedule`.
-- Secrets (e.g. the Discord webhook URL) live in the routine's environment variables. Never in any repo.
-- Don't invent facts about Routines. If a detail matters, check the Claude Code docs or ask.
+Milestone 1 (a read-only dashboard for Claude Code Routines) is archived (ADR-0010). Its map model
+stays in core and ui: the station map draws the runtime through it via core's `mapModelFor` (D14, D24),
+and its own fixture `fixtures/map-demo/` feeds the ui tests and the `/dev` gallery.
 
 ## Vocabulary rule
 
-Final space-themed names are being workshopped elsewhere. **Code uses neutral names only.**
-Display strings live in one glossary module in `packages/core` so a rename is a one-file change.
-Never put a themed word (planet, lane, orbit, station-as-brand, etc.) in an identifier, filename,
-schema key, or test name.
+On-screen words come from the brief §4 and live only in `packages/core/src/glossary.ts`, so a
+rename is a one-file change. **Code uses neutral identifiers**: identifiers, filenames, schema
+keys, event types, CSS custom properties, and test names.
 
-| Code term  | Meaning |
-|------------|---------|
-| `team`     | agents sharing one permission scope (connectors + repo scope) and one mission |
-| `grant`    | a tool/skill a team may use; `mode: 'read' \| 'write'` |
-| `handoff`  | a read authorization from one team to another's ledger (ADR-0008): one ledger per team, no extra file; the reader team may read the writer team's `ledger/<team>.md` |
-| `agent`    | a worker with a persona (name, mandate, tone, tool allowlist) and a visual identity; exactly one team |
-| `overseer` | the privileged agent that reads all ledgers and is the only one allowed to post outward |
-| `station`  | the whole map (temporary name for the document root) |
+| On screen | Code identifier | Meaning |
+|-----------|-----------------|---------|
+| Station | `station` | the whole system: rooms, crew, props, hallways, runtime |
+| Commander | `user` | the person using it |
+| Room | `room` | a capability-scoped team; props placed in it grant tools to its crew |
+| Crew / crew member | `agent` | an agent; exactly one room |
+| Overseer | `role: "overseer"` | the crew member with dispatch rights (a role, not "the first agent") |
+| Hallway | `lane` | an authorized handoff lane between rooms (rendered in v1, enforced in v2) |
+| Prop | `grant` (kind `prop`) | a capability placed in a room: `web`, `files`, `memory` |
+| Connector | `connector` | an MCP server installed station-wide; each agent is granted it or not |
+| COMMS | `comms` | the chat surface |
+| Session / Run / Dispatch | `session` / `run` / `dispatch` | a conversation / one bounded execution / the Overseer handing a task to crew |
+| Ask first / Full power | `approvalMode: "ask" \| "full"` | consent for `write`-class tool calls |
+| Stored beliefs / Awaiting your decision | `memory` (`status`) | approved memories / proposals |
 
-## Stack
-
-- pnpm workspaces + Turborepo. TypeScript strict everywhere. Node 22. ESM only.
-- App: React 19 + Next.js App Router. Tailwind for utilities.
-- Schema: zod, with JSON Schema exported from it. Versioned; unknown fields tolerated.
-- Tests: Vitest; React Testing Library for components.
-- Lint/format: Biome. Conventional commits.
-- Motion: state-driven CSS (keyframes on SVG groups). `prefers-reduced-motion` respected everywhere.
-  No animation library.
-- Themes: light and dark via CSS variables. Dark is defined under `prefers-color-scheme: dark`
-  guarded by `:root:not([data-theme="light"])`, and again under `:root[data-theme="dark"]`.
-- Distribution: clone-and-run. Packages are `@darthsaul/*`, `"private": true`. npm publishing is a
-  README roadmap item, not this milestone.
-- License MIT. Everything original: no borrowed sprites, marks, or franchise names.
+The floor guard fails a diff that puts other themed words (planet, orbit, outpost, relay…) in
+code outside the glossary and docs.
 
 ## Layout
 
 ```
-apps/web/               Next.js dashboard; consumes ui via workspace:*
-packages/core/          @darthsaul/outerworld-ai-core — headless. zod schema for Station +
-                        StationState, glossary, layout math (handoff geometry), event model,
-                        ledger parsing. Zero React, zero DOM, zero filesystem.
-packages/ui/            @darthsaul/outerworld-ai-ui — React components + the rigged Character
-                        SVG. Tokens as CSS variables + a Tailwind preset.
-packages/generator/     @darthsaul/outerworld-ai-generator — Station → ledger-repo files.
-                        Pure functions + a small CLI. Knows nothing about rendering.
-fixtures/demo-station/  fictional Station + fake ledger. All tests/screenshots use this.
-templates/ledger-repo/  skeleton a user's private ledger repo starts from.
-docs/                   ARCHITECTURE.md, SCHEMA.md, PRIVACY.md, decisions/ (ADRs)
+apps/daemon/       thin Node entry: config, Hono HTTP API + SSE, auth, serves the built SPA
+apps/station/      thin Vite + React SPA: routes, data fetching, SSE client, screens
+packages/core/     @darthsaul/outerworld-ai-core — zod schemas (station.json, agent.json, events),
+                   glossary, pure policy (grant resolution, dispatch reach, depth, budgets),
+                   prompt assembly, run state transitions, layout math. No IO, no React.
+packages/runtime/  @darthsaul/outerworld-ai-runtime — agent loop, dispatcher, scheduler, tools,
+                   MCP client, memory, budgets, storage (files, SQLite, keychain).
+packages/ui/       @darthsaul/outerworld-ai-ui — React components, tokens, the rigged character,
+                   the station map. Knows core, never runtime.
+fixtures/demo-station/  a fictional $OUTERWORLD_HOME. All tests, dev runs, screenshots use it.
+fixtures/map-demo/      the milestone 1 map fixture, for the ui map tests and the /dev gallery.
+docs/              ARCHITECTURE.md, SCHEMA.md, PRIVACY.md, decisions/ (ADRs), specs/, design/
 ```
 
-Boundary rule when unsure where something goes: **core** knows nothing about React or files;
-**ui** knows nothing about Routines or GitHub; **generator** knows nothing about rendering.
-The schema in core is the product's real API. generator and ui both key off it.
+Boundary rules:
+- **Runtime logic lives in `packages/runtime`, never in `apps/*`**, so it can move into a desktop
+  shell later. The apps wire things together and nothing more.
+- **Pure, deterministic logic goes in `packages/core`** with thorough unit tests: schemas, grant
+  resolution, dispatch reach and depth, budget math, prompt assembly, state transitions.
+- **ui** knows nothing about the runtime, HTTP, or OpenRouter; it renders core types.
+- Native modules (`better-sqlite3`, `@napi-rs/keyring`) load only in runtime and daemon.
+
+## Stack (ADR-0011)
+
+pnpm workspaces + Turborepo, TypeScript strict, Node 22 (`.nvmrc`), ESM only, zod 4, Vitest,
+Biome, Conventional Commits. Daemon: Hono on `@hono/node-server`, Vercel AI SDK v7 (`ai`) with
+`@openrouter/ai-sdk-provider`, `@modelcontextprotocol/client` v2, `better-sqlite3`, `croner`,
+`@napi-rs/keyring`. SPA: Vite 8, React 19, TanStack Query 5, react-router 7, Tailwind v4.
+**Verify a library's current API in its docs or types before using it**; AI SDK v7 renamed a lot
+(`instructions`, `isStepCount`, `result.stream`).
+
+The agent loop is ours: one `streamText` call per step, tools declared without `execute`, and the
+runtime does policy check → consent → execute → next step, with a budget check before every model
+call and our own retry/backoff (ADR-0011).
+
+## Security and secrets
+
+- Secrets (OpenRouter key, connector tokens) live in the OS keychain; `OPENROUTER_API_KEY` env is
+  a dev fallback. **Never log, persist to the station directory or SQLite, emit in an event, or
+  send to the SPA any secret.** The API reports only whether a key is configured.
+- Tools not granted are never sent to the model and are rejected at execution (double
+  enforcement). Our read/write classification is authoritative; unknown tools are `write`.
+- Files tools are confined to `workspaces/<agentId>/` (realpath check, no traversal, no symlink
+  escape). No shell tool in v1. `web_fetch` refuses loopback and private addresses.
+- *Ask first* is the default; *Full power* is visibly marked. Consent never times out into
+  approval. Tool results are untrusted data; the policy layer, not the prompt, enforces.
+- `docs/PRIVACY.md` is the data map: what lives where, what leaves the machine. Keep it current.
+- gitleaks runs in CI. Don't add allowlist entries to get green.
+
+## Fixtures only, never real data
+
+Every test, dev run, screenshot, and gallery cell uses `fixtures/demo-station/`, a fictional
+station. Never commit real names, API keys, tokens, Notion IDs, URLs, or session data. If you need
+a new shape of data, extend the fixture. `pnpm dev` works on a copy under `.outerworld/` so the
+fixture is never mutated. `.outerworld/` is gitignored; never un-ignore it.
+
+## No network in tests or CI
+
+Tests use a scripted fake model (`MockLanguageModelV4` from `ai/test`, or the runtime's fake
+provider) and a fake MCP server (`InMemoryTransport`). Real OpenRouter and Notion calls happen
+only in manually run smoke tests gated by environment variables.
 
 ## Never hardcode tokens
 
-Every color, radius, spacing step, and motion duration is a CSS custom property defined in the
-`ui` tokens and consumed by Tailwind via theme extension. Components never contain a hex, an
-`rgb()`, a pixel radius, or a `ms` value. Per-agent recoloring goes through the palette contract: the persona sets only
-`rig: { tintHue, trimHue, head, trace }`; chrome, trim, emblem shade and glow are derived in the
-token CSS; glow is owned by run state; shoulder and accessory are derived from grants and
-handoffs in core. The overseer has its own 48×64 hero rig, achromatic, at the right edge of the map with the stations in columns to its left.
+Every color, radius, spacing step, and motion duration is a CSS custom property in the `ui`
+tokens, consumed by Tailwind via theme extension (ADR-0003). Components in `packages/ui` and
+`apps/*` never contain a hex, `rgb()`, a pixel radius, or an `ms` literal. Per-agent recoloring
+goes through the palette contract: the agent sets only `rig: { tintHue, trimHue, head, trace }`;
+chrome, trim, emblem shade and glow are derived in token CSS; glow is owned by run state. Motion is
+state-driven CSS with `prefers-reduced-motion` respected; no animation library. Light and dark
+themes via CSS variables (dark under `prefers-color-scheme: dark` guarded by
+`:root:not([data-theme="light"])`, and again under `:root[data-theme="dark"]`).
 
 ## Design source of truth
 
 `docs/design/` holds the design spec, UI mock, naming workshop, and rig studies. Read
-`docs/design/README.md` before any ui work. Tokens in `packages/ui/src/tokens/` are a translation
-of `docs/design/outerworld-spec.dc.html`; change the spec first, then the tokens. Reference
-renders under `docs/design/assets/`, `reference/`, and `studies/` are generated art and are never
-shipped or traced into a shipped asset. `rig/rig-parts-v0.svg` is the proportion target for the
-hand-drawn rig.
-
-## Fixtures only, never real data
-
-Every screenshot, test, gallery cell (`/dev`), and example uses `fixtures/demo-station/`, a fictional user.
-Never commit a real Station, real ledger output, real usernames, real repo names, or real webhook
-URLs. If you need a new shape of data, extend the fixture.
-
-## Privacy rules
-
-- The user's Station and ledger live in **their** private repo, never in this one.
-- The local workspace directory `.outerworld/` is gitignored. Never un-ignore it.
-- The app reads a ledger from a local path given by env var, or falls back to the fixture.
-  It makes no network calls to fetch state.
-- Secrets never enter generated files. `scripts/post-digest.sh` reads `$DISCORD_WEBHOOK_URL`
-  from the environment; the generator must not accept a webhook value as input.
-- `docs/PRIVACY.md` is the data map: what lives where, what leaves the machine. Keep it current.
-- gitleaks runs in CI. Don't add allowlist entries to get green.
+`docs/design/README.md` before any ui work. Tokens in `packages/ui/src/tokens/` translate
+`docs/design/outerworld-spec.dc.html`; change the spec first, then the tokens. Reference renders
+under `docs/design/assets/`, `reference/`, and `studies/` are generated art and are never shipped
+or traced. `rig/rig-parts-v0.svg` is the proportion target for the hand-drawn rig.
 
 ## Run and test
 
 ```
 pnpm install
-pnpm dev            # apps/web on http://localhost:3000 (pass -- -p 3210 for another port)
+pnpm dev            # daemon + Vite (http://localhost:5173) on .outerworld/dev-home, a copy of the fixture
+pnpm dev:fresh      # the same on an empty station, wiped each time: onboarding from the start
+OUTERWORLD_HOME=~/.outerworld pnpm dev   # a real station directory
 pnpm build          # turbo build across packages
-pnpm test           # vitest across packages; coverage thresholds enforced in core and generator
+pnpm test           # vitest across packages; coverage thresholds in core and runtime
 pnpm lint           # biome check .   (pnpm lint:fix to apply)
 pnpm typecheck      # tsc --noEmit across packages
-pnpm check:task     # what to run before a commit: lint, types, secrets, floor guard, tests (< 90 s)
+pnpm check:task     # before every commit: lint, types, secrets, floor guard, tests (< 90 s)
 pnpm check:full     # check:task + build; what CI's quality job runs
 pnpm browser:verify # Playwright: screenshots, console errors, reduced motion, axe; CI's browser job
-OUTERWORLD_LEDGER_PATH=/path/to/ledger pnpm dev   # render a real local ledger repo (station.json at its root)
-pnpm start          # after pnpm build: the production server; both routes render per request (force-dynamic)
-node packages/generator/dist/bin.js generate --station fixtures/demo-station/station.json --out /tmp/ledger
-node packages/generator/dist/bin.js validate --station /tmp/ledger/station.json
 ```
 
-The generator quickstart above (after `pnpm build`) is the fastest way to get a real ledger repo to
-point `OUTERWORLD_LEDGER_PATH` at. The dashboard never simulates on a real ledger: the "Run digest"
-demo timeline exists for the fixture only. `/dev` is the component gallery (there is no Storybook);
-it always renders the fixture and ships in production builds as a localhost tool.
+Use Node 22 (`nvm use`). Packages build with `tsc` to `dist/`; dependents typecheck against
+`dist/`, so run `pnpm build` once after pulling changes to a package (`pnpm dev` builds and
+watches them for you).
 
-Use Node 22 (`nvm use` reads `.nvmrc`). Packages build with `tsc` to `dist/`; dependents
-typecheck against `dist/`, so run `pnpm build` once after pulling changes to a package.
-
-Read `CONSTRAINTS.md` before writing code. Do not weaken it to make a change pass. It says
-where each check runs in the pipeline. Don't silence a check, skip a test, or lower a threshold
-to get green. If a gate is wrong for this project, say
-so and propose a change to CONSTRAINTS.md.
+Read `CONSTRAINTS.md` before writing code. Do not weaken it to make a change pass; it says where
+each check runs. Don't silence a check, skip a test, or lower a threshold to get green. If a gate
+is wrong for this project, say so and propose a change to CONSTRAINTS.md.
 
 ## Working agreements
 
-- Skills (Addy Osmani's agent-skills pack) are workflows, not reading. Lifecycle:
-  /spec → /plan → /build → /test → review → ship. Pass every verification gate.
-- Plan each step, show the plan, build only after confirmation. Stop for review after each
-  milestone step.
-- Small, reviewable commits with Conventional Commits messages (`feat(core): ...`,
-  `chore(repo): ...`, `docs(adr): ...`). Don't push unless asked.
+- Follow `tasks/todo.md` phase by phase. Stop at each CHECKPOINT with: what was built, how to try
+  it (exact commands), tests added, decisions made, open questions.
+- Out of scope for v1 (brief §3): conveyor lines, inbox/outbox, webhooks, watchers, shell tools,
+  recursive delegation, helper copies, agents editing agents, desktop shell, non-Notion
+  connectors, embeddings, summarization, npm publishing. If you find yourself building one, stop
+  and ask.
+- A decision the brief doesn't cover: make the smallest reasonable choice, record it in an ADR
+  (`docs/decisions/`) or the `tasks/todo.md` decisions list, and flag it at the next checkpoint.
+- Small commits, one logical change each, Conventional Commits (`feat(runtime): ...`,
+  `docs(adr): ...`). `pnpm check:task` green before every commit. Don't push unless asked.
+- TDD for logic: schemas, policy, prompt assembly, state machine, storage, the agent loop with
+  the fake provider.
 - Every package has a README documenting its public API.
-- Record decisions in `docs/decisions/` as ADRs. Update this file when they change.
-- TDD for logic: schema validation, geometry, ledger parsing, token resolution, component state,
-  generator output (snapshot tests against the fixture).
-- Next.js ships version-matched docs at `apps/web/node_modules/next/dist/docs/`. Read the relevant
-  guide there before writing app code; Next 16 differs from older conventions.
-- Browser-verify ui and web work in a real browser (animations, reduced motion, both themes,
-  single-column layout) before calling a step done. This repo uses headless Playwright
-  screenshots for that (no Chrome DevTools MCP); keep the scripts under `scripts/browser/`.
+- Browser-verify ui and SPA work in a real browser (both themes, reduced motion, narrow layout)
+  before calling a step done: headless Playwright under `scripts/browser/`.

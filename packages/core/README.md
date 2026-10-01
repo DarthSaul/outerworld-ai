@@ -1,14 +1,44 @@
 # @darthsaul/outerworld-ai-core
 
-Headless core for Outerworld AI: the Station and StationState schemas (zod, with JSON Schema
-export), the glossary, layout and handoff geometry, rig derivation, the event model, and ledger
-parsing. Zero React, zero DOM, zero filesystem. Private package, consumed in-workspace.
+Headless core for Outerworld AI: the station runtime's schemas (`station.json`, `agent.json`,
+runtime events), the glossary, an SSE parser, and pure policy as later phases add it; plus the
+milestone 1 map model (Station, StationState, layout, rig, ledger parsing) that the ui map renders
+until Phase 9 (tasks/todo.md D14). Zero React, zero DOM, zero filesystem. Private package,
+consumed in-workspace.
 
-The contract is `docs/SCHEMA.md`; versioning is ADR-0009. Committed JSON Schemas live in
-`schema/` and a test fails when they drift from the zod source (regenerate with
-`pnpm build && node scripts/write-schemas.mjs`).
+Versioning is ADR-0009. Committed JSON Schemas live in `schema/` and a test fails when they drift
+from the zod source (regenerate with `pnpm build && node scripts/write-schemas.mjs`).
 
-## Public API
+## Public API: station runtime
+
+### Config documents (brief §9)
+| Export | Description |
+|--------|-------------|
+| `parseStationConfig(input)` | `Result<StationConfig>` for `station.json`: rooms with props (`web`, `files`, `memory`), lanes between rooms, connectors (http or stdio transport, no secrets: headers and env are rejected), budgets in USD, dispatch policy (`maxDepth` 0 or 1, `autoReview`). Defaults filled; unknown fields kept. Never throws. |
+| `parseAgentConfig(input)` | `Result<AgentConfig>` for `agents/<id>/agent.json`: name, `roomId`, `role` (`overseer` \| `crew`), `model`, `approvalMode` (`ask` \| `full`), `connectorGrants`, `schedules` (cron with 5 or 6 fields, IANA time zone, prompt, `catchUp`, `enabled`), optional `rig`. |
+| `stationCrewIssues(station, crew)` | Cross-file rules: agent ids, known rooms, installed connectors, at most one overseer. |
+| `StationConfig`, `Room`, `Prop`, `PropKind`, `Lane`, `Connector`, `ConnectorTransport`, `Budgets`, `DispatchPolicy`, `AgentConfig`, `AgentRole`, `ApprovalMode`, `AgentSchedule` | zod schemas and inferred types. |
+
+### Event log (brief §10)
+| Export | Description |
+|--------|-------------|
+| `RuntimeEvent`, `parseRuntimeEvent(input)` | The v1 event union: envelope `{ seq, type, at, agentId?, sessionId?, runId?, payload }`, with the ids each family requires (run, dispatch, and consent events carry agent, session, and run). Payloads keep unknown fields. |
+| `foldCrewActivity(state, event)`, `activityOf(state, agentId)`, `CREW_ACTIVITY_EVENT_TYPES` | What each crew member is doing, folded from run events: `idle`, `running`, `awaiting_consent`, `done`, `failed`, `blocked` (budget or kill switch); several runs at once aggregate, waiting for consent first. |
+| `mapModelFor(config, crew, activity, asOf)` | The station map from runtime state (D24): rooms → panels, props and granted connectors → chips, hallways → handoffs, the Overseer → the core, live state from crew activity. Returns the map model `{ station, state }` the ui renders. |
+| `notificationFor(event)`, `NOTIFICATION_EVENT_TYPES`, `Notification` | The Notifications projection: `action` (consent, memory proposals), `alert` (failed, interrupted, max steps, budget stop, missed schedule, connector sign-in or error, kill switch), `info` (a scheduled run's result, a finished dispatch, a budget warning). Ids and details only; the words are glossary keys `notification.<kind>`. |
+| `EVENT_TYPES`, `EventType`, `EventOf<T>`, `NewRuntimeEvent` | Every type; one event by type; an event before the store assigns `seq` and `at`. |
+
+### Server-sent events
+| Export | Description |
+|--------|-------------|
+| `createSseParser(onMessage)` | Incremental `text/event-stream` parser for fetch-based clients: `push(chunk)`, `lastEventId()`. |
+
+### Glossary
+| Export | Description |
+|--------|-------------|
+| `glossary`, `term(key)`, `GLOSSARY_KEYS` | The only place on-screen words live (brief §4): Room, Crew, Hallway, Prop, COMMS, Commander, Ask first, Full power, … Keys are the neutral code identifiers. |
+
+## Public API: milestone 1 map model
 
 ### Schema
 | Export | Description |

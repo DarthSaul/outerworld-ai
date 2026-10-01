@@ -33,6 +33,14 @@ describe("AgentCard", () => {
     expect(screen.getByText("working")).toBeInTheDocument();
   });
 
+  it("shows a note in place of the run word when there is one", () => {
+    render(
+      <AgentCard {...props} state="working" note="waiting for your approval" onSelect={() => {}} />,
+    );
+    expect(screen.getByText("waiting for your approval")).toBeInTheDocument();
+    expect(screen.queryByText("working")).not.toBeInTheDocument();
+  });
+
   it("marks selected and dimmed", () => {
     render(<AgentCard {...props} state="done" selected dimmed onSelect={() => {}} />);
     const card = screen.getByRole("button");

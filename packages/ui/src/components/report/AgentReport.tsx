@@ -50,7 +50,7 @@ export function AgentReport({
           ))}
         </ul>
       </Region>
-      <Region title={term("team")}>
+      <Region title={term("room")}>
         {team ? (
           <LinkButton onClick={() => onSelect({ kind: "team", id: team.id })}>
             {team.name}

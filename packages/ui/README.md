@@ -31,7 +31,7 @@ in-workspace.
 ### Pieces
 | Export | Description |
 |--------|-------------|
-| `TeamPanel`, `AgentCard`, `GrantChip`, `TeamEmblem`, `HandoffLayer`, `Packet`, `OverseerCore`, `Pane`, `EmptyState`, `Toast`, `ToastRegion` | Controlled, state-via-data-attributes, styled only through tokens. Display words (`healthLabel`, `stateLabel`, `roleNoun`) come in as props from core's glossary; the pieces hold no strings of their own. |
+| `TeamPanel`, `AgentCard`, `GrantChip`, `TeamEmblem`, `HandoffLayer`, `Packet`, `OverseerCore`, `Pane`, `EmptyState`, `Toast`, `ToastRegion` | Controlled, state-via-data-attributes, styled only through tokens. Display words (`healthLabel`, `stateLabel`, `roleNoun`) come in as props from core's glossary; the pieces hold no strings of their own. An agent's optional `note` (e.g. "waiting for your approval", from the map state) replaces the run word on its card. |
 | `Character`, `OverseerCharacter`, `RigSprite` | The rig: five `<use>`s over one sprite, recolored by two persona hues; the overseer's own 48×64 hero rig; `data-state` drives motion in `character.css`. |
 | `Selection`, `isSelected`, `sameSelection`, `resolveSelection`, `teamOfSelection` | One selection at a time: `{ kind, id }`; `resolveSelection` turns it into the entity (or undefined when the Station no longer has it). |
 | `usePan`, `DRAG_THRESHOLD_PX` | Drag-to-pan for a surface: offset + pointer handlers; a press under the threshold stays a click, a drag swallows the click that ends it. |

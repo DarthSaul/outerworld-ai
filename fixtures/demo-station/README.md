@@ -1,16 +1,19 @@
-# Demo Station fixture
+# Demo station (v1)
 
-A fictional person's Station and a fake ledger repo. Every screenshot, test, gallery cell (`/dev`), and
-example in this repository uses this fixture. Nothing here is real: no real people, repos, sessions, or
-webhook URLs. When you need a new shape of data, extend this fixture rather than adding real data.
+A fictional station data directory (`$OUTERWORLD_HOME`, brief §9) for development, tests, and
+screenshots. Nothing here is real: no real people, API keys, tokens, Notion IDs, or URLs (the
+connector URL uses the reserved `.example` domain). `pnpm dev` runs on a copy under
+`.outerworld/dev-home/`, so this directory is never mutated.
 
-- `station.json` — the Station document (two teams, three agents, one overseer named Ultron).
-- `ledger/` — what a ledger repo looks like after a few runs: team ledgers, run records, team
-  status, overseer status, and the last digest.
+- `station.json`: three rooms (Command with Web and Memory; Operations with Web, Files, and
+  Memory; Research with Web and Memory), hallways from Operations and Research to Command, a
+  Notion connector, budgets ($5 / $25 / $50, the onboarding defaults), dispatch depth 1.
+- `agents/vesper/`: the Overseer, in Command, *Ask first*.
+- `agents/quill/`: the Project Manager (brief §17, as the template makes it), in Operations,
+  granted Notion, *Ask first*, with a disabled weekday briefing schedule in UTC.
+- `agents/wren/`: a researcher in Research, *Full power*, with a rig of its own.
 
-Static states covered: Project Management has an open run (planner working, scribe idle) and is
-healthy; Strength App's last run failed 30 hours ago, so it is stalled and degraded with the
-builder shown failed; the overseer is in attention. The demo timeline in the ui package plays the
-remaining transitions.
-
-The "as of" moment for this fixture is 2026-09-27T15:00:00Z.
+The directory holds configuration only. Runtime history (sessions, runs, events, memory) lives in
+`station.db`, which the daemon creates; `browser:verify` builds a little of it through the real
+runtime and the fake model before taking screenshots (D25), so the map, Notifications, and Memory
+are checked with real activity. The milestone 1 map fixture is `fixtures/map-demo/` (D14).

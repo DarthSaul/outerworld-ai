@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { AgentConfig } from "../config/agent-config.js";
+import { StationConfig } from "../config/station-config.js";
+import { RuntimeEvent } from "../runtime-events.js";
 import { SCHEMA_VERSION } from "./common.js";
 import { StationState } from "./state.js";
 import { Station } from "./station.js";
@@ -6,8 +9,11 @@ import { OverseerStatus, RunRecord, TeamStatus } from "./status.js";
 
 const SCHEMA_BASE = "https://outerworld.ai/schema";
 
-/** The documents that cross a boundary: written by users or Routines, read by this app. */
+/** The documents that cross a boundary: station.json, agent.json, and the event stream; plus the milestone 1 map documents. */
 export const JSON_SCHEMAS = {
+  "station-config": { title: "StationConfig", schema: StationConfig },
+  "agent-config": { title: "AgentConfig", schema: AgentConfig },
+  "runtime-event": { title: "RuntimeEvent", schema: RuntimeEvent },
   station: { title: "Station", schema: Station },
   "run-record": { title: "RunRecord", schema: RunRecord },
   "team-status": { title: "TeamStatus", schema: TeamStatus },

@@ -1,358 +1,128 @@
-# Schema and contracts
+# Schema and contracts (v1)
 
-The Station and StationState schemas are the product's real API. `packages/core` defines them
-with zod, exports JSON Schema, and provides the pure functions that ui and generator build on.
-This document is the contract; the code follows it. Status: **implemented in core, 2026-09-27**; kept current with the code. Sections marked *generator* are documented fully in the generator step.
+The data a station is made of, and the contracts between the daemon and the SPA. The zod schemas
+in `packages/core` are the source of truth, and this page summarizes them. JSON Schema exports of
+the config and event schemas are committed in `packages/core/schema/`; regenerate them with
+`node scripts/write-schemas.mjs` in `packages/core`, and a test fails when they drift.
 
-Conventions: neutral vocabulary (ADR-0002); collections are lowercase plural arrays, references
-are singular `<thing>Id` strings; ids are `^[a-z0-9][a-z0-9-]*$` and unique within their
-collection; timestamps are ISO 8601 UTC strings; every object tolerates unknown fields
-(`.passthrough()`), so additive changes need no version bump (ADR-0009).
+**Versioning (ADR-0009):**
+- Every document carries `schemaVersion` (v1 is `1`). A newer version loads with a warning, never
+  a crash.
+- Objects keep unknown fields, so a hand-added note or a newer daemon's field survives a round
+  trip.
+- API *update* inputs are strict, so a typo is refused rather than silently ignored.
+- Every id is lowercase letters, digits and hyphens (`^[a-z0-9][a-z0-9-]*$`), and never a
+  JavaScript object property name.
 
-## 1. Station (config the user owns)
-
-```ts
-Station = {
-  schemaVersion: 1,
-  id: string,                      // the station's own id, e.g. "demo-station"
-  name: string,                    // display name
-  teams: Team[],                   // 1..n
-  agents: Agent[],                 // each belongs to exactly one team
-  grants: Grant[],                 // each belongs to exactly one team
-  handoffs: Handoff[],             // directional; A→B and B→A are two records
-  overseer: Overseer,              // singleton
-}
-
-Team = {
-  id: string,
-  name: string,
-  mission: string,                 // required, one line
-  category: "research" | "build" | "operations" | "records" | "coordination" | "other",
-  emblem: { hue: number /* 0..360 */, mark: "spire" | "forge" | "dome" | "archive" | "beacon" | "none" },
-  scope: {
-    repos: string[],               // GitHub "owner/name" strings the team's Routine may clone
-  },
-  schedule: {
-    kind: "interval", everyMinutes: number /* >= 60, Routines' minimum */,
-  } | {
-    kind: "cron", expression: string, timezone: string,
-  },
-}
-
-Grant = {
-  id: string,
-  teamId: string,
-  tool: string,                    // connector or skill id, e.g. "notion", "git", "discord", "skill:release-notes"
-  mode: "read" | "write",
-  kind: "connector" | "skill",     // connector: enable on the Routine; skill: emitted under skills/
-  label?: string,                  // display override; defaults to tool
-}
-
-Agent = {
-  id: string,
-  teamId: string,
-  persona: {
-    name: string,
-    mandate: string,               // one line, what this agent is for
-    tone: string,                  // free text, goes into the persona file
-    allowlist: string[],           // grant ids; must be a subset of the team's grants (validated)
-    rig: {
-      tintHue: number,             // 0..360, chrome tint
-      trimHue: number,             // 0..360, trim metal
-      head: "dome" | "wedge" | "crest",   // crest is reserved for the overseer (validated)
-      trace: "core" | "bar" | "chevron" | "split" | "frame" | "twin",  // frame reserved for the overseer (validated)
-    },
-  },
-}
-
-Handoff = {
-  id: string,
-  from: string,                    // writer teamId
-  to: string,                      // reader teamId; from !== to (validated); (from,to) unique (validated)
-  note?: string,                   // why this lane exists; goes into CLAUDE.md
-}
-
-Overseer = {
-  persona: { name: string, mandate: string, tone: string },   // rig is fixed: crest + frame, achromatic
-  schedule: Team["schedule"],
-  outward: { kind: "discord-webhook" },                        // the only channel in milestone 1; URL is never here
-}
-```
-
-Cross-field validation (all produce structured issues, never throws): every `agent.teamId`,
-`grant.teamId`, `handoff.from/to` resolves; `allowlist ⊆ team grants`; no self-handoff; no
-duplicate `(from, to)`; `crest`/`frame` not used by agents; `everyMinutes >= 60`; ids unique.
-
-Derived, never stored: layout positions, handoff pairing, rig shoulder and accessory, palette
-colors from hues.
-
-## 2. Ledger repo layout (what the generator writes, what core reads)
+## The station directory (`$OUTERWORLD_HOME`, default `~/.outerworld`)
 
 ```
-CLAUDE.md                        # for the Routine: purpose, teams, handoff table, ledger rules, status rules
-station.json                     # copy of the Station document
-agents/<agentId>.md              # persona: name, mandate, tone, allowlist, rig (for the record)
-skills/<skillId>/SKILL.md        # one per grant with kind "skill"
-routines/<teamId>.prompt.md      # the prompt to paste into the Routine, with a setup checklist header
-routines/overseer.prompt.md
-ledger/<teamId>.md               # the team's ledger (below)
-scripts/post-digest.sh           # posts status/digest.md to $DISCORD_WEBHOOK_URL
-status/README.md                 # the JSON contract, copied from this section
-status/teams/<teamId>.json       # latest state of the team (TeamStatus)
-status/runs/<teamId>/<startedAt>.json   # one RunRecord per run, filename = startedAt with ':' → '-'
-status/overseer.json             # OverseerStatus
-status/digest.md                 # the overseer's last outward post (Markdown)
+station.json              rooms, hallways, connectors, budgets, dispatch policy
+agents/<id>/agent.json    a crew member's config
+agents/<id>/identity.md   who they are                  ┐
+agents/<id>/purpose.md    what they are for             │ the four documents: markdown,
+agents/<id>/standing-orders.md   rules they always follow │ up to 256 KiB each, in every prompt
+agents/<id>/context.md    background they should know   ┘
+workspaces/<id>/          the only place their files tools can read and write
+station.db                SQLite: sessions, runs, events, memory, spend, … (below)
+daemon.token              the per-install API token (0600)
+logs/
 ```
 
-Routines commit status changes to the default branch (their own repo, only the owner's commits,
-so the push check passes). A cloud session starts on an auto-named `claude/` branch, so the prompt
-tells the Routine to check out the default branch before its first commit. If the push is rejected
-twice, a team run pushes `claude/status-<teamId>-<startedAt>` and the overseer pushes
-`claude/status-overseer-<startedAt>`, with `:` replaced by `-` in the timestamp as in the run
-filename (a git ref cannot contain `:`), and says so in the run's `notes`. The dashboard reads
-whichever checkout is at `OUTERWORLD_LEDGER_PATH`.
+The files are human-editable and written atomically. The daemon reads them on every request and
+run, so a change takes effect on the next run. Secrets are never here (see below).
 
-### Team ledger (`ledger/<teamId>.md`)
+### `station.json` (`StationConfig`)
 
-Markdown with a fixed skeleton the Routine must keep, so the diff view has stable anchors:
+| Field | Shape | Notes |
+|---|---|---|
+| `schemaVersion` | `1` | |
+| `name` | string | |
+| `rooms` | `Room[]`, at least 1 | `{ id, name, description?, props: [{ kind: "web" \| "files" \| "memory" }] }`. Props grant the room's crew built-in tools. |
+| `lanes` | `Lane[]` | Hallways: `{ id, from, to, note? }` between room ids. Drawn on the map; enforced in v2. |
+| `connectors` | `Connector[]` | `{ id, name, transport }`, where `transport` is `{ type: "http", url }` (http or https) or `{ type: "stdio", command, args }`. There is no field for headers or environment values, so secrets cannot be put here. v1 connects HTTP connectors only and ships the Notion preset (ADR-0012). |
+| `budgets` | `{ perRunUsd?, perAgentDailyUsd?, stationDailyUsd? }` | Positive USD. A missing cap means no cap. Onboarding writes `DEFAULT_BUDGETS` (5 / 25 / 50, D22). |
+| `dispatch` | `{ maxDepth: 0 \| 1, autoReview }` | Defaults `{ maxDepth: 1, autoReview: true }`. `0` turns delegation off. |
 
-```
-# <Team name> · ledger
-<!-- ow:ledger v1 · team:<teamId> -->
+Cross-file rules (`stationCrewIssues`): agent ids are unique, every room and connector an agent
+names exists, and there is at most one Overseer.
 
-## Next steps
-- ...
+### `agents/<id>/agent.json` (`AgentConfig`)
 
-## Waiting on
-- ...
+| Field | Shape | Notes |
+|---|---|---|
+| `schemaVersion` | `1` | |
+| `name` | string | Display name; the id is the directory name. |
+| `roomId` | room id | Exactly one room. |
+| `role` | `"overseer"` \| `"crew"` | The Overseer gets `dispatch` and `read_session`. |
+| `model` | string | An OpenRouter model id. One outside `SUPPORTED_MODELS` is a warning. |
+| `approvalMode` | `"ask"` \| `"full"` | *Ask first* (default) pauses `write`-class calls for consent. |
+| `connectorGrants` | connector ids | Granting a connector grants all of its tools (ADR-0012). |
+| `schedules` | `Schedule[]` | `{ id, cron (5 or 6 fields, checked by croner), timezone? (IANA; absent = the machine's), prompt, sessionId?, catchUp (false), enabled (true) }` (D21). |
+| `rig` | `{ tintHue, trimHue, head, trace }`? | The character's look. The `crest` head and `frame` trace are reserved for the Overseer. |
 
-## Log
-- <ISO timestamp> · <one line>
-```
+**Effective tools** (`resolveGrants`) are the role tools, plus the room's prop tools, plus every
+tool of each granted, connected connector. Each tool is `read` or `write` by our classification
+(D16, `KNOWN_TOOL_CLASSES`); unknown tools are `write`.
 
-Headings are matched exactly. Anything else is preserved but not interpreted.
+## Events (`RuntimeEvent`, brief §10)
 
-### Status files
+The envelope is `{ seq, type, at, agentId?, sessionId?, runId?, payload, ephemeral? }`. `seq`
+increases monotonically, and `ephemeral` marks streamed deltas that are sent live and never stored
+(D18). Payloads never carry a secret: they are redacted before storage.
 
-```ts
-RunRecord = {
-  schemaVersion: 1,
-  teamId: string,
-  startedAt: string,
-  endedAt?: string,                // absent while the run is open
-  outcome?: "done" | "failed",     // absent while open; a missing endedAt older than the schedule → stalled (derived)
-  sessionId?: string,              // from CLAUDE_CODE_REMOTE_SESSION_ID
-  sessionUrl?: string,
-  agents: Array<{ agentId: string, state: "idle" | "working" | "done" | "failed", note?: string }>,
-  grantsUsed: Array<{ grantId: string, count: number }>,
-  ledger: { changed: boolean, linesAdded: number, linesRemoved: number, summary?: string },
-  error?: string,                  // when outcome is failed
-  notes?: string,
-}
+| Family | Types |
+|---|---|
+| station | `station.started`, `station.stopped {reason}`, `station.updated`, `station.kill_switch {engaged}` |
+| agent | `agent.updated {change: created \| updated \| deleted}` |
+| session | `session.created {title}`, `session.renamed`, `session.archived` |
+| run | `run.queued {trigger}`, `run.started {model}`, `run.delta {text}` (ephemeral), `run.tool_call {toolCallId, tool, input, class, rejected?}`, `run.tool_result {ok, summary?}`, `run.awaiting_consent {consentId}`, `run.retrying`, `run.steered`, `run.completed {reason?, trigger?}`, `run.failed {error, trigger?}`, `run.cancelled {by: user \| kill_switch \| budget}`, `run.interrupted` |
+| dispatch | `dispatch.started {to, task}`, `dispatch.completed {summary}`, `dispatch.failed {error}`, `dispatch.cancelled` |
+| consent | `consent.requested {tool, input}`, `consent.resolved {decision}` |
+| memory | `memory.proposed {text, scope}`, `memory.approved`, `memory.rejected`, `memory.updated {change: edited \| deleted}` |
+| schedule | `schedule.fired {scheduleId, scheduledFor, manual?}`, `schedule.missed {reason?: down \| busy \| stopped \| error, detail?}` |
+| connector | `connector.status {connectorId, status: connected \| disconnected \| needs_auth \| error, detail?}` |
+| budget | `budget.warning`, `budget.blocked {scope: run \| agent \| station, spentUsd, limitUsd}` (`budget.blocked` ends its run as `blocked_budget`) |
 
-TeamStatus = {
-  schemaVersion: 1,
-  teamId: string,
-  updatedAt: string,
-  lastRunStartedAt?: string,       // pointer into status/runs/
-  agents: RunRecord["agents"],     // last known per-agent state
-  ledgerPath: string,              // "ledger/<teamId>.md"
-}
+The run states and their allowed transitions are in core's `run/run-state.ts`
+([ARCHITECTURE.md](ARCHITECTURE.md#the-agent-loop-runservice-adr-0011)). The projections over this
+log are:
+- `notificationFor`: Notifications;
+- `foldCrewActivity` / `activityOf`: what each crew member is doing now;
+- `mapModelFor`: the station map from config plus activity (D24).
 
-OverseerStatus = {
-  schemaVersion: 1,
-  updatedAt: string,
-  state: "idle" | "reconciling" | "reported" | "attention",
-  lastRunStartedAt?: string,
-  lastOutwardPostAt?: string,
-  reconciled: number,              // ledgers read in the last run
-  attention: Array<{ teamId: string, reason: string }>,
-  digestPath: "status/digest.md",
-}
-```
+## SQLite (`station.db`)
 
-## 3. StationState (derived by core from the ledger)
+The database runs in WAL mode with foreign keys on. Numbered migrations are applied once each and
+recorded in `schema_migrations`.
 
-```ts
-StationState = {
-  schemaVersion: 1,
-  provenance: {
-    asOf: string,                  // newest timestamp seen in status/, or the read time when none
-    sourceRef?: string,            // commit sha if the reader supplies it
-    sourcePath: string,            // the ledger root as given
-  },
-  teams: Record<teamId, {
-    health: "ok" | "attention" | "stalled",
-    healthReason?: string,
-    run: "idle" | "working" | "done" | "failed",     // from the latest RunRecord
-    lastRun?: RunSummary,
-    recentRuns: RunSummary[],      // newest first, at most 6
-    ledger: { path: string, exists: boolean, sections?: LedgerSections, changedInLastRun: boolean },
-    degraded: boolean,             // last run older than 24 h
-  }>,
-  agents: Record<agentId, { state: "idle" | "working" | "done" | "failed", note?: string }>,
-  handoffs: Record<handoffId, { carrying: boolean }>,   // true when the writer's ledger changed in its last run
-  overseer: OverseerStatus-like + { digest?: string },
-  issues: Issue[],                 // everything the parser could not prove, never thrown
-}
+| Table | Holds |
+|---|---|
+| `events` | The append-only log. Triggers refuse update and delete. |
+| `sessions` | `id, agent_id, title, created_at, archived_at?` |
+| `runs` | `id, session_id, agent_id, state, trigger, model, created_at, started_at?, ended_at?, error?, steps, depth, dispatch_id?` |
+| `messages` | Each session's messages in order (`position`): the Commander, assistant text with tool calls, tool results, and dispatch reports (`ChatMessage`). |
+| `memories` | `id, agent_id, scope (agent \| station), text, status (proposed \| approved \| rejected), source_run_id?, created_at, decided_at?` |
+| `consents` | One row per consent request: `tool, input, status (pending \| approved \| denied \| expired)`. |
+| `spend` | One row per model call: tokens, `cost_usd` (OpenRouter's, or null), and the UTC day. |
+| `dispatches` | Lead and worker agent, session and run; `task, inputs?, status, summary?` |
+| `schedule_state` | Per schedule: the config it was armed with (`signature`), the last occurrence accounted for, and its session. |
+| `schedule_fires` | Per schedule: history (`fired` with its run, or `missed` with a reason). |
+| `station_state` | Keyed values: the kill switch, the Notifications read marker. |
 
-Issue = { level: "warn" | "error", path: string, message: string }
-RunSummary = pick(RunRecord, startedAt, endedAt, outcome, sessionUrl, grantsUsed, ledger, error)
-LedgerSections = { nextSteps: string[], waitingOn: string[], log: string[] }
-```
+## Secrets
 
-Health derivation (pure, tested):
-- `stalled` when the latest run started more than `2 × schedule interval` ago, or an open run has
-  no `endedAt` and started more than `2 × schedule interval` ago, or there is no run at all and
-  the ledger exists.
-- `attention` when the latest run's outcome is `failed`, or the overseer's `attention` list names
-  the team, or a status file for the team was malformed (issue recorded).
-- `ok` otherwise. Cron schedules use the gap between the two most recent runs as the interval,
-  falling back to 24 h.
+These live in the OS keychain (service `outerworld-ai`): the OpenRouter key, and each
+connector's OAuth tokens and client registration (`mcp.<id>.tokens` / `mcp.<id>.client`). The
+entries are per OS user and shared by every station directory, by the owner's decision.
+`OUTERWORLD_SECRETS=memory` keeps a daemon off the keychain. No secret is ever written to the
+station directory or SQLite, put in an event or log, or sent to the SPA. The API reports only
+whether a key is configured. See [PRIVACY.md](PRIVACY.md).
 
-Run state: `working` when the latest RunRecord has no `endedAt` and is not stalled; otherwise
-the outcome, or `idle` when there is no record. Agent state comes from the latest RunRecord's
-`agents` entry, defaulting to `idle`.
+## HTTP API
 
-## 4. Core public API
-
-```ts
-// schema
-parseStation(input: unknown): Result<Station>
-parseStationState(input: unknown): Result<StationState>
-Result<T> = { ok: true, value: T, issues: Issue[] } | { ok: false, issues: Issue[] }
-stationJsonSchema, stationStateJsonSchema, runRecordJsonSchema, teamStatusJsonSchema, overseerStatusJsonSchema
-SCHEMA_VERSION = 1
-
-// ledger
-parseLedger(station: Station, files: LedgerFiles, options?: { now?: string, sourceRef?: string, sourcePath?: string }): StationState
-LedgerFiles = Record<string /* path relative to ledger root, posix */, string /* contents */>
-parseLedgerMarkdown(text: string): LedgerSections | undefined   // undefined only when neither the marker nor a known heading is present
-
-// events
-StationEvent =
-  | { type: "run.started", teamId, at }
-  | { type: "agent.state", teamId, agentId, state, at }
-  | { type: "ledger.written", teamId, at, linesAdded, linesRemoved }
-  | { type: "run.finished", teamId, at, outcome: "done" | "failed", error? }
-  | { type: "overseer.state", state, at }
-  | { type: "digest.posted", at }
-applyEvent(state: StationState, event: StationEvent, station: Station): StationState   // pure, returns a new object
-bindReducer(station: Station): (state, event) => StationState                          // the two-argument form for reducers
-emptyState(station: Station, { now, sourcePath, sourceRef? }): StationState             // all idle, all ok, no runs
-
-// layout (abstract 1000×1000 unit square, origin top-left)
-layoutStation(station: Station): Layout
-Layout = {
-  overseer: { x, y, w, h },
-  teams: Record<teamId, { x, y, w, h, ring: 0 | 1 }>,
-  mode: "columns" | "list",       // overseer at the right edge, teams in columns to its left; list above 16 teams
-}
-handoffGeometry(handoff: Handoff, layout: Layout, all: Handoff[]): HandoffGeometry
-HandoffGeometry = { path: string /* SVG d, cubic */, midpoint: {x,y}, angle: number, chevronAt: {x,y}, paired: boolean, side: -1 | 0 | 1 }
-
-// rig
-deriveRig(agent: Agent, station: Station): { shoulder: "ball" | "pauldron", accessory: "antenna" | "thruster" | "plate" | "none" }
-overseerRig(): { head: "crest", trace: "frame", shoulder: "pauldron", accessory: "crest" }
-
-// glossary
-glossary: Record<GlossaryKey, string>   // the only place themed display strings live
-term(key: GlossaryKey): string
-GlossaryKey = "station" | "team" | "teams" | "scope" | "grant" | "grants" | "grant.read" | "grant.write" | "grant.verb"
-  | "handoff" | "handoffs" | "agent" | "agents" | "persona" | "ledger" | "run" | "runs" | "overseer"
-  | "emblem" | "health.ok" | "health.attention" | "health.stalled" | "run.idle" | "run.working" | "run.done" | "run.failed"
-  | "empty.handoffs.title" | "empty.handoffs.body" | "eyebrow.team" | ...
-```
-
-Glossary contents (simplified 2026-09-27, reconciliation A20): station "the Reach", team
-"Station", scope "Standing orders", grant "Tool", handoff "Handoff", agent "Agent", persona
-"Persona", ledger "Station Report", system report (the digest) "System Report", run "Routine run", overseer role "Overseer". Health and run words
-stay plain. The overseer's proper name comes from its persona.
-
-## 5. Fixture (`fixtures/demo-station/`)
-
-A fictional person's Station: two teams, three agents, one overseer named "Ultron" (owner's choice; a placeholder to replace before public release).
-- `project-management` (category operations, emblem dome, hue 230): agents `planner` (working)
-  and `scribe` (idle); grants notion read, ledger write; interval 360 min; last run open.
-- `strength-app` (category build, emblem forge, hue 55): agent `builder` (failed); grants git
-  read, notion read, ledger write, discord write; interval 360 min; last run failed 26 h ago,
-  so health is `stalled` and `degraded` is true.
-- Handoffs: `strength-app → project-management` and `project-management → strength-app`
-  (a pair), the first carrying.
-- Overseer state `attention`, one attention entry for `strength-app`, a digest file.
-The scripted demo timeline (ui step) walks: run.started → agent working → ledger.written →
-run.finished done → overseer reconciling → digest.posted.
-
-## 6. Generator: CLI and emitted files
-
-Implemented 2026-09-27. `packages/generator` turns a Station document into the
-files a private ledger repo needs. Pure functions produce `{ path, contents }` records; the CLI
-is the only place `node:fs` appears.
-
-### CLI
-
-```
-outerworld generate --station <path/to/station.json> --out <dir> [--dry-run] [--force]
-outerworld validate --station <path/to/station.json>
-```
-
-- `generate` validates the Station (same rules as core's `parseStation`), emits the file set,
-  and writes it under `--out`. It refuses to overwrite `ledger/*.md`, `status/**`, or
-  `station.json` when they already exist unless `--force`, because those are the user's and
-  the Routines' data; everything else (personas, skills, prompts, `CLAUDE.md`, the script) is
-  regenerated on every run. `--dry-run` prints the file list with sizes and writes nothing.
-- Exit codes: `0` written (or dry run), `1` invalid station (issues printed as `path: message`),
-  `2` could not read or write (the OS error, no stack).
-- Output is deterministic: same Station, same bytes. Files are sorted by path.
-
-### Emitted layout
-
-```
-CLAUDE.md                        the ledger repo's agent guide: what this repo is, the teams, the
-                                 handoff table (who may read whose station report), the status
-                                 contract, and the rules every Routine follows
-station.json                     the Station document, verbatim (pretty-printed)
-agents/<agentId>.md              persona: name, mandate, tone, allowlist, rig (for the record)
-skills/<skillId>/SKILL.md        one per grant with kind "skill" (skillId = the grant's tool id)
-routines/<teamId>.prompt.md      the prompt to paste into the Routine, with a setup header
-routines/overseer.prompt.md      the overseer's prompt
-ledger/<teamId>.md               the team's station report skeleton (fixed headings)
-scripts/post-digest.sh           posts status/digest.md to $DISCORD_WEBHOOK_URL; fails loudly if unset
-status/README.md                 the status JSON contract (schemas in section 2), stamped with the
-                                 schema version; status/teams/ and status/runs/ hold .gitkeep
-```
-
-### Routine prompt shape (`routines/<teamId>.prompt.md`)
-
-1. **Setup checklist** (a fenced block at the top, for the human creating the Routine): the
-   repository to attach, which connectors to keep enabled (from the team's connector grants)
-   and a reminder that every other connector should be removed, the schedule (interval or cron
-   from the Station), the environment variable the overseer needs (`DISCORD_WEBHOOK_URL`) and the
-   network allow-list entry for `discord.com`, and the two ways to create it: claude.ai/code/routines
-   or `/schedule` in the CLI. Facts come from the Claude Code docs; nothing is invented.
-2. **Identity**: team name, mission, the agents and their personas (linked to `agents/*.md`).
-3. **Allowed tools**: the team's grants with modes, restated as rules the prompt enforces.
-4. **Handoffs**: which station reports this team may read (inbound) and that its own report is
-   read by whom (outbound), with paths.
-5. **Procedure**: read `ledger/<teamId>.md`, read inbound reports, do the mission, update the
-   three fixed sections of the station report, write the status files, commit to the default
-   branch with a conventional message (fall back to `claude/status-<teamId>-<startedAt>` after
-   two rejected pushes; see section 2).
-6. **Status contract**: exact JSON shapes for `status/teams/<teamId>.json` and
-   `status/runs/<teamId>/<startedAt>.json`, with `CLAUDE_CODE_REMOTE_SESSION_ID` for the session
-   link. Filenames use the ISO start time with `:` replaced by `-`.
-
-The overseer prompt reads every station report and status file, writes `status/overseer.json`
-and `status/digest.md`, runs `scripts/post-digest.sh`, and commits.
-
-### Public API
-
-```ts
-emitLedger(station: Station, options?: { generatedAt?: string }): EmittedFile[]
-// individual emitters, all pure:
-emitClaudeMd, emitStationJson, emitAgentPersona, emitSkill, emitRoutinePrompt,
-emitOverseerPrompt, emitLedgerSkeleton, emitPostDigestScript, emitStatusReadme
-protectedPaths(files: EmittedFile[]): string[]   // ledger/*.md, status/**, station.json
-```
-
-`generatedAt` stamps headers; the fixture snapshot uses a fixed value so output is stable.
+All routes are under `/api`, with JSON bodies and the bearer token; commands are plain POST, PUT,
+PATCH and DELETE, and live state comes over one SSE stream (`GET /api/events`). Each route,
+including the status codes the SPA relies on, is listed in
+[apps/daemon/README.md](../apps/daemon/README.md). Request bodies are validated with core's input
+schemas (`packages/core/src/api/`).

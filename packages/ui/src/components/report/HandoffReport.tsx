@@ -23,7 +23,7 @@ export function HandoffReport({
     <>
       <header className="flex flex-col gap-(--ow-space-1)">
         <Eyebrow>
-          {term("handoff")} · {hs?.carrying ? "carrying" : "quiet"}
+          {term("lane")} · {hs?.carrying ? "carrying" : "quiet"}
         </Eyebrow>
         <h2 className="text-title text-ink-1">
           {from?.name ?? handoff.from} → {to?.name ?? handoff.to}
@@ -38,7 +38,7 @@ export function HandoffReport({
             : "No change in the writer's last run."}
         </p>
       </Region>
-      <Region title={term("teams")}>
+      <Region title={term("rooms")}>
         <LinkList
           items={ends}
           keyOf={(e) => e.role}

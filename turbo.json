@@ -1,10 +1,11 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
+  "globalDependencies": ["fixtures/**"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
+      "outputs": ["dist/**"]
     },
     "typecheck": {
       "dependsOn": ["^build"]
@@ -18,5 +19,5 @@
       "persistent": true
     }
   },
-  "globalEnv": ["CI", "GITHUB_ACTIONS", "OUTERWORLD_LEDGER_PATH"]
+  "globalEnv": ["CI", "GITHUB_ACTIONS", "OUTERWORLD_HOME", "OUTERWORLD_MODEL", "OUTERWORLD_PORT"]
 }

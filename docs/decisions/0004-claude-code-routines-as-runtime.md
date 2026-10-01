@@ -1,7 +1,7 @@
 # ADR-0004: Claude Code Routines as the agent runtime
 
 ## Status
-Accepted
+Superseded by ADR-0010
 
 ## Date
 2026-09-27

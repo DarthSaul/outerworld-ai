@@ -3,14 +3,15 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "A space-themed map of your Claude Code Routines: teams, permissions, handoffs, and one overseer.",
+  "description": "A local-first agent runtime with a space-station interface: your AI crew, their capabilities, and their work, live.",
   "license": "MIT",
   "packageManager": "pnpm@10.31.0",
   "engines": {
     "node": ">=22"
   },
   "scripts": {
-    "dev": "turbo run dev",
+    "dev": "node scripts/dev.mjs",
+    "dev:fresh": "node scripts/dev.mjs --fresh",
     "build": "turbo run build",
     "test": "turbo run test",
     "lint": "biome check .",
@@ -27,5 +28,10 @@
     "playwright": "^1.63.0",
     "turbo": "2.11.4",
     "typescript": "~5.9.3"
+  },
+  "pnpm": {
+    "ignoredBuiltDependencies": [
+      "better-sqlite3"
+    ]
   }
 }

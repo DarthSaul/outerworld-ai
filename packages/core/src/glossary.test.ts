@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { GLOSSARY_KEYS, glossary, term } from "./glossary.js";
+import { GLOSSARY_KEYS, glossary, term, termWith } from "./glossary.js";
 
 describe("glossary", () => {
   it("has a display string for every key, none empty", () => {
@@ -8,17 +8,22 @@ describe("glossary", () => {
     }
   });
 
-  it("returns the simplified display nouns for the core objects (reconciliation A20)", () => {
-    expect(term("team")).toBe("Station");
-    expect(term("grant")).toBe("Tool");
-    expect(term("handoff")).toBe("Handoff");
-    expect(term("agent")).toBe("Agent");
-    expect(term("ledger")).toBe("Station Report");
-    expect(term("system.report")).toBe("System Report");
-    expect(term("run")).toBe("Routine run");
+  it("returns the station runtime vocabulary for the core objects (brief §4)", () => {
+    expect(term("room")).toBe("Room");
+    expect(term("grant")).toBe("Prop");
+    expect(term("lane")).toBe("Hallway");
+    expect(term("agent")).toBe("Crew member");
+    expect(term("agents")).toBe("Crew");
+    expect(term("user")).toBe("Commander");
+    expect(term("comms")).toBe("COMMS");
+    expect(term("run")).toBe("Run");
     expect(term("overseer")).toBe("the Overseer");
     expect(term("overseer.role")).toBe("Overseer");
-    expect(term("station")).toBe("the Reach");
+    expect(term("station")).toBe("Station");
+    expect(term("approvalMode.ask")).toBe("Ask first");
+    expect(term("approvalMode.full")).toBe("Full power");
+    expect(term("memory.beliefs")).toBe("Stored beliefs");
+    expect(term("memory.proposals")).toBe("Awaiting your decision");
   });
 
   it("keeps health and run words plain, never themed", () => {
@@ -34,9 +39,9 @@ describe("glossary", () => {
   });
 
   it("carries the plain word for every themed noun so tooltips can show it", () => {
-    expect(term("team.plain")).toBe("team");
-    expect(term("grant.plain")).toBe("grant");
-    expect(term("handoff.plain")).toBe("handoff");
+    expect(term("room.plain")).toBe("team");
+    expect(term("grant.plain")).toBe("capability grant");
+    expect(term("lane.plain")).toBe("handoff lane");
     expect(term("agent.plain")).toBe("agent");
     expect(term("ledger.plain")).toBe("ledger");
     expect(term("run.plain")).toBe("run");
@@ -46,5 +51,14 @@ describe("glossary", () => {
   it("never uses a franchise placeholder name", () => {
     const all = Object.values(glossary).join(" ").toLowerCase();
     expect(all).not.toMatch(/ultron/);
+  });
+
+  it("fills placeholders, leaving an unknown one visible", () => {
+    expect(termWith("notification.run_failed", { agent: "Quill", detail: "HTTP 500" })).toBe(
+      "A run by Quill failed: HTTP 500",
+    );
+    expect(termWith("notification.run_failed", { agent: "Quill" })).toBe(
+      "A run by Quill failed: {detail}",
+    );
   });
 });

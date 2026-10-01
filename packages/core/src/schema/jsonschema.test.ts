@@ -9,9 +9,18 @@ const committed = (name: string) =>
   JSON.parse(readFileSync(join(here, "..", "..", "schema", `${name}.schema.json`), "utf8"));
 
 describe("JSON Schema export", () => {
-  it("exports the five documents", () => {
+  it("exports the runtime documents and the milestone 1 map documents", () => {
     expect(Object.keys(JSON_SCHEMAS).sort()).toEqual(
-      ["overseer-status", "run-record", "station", "station-state", "team-status"].sort(),
+      [
+        "agent-config",
+        "overseer-status",
+        "run-record",
+        "runtime-event",
+        "station",
+        "station-config",
+        "station-state",
+        "team-status",
+      ].sort(),
     );
   });
 

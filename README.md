@@ -1,36 +1,52 @@
 # Outerworld AI
 
-A dashboard that renders your AI agents, and how they are allowed to work together, as a
-space-themed map. Teams of agents are stations, stations have governed permissions, authorized
-handoffs between stations are drawn as wires, and one overseer at the right edge reads everything
-and reports outward.
+A local-first agent runtime with a space-station interface. You create AI agents (your **crew**),
+organize them into **rooms** on a **station**, give them real capabilities (**props** placed in a
+room, **connectors** like Notion granted per agent), and watch them work: streamed replies, real
+tool calls, real cost. The map is a projection of runtime state, not a simulation.
 
-The agents do not run in this app. They run as **Claude Code Routines**, Anthropic's
-cloud-scheduled Claude Code sessions. That means Outerworld AI only works with a Claude Pro or
-Max subscription (Routines are a Pro/Max+ feature). We say that plainly because it shapes the
-whole design.
+Everything runs on your machine:
 
-## What it does
+- a Node **daemon** owns agents, model calls, tools, persistence, scheduling, and an append-only
+  event log, listening on `127.0.0.1` only;
+- a React **SPA** in your browser talks to it with a per-install token.
 
-1. **Configuration editor.** Creating an agent, granting a tool, or authorizing a handoff produces
-   files you commit to a separate, private *ledger repo*: `CLAUDE.md`, persona files, skills, one
-   routine prompt per team, and a Discord webhook script. A Routine clones that repo and runs the
-   prompt. In milestone 1 the editor is the `outerworld generate` CLI plus a hand-edited
-   `station.json`; in-browser editing comes later.
-2. **State renderer.** It reads the ledger repo (status files, run history) and shows the last
-   known state. It never streams live activity and never asserts state it can't prove from files.
+Model access is bring-your-own-key through **OpenRouter**. There is no Outerworld server. Your
+data stays on disk except for the model, connector, and web requests your agents make; see
+[docs/PRIVACY.md](docs/PRIVACY.md).
 
-Three constraints shape everything:
-- A Routine starts with zero context, so the ledger repo must carry everything an agent needs.
-- There is no API to create Routines, only a per-routine HTTP trigger. The app generates the
-  prompt and guides you to create the Routine at claude.ai/code/routines or with `/schedule`.
-- Secrets such as the Discord webhook URL live in the Routine's environment variables, never in
-  any repo. See [docs/PRIVACY.md](docs/PRIVACY.md) for the full data map.
+**Product law:** the interface never asserts state the runtime cannot prove.
+
+## What v1 does
+
+- **COMMS**: chat with any crew member; sessions are saved and re-openable.
+- **Overseer delegation**: the Overseer dispatches tasks to crew members, workers run
+  concurrently, results return to the Overseer's session, all visible live.
+- **Agents as documents**: identity, purpose, standing orders, and context as markdown; model,
+  approval mode (*Ask first* or *Full power*), and grants as config.
+- **Capabilities with consent**: tools not granted are never offered to the model and are rejected
+  if called; side-effectful calls wait for your approval under *Ask first*.
+- **Notion** over its hosted MCP server; each agent is granted it or not.
+- **Schedules** while the daemon runs, **memory** you approve, **notifications**, **spend** and
+  **budgets** checked before every model call, and a kill switch.
+- **Station map**: rooms, their props and crew, hallways, and the Overseer, with each crew
+  member's live state (working, waiting for your approval, stopped) drawn from runtime events.
+- **Onboarding**: on a new station, your OpenRouter key, then your Overseer, then a first chat.
+
+The full direction is [docs/specs/BRIEF-station-runtime.md](docs/specs/BRIEF-station-runtime.md).
 
 ## Status
 
-Milestone 1 is in progress: read-only dashboard, generator CLI, demo fixture. See
-[docs/specs/SPEC-milestone-1.md](docs/specs/SPEC-milestone-1.md).
+**v1 is feature-complete** on the `runtime-pivot` branch, awaiting the owner's sign-off
+(CHECKPOINT 10). Every phase in [tasks/todo.md](tasks/todo.md) is done. How each acceptance
+criterion in the brief is shown, by test or by manual steps, is in
+[docs/specs/v1-acceptance.md](docs/specs/v1-acceptance.md). How it fits together is in
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), and the data in [docs/SCHEMA.md](docs/SCHEMA.md).
+Known limits and later work are under Follow-ups in `tasks/todo.md` (for example, a run can end a
+little over its budget cap, because caps are checked before each model call).
+
+Milestone 1 (a read-only dashboard for Claude Code Routines) is archived: see ADR-0010 and
+`tasks/archive/`.
 
 ## Quickstart
 
@@ -40,27 +56,22 @@ Requires Node 22 and pnpm 10 (`corepack enable` gives you pnpm).
 git clone https://github.com/DarthSaul/outerworld-ai.git
 cd outerworld-ai
 pnpm install
-pnpm dev                                   # dashboard on http://localhost:3000, rendering the demo fixture
-OUTERWORLD_LEDGER_PATH=/path/to/ledger pnpm dev   # render your own local ledger repo instead
+pnpm dev
 ```
 
-The production build works the same way: `pnpm build`, then `pnpm start` (or
-`OUTERWORLD_LEDGER_PATH=/path/to/ledger pnpm start`). Both routes render on every request, so the
-page always reflects the ledger on disk. With a real ledger the dashboard shows the station view
-only; the scripted "Run digest" demo exists for the fixture alone.
-
-### Generate a ledger repo
+`pnpm dev` starts the daemon on `127.0.0.1:4317` and the SPA on http://localhost:5173, against a
+copy of the fictional demo station (`fixtures/demo-station/`, copied to `.outerworld/dev-home/`).
+On that copy, replies come from a scripted fake model (no key, no network). To chat for real:
 
 ```
-pnpm build                                                     # builds the generator CLI to packages/generator/dist
-node packages/generator/dist/bin.js generate --station fixtures/demo-station/station.json --out /path/to/ledger
-node packages/generator/dist/bin.js validate --station /path/to/ledger/station.json
-OUTERWORLD_LEDGER_PATH=/path/to/ledger pnpm dev                # render what you just generated
+OUTERWORLD_MODEL=openrouter pnpm dev   # then Settings → paste your OpenRouter key
 ```
 
-Start from your own `station.json` (the fixture's is the example; `docs/SCHEMA.md` is the
-contract). The generated repo is yours to keep private: it carries the prompts your Routines run
-and the status files they write back. See `templates/ledger-repo/README.md`.
+The key is checked with OpenRouter and stored in your OS keychain, never on disk or in the
+browser. `OUTERWORLD_HOME=~/.outerworld pnpm dev` runs your own station directory instead; on a
+new directory, onboarding asks for the key, creates your Overseer, and opens a first chat.
+`pnpm dev:fresh` walks through the same onboarding on an empty throwaway station with the fake
+model.
 
 Other commands:
 
@@ -73,36 +84,25 @@ pnpm browser:verify   # after pnpm build: screenshots, console errors, reduced m
 ## Layout
 
 ```
-apps/web/                Next.js dashboard
-packages/core/           headless schema, glossary, layout math, event model, ledger parsing
-packages/ui/             React components, design tokens, the rigged character SVG
-packages/generator/      Station → ledger-repo files, plus the CLI
-fixtures/demo-station/   a fictional user's Station and ledger; every test and screenshot uses it
-templates/ledger-repo/   the skeleton your private ledger repo starts from
+apps/daemon/             Node entry: config, HTTP API, SSE, auth, serves the built SPA
+apps/station/            Vite + React SPA
+packages/core/           schemas, glossary, event types, pure policy and prompt assembly
+packages/runtime/        agent loop, dispatcher, scheduler, tools, MCP, memory, budgets, storage
+packages/ui/             React components, design tokens, the rigged character, the station map
+fixtures/demo-station/   a fictional station directory for dev, tests, and screenshots
 docs/                    ARCHITECTURE, SCHEMA, PRIVACY, design assets, ADRs, specs
 ```
 
-Packages are published under the `@darthsaul` scope and are private for now: clone and run.
+`apps/web` and `packages/generator` (milestone 1) were removed in Phase 1; git history keeps them.
 
 ## Roadmap
 
-- **npm publishing** of `@darthsaul/outerworld-ai-core`, `-ui`, and `-generator` with Changesets
-  and `publishConfig.access: "public"`. Not part of milestone 1.
-- In-browser editing: standing orders, personas, and handoffs edited in the detail panel, committed
-  to the ledger repo.
-- Routine trigger wiring (the per-routine HTTP trigger) so a handoff can wake the reader team.
-- Vocabulary: the on-screen words (Station, Tool, Handoff, Agent, Routine run, Overseer, Station
-  Report, System Report) live in core's glossary; code keeps neutral names, so any later rename is
-  one file. The fixture's overseer name is a placeholder to replace before any public release.
-- ~~The 48×64 overseer hero rig~~ shipped 2026-09-27. The raster-sprite upgrade path in the design
-  spec remains open.
-- Connector drift: status files reporting which connectors a run actually had.
-- Optional manual team positions in the Station document (reconciliation A10); layout is derived
-  today.
-- TypeScript 7 spike once the Go compiler is stable (ADR-0007).
-- Verify the dashboard in WebKit and Firefox; `browser:verify` runs Chromium only.
-- Enforce ui line coverage and the web first-load JS budget now that both are recorded in
-  `CONSTRAINTS.md`.
+- **v2**: conveyor lines (inbox, bays, outbox), cross-room handoffs, a consent-gated terminal
+  prop, the Overseer editing crew, session compaction.
+- **v3**: more MCP connectors, channel and webhook triggers, visual station editing, embeddings
+  memory, a desktop shell, npm publishing.
+- The on-screen vocabulary (Station, Room, Crew, Hallway, Prop, COMMS) is another product's and
+  lives only in core's glossary; revisit it before a public release.
 
 ## Contributing
 

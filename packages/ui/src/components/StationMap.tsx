@@ -110,14 +110,18 @@ export const StationMap = memo(function StationMap({
       .map((g) => ({ id: g.id, mode: g.mode, label: g.label ?? g.tool }));
     const agents: TeamPanelAgent[] = station.agents
       .filter((a) => a.teamId === t.id)
-      .map((a) => ({
-        id: a.id,
-        name: a.persona.name,
-        mandate: a.persona.mandate,
-        rig: a.persona.rig,
-        derived: deriveRig(a, station),
-        state: state.agents[a.id]?.state ?? "idle",
-      }));
+      .map((a) => {
+        const note = state.agents[a.id]?.note;
+        return {
+          id: a.id,
+          name: a.persona.name,
+          mandate: a.persona.mandate,
+          rig: a.persona.rig,
+          derived: deriveRig(a, station),
+          state: state.agents[a.id]?.state ?? "idle",
+          ...(note ? { note } : {}),
+        };
+      });
     const last = timeLabel(ts?.lastRun?.startedAt);
     return (
       <TeamPanel
@@ -168,7 +172,7 @@ export const StationMap = memo(function StationMap({
         <svg
           className="ow-map-svg"
           viewBox={`0 0 ${LAYOUT_SIZE} ${LAYOUT_SIZE}`}
-          aria-label={term("handoffs")}
+          aria-label={term("lanes")}
         >
           <g className="ow-overseer-links">
             {station.teams.map((t) => {

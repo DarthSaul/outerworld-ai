@@ -1,0 +1,166 @@
+import {
+  type NewRuntimeEvent,
+  parseRuntimeEvent,
+  type RuntimeEvent,
+} from "@darthsaul/outerworld-ai-core";
+import type { Redactor } from "../secrets/redact.js";
+import type { Db } from "./database.js";
+
+export type EventListener = (event: RuntimeEvent) => void;
+
+interface Row {
+  seq: number;
+  type: string;
+  at: string;
+  agent_id: string | null;
+  session_id: string | null;
+  run_id: string | null;
+  payload: string;
+}
+
+const toEvent = (row: Row): RuntimeEvent =>
+  ({
+    seq: row.seq,
+    type: row.type,
+    at: row.at,
+    ...(row.agent_id !== null ? { agentId: row.agent_id } : {}),
+    ...(row.session_id !== null ? { sessionId: row.session_id } : {}),
+    ...(row.run_id !== null ? { runId: row.run_id } : {}),
+    payload: JSON.parse(row.payload),
+  }) as RuntimeEvent;
+
+/**
+ * The append-only event log (brief §10) over SQLite. `append` validates the event against the
+ * core schema, assigns `seq` and `at`, commits, then notifies subscribers in-process. `since`
+ * replays the log for SSE `Last-Event-ID` and restart recovery.
+ */
+export class EventStore {
+  readonly #db: Db;
+  readonly #now: () => Date;
+  readonly #listeners = new Set<EventListener>();
+  readonly #onListenerError: (error: unknown) => void;
+  readonly #redact: Redactor | undefined;
+  readonly #insert;
+  readonly #since;
+  readonly #latest;
+
+  constructor(
+    db: Db,
+    options: {
+      now?: () => Date;
+      onListenerError?: (error: unknown) => void;
+      /** Applied to every payload before it is stored or sent (brief §11). */
+      redact?: Redactor;
+    } = {},
+  ) {
+    this.#redact = options.redact;
+    this.#db = db;
+    this.#now = options.now ?? (() => new Date());
+    this.#onListenerError =
+      options.onListenerError ?? ((error) => console.error("event listener failed:", error));
+    this.#insert = db.prepare(
+      "insert into events (type, at, agent_id, session_id, run_id, payload) values (@type, @at, @agentId, @sessionId, @runId, @payload)",
+    );
+    this.#since = db.prepare("select * from events where seq > ? order by seq limit ?");
+    this.#latest = db.prepare("select coalesce(max(seq), 0) as seq from events");
+  }
+
+  append(event: NewRuntimeEvent): RuntimeEvent {
+    const at = this.#now().toISOString();
+    const payload = this.#redact ? this.#redact.value(event.payload) : event.payload;
+    const candidate = { ...event, payload, seq: this.latestSeq() + 1, at };
+    const parsed = parseRuntimeEvent(candidate);
+    if (!parsed.ok) {
+      throw new Error(
+        `invalid ${event.type} event: ${parsed.issues.map((i) => `${i.path}: ${i.message}`).join("; ")}`,
+      );
+    }
+    const e = parsed.value;
+    const { lastInsertRowid } = this.#insert.run({
+      type: e.type,
+      at,
+      agentId: e.agentId ?? null,
+      sessionId: e.sessionId ?? null,
+      runId: e.runId ?? null,
+      payload: JSON.stringify(e.payload),
+    });
+    const stored = { ...e, seq: Number(lastInsertRowid) } as RuntimeEvent;
+    this.#notify(stored);
+    return stored;
+  }
+
+  /**
+   * Sends an event to live subscribers without storing it (token deltas, D18). It carries the
+   * last stored seq and `ephemeral: true`, so replay and `Last-Event-ID` are unaffected.
+   */
+  publish(event: NewRuntimeEvent): RuntimeEvent {
+    const payload = this.#redact ? this.#redact.value(event.payload) : event.payload;
+    const parsed = parseRuntimeEvent({
+      ...event,
+      payload,
+      seq: this.latestSeq(),
+      at: this.#now().toISOString(),
+      ephemeral: true,
+    });
+    if (!parsed.ok) {
+      throw new Error(
+        `invalid ${event.type} event: ${parsed.issues.map((i) => `${i.path}: ${i.message}`).join("; ")}`,
+      );
+    }
+    this.#notify(parsed.value);
+    return parsed.value;
+  }
+
+  #notify(event: RuntimeEvent) {
+    for (const listener of this.#listeners) {
+      try {
+        listener(event);
+      } catch (error) {
+        // A broken listener must not break the log or the other listeners.
+        this.#onListenerError(error);
+      }
+    }
+  }
+
+  /** Events with `seq` greater than the given one, oldest first. */
+  since(seq: number, limit = 10_000): RuntimeEvent[] {
+    return (this.#since.all(seq, limit) as Row[]).map(toEvent);
+  }
+
+  /**
+   * Stored events of the given types, newest first: those after `afterSeq` and before
+   * `beforeSeq` when given. For projections such as Notifications.
+   */
+  ofTypes(
+    types: readonly string[],
+    options: { afterSeq?: number; beforeSeq?: number; limit?: number } = {},
+  ): RuntimeEvent[] {
+    if (types.length === 0) return [];
+    const marks = types.map(() => "?").join(", ");
+    const rows = this.#db
+      .prepare(
+        `select * from events where type in (${marks}) and seq > ? and seq < ? order by seq desc limit ?`,
+      )
+      .all(
+        ...types,
+        options.afterSeq ?? 0,
+        options.beforeSeq ?? Number.MAX_SAFE_INTEGER,
+        options.limit ?? 100,
+      ) as Row[];
+    return rows.map(toEvent);
+  }
+
+  latestSeq(): number {
+    return (this.#latest.get() as { seq: number }).seq;
+  }
+
+  subscribe(listener: EventListener): () => void {
+    this.#listeners.add(listener);
+    return () => this.#listeners.delete(listener);
+  }
+
+  close(): void {
+    this.#listeners.clear();
+    this.#db.close();
+  }
+}
