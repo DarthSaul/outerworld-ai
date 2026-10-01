@@ -115,7 +115,7 @@
   --color-room-4: var(--st-room-4);
   --color-room-5: var(--st-room-5);
 
-  --font-sans: var(--ow-font-sans);
+  --font-sans: var(--st-font-body);
   --font-mono: var(--ow-font-mono);
   --font-display: var(--st-font-display);
   --font-body: var(--st-font-body);

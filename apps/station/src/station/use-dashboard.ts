@@ -7,7 +7,7 @@ import {
   stVar,
 } from "@darthsaul/outerworld-ai-ui";
 import { useMemo, useState } from "react";
-import { notificationText } from "../components/notification-text.js";
+import { linkFor, notificationText } from "../components/notification-text.js";
 import {
   type MemoryItem,
   useActivity,
@@ -84,6 +84,7 @@ export function useRadio(dashboard: Dashboard | undefined): RadioEntry[] {
         who: member?.name ?? term("station"),
         color,
         text: notificationText(n, nameOf, connectorName),
+        ...((to) => (to ? { to } : {}))(linkFor(n)),
       };
     });
   }, [feed.data, dashboard, station.data]);

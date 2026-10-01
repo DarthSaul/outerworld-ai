@@ -12,6 +12,8 @@ export interface RadioEntry {
   /** A var() reference: the speaker's room color. */
   readonly color: string;
   readonly text: string;
+  /** Where to look, if anywhere: the line opens it. */
+  readonly to?: string;
 }
 
 const clock = (iso: string) => {
@@ -19,8 +21,32 @@ const clock = (iso: string) => {
   return Number.isNaN(d.getTime()) ? "--:--:--" : d.toLocaleTimeString("en-GB");
 };
 
-/** The header's chatter feed: newest on top, one line each, in a short scroll area. */
-export function RadioChatter({ entries }: { readonly entries: readonly RadioEntry[] }) {
+function Line({ entry }: { readonly entry: RadioEntry }) {
+  return (
+    <>
+      <time dateTime={entry.at} className="shrink-0 text-fg-dim">
+        {clock(entry.at)}
+      </time>
+      <span className="shrink-0 uppercase" style={{ color: entry.color }}>
+        {entry.who}
+      </span>
+      <span className="truncate text-fg-log">{entry.text}</span>
+    </>
+  );
+}
+
+/**
+ * The header's chatter feed: newest on top, one line each, in a short scroll area. A line with a
+ * place to look is a button (`onOpen`), which also lets the keyboard reach the scroll area.
+ */
+export function RadioChatter({
+  entries,
+  onOpen,
+}: {
+  readonly entries: readonly RadioEntry[];
+  readonly onOpen?: (to: string) => void;
+}) {
+  const row = "flex w-full min-w-0 gap-2.5 whitespace-nowrap text-left text-b17";
   return (
     <section
       aria-label={term("radio.title")}
@@ -35,14 +61,20 @@ export function RadioChatter({ entries }: { readonly entries: readonly RadioEntr
           <li className="text-b17 text-fg-dim">{term("radio.empty")}</li>
         ) : (
           entries.map((e) => (
-            <li key={e.id} className="flex min-w-0 gap-2.5 whitespace-nowrap text-b17">
-              <time dateTime={e.at} className="shrink-0 text-fg-dim">
-                {clock(e.at)}
-              </time>
-              <span className="shrink-0 uppercase" style={{ color: e.color }}>
-                {e.who}
-              </span>
-              <span className="truncate text-fg-log">{e.text}</span>
+            <li key={e.id}>
+              {e.to && onOpen ? (
+                <button
+                  type="button"
+                  className={`${row} cursor-pointer bg-transparent p-0 hover:bg-hover`}
+                  onClick={() => e.to && onOpen(e.to)}
+                >
+                  <Line entry={e} />
+                </button>
+              ) : (
+                <div className={row}>
+                  <Line entry={e} />
+                </div>
+              )}
             </li>
           ))
         )}
@@ -108,6 +140,8 @@ export interface StationHeaderProps {
   readonly live: number;
   readonly alerts: number;
   readonly radio: readonly RadioEntry[];
+  /** Open where a radio line points. */
+  readonly onOpenRadio?: (to: string) => void;
   /** Right end: the stop button, CRT switch, connection status. */
   readonly controls: ReactNode;
 }
@@ -136,7 +170,7 @@ export function StationHeader(p: StationHeaderProps) {
       <div className="flex min-w-0 flex-auto flex-wrap items-stretch justify-end gap-2">
         <StatBox label={term("stat.live")} value={p.live} tone="green" />
         <StatBox label={term("stat.alerts")} value={p.alerts} tone="red" alert={p.alerts > 0} />
-        <RadioChatter entries={p.radio} />
+        <RadioChatter entries={p.radio} {...(p.onOpenRadio ? { onOpen: p.onOpenRadio } : {})} />
         {p.controls}
       </div>
     </header>

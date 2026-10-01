@@ -4,35 +4,11 @@ import { Link } from "react-router";
 import { ConsentCard } from "../comms/ConsentCard.js";
 import { ErrorNote } from "../components/ErrorNote.js";
 import { formatWhen } from "../components/format.js";
-import { notificationText } from "../components/notification-text.js";
+import { linkFor, notificationText } from "../components/notification-text.js";
 import { useConsents, useMarkRead, useNotifications, useStationView } from "../queries.js";
 
 const button =
   "h-(--ow-size-control-h-dense) rounded-control border border-border-subtle px-(--ow-size-control-pad-x) text-label text-ink-1 disabled:text-ink-3";
-
-const session = (n: Notification) =>
-  n.agentId && n.sessionId
-    ? `/comms?agent=${encodeURIComponent(n.agentId)}&open=${encodeURIComponent(n.sessionId)}`
-    : undefined;
-
-/** Where to look for each kind of notification, if anywhere. */
-function linkFor(n: Notification): string | undefined {
-  switch (n.kind) {
-    case "memory":
-      return n.agentId ? `/memory?agent=${encodeURIComponent(n.agentId)}` : undefined;
-    case "schedule_missed":
-      return n.agentId ? `/crew/${encodeURIComponent(n.agentId)}` : undefined;
-    case "budget_warning":
-    case "budget_blocked":
-      return "/settings";
-    case "connector":
-      return "/connectors";
-    case "kill_switch":
-      return undefined;
-    default:
-      return session(n);
-  }
-}
 
 function Line({
   n,

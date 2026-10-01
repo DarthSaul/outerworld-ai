@@ -53,7 +53,7 @@ export function CrewRoster({
                   <span className="text-b16 text-fg-mute">{roomName(c.roomId)}</span>
                 </span>
                 <span
-                  className={`font-display text-d7 uppercase ${c.status === "blocked" ? "st-blink st-blink-blocked" : ""}`}
+                  className="font-display text-d7 uppercase"
                   style={{ color: toneVar(CREW_STATUS_TONE[c.status]) }}
                 >
                   {term(`crewStatus.${c.status}`)}

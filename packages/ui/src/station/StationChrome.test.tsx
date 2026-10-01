@@ -51,6 +51,23 @@ describe("StationHeader", () => {
 });
 
 describe("RadioChatter", () => {
+  it("opens where a line points, and leaves a line with nowhere to go as text", () => {
+    const onOpen = vi.fn();
+    render(
+      <RadioChatter
+        entries={[
+          { ...radio[0], to: "/comms" } as (typeof radio)[0],
+          radio[1] as (typeof radio)[0],
+        ]}
+        onOpen={onOpen}
+      />,
+    );
+    const buttons = screen.getAllByRole("button");
+    expect(buttons).toHaveLength(1);
+    fireEvent.click(buttons[0] as HTMLElement);
+    expect(onOpen).toHaveBeenCalledWith("/comms");
+  });
+
   it("says so when the channel is empty", () => {
     render(<RadioChatter entries={[]} />);
     expect(screen.getByText("Static. Nothing on the channel yet.")).toBeInTheDocument();

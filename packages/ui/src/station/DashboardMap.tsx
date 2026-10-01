@@ -192,7 +192,7 @@ function Room({
               {room.name}
             </span>
             {room.alert ? (
-              <span className="st-blink st-blink-alert ml-auto bg-red px-1 py-0.75 font-display text-d6 text-on-red uppercase">
+              <span className="ml-auto bg-red-text px-1 py-0.75 font-display text-d6 text-ink uppercase">
                 {term("map.alert")}
               </span>
             ) : null}

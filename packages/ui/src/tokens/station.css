@@ -50,7 +50,7 @@
   --st-text-soft: oklch(0.78 0.03 250); /* descriptions, roles */
   --st-text-quiet: oklch(0.75 0.04 250); /* secondary buttons, the Bridge label */
   --st-text-mute: oklch(0.65 0.05 250);
-  --st-text-dim: oklch(0.55 0.05 250); /* timestamps, placeholders */
+  --st-text-dim: oklch(0.6 0.05 250); /* timestamps, placeholders. Design .55; AA (D26) */
   --st-ink: oklch(0.15 0.03 265); /* text on colored chips */
   --st-on-red: oklch(0.98 0.01 25);
   --st-title: oklch(0.92 0.06 200); /* header and footer titles */
@@ -70,7 +70,7 @@
   --st-white: oklch(0.92 0.04 250); /* the Overseer */
   --st-lane-auth: oklch(0.62 0.09 230); /* an authorized hallway (schematic) */
   --st-lane-selected: oklch(0.97 0.03 250);
-  --st-done: oklch(0.55 0.04 250);
+  --st-done: oklch(0.62 0.04 250); /* design .55; AA (D26) */
 
   /* Room colors by room order (ADR-0013 #18). The first three are the design's. */
   --st-room-0: var(--st-cyan);
@@ -201,40 +201,45 @@
   --st-map-lane-auth: oklch(0.75 0.16 145);
 }
 
-/* Global resets from the design's tokens.css. */
-html,
-body {
-  margin: 0;
-  background: var(--st-bg);
-  color: var(--st-text);
-  font-family: var(--st-font-body);
-  font-size: var(--st-b19);
-  line-height: var(--st-line-height);
-}
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-a {
-  color: var(--st-cyan);
-}
-a:hover {
-  color: var(--st-link-hover);
-}
-input::placeholder,
-textarea::placeholder {
-  color: var(--st-text-dim);
-}
-::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-::-webkit-scrollbar-track {
-  background: var(--st-input-row);
-}
-::-webkit-scrollbar-thumb {
-  background: var(--st-line);
+/*
+ * Global resets from the design's tokens.css, in the base layer so Tailwind utilities (a tab's
+ * ink text on a link, say) win over them.
+ */
+@layer base {
+  html,
+  body {
+    margin: 0;
+    background: var(--st-bg);
+    color: var(--st-text);
+    font-family: var(--st-font-body);
+    font-size: var(--st-b19);
+    line-height: var(--st-line-height);
+  }
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+  a {
+    color: var(--st-cyan);
+  }
+  a:hover {
+    color: var(--st-link-hover);
+  }
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--st-text-dim);
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--st-input-row);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--st-line);
+  }
 }
 
 /* CRT overlay: fixed, pointer-events none, toggled by the viewer. */

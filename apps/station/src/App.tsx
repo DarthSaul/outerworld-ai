@@ -7,7 +7,7 @@ import {
   tabClass,
 } from "@darthsaul/outerworld-ai-ui";
 import { lazy, type ReactNode, Suspense } from "react";
-import { NavLink, Route, Routes } from "react-router";
+import { NavLink, Route, Routes, useNavigate } from "react-router";
 import { CommsPage } from "./comms/CommsPage.js";
 import { ErrorNote } from "./components/ErrorNote.js";
 import { useDaemon } from "./daemon-context.js";
@@ -104,6 +104,7 @@ function Chrome({ children }: { readonly children: ReactNode }) {
   const spend = useSpend();
   const health = useHealth();
   const [crt, setCrt] = useCrt();
+  const navigate = useNavigate();
   const engaged = kill.data?.engaged ?? false;
   const config = station.data?.station;
   return (
@@ -116,6 +117,7 @@ function Chrome({ children }: { readonly children: ReactNode }) {
         live={dashboard?.liveCount ?? 0}
         alerts={dashboard?.alerts ?? 0}
         radio={radio}
+        onOpenRadio={(to) => navigate(to)}
         controls={
           <>
             <StopButton
