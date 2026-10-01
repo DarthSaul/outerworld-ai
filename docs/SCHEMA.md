@@ -59,7 +59,8 @@ names exists, and there is at most one Overseer.
 | `approvalMode` | `"ask"` \| `"full"` | *Ask first* (default) pauses `write`-class calls for consent. |
 | `connectorGrants` | connector ids | Granting a connector grants all of its tools (ADR-0012). |
 | `schedules` | `Schedule[]` | `{ id, cron (5 or 6 fields, checked by croner), timezone? (IANA; absent = the machine's), prompt, sessionId?, catchUp (false), enabled (true) }` (D21). |
-| `rig` | `{ tintHue, trimHue, head, trace }`? | The character's look. The `crest` head and `frame` trace are reserved for the Overseer. |
+| `look` | integer 0–23? | The pixel character this agent appears as: an index into core's `CHARACTERS`, set on Crew Select. Absent means a stable pick from the agent id (`lookFor`). ADR-0013. |
+| `rig` | `{ tintHue, trimHue, head, trace }`? | Superseded by `look` (ADR-0013); still accepted until the rig is removed. The `crest` head and `frame` trace are reserved for the Overseer. |
 
 **Effective tools** (`resolveGrants`) are the role tools, plus the room's prop tools, plus every
 tool of each granted, connected connector. Each tool is `read` or `write` by our classification

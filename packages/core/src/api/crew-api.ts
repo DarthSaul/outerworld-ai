@@ -1,6 +1,5 @@
 import { z } from "zod";
-import type { AgentConfig } from "../config/agent-config.js";
-import { AgentRole, ApprovalMode, Schedule } from "../config/agent-config.js";
+import { AgentConfig, AgentRole, ApprovalMode, Schedule } from "../config/agent-config.js";
 import { Prop, type StationConfig } from "../config/station-config.js";
 import type { EffectiveTool } from "../policy/grants.js";
 import { Id, type Issue } from "../schema/common.js";
@@ -35,6 +34,7 @@ export const UpdateAgentInput = z.strictObject({
   approvalMode: ApprovalMode.optional(),
   connectorGrants: z.array(Id).optional(),
   rig: Rig.optional(),
+  look: AgentConfig.shape.look,
 });
 
 /** A scheduled prompt is sent like a Commander's message, so it has the same practical limit. */

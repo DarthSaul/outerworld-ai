@@ -25,6 +25,14 @@ const valid = (): Record<string, unknown> => ({
 const paths = (input: unknown) => parseAgentConfig(input).issues.map((i) => `${i.level} ${i.path}`);
 
 describe("parseAgentConfig", () => {
+  it("accepts a look that indexes one of the 24 characters, and nothing else", () => {
+    expect(parseAgentConfig({ ...valid(), look: 0 }).ok).toBe(true);
+    expect(parseAgentConfig({ ...valid(), look: 23 }).ok).toBe(true);
+    expect(paths({ ...valid(), look: 24 })).toEqual(["error look"]);
+    expect(paths({ ...valid(), look: -1 })).toEqual(["error look"]);
+    expect(paths({ ...valid(), look: 1.5 })).toEqual(["error look"]);
+  });
+
   it("accepts a full valid agent.json with no issues", () => {
     const r = parseAgentConfig(valid());
     expect(r.issues).toEqual([]);

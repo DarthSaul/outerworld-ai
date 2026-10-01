@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CHARACTER_COUNT } from "../characters.js";
 import {
   duplicateIdIssues,
   Id,
@@ -59,7 +60,15 @@ export const AgentConfig = z.looseObject({
   /** Connector ids from station.json; granting one grants all of its tools (ADR-0012). */
   connectorGrants: z.array(Id).default([]),
   schedules: z.array(Schedule).default([]),
+  /** Superseded by `look` (ADR-0013); still parsed until the rig is removed. */
   rig: Rig.optional(),
+  /** Index into core's CHARACTERS: the pixel character this agent appears as (ADR-0013). */
+  look: z
+    .number()
+    .int()
+    .min(0)
+    .max(CHARACTER_COUNT - 1)
+    .optional(),
 });
 
 export type AgentRole = z.infer<typeof AgentRole>;

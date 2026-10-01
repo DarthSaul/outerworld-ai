@@ -48,6 +48,23 @@ export {
   UpdateRoomInput,
   UpdateScheduleInput,
 } from "./api/crew-api.js";
+// Pixel characters an agent can appear as (ADR-0013)
+export {
+  type Cell,
+  CHARACTER_COUNT,
+  CHARACTERS,
+  type CharacterGrid,
+  type CharacterSpec,
+  characterGrid,
+  gridRuns,
+  type HairStyle,
+  lookFor,
+  OUTLINE,
+  type PixelRun,
+  SPRITE_H,
+  SPRITE_W,
+  shade,
+} from "./characters.js";
 // Station runtime config (station.json, agent.json) — ADR-0010
 export {
   AgentConfig,

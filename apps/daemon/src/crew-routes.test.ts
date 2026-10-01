@@ -77,6 +77,13 @@ describe("crew and room routes", () => {
     ]);
   });
 
+  it("PATCH /agents/:id sets the character look (Crew Select) and rejects one out of range", async () => {
+    const { call } = setup();
+    const patched = await call("PATCH", "/agents/quill", { look: 21 });
+    expect(((await patched.json()) as AgentView).config.look).toBe(21);
+    expect((await call("PATCH", "/agents/quill", { look: 24 })).status).toBe(400);
+  });
+
   it("PUT /agents/:id/documents/:name writes a document; unknown names are 404", async () => {
     const { call } = setup();
     const res = await call("PUT", "/agents/quill/documents/context", { text: "New context.\n" });
