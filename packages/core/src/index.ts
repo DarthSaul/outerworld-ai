@@ -114,6 +114,17 @@ export {
   tagPoint,
 } from "./dashboard/layout.js";
 export {
+  type Dashboard,
+  type DashboardCrew,
+  type DashboardGrant,
+  type DashboardInput,
+  type DashboardLane,
+  type DashboardMission,
+  type DashboardRoom,
+  type DashboardRun,
+  dashboardModel,
+} from "./dashboard/model.js";
+export {
   alertCount,
   CREW_DISPLAY_STATUSES,
   type CrewDisplayStatus,
