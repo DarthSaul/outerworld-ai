@@ -51,6 +51,8 @@ export function foldCrewActivity(state: CrewActivityState, event: RuntimeEvent):
   else if (event.type === "run.interrupted") next = end("failed");
   else if (event.type === "run.cancelled")
     next = event.payload.by === "user" ? end("idle") : end("blocked", event.payload.by);
+  // A cap stops a run with budget.blocked (state blocked_budget), not run.cancelled.
+  else if (event.type === "budget.blocked") next = end("blocked", "budget");
   return next ? { ...state, [agentId]: next } : state;
 }
 
@@ -83,4 +85,5 @@ export const CREW_ACTIVITY_EVENT_TYPES = [
   "run.failed",
   "run.interrupted",
   "run.cancelled",
+  "budget.blocked",
 ] as const;

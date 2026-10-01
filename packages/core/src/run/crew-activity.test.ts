@@ -80,6 +80,16 @@ describe("crew activity from events", () => {
     expect(end(ev({ type: "run.cancelled", ...ids("r"), payload: { by: "user" } })).state).toBe(
       "idle",
     );
+    // What the runtime actually emits when a cap stops a run: budget.blocked with the run's ids.
+    expect(
+      end(
+        ev({
+          type: "budget.blocked",
+          ...ids("r"),
+          payload: { scope: "run", spentUsd: 0.39, limitUsd: 0.25 },
+        }),
+      ),
+    ).toMatchObject({ state: "blocked", detail: "budget", runs: 0 });
   });
 
   it("keeps crew members apart, ignores deltas, and knows nothing of crew it never saw", () => {

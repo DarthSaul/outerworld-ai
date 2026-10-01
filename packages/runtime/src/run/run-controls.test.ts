@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { crewActivity } from "../activity/crew-activity.js";
 import {
   type Chunk,
   callTool,
@@ -197,6 +198,8 @@ describe("spend and budgets", () => {
     expect(t.model.doStreamCalls).toHaveLength(2);
     const blocked = t.events.since(0).find((e) => e.type === "budget.blocked");
     expect(blocked?.payload).toEqual({ scope: "run", spentUsd: 0.6, limitUsd: 0.5 });
+    // The map's projection ends the run as blocked, not still running.
+    expect(crewActivity(t.events).quill).toMatchObject({ state: "blocked", runs: 0 });
   });
 
   it("blocks a new run at once when the station's daily cap is already spent", async () => {
@@ -208,6 +211,7 @@ describe("spend and budgets", () => {
     const second = await t.service.settled((await t.service.send(b.id, "second")).runId);
     expect(second.state).toBe("blocked_budget");
     expect(t.model.doStreamCalls).toHaveLength(1);
+    expect(crewActivity(t.events).quill).toMatchObject({ state: "blocked", runs: 0 });
   });
 
   it("warns once at 80% of a cap", async () => {

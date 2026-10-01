@@ -81,4 +81,23 @@ describe("Station map", () => {
     });
     await expect.poll(() => quill.dataset.state).toBe("working");
   });
+
+  it("shows a crew member stopped by a budget, from budget.blocked alone", async () => {
+    const fake = fakeApi();
+    fake.crewActivity.quill = { state: "running", runs: 1, sessionId: "s1", at };
+    const { emit } = renderApp("/", fake);
+    const m = await map();
+    const quill = within(m).getByRole("button", { name: /Quill/ });
+    await expect.poll(() => quill.dataset.state).toBe("working");
+    fake.crewActivity.quill = { state: "blocked", runs: 0, sessionId: "s1", detail: "budget", at };
+    emit({
+      type: "budget.blocked",
+      agentId: "quill",
+      sessionId: "s1",
+      runId: "r1",
+      payload: { scope: "run", spentUsd: 0.6, limitUsd: 0.5 },
+    });
+    await expect.poll(() => quill.dataset.state).toBe("failed");
+    expect(within(m).getByText("stopped by a budget")).toBeInTheDocument();
+  });
 });

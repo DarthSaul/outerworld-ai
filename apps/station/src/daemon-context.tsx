@@ -77,6 +77,12 @@ export function invalidateFor(event: RuntimeEvent, client: QueryClient): void {
     void client.invalidateQueries({ queryKey: ["memories"] });
   } else if (event.type.startsWith("budget.")) {
     void client.invalidateQueries({ queryKey: ["spend"] });
+    // A cap ends a run with budget.blocked alone (no run.* event follows): refresh what it ended.
+    if (event.type === "budget.blocked") {
+      void client.invalidateQueries({ queryKey: ["activity"] });
+      if (event.sessionId)
+        void client.invalidateQueries({ queryKey: ["session", event.sessionId] });
+    }
   }
 }
 
