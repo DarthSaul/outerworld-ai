@@ -5,6 +5,7 @@ import type {
   ConnectorManager,
   EventStore,
   MemoryService,
+  NotificationService,
   Scheduler,
 } from "@darthsaul/outerworld-ai-runtime";
 import { Hono } from "hono";
@@ -14,6 +15,7 @@ import { connectorRoutes, oauthCallback } from "./connector-routes.js";
 import { crewRoutes } from "./crew-routes.js";
 import { apiRequestRules } from "./http.js";
 import { memoryRoutes } from "./memory-routes.js";
+import { notificationRoutes } from "./notification-routes.js";
 import { scheduleRoutes } from "./schedule-routes.js";
 import { tokensMatch } from "./token.js";
 
@@ -27,6 +29,7 @@ export interface AppOptions extends CommsDeps {
   readonly connectors: ConnectorManager;
   readonly memory: MemoryService;
   readonly scheduler: Scheduler;
+  readonly notifications: NotificationService;
   readonly version: string;
   /** The built SPA (`apps/station/dist`). Absent in development, where Vite serves it. */
   readonly spaDir?: string;
@@ -142,6 +145,7 @@ export function createApp(options: AppOptions): Hono {
   app.route("/api", connectorRoutes({ crew: options.crew, connectors: options.connectors }));
   app.route("/api", memoryRoutes(options.memory));
   app.route("/api", scheduleRoutes(options));
+  app.route("/api", notificationRoutes(options.notifications));
   app.route("/", oauthCallback(options.connectors));
 
   app.all("/api/*", (c) => c.json({ error: "not found" }, 404));

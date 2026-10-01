@@ -10,6 +10,7 @@ import {
   MemorySecretStore,
   MemoryService,
   MemoryStore,
+  NotificationService,
   openDatabase,
   RunService,
   Scheduler,
@@ -25,6 +26,7 @@ export type TestServices = CommsDeps & {
   memory: MemoryService;
   memoryStore: MemoryStore;
   scheduler: Scheduler;
+  notifications: NotificationService;
 };
 
 /** Runtime services for app tests: scripted model, in-memory keychain, no network. */
@@ -68,6 +70,7 @@ export function testServices(
     memory,
     memoryStore,
     scheduler,
+    notifications: new NotificationService({ events, db }),
     sessions,
     consents,
     spend,

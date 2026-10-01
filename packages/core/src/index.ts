@@ -18,6 +18,7 @@ export {
   EditMemoryInput,
   KillSwitchInput,
   MAX_MESSAGE_CHARS,
+  MarkReadInput,
   SendMessageInput,
   type SettingsView,
   type SpendView,
@@ -80,7 +81,7 @@ export {
   type StationEvent,
 } from "./events.js";
 // Glossary
-export { GLOSSARY_KEYS, type GlossaryKey, glossary, term } from "./glossary.js";
+export { GLOSSARY_KEYS, type GlossaryKey, glossary, term, termWith } from "./glossary.js";
 export { deriveHealth, type HealthInputs } from "./health.js";
 // Layout
 export {
@@ -102,6 +103,14 @@ export {
   parseLedger,
   parseLedgerMarkdown,
 } from "./ledger/parse.js";
+// Notifications: a projection of the event log (brief §10)
+export {
+  NOTIFICATION_EVENT_TYPES,
+  type Notification,
+  type NotificationKind,
+  type NotificationLevel,
+  notificationFor,
+} from "./notifications.js";
 // Budgets and consent (brief §6, §15)
 export {
   BUDGET_WARNING_SHARE,

@@ -42,6 +42,10 @@ export {
 } from "./memory/memory-store.js";
 export { createRememberTool } from "./memory/remember.js";
 export {
+  type NotificationPage,
+  NotificationService,
+} from "./notifications/notification-service.js";
+export {
   type ModelFactory,
   NoApiKeyError,
   openRouterModels,

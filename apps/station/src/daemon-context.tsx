@@ -1,4 +1,4 @@
-import type { RuntimeEvent } from "@darthsaul/outerworld-ai-core";
+import { NOTIFICATION_EVENT_TYPES, type RuntimeEvent } from "@darthsaul/outerworld-ai-core";
 import { type QueryClient, useQueryClient } from "@tanstack/react-query";
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useState } from "react";
 import { type Api, createApi } from "./lib/api.js";
@@ -30,7 +30,12 @@ const DaemonContext = createContext<DaemonState | null>(null);
  * Events are the only signal that server state changed: each one invalidates the queries it can
  * affect, so every open tab refetches and stays true to the daemon.
  */
+const NOTIFYING = new Set<string>(NOTIFICATION_EVENT_TYPES);
+
 export function invalidateFor(event: RuntimeEvent, client: QueryClient): void {
+  if (!event.ephemeral && NOTIFYING.has(event.type)) {
+    void client.invalidateQueries({ queryKey: ["notifications"] });
+  }
   if (event.type === "agent.updated") {
     void client.invalidateQueries({ queryKey: ["station"] });
     void client.invalidateQueries({ queryKey: ["agent", event.agentId] });

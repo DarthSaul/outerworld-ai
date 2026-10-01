@@ -145,7 +145,7 @@ describe("RunService: tools", () => {
     const run = await t.service.settled((await t.service.send(session.id, "Loop")).runId);
     expect(run).toMatchObject({ state: "completed", steps: 2 });
     const done = t.events.since(0).find((e) => e.type === "run.completed");
-    expect(done?.payload).toEqual({ reason: "max_steps" });
+    expect(done?.payload).toEqual({ reason: "max_steps", trigger: "user" });
     expect(t.model.doStreamCalls).toHaveLength(2);
   });
 });

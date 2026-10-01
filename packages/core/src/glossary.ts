@@ -148,6 +148,28 @@ export const glossary = {
   "runState.cancelled": "cancelled",
   "runState.interrupted": "interrupted: the daemon stopped mid-run",
   "runState.blocked_budget": "stopped by a budget",
+  "notifications.feed": "Feed",
+  "notifications.markRead": "Mark all as read",
+  "notifications.new": "New",
+  "notifications.older": "Show older",
+  "notifications.none.title": "Nothing to report",
+  "notifications.none.body":
+    "Failures, finished schedules and delegated tasks, budget stops, and requests for you show up here.",
+  "notifications.unread": "unread",
+  "notification.consent": "{agent} is waiting for your approval to use {subject}.",
+  "notification.memory": "{agent} wants to remember: {detail}",
+  "notification.schedule_done": "{agent} finished a scheduled run.",
+  "notification.schedule_missed": "{agent}'s schedule {subject} did not run: {reason}.",
+  "notification.run_failed": "A run by {agent} failed: {detail}",
+  "notification.run_interrupted": "A run by {agent} was interrupted when the station stopped.",
+  "notification.max_steps": "A run by {agent} stopped at the step limit.",
+  "notification.dispatch_done": "A delegated task for {agent} is done: {detail}",
+  "notification.dispatch_failed": "A delegated task for {agent} failed: {detail}",
+  "notification.budget_warning": "Spend is near the {subject} budget: {detail}.",
+  "notification.budget_blocked": "The {subject} budget stopped a run: {detail}.",
+  "notification.connector": "{subject} needs attention: {detail}",
+  "notification.kill_switch": "The kill switch is on. Nothing runs until it is cleared.",
+  "notification.open": "Open",
   budgets: "Budgets",
   "budgets.hint":
     "Checked before every model call. A run that would go over stops cleanly and says why.",
@@ -261,4 +283,9 @@ export const GLOSSARY_KEYS = Object.keys(glossary) as GlossaryKey[];
 /** Display string for a glossary key. */
 export function term(key: GlossaryKey): string {
   return glossary[key];
+}
+
+/** A display string with `{name}` placeholders filled; an unknown placeholder stays visible. */
+export function termWith(key: GlossaryKey, vars: Readonly<Record<string, string>>): string {
+  return glossary[key].replace(/\{(\w+)\}/g, (whole, name: string) => vars[name] ?? whole);
 }

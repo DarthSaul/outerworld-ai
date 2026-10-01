@@ -33,11 +33,16 @@ imported by core, ui, or the SPA.
 | `Clock`, `systemClock` | Time and timers; `systemClock` chains timeouts past setTimeout's 24.8-day cap. Tests pass a manual clock. |
 | `cronIssue(cron, timezone?)`, `machineTimeZone()` | croner's reason for refusing a cron or zone; the zone used when a schedule names none. |
 
+### Notifications (Phase 9, brief §10)
+| Export | Description |
+|--------|-------------|
+| `NotificationService({ events, db })` | `page({ before?, limit? })` → `{ items, unread, readSeq, nextBefore? }`: the event log projected through core's `notificationFor`, newest first; `markRead(seq)` moves one persisted read marker forward (never back); `unread()` counts up to 999. |
+
 ### Database and event log
 | Export | Description |
 |--------|-------------|
 | `openDatabase(path)` | better-sqlite3 with WAL and foreign keys; applies `MIGRATIONS` not yet recorded in `schema_migrations`, each in a transaction. |
-| `EventStore` | `append(event)` validates against core's `RuntimeEvent`, assigns `seq` and `at`, commits, then notifies subscribers; `since(seq, limit)` replays for SSE `Last-Event-ID` and restart recovery; `subscribe(listener)`; `latestSeq()`. Updates and deletes are refused by triggers. |
+| `EventStore` | `append(event)` validates against core's `RuntimeEvent`, assigns `seq` and `at`, commits, then notifies subscribers; `since(seq, limit)` replays for SSE `Last-Event-ID` and restart recovery; `ofTypes(types, { afterSeq?, beforeSeq?, limit? })` newest first, for projections; `subscribe(listener)`; `latestSeq()`. Updates and deletes are refused by triggers. |
 
 ## Tests
 

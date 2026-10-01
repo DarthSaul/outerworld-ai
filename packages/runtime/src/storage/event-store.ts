@@ -127,6 +127,29 @@ export class EventStore {
     return (this.#since.all(seq, limit) as Row[]).map(toEvent);
   }
 
+  /**
+   * Stored events of the given types, newest first: those after `afterSeq` and before
+   * `beforeSeq` when given. For projections such as Notifications.
+   */
+  ofTypes(
+    types: readonly string[],
+    options: { afterSeq?: number; beforeSeq?: number; limit?: number } = {},
+  ): RuntimeEvent[] {
+    if (types.length === 0) return [];
+    const marks = types.map(() => "?").join(", ");
+    const rows = this.#db
+      .prepare(
+        `select * from events where type in (${marks}) and seq > ? and seq < ? order by seq desc limit ?`,
+      )
+      .all(
+        ...types,
+        options.afterSeq ?? 0,
+        options.beforeSeq ?? Number.MAX_SAFE_INTEGER,
+        options.limit ?? 100,
+      ) as Row[];
+    return rows.map(toEvent);
+  }
+
   latestSeq(): number {
     return (this.#latest.get() as { seq: number }).seq;
   }

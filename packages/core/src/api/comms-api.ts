@@ -69,3 +69,7 @@ export interface SettingsView {
     readonly keychainError?: string;
   };
 }
+
+/** `POST /api/notifications/read`: everything up to `seq` has been seen. */
+export const MarkReadInput = z.strictObject({ seq: z.number().int().nonnegative() });
+export type MarkReadInput = z.infer<typeof MarkReadInput>;

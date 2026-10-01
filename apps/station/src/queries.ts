@@ -6,6 +6,7 @@ import type {
   CreateAgentInput,
   CreateRoomInput,
   CreateScheduleInput,
+  Notification,
   Room,
   RunState,
   SettingsView,
@@ -17,7 +18,7 @@ import type {
   UpdateRoomInput,
   UpdateScheduleInput,
 } from "@darthsaul/outerworld-ai-core";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
 import { useDaemon } from "./daemon-context.js";
 
 /**
@@ -475,5 +476,35 @@ export function useUpdateBudgets() {
   const { api } = useDaemon();
   return useMutation({
     mutationFn: (input: UpdateBudgetsInput) => api.send("PUT", "/budgets", input),
+  });
+}
+
+/** A page of the Notifications feed (mirrors the runtime's NotificationPage). */
+export interface NotificationPage {
+  readonly items: readonly Notification[];
+  readonly unread: number;
+  readonly readSeq: number;
+  readonly nextBefore?: number;
+}
+
+/** The feed, newest first, one page at a time; the first page also carries the unread count. */
+export function useNotifications() {
+  const { api } = useDaemon();
+  return useInfiniteQuery({
+    queryKey: ["notifications"],
+    initialPageParam: undefined as number | undefined,
+    queryFn: ({ pageParam }) =>
+      api.get<NotificationPage>(
+        pageParam === undefined ? "/notifications" : `/notifications?before=${pageParam}`,
+      ),
+    getNextPageParam: (last) => last.nextBefore,
+  });
+}
+
+export function useMarkRead() {
+  const { api } = useDaemon();
+  return useMutation({
+    mutationFn: (seq: number) =>
+      api.send<{ readSeq: number; unread: number }>("POST", "/notifications/read", { seq }),
   });
 }

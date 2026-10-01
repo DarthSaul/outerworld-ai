@@ -11,6 +11,7 @@ import { MemoryPage } from "./pages/MemoryPage.js";
 import { NotificationsPage } from "./pages/NotificationsPage.js";
 import { SettingsPage } from "./pages/SettingsPage.js";
 import { StationPage } from "./pages/StationPage.js";
+import { useNotifications } from "./queries.js";
 
 const Gallery = lazy(() => import("./dev/GalleryPage.js"));
 
@@ -24,6 +25,20 @@ export const SCREENS: ReadonlyArray<{ path: string; label: GlossaryKey }> = [
   { path: "/connectors", label: "connectors" },
   { path: "/settings", label: "settings" },
 ];
+
+/** The unread count beside Notifications; read aloud as "N unread". */
+function UnreadBadge() {
+  const feed = useNotifications();
+  const unread = feed.data?.pages[0]?.unread ?? 0;
+  if (unread === 0) return null;
+  return (
+    <span className="ml-(--ow-space-1) rounded-control border border-border-strong px-(--ow-space-1) font-mono text-mono text-ink-1">
+      {" "}
+      {unread > 99 ? "99+" : unread}
+      <span className="sr-only"> {term("notifications.unread")}</span>
+    </span>
+  );
+}
 
 function StatusBadge() {
   const { status } = useDaemon();
@@ -67,6 +82,7 @@ export function App() {
                         className="text-label text-ink-2 aria-[current=page]:text-ink-1 aria-[current=page]:underline"
                       >
                         {term(s.label)}
+                        {s.path === "/notifications" ? <UnreadBadge /> : null}
                       </NavLink>
                     </li>
                   ))}

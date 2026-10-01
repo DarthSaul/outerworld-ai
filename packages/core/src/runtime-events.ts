@@ -41,6 +41,8 @@ const event = <T extends string, C extends z.ZodRawShape, P extends z.ZodRawShap
 
 const ToolClass = z.enum(["read", "write"]);
 const BudgetScope = z.enum(["run", "agent", "station"]);
+const RunTrigger = z.enum(["user", "dispatch", "schedule", "review"]);
+
 const budget = { scope: BudgetScope, spentUsd: z.number(), limitUsd: z.number() };
 
 export const RuntimeEvent = z.discriminatedUnion("type", [
@@ -55,9 +57,7 @@ export const RuntimeEvent = z.discriminatedUnion("type", [
   event("session.renamed", about.session, { title: z.string() }),
   event("session.archived", about.session, {}),
 
-  event("run.queued", about.run, {
-    trigger: z.enum(["user", "dispatch", "schedule", "review"]),
-  }),
+  event("run.queued", about.run, { trigger: RunTrigger }),
   event("run.started", about.run, { model: z.string().min(1) }),
   event("run.delta", about.run, { text: z.string() }),
   event("run.tool_call", about.run, {
@@ -85,8 +85,10 @@ export const RuntimeEvent = z.discriminatedUnion("type", [
   event("run.completed", about.run, {
     /** Present when the run stopped for a reason other than a final answer. */
     reason: z.enum(["max_steps"]).optional(),
+    /** What started it, so a scheduled run's result can be told apart (Notifications). */
+    trigger: RunTrigger.optional(),
   }),
-  event("run.failed", about.run, { error: z.string() }),
+  event("run.failed", about.run, { error: z.string(), trigger: RunTrigger.optional() }),
   event("run.cancelled", about.run, { by: z.enum(["user", "kill_switch", "budget"]) }),
   event("run.interrupted", about.run, {}),
 

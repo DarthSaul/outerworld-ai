@@ -62,6 +62,8 @@ allowed `Origin` and a `Sec-Fetch-Site` other than `cross-site`. Every `/api/*` 
 | `POST /api/memories/:id/approve` | Optional `{ text }` to approve an edited version; `POST /api/memories/:id/reject` rejects. 409 once decided. |
 | `PATCH /api/memories/:id` | `{ text }` edits a stored belief; `DELETE` forgets it (204). |
 | `GET /oauth/callback/:id` | Where sign-in returns (no API token: the browser comes from Notion). Accepts only the one-time `state` of a sign-in in progress; shows a small page saying whether it worked. The only cross-site navigation allowed. |
+| `GET /api/notifications?before=&limit=` | A page of the Notifications feed, newest first: `{ items, unread, readSeq, nextBefore? }` (core's `notificationFor` over the event log; limit 50, at most 200). |
+| `POST /api/notifications/read` | `{ seq }` marks everything up to it read (the marker never moves back) → `{ readSeq, unread }`. |
 | `PUT /api/budgets` | `{ perRunUsd?, perAgentDailyUsd?, stationDailyUsd? }`: USD caps in `station.json`; `null` removes one, a missing field keeps it. Current caps are in `GET /api/station`. |
 | `GET /api/settings` | `{ modelMode, timezone, openrouter: { configured, source } }` (`timezone`: the machine's zone, used by schedules without one), never the key. |
 | `PUT /api/settings/openrouter` | `{ key }`: checked with OpenRouter's key endpoint (no model call), stored in the OS keychain → 204; a rejected key is 400. |

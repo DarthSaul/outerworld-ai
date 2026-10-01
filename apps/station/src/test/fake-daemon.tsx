@@ -4,6 +4,7 @@ import {
   type AgentDocumentName,
   type AgentView,
   type ChatMessage,
+  type Notification,
   type RuntimeEvent,
   resolveGrants,
   type StationConfig,
@@ -111,6 +112,9 @@ export function fakeApi() {
   const connectors: ConnectorItem[] = [];
   const memories: MemoryItem[] = [];
   const scheduleHistory = new Map<string, ScheduleFireItem[]>();
+  /** Newest first, as the daemon pages them. */
+  const notifications: Notification[] = [];
+  const notificationState = { readSeq: 0, pageSize: 50 };
   const connectAnswer: {
     status: ConnectorItem["status"];
     authorizationUrl?: string;
@@ -158,6 +162,27 @@ export function fakeApi() {
     if (path === "/kill-switch") {
       if (method === "PUT") control.engaged = Boolean(b.engaged);
       return { engaged: control.engaged };
+    }
+    if (path.startsWith("/notifications")) {
+      const unread = () => notifications.filter((n) => n.seq > notificationState.readSeq).length;
+      if (method === "POST") {
+        notificationState.readSeq = Math.max(notificationState.readSeq, Number(b.seq));
+        return { readSeq: notificationState.readSeq, unread: unread() };
+      }
+      const before = Number(
+        new URLSearchParams(path.split("?")[1] ?? "").get("before") ?? "Infinity",
+      );
+      const items = notifications
+        .filter((n) => n.seq < before)
+        .slice(0, notificationState.pageSize);
+      const last = items.at(-1);
+      const more = last !== undefined && notifications.some((n) => n.seq < last.seq);
+      return {
+        items,
+        unread: unread(),
+        readSeq: notificationState.readSeq,
+        ...(more ? { nextBefore: last.seq } : {}),
+      };
     }
     if (path === "/budgets") {
       const budgets: Record<string, unknown> = { ...state.station.budgets };
@@ -442,6 +467,8 @@ export function fakeApi() {
     connectAnswer,
     memories,
     scheduleHistory,
+    notifications,
+    notificationState,
     api,
     calls,
     state,

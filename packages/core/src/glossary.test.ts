@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { GLOSSARY_KEYS, glossary, term } from "./glossary.js";
+import { GLOSSARY_KEYS, glossary, term, termWith } from "./glossary.js";
 
 describe("glossary", () => {
   it("has a display string for every key, none empty", () => {
@@ -51,5 +51,14 @@ describe("glossary", () => {
   it("never uses a franchise placeholder name", () => {
     const all = Object.values(glossary).join(" ").toLowerCase();
     expect(all).not.toMatch(/ultron/);
+  });
+
+  it("fills placeholders, leaving an unknown one visible", () => {
+    expect(termWith("notification.run_failed", { agent: "Quill", detail: "HTTP 500" })).toBe(
+      "A run by Quill failed: HTTP 500",
+    );
+    expect(termWith("notification.run_failed", { agent: "Quill" })).toBe(
+      "A run by Quill failed: {detail}",
+    );
   });
 });

@@ -485,7 +485,7 @@ export class RunService {
         }
         if (result.toolCalls.length === 0) {
           sessions.transition(run.id, "complete");
-          events.append({ type: "run.completed", ...ids, payload: {} });
+          events.append({ type: "run.completed", ...ids, payload: { trigger: run.trigger } });
           return sessions.getRun(run.id) as RunRecord;
         }
         for (const call of result.toolCalls) {
@@ -494,7 +494,11 @@ export class RunService {
         }
       }
       sessions.transition(run.id, "complete");
-      events.append({ type: "run.completed", ...ids, payload: { reason: "max_steps" } });
+      events.append({
+        type: "run.completed",
+        ...ids,
+        payload: { reason: "max_steps", trigger: run.trigger },
+      });
       return sessions.getRun(run.id) as RunRecord;
     } catch (error) {
       const reason = signal.aborted ? signal.reason : error;
@@ -511,7 +515,11 @@ export class RunService {
         const current = sessions.getRun(run.id);
         if (current?.state === "queued") sessions.transition(run.id, "start");
         sessions.transition(run.id, "fail", { error: message });
-        events.append({ type: "run.failed", ...ids, payload: { error: message } });
+        events.append({
+          type: "run.failed",
+          ...ids,
+          payload: { error: message, trigger: run.trigger },
+        });
       }
       return sessions.getRun(run.id) as RunRecord;
     } finally {

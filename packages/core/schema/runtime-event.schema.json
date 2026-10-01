@@ -981,6 +981,15 @@
               "enum": [
                 "max_steps"
               ]
+            },
+            "trigger": {
+              "type": "string",
+              "enum": [
+                "user",
+                "dispatch",
+                "schedule",
+                "review"
+              ]
             }
           },
           "additionalProperties": {}
@@ -1035,6 +1044,15 @@
           "properties": {
             "error": {
               "type": "string"
+            },
+            "trigger": {
+              "type": "string",
+              "enum": [
+                "user",
+                "dispatch",
+                "schedule",
+                "review"
+              ]
             }
           },
           "required": [

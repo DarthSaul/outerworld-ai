@@ -23,6 +23,7 @@ from the zod source (regenerate with `pnpm build && node scripts/write-schemas.m
 | Export | Description |
 |--------|-------------|
 | `RuntimeEvent`, `parseRuntimeEvent(input)` | The v1 event union: envelope `{ seq, type, at, agentId?, sessionId?, runId?, payload }`, with the ids each family requires (run, dispatch, and consent events carry agent, session, and run). Payloads keep unknown fields. |
+| `notificationFor(event)`, `NOTIFICATION_EVENT_TYPES`, `Notification` | The Notifications projection: `action` (consent, memory proposals), `alert` (failed, interrupted, max steps, budget stop, missed schedule, connector sign-in or error, kill switch), `info` (a scheduled run's result, a finished dispatch, a budget warning). Ids and details only; the words are glossary keys `notification.<kind>`. |
 | `EVENT_TYPES`, `EventType`, `EventOf<T>`, `NewRuntimeEvent` | Every type; one event by type; an event before the store assigns `seq` and `at`. |
 
 ### Server-sent events
