@@ -46,7 +46,7 @@ in the same change that was failing it. Tightening is silent; loosening is a rev
 | Coverage: station | lines >= 85%, branches >= 80% | `vitest run --coverage` in `apps/station` (`src/main.tsx` and `src/dev/`, the component gallery, excluded) | task end, CI |
 | Coverage: generator | lines >= 90%, branches >= 85% | Retired 2026-09-29: `packages/generator` archived (ADR-0010); nothing left to measure. Row stays until the owner removes it | n/a |
 | Accessibility: components | Zero axe violations of any impact in rendered component tests | `vitest-axe` assertions in `packages/ui` tests | task end, CI |
-| Accessibility: app | Zero critical or serious axe violations on `/` and `/dev` in both themes | `pnpm browser:verify` (`@axe-core/playwright` inside `scripts/browser/screenshot.mjs`, against the built SPA served by the built daemon on a copy of the fixture) | CI (browser job); locally before a ui or SPA step closes |
+| Accessibility: app | Zero critical or serious axe violations on `/` and `/dev` (dark only since ADR-0013) | `pnpm browser:verify` (`@axe-core/playwright` inside `scripts/browser/screenshot.mjs`, against the built SPA served by the built daemon on a copy of the fixture) | CI (browser job); locally before a ui or SPA step closes |
 | Schema | Demo fixture validates against the current Station and StationState schemas; exported JSON Schema matches the committed copy | Vitest tests in `packages/core` | task end, CI |
 | Generator output | Emitted ledger files match committed snapshots for the demo fixture | Retired 2026-09-29 with `packages/generator` (ADR-0010). Row stays until the owner removes it | task end, CI |
 

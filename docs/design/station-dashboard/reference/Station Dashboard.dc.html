@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;background:oklch(0.13 0.03 268);}
+*{box-sizing:border-box;}
+a{color:oklch(0.82 0.12 200);}
+a:hover{color:oklch(0.92 0.08 200);}
+input::placeholder{color:oklch(0.55 0.05 250);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:oklch(0.14 0.03 265);}
+::-webkit-scrollbar-thumb{background:oklch(0.42 0.08 250);}
+</style>
+</helmet>
+<div style="min-height:100vh;background:oklch(0.13 0.03 268);color:oklch(0.9 0.02 250);font-family:'VT323',monospace;font-size:19px;line-height:1.15;position:relative;">
+
+  <header style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 20px;padding:12px 16px;background:oklch(0.17 0.045 262);border-bottom:3px solid oklch(0.42 0.08 250);box-shadow:0 3px 0 oklch(0.08 0.02 265);">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div style="width:34px;height:34px;background:oklch(0.82 0.12 200);clip-path:polygon(50% 0,100% 100%,50% 78%,0 100%);"></div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <div style="font-family:'Press Start 2P';font-size:14px;letter-spacing:2px;color:oklch(0.92 0.06 200);">STATION ORION-7</div>
+        <div style="font-size:17px;color:oklch(0.68 0.05 250);letter-spacing:1px;">OVERSEER CONSOLE · 3 ROOMS · 7 CREW</div>
+      </div>
+      <div style="display:flex;gap:6px;margin-left:8px;">
+        <sc-for list="{{ pageTabs }}" as="p" hint-placeholder-count="2">
+          <button onClick="{{ p.onClick }}" style="padding:7px 9px;background:{{ p.bg }};border:2px solid oklch(0.82 0.12 200);color:{{ p.fg }};font-family:'Press Start 2P';font-size:7px;cursor:pointer;">{{ p.label }}</button>
+        </sc-for>
+      </div>
+    </div>
+    <div style="flex:1 1 auto;display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;justify-content:flex-end;min-width:0;">
+      <div style="display:flex;flex-direction:column;gap:4px;padding:6px 10px;border:2px solid oklch(0.35 0.07 250);background:oklch(0.13 0.03 265);">
+        <span style="font-family:'Press Start 2P';font-size:7px;color:oklch(0.65 0.05 250);">TASKS LIVE</span>
+        <span style="font-size:22px;color:oklch(0.82 0.15 145);">{{ activeCount }}</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;padding:6px 10px;border:2px solid {{ alertBorder }};background:oklch(0.13 0.03 265);">
+        <span style="font-family:'Press Start 2P';font-size:7px;color:oklch(0.65 0.05 250);">ALERTS</span>
+        <span style="font-size:22px;color:oklch(0.68 0.19 25);">{{ alertCount }}</span>
+      </div>
+      <div style="flex:1 1 300px;max-width:520px;display:flex;flex-direction:column;gap:4px;padding:6px 10px;border:2px solid oklch(0.35 0.07 250);background:oklch(0.13 0.03 265);min-width:0;">
+        <div style="display:flex;justify-content:space-between;gap:8px;font-family:'Press Start 2P';font-size:7px;color:oklch(0.65 0.05 250);"><span>RADIO CHATTER</span><span>CH-01 · ALL ROOMS</span></div>
+        <div style="height:40px;overflow:auto;display:flex;flex-direction:column;gap:1px;">
+          <sc-for list="{{ log }}" as="e" hint-placeholder-count="2">
+            <div style="display:flex;gap:10px;font-size:17px;white-space:nowrap;min-width:0;">
+              <span style="color:oklch(0.55 0.05 250);flex:0 0 auto;">{{ e.ts }}</span>
+              <span style="color:{{ e.color }};flex:0 0 auto;">{{ e.who }}</span>
+              <span style="color:oklch(0.88 0.02 250);overflow:hidden;text-overflow:ellipsis;">{{ e.text }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <button onClick="{{ togglePause }}" style="display:flex;align-items:center;gap:8px;padding:0 14px;background:oklch(0.13 0.03 265);border:2px solid {{ pauseColor }};color:{{ pauseColor }};font-family:'Press Start 2P';font-size:8px;cursor:pointer;" style-hover="background:oklch(0.2 0.05 262);">
+        <span style="width:26px;height:10px;border-radius:5px;background:{{ pauseColor }};"></span>{{ pauseLabel }}
+      </button>
+    </div>
+  </header>
+
+  <sc-if value="{{ isDash }}" hint-placeholder-val="{{ true }}">
+  <main style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,3fr) minmax(0,2fr);gap:14px;padding:14px;align-items:stretch;">
+
+    <div style="display:flex;flex-direction:column;min-width:0;">
+
+      <section style="flex:1;background:oklch(0.17 0.035 265);border:2px solid oklch(0.42 0.08 250);box-shadow:4px 4px 0 oklch(0.08 0.02 265);display:flex;flex-direction:column;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;background:oklch(0.24 0.06 258);border-bottom:2px solid oklch(0.42 0.08 250);font-family:'Press Start 2P';font-size:9px;letter-spacing:1px;color:oklch(0.85 0.1 200);">
+          <span>CREW ROSTER</span><span style="color:oklch(0.65 0.05 250);">7 + OV</span>
+        </div>
+        <div style="display:flex;flex-direction:column;padding:6px;">
+          <sc-for list="{{ roster }}" as="a" hint-placeholder-count="7">
+            <div onClick="{{ a.onClick }}" style="display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:4px 10px;align-items:center;padding:6px;cursor:pointer;border:2px solid {{ a.selBorder }};" style-hover="background:oklch(0.21 0.045 262);">
+              <div style="width:30px;height:30px;background:{{ a.color }};color:oklch(0.15 0.03 265);font-family:'Press Start 2P';font-size:8px;display:flex;align-items:center;justify-content:center;grid-row:span 2;">{{ a.initials }}</div>
+              <div style="font-size:19px;color:oklch(0.95 0.02 250);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ a.name }} <span style="color:oklch(0.65 0.05 250);font-size:16px;">{{ a.role }}</span></div>
+              <div style="font-family:'Press Start 2P';font-size:7px;color:{{ a.statusColor }};opacity:{{ a.lamp }};">{{ a.status }}</div>
+              <div style="height:6px;background:oklch(0.1 0.02 265);border:1px solid oklch(0.35 0.07 250);grid-column:span 2;">
+                <div style="height:100%;width:{{ a.fuelW }};background:{{ a.color }};"></div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:14px;min-width:0;">
+      <section style="flex:1;background:oklch(0.17 0.035 265);border:2px solid oklch(0.42 0.08 250);box-shadow:4px 4px 0 oklch(0.08 0.02 265);display:flex;flex-direction:column;">
+        <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 16px;padding:6px 10px;background:oklch(0.24 0.06 258);border-bottom:2px solid oklch(0.42 0.08 250);font-family:'Press Start 2P';font-size:9px;letter-spacing:1px;color:oklch(0.85 0.1 200);">
+          <span>STATION MAP · DECK 01</span>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
+            <sc-for list="{{ styleBtns }}" as="b" hint-placeholder-count="3">
+              <button onClick="{{ b.onClick }}" style="padding:5px 7px;background:{{ b.bg }};border:2px solid oklch(0.82 0.12 200);color:{{ b.fg }};font-family:'Press Start 2P';font-size:7px;cursor:pointer;">{{ b.label }}</button>
+            </sc-for>
+            <span style="width:2px;height:20px;background:oklch(0.42 0.08 250);"></span>
+            <button onClick="{{ toggleDraw }}" style="padding:5px 8px;background:{{ drawBg }};border:2px solid oklch(0.83 0.14 80);color:{{ drawFg }};font-family:'Press Start 2P';font-size:7px;cursor:pointer;">{{ drawLabel }}</button>
+          </div>
+        </div>
+        <div style="flex:1;display:flex;width:100%;overflow-x:auto;">
+        <div style="position:relative;flex:1;width:100%;min-width:860px;min-height:580px;overflow:hidden;background:{{ ms.mapBg }};">
+          <div style="position:absolute;inset:0;background:{{ ms.planeBg }};transform:{{ ms.plane }};transform-origin:50% 55%;">
+
+            <sc-for list="{{ segments }}" as="s" hint-placeholder-count="0">
+              <div onClick="{{ s.onClick }}" style="position:absolute;left:{{ s.left }};top:{{ s.top }};width:{{ s.width }};height:{{ s.height }};margin-left:{{ s.ml }};margin-top:{{ s.mt }};background:{{ s.bg }};border-top:{{ s.bt }};border-bottom:{{ s.bb }};border-left:{{ s.bl }};border-right:{{ s.br }};cursor:pointer;"></div>
+            </sc-for>
+            <sc-for list="{{ packets }}" as="p" hint-placeholder-count="0">
+              <div style="position:absolute;left:{{ p.left }};top:{{ p.top }};width:8px;height:8px;margin:-4px 0 0 -4px;background:{{ p.color }};box-shadow:0 0 8px {{ p.color }};pointer-events:none;"></div>
+            </sc-for>
+            <sc-for list="{{ laneTags }}" as="l" hint-placeholder-count="0">
+              <div onClick="{{ l.onClick }}" style="position:absolute;left:{{ l.left }};top:{{ l.top }};transform:translate(-50%,-50%);padding:2px 4px;background:oklch(0.11 0.03 268);border:1px solid {{ l.color }};color:{{ l.color }};font-family:'Press Start 2P';font-size:6px;cursor:pointer;white-space:nowrap;">{{ l.id }}</div>
+            </sc-for>
+
+            <sc-for list="{{ rooms }}" as="r" hint-placeholder-count="3">
+              <div onClick="{{ r.onClick }}" style="position:absolute;left:{{ r.x }};top:{{ r.y }};width:{{ r.w }};height:{{ r.h }};background:{{ r.bg }};border:{{ r.border }};box-shadow:{{ r.shadow }};cursor:pointer;display:flex;flex-direction:column;gap:6px;padding:6px;overflow:hidden;">
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <span style="background:{{ r.color }};color:oklch(0.15 0.03 265);font-family:'Press Start 2P';font-size:7px;padding:3px 4px;">{{ r.sector }}</span>
+                  <span style="font-family:'Press Start 2P';font-size:7px;color:{{ r.color }};background:oklch(0.12 0.03 265);padding:3px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.name }}</span>
+                  <sc-if value="{{ r.alert }}" hint-placeholder-val="{{ false }}">
+                    <span style="margin-left:auto;background:oklch(0.68 0.19 25);color:oklch(0.98 0.01 25);font-family:'Press Start 2P';font-size:6px;padding:3px 4px;opacity:{{ r.alertBlink }};">! ALERT</span>
+                  </sc-if>
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                  <sc-for list="{{ r.crew }}" as="c" hint-placeholder-count="2">
+                    <div onClick="{{ c.onClick }}" style="display:flex;align-items:center;gap:5px;padding:2px 5px 2px 2px;border:1px solid {{ c.border }};background:oklch(0.12 0.03 265);">
+                      <div style="position:relative;width:22px;height:22px;background:{{ r.color }};color:oklch(0.15 0.03 265);font-family:'Press Start 2P';font-size:7px;display:flex;align-items:center;justify-content:center;">{{ c.initials }}<span style="position:absolute;right:-3px;top:-3px;width:6px;height:6px;background:{{ c.statusColor }};opacity:{{ c.lamp }};"></span></div>
+                      <span style="font-size:15px;color:oklch(0.92 0.02 250);">{{ c.name }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:auto;">
+                  <sc-for list="{{ r.grants }}" as="g" hint-placeholder-count="2">
+                    <div title="{{ g.obj }}" style="display:flex;align-items:center;gap:5px;padding:1px 5px;border:1px dashed {{ r.color }};background:oklch(0.12 0.03 265);opacity:{{ g.opacity }};">
+                      <span style="width:6px;height:6px;transform:rotate(45deg);background:{{ g.dot }};"></span>
+                      <span style="font-size:14px;color:oklch(0.85 0.03 250);text-decoration:{{ g.deco }};">{{ g.real }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-for>
+
+            <div onClick="{{ bridge.onClick }}" style="position:absolute;left:38%;top:36%;width:24%;height:28%;background:{{ bridge.bg }};border:{{ bridge.border }};box-shadow:{{ bridge.shadow }};cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;">
+              <span style="font-family:'Press Start 2P';font-size:7px;color:oklch(0.75 0.05 250);background:oklch(0.12 0.03 265);padding:3px 4px;">HQ · BRIDGE</span>
+              <div style="width:38px;height:38px;background:oklch(0.92 0.04 250);color:oklch(0.15 0.03 265);font-family:'Press Start 2P';font-size:9px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px oklch(0.16 0.04 265),0 0 0 5px oklch(0.82 0.12 200);">OV</div>
+              <span style="font-family:'Press Start 2P';font-size:8px;color:oklch(0.92 0.06 200);background:oklch(0.12 0.03 265);padding:3px 4px;">OVERSEER</span>
+            </div>
+          </div>
+
+          <sc-if value="{{ drawing }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute;left:50%;top:10px;transform:translateX(-50%);padding:6px 10px;background:oklch(0.83 0.14 80);color:oklch(0.15 0.03 265);font-family:'Press Start 2P';font-size:8px;white-space:nowrap;">{{ drawHint }}</div>
+          </sc-if>
+          <sc-if value="{{ paused }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute;inset:0;background:oklch(0.08 0.02 265 / 0.6);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;">
+              <div style="font-family:'Press Start 2P';font-size:30px;color:oklch(0.95 0.03 250);letter-spacing:4px;text-shadow:4px 4px 0 oklch(0.42 0.08 250);">PAUSE</div>
+              <div style="font-size:20px;color:oklch(0.8 0.04 250);">All crews holding position. Press START to resume.</div>
+            </div>
+          </sc-if>
+        </div>
+        </div>
+      </section>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:14px;min-width:0;">
+      <section style="background:oklch(0.17 0.035 265);border:2px solid oklch(0.42 0.08 250);box-shadow:4px 4px 0 oklch(0.08 0.02 265);display:flex;flex-direction:column;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;background:oklch(0.24 0.06 258);border-bottom:2px solid oklch(0.42 0.08 250);font-family:'Press Start 2P';font-size:9px;letter-spacing:1px;color:oklch(0.85 0.1 200);">
+          <span>OVERSEER COMMS</span>
+          <span style="width:8px;height:8px;background:oklch(0.68 0.19 25);opacity:{{ blink }};"></span>
+        </div>
+        <div style="display:flex;gap:10px;padding:10px;">
+          <div style="flex:0 0 84px;height:96px;border:2px solid oklch(0.82 0.12 200);background:repeating-linear-gradient(45deg,oklch(0.2 0.04 260) 0 6px,oklch(0.16 0.035 262) 6px 12px);display:flex;align-items:flex-end;justify-content:center;padding:4px;">
+            <span style="font-family:monospace;font-size:10px;color:oklch(0.7 0.05 250);text-align:center;line-height:1.2;">overseer portrait</span>
+          </div>
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;">
+            <div style="font-family:'Press Start 2P';font-size:8px;color:oklch(0.83 0.14 80);">{{ msgSpeaker }}</div>
+            <div style="min-height:88px;font-size:19px;color:oklch(0.95 0.02 250);text-wrap:pretty;">{{ typed }}<span style="display:inline-block;width:9px;height:15px;margin-left:2px;background:oklch(0.82 0.12 200);opacity:{{ blink }};vertical-align:-2px;"></span></div>
+          </div>
+        </div>
+        <sc-if value="{{ hasApproval }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;gap:10px;padding:0 10px 10px;">
+            <button onClick="{{ approve }}" style="flex:1;display:flex;align-items:center;gap:8px;padding:6px 8px;background:oklch(0.13 0.03 265);border:2px solid oklch(0.82 0.15 145);color:oklch(0.82 0.15 145);font-family:'Press Start 2P';font-size:9px;cursor:pointer;" style-hover="background:oklch(0.22 0.06 150);">
+              <span style="width:22px;height:22px;border-radius:50%;background:oklch(0.82 0.15 145);color:oklch(0.15 0.03 265);display:flex;align-items:center;justify-content:center;font-size:9px;">A</span>APPROVE
+            </button>
+            <button onClick="{{ deny }}" style="flex:1;display:flex;align-items:center;gap:8px;padding:6px 8px;background:oklch(0.13 0.03 265);border:2px solid oklch(0.68 0.19 25);color:oklch(0.75 0.15 25);font-family:'Press Start 2P';font-size:9px;cursor:pointer;" style-hover="background:oklch(0.22 0.07 25);">
+              <span style="width:22px;height:22px;border-radius:50%;background:oklch(0.68 0.19 25);color:oklch(0.15 0.03 265);display:flex;align-items:center;justify-content:center;font-size:9px;">B</span>DENY
+            </button>
+          </div>
+        </sc-if>
+        <sc-if value="{{ noApproval }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;justify-content:flex-end;padding:0 10px 10px;">
+            <button onClick="{{ nextMsg }}" style="padding:6px 10px;background:transparent;border:2px solid oklch(0.42 0.08 250);color:oklch(0.85 0.1 200);font-family:'Press Start 2P';font-size:8px;cursor:pointer;" style-hover="border-color:oklch(0.82 0.12 200);">NEXT ▶</button>
+          </div>
+        </sc-if>
+        <div style="display:flex;gap:6px;padding:10px;border-top:2px solid oklch(0.3 0.06 255);background:oklch(0.14 0.03 265);">
+          <span style="font-family:'Press Start 2P';font-size:9px;color:oklch(0.82 0.15 145);align-self:center;">&gt;</span>
+          <input value="{{ order }}" onChange="{{ onOrder }}" onKeyDown="{{ onOrderKey }}" placeholder="Give the Overseer an order…" style="flex:1;min-width:0;background:transparent;border:none;outline:none;color:oklch(0.95 0.02 250);font-family:'VT323',monospace;font-size:19px;">
+          <button onClick="{{ sendOrder }}" style="padding:5px 8px;background:oklch(0.82 0.15 145);border:none;color:oklch(0.15 0.03 265);font-family:'Press Start 2P';font-size:7px;cursor:pointer;">SEND</button>
+        </div>
+      </section>
+
+      <section style="background:oklch(0.17 0.035 265);border:2px solid oklch(0.42 0.08 250);box-shadow:4px 4px 0 oklch(0.08 0.02 265);display:flex;flex-direction:column;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;background:oklch(0.24 0.06 258);border-bottom:2px solid oklch(0.42 0.08 250);font-family:'Press Start 2P';font-size:9px;letter-spacing:1px;color:oklch(0.85 0.1 200);">
+          <span>SCANNER</span><span style="color:oklch(0.65 0.05 250);font-size:7px;">{{ selKind }}</span>
+        </div>
+
+        <sc-if value="{{ isRoom }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;gap:14px;padding:12px;">
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span style="background:{{ selRoom.color }};color:oklch(0.15 0.03 265);font-family:'Press Start 2P';font-size:8px;padding:4px 5px;">{{ selRoom.sector }}</span>
+                <span style="font-family:'Press Start 2P';font-size:10px;color:{{ selRoom.color }};">{{ selRoom.name }}</span>
+              </div>
+              <div style="font-size:18px;color:oklch(0.78 0.03 250);text-wrap:pretty;">{{ selRoom.desc }}</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <div style="font-family:'Press Start 2P';font-size:7px;color:oklch(0.65 0.05 250);">CREW</div>
+              <sc-for list="{{ selRoom.crew }}" as="c" hint-placeholder-count="2">
+                <div onClick="{{ c.onClick }}" style="display:flex;align-items:center;gap:8px;padding:4px;border:1px solid oklch(0.3 0.06 255);cursor:pointer;" style-hover="border-color:oklch(0.82 0.12 200);">
+                  <div style="width:22px;height:22px;background:{{ selRoom.color }};color:oklch(0.15 0.03 265);font-family:'Press Start 2P';font-size:7px;display:flex;align-items:center;justify-content:center;">{{ c.initials }}</div>
+                  <span style="flex:1;">{{ c.name }}</span>
+                  <span style="font-family:'Press Start 2P';font-size:7px;color:{{ c.statusColor }};">{{ c.status }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <sc-if value="{{ selRoom.hasGrants }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;flex-direction:column;gap:6px;">
+                <div style="font-family:'Press Start 2P';font-size:7px;color:oklch(0.65 0.05 250);">PLACED OBJECTS · GRANTS</div>
+                <sc-for list="{{ selRoom.grants }}" as="g" hint-placeholder-count="2">
+                  <div style="display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:2px 10px;align-items:center;padding:6px;border:1px dashed {{ selRoom.color }};opacity:{{ g.opacity }};">
+                    <span style="width:7px;height:7px;transform:rotate(45deg);background:{{ g.dot }};"></span>
+                    <div style="display:flex;flex-direction:column;min-width:0;">
+                      <span style="font-family:'Press Start 2P';font-size:7px;color:{{ selRoom.color }};">{{ g.obj }}</span>
+                      <span style="font-size:17px;text-decoration:{{ g.deco }};">{{ g.real }} · <span style="color:oklch(0.65 0.05 250);">{{ g.scope }}</span></span>
+                    </div>
+                    <button onClick="{{ g.onToggle }}" style="padding:4px 6px;background:transparent;border:2px solid {{ g.btnColor }};color:{{ g.btnColor }};font-family:'Press Start 2P';font-size:7px;cursor:pointer;">{{ g.label }}</button>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <div style="font-family:'Press Start 2P';font-size:7px;color:oklch(0.65 0.05 250);">HALLWAYS · HANDOFF LANES</div>
+              <sc-for list="{{ selRoom.lanes }}" as="l" hint-placeholder-count="2">
+                <div onClick="{{ l.onClick }}" style="display:flex;align-items:center;gap:8px;padding:4px 6px;border:1px solid oklch(0.3 0.06 255);cursor:pointer;" style-hover="border-color:oklch(0.82 0.12 200);">
+                  <span style="font-family:'Press Start 2P';font-size:7px;color:{{ l.color }};">{{ l.id }}</span>
+                  <span style="flex:1;font-size:17px;">⇄ {{ l.other }}</span>
+                  <span style="font-family:'Press Start 2P';font-size:7px;color:{{ l.color }};">{{ l.status }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <div style="font-family:'Press Start 2P';font-size:7px;color:oklch(0.65 0.05 250);">MISSIONS IN ROOM</div>
+              <sc-for list="{{ selRoom.tasks }}" as="t" hint-placeholder-count="3">
+                <div onClick="{{ t.onClick }}" style="display:flex;flex-direction:column;gap:4px;padding:6px 8px;border:1px solid oklch(0.3 0.06 255);background:oklch(0.15 0.03 265);cursor:pointer;" style-hover="border-color:oklch(0.82 0.12 200);">
+                  <div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline;">
+                    <span style="font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ t.title }}</span>
+                    <span style="font-family:'Press Start 2P';font-size:7px;color:{{ t.color }};flex:0 0 auto;">{{ t.status }}</span>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;gap:8px;font-size:15px;color:oklch(0.65 0.05 250);"><span>{{ t.id }} · {{ t.agentName }}</span><span>{{ t.pct }}</span></div>
+                  <div style="height:8px;background:oklch(0.1 0.02 265);border:1px solid oklch(0.3 0.06 255);">
+                    <div style="height:100%;width:{{ t.pct }};background:repeating-linear-gradient(90deg,{{ t.color }} 0 6px,transparent 6px 8px);"></div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isAgent }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:14px;padding:12px;">
+            <div style="display:flex;gap:12px;align-items:center;">
+              <div style="width:52px;height:52px;background:{{ selAgent.color }};color:oklch(0.15 0.03 265);font-family:'Press Start 2P';font-size:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px oklch(0.16 0.04 265),0 0 0 5px {{ selAgent.color }};">{{ selAgent.initials }}</div>
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <span style="font-family:'Press Start 2P';font-size:11px;color:oklch(0.95 0.02 250);">{{ selAgent.name }}</span>
+                <span style="font-size:18px;color:oklch(0.72 0.04 250);">{{ selAgent.role }} · {{ selAgent.roomName }}</span>
+                <span style="font-family:'Press Start 2P';font-size:7px;color:{{ selAgent.statusColor }};">{{ selAgent.status }}</span>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px;">
+              <div style="display:flex;justify-content:space-between;font-family:'Press Start 2P';font-size:7px;color:oklch(0.65 0.05 250);"><span>FUEL · TOKEN BUDGET</span><span>{{ selAgent.fuelW }}</span></div>
+              <div style="height:12px;border:2px solid oklch(0.45 0.08 250);background:oklch(0.1 0.02 265);">
+                <div style="height:100%;width:{{ selAgent.fuelW }};background:repeating-linear-gradient(90deg,{{ selAgent.color }} 0 8px,transparent 8px 10px);"></div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <div style="font-family:'Press Start 2P';font-size:7px;color:oklch(0.65 0.05 250);">TASK LOG</div>
+              <sc-for list="{{ selAgent.tasks }}" as="t" hint-placeholder-count="2">
+                <div style="display:flex;flex-direction:column;gap:4px;padding:6px 8px;border:1px solid oklch(0.3 0.06 255);background:oklch(0.15 0.03 265);">
+                  <div style="display:flex;justify-content:space-between;gap:8px;"><span style="font-size:17px;">{{ t.title }}</span><span style="font-family:'Press Start 2P';font-size:7px;color:{{ t.color }};flex:0 0 auto;">{{ t.status }}</span></div>
+                  <div style="display:flex;justify-content:space-between;gap:8px;font-size:15px;color:oklch(0.65 0.05 250);"><span>{{ t.id }} · {{ t.note }}</span><span>{{ t.pct }}</span></div>
+                  <div style="height:8px;background:oklch(0.1 0.02 265);border:1px solid oklch(0.3 0.06 255);">
+                    <div style="height:100%;width:{{ t.pct }};background:repeating-linear-gradient(90deg,{{ t.color }} 0 6px,transparent 6px 8px);"></div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <div style="font-family:'Press Start 2P';font-size:7px;color:oklch(0.65 0.05 250);">CAN USE · ROOM GRANTS</div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                <sc-for list="{{ selAgent.grants }}" as="g" hint-placeholder-count="2">
+                  <span style="padding:1px 6px;border:1px dashed {{ selAgent.color }};font-size:16px;opacity:{{ g.opacity }};text-decoration:{{ g.deco }};">{{ g.real }}</span>
+                </sc-for>
+              </div>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;">
+              <button onClick="{{ selAgent.onHold }}" style="padding:6px 10px;background:transparent;border:2px solid oklch(0.83 0.14 80);color:oklch(0.83 0.14 80);font-family:'Press Start 2P';font-size:7px;cursor:pointer;">{{ selAgent.holdLabel }}</button>
+              <button onClick="{{ selAgent.back }}" style="padding:6px 10px;background:transparent;border:2px solid oklch(0.42 0.08 250);color:oklch(0.85 0.1 200);font-family:'Press Start 2P';font-size:7px;cursor:pointer;">◀ {{ selAgent.roomName }}</button>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isLane }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:14px;padding:12px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="border:2px solid {{ selLane.color }};color:{{ selLane.color }};font-family:'Press Start 2P';font-size:9px;padding:4px 6px;">{{ selLane.id }}</span>
+              <span style="font-family:'Press Start 2P';font-size:8px;color:{{ selLane.color }};">{{ selLane.status }}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:20px;">
+              <span onClick="{{ selLane.goFrom }}" style="cursor:pointer;color:{{ selLane.fromColor }};">{{ selLane.from }}</span>
+              <span style="color:oklch(0.65 0.05 250);">⇄</span>
+              <span onClick="{{ selLane.goTo }}" style="cursor:pointer;color:{{ selLane.toColor }};">{{ selLane.to }}</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:2px;">
+              <span style="font-family:'Press Start 2P';font-size:7px;color:oklch(0.65 0.05 250);">CARRIES</span>
+              <span style="font-size:18px;">{{ selLane.purpose }}</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:2px;">
+              <span style="font-family:'Press Start 2P';font-size:7px;color:oklch(0.65 0.05 250);">TRAFFIC NOW</span>
+              <span style="font-size:18px;">{{ selLane.trafficText }}</span>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;">
+              <button onClick="{{ selLane.onToggle }}" style="padding:8px 10px;background:transparent;border:2px solid {{ selLane.btnColor }};color:{{ selLane.btnColor }};font-family:'Press Start 2P';font-size:7px;cursor:pointer;">{{ selLane.action }}</button>
+              <button onClick="{{ selLane.onRemove }}" style="padding:8px 10px;background:transparent;border:2px solid oklch(0.42 0.08 250);color:oklch(0.75 0.04 250);font-family:'Press Start 2P';font-size:7px;cursor:pointer;">DEMOLISH</button>
+            </div>
+          </div>
+        </sc-if>
+      </section>
+    </div>
+  </main>
+
+  <footer style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 20px;padding:12px 16px;background:oklch(0.17 0.045 262);border-top:3px solid oklch(0.42 0.08 250);box-shadow:0 -3px 0 oklch(0.08 0.02 265);">
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <div style="font-family:'Press Start 2P';font-size:10px;letter-spacing:2px;color:oklch(0.92 0.06 200);">STATION VITALS</div>
+      <div style="font-size:17px;color:oklch(0.68 0.05 250);letter-spacing:1px;">BUDGET · TOKENS · UPTIME</div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;justify-content:flex-end;">
+      <div style="display:flex;flex-direction:column;gap:4px;padding:6px 10px;border:2px solid oklch(0.35 0.07 250);background:oklch(0.13 0.03 265);">
+        <span style="font-family:'Press Start 2P';font-size:7px;color:oklch(0.65 0.05 250);">TOKENS</span>
+        <span style="font-size:22px;color:oklch(0.82 0.12 200);">{{ tokenText }}</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;padding:6px 10px;border:2px solid oklch(0.35 0.07 250);background:oklch(0.13 0.03 265);min-width:170px;">
+        <span style="font-family:'Press Start 2P';font-size:7px;color:oklch(0.65 0.05 250);">FUEL · {{ spendText }}</span>
+        <div style="height:12px;border:2px solid oklch(0.45 0.08 250);background:oklch(0.1 0.02 265);">
+          <div style="height:100%;width:{{ spendW }};background:repeating-linear-gradient(90deg,oklch(0.83 0.14 80) 0 8px,transparent 8px 10px);"></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;padding:6px 10px;border:2px solid oklch(0.35 0.07 250);background:oklch(0.13 0.03 265);">
+        <span style="font-family:'Press Start 2P';font-size:7px;color:oklch(0.65 0.05 250);">UPTIME</span>
+        <span style="font-size:22px;color:oklch(0.92 0.03 250);">{{ uptime }}</span>
+      </div>
+    </div>
+  </footer>
+  </sc-if>
+
+  <sc-if value="{{ isSelect }}" hint-placeholder-val="{{ false }}">
+  <main style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:14px;padding:14px;align-items:stretch;">
+    <section style="background:oklch(0.17 0.035 265);border:2px solid oklch(0.42 0.08 250);box-shadow:4px 4px 0 oklch(0.08 0.02 265);display:flex;flex-direction:column;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;background:oklch(0.24 0.06 258);border-bottom:2px solid oklch(0.42 0.08 250);font-family:'Press Start 2P';font-size:9px;letter-spacing:1px;color:oklch(0.85 0.1 200);"><span>APPEARANCE</span><span style="color:oklch(0.65 0.05 250);font-size:7px;">{{ cfg.room }}</span></div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:14px;padding:12px;">
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="font-family:'Press Start 2P';font-size:7px;color:oklch(0.65 0.05 250);">CONFIGURING AGENT</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;">
+            <sc-for list="{{ cfgAgents }}" as="a" hint-placeholder-count="7">
+              <button onClick="{{ a.onClick }}" style="display:flex;align-items:center;gap:6px;padding:3px 8px 3px 3px;background:{{ a.bg }};border:2px solid {{ a.border }};cursor:pointer;color:oklch(0.92 0.02 250);font-family:'VT323',monospace;font-size:17px;">
+                <div style="flex:0 0 20px;width:20px;height:26px;background:{{ a.spr }} center/contain no-repeat;image-rendering:pixelated;"></div>{{ a.name }}
+              </button>
+            </sc-for>
+          </div>
+        </div>
+        <div style="position:relative;flex:1;min-height:320px;border:2px solid oklch(0.35 0.07 250);overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:28px;background:radial-gradient(1.5px 1.5px at 14% 18%,oklch(0.95 0.02 250),transparent),radial-gradient(1px 1px at 72% 12%,oklch(0.95 0.02 250),transparent),radial-gradient(1px 1px at 44% 30%,oklch(0.95 0.02 250),transparent),radial-gradient(1.5px 1.5px at 86% 40%,oklch(0.95 0.02 250),transparent),radial-gradient(1px 1px at 24% 52%,oklch(0.95 0.02 250),transparent),linear-gradient(oklch(0.16 0.07 285),oklch(0.1 0.035 268) 70%);">
+          <div style="position:absolute;left:10px;top:10px;font-family:'Press Start 2P';font-size:8px;color:{{ cfg.color }};">{{ cfg.name }} · {{ cfg.role }}</div>
+          <div style="position:relative;z-index:1;width:160px;height:208px;background:{{ pick.bg }} center/contain no-repeat;image-rendering:pixelated;margin-bottom:-26px;"></div>
+          <div style="width:210px;height:30px;border-radius:50%;background:oklch(0.28 0.06 255);border:3px solid oklch(0.82 0.12 200);box-shadow:0 0 26px oklch(0.82 0.12 200 / 0.45);"></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;align-items:center;text-align:center;">
+          <div style="font-family:'Press Start 2P';font-size:18px;letter-spacing:2px;color:oklch(0.92 0.06 200);">{{ pick.name }}</div>
+          <div style="font-size:21px;color:oklch(0.78 0.04 250);">{{ pick.role }}</div>
+          <div style="font-family:'Press Start 2P';font-size:7px;color:{{ pick.statusColor }};">{{ pick.status }}</div>
+        </div>
+        <div style="display:flex;gap:10px;">
+          <button onClick="{{ confirmLook }}" style="flex:1;display:flex;align-items:center;gap:8px;padding:6px 8px;background:oklch(0.13 0.03 265);border:2px solid oklch(0.82 0.15 145);color:oklch(0.82 0.15 145);font-family:'Press Start 2P';font-size:8px;cursor:pointer;" style-hover="background:oklch(0.22 0.06 150);">
+            <span style="flex:0 0 22px;height:22px;border-radius:50%;background:oklch(0.82 0.15 145);color:oklch(0.15 0.03 265);display:flex;align-items:center;justify-content:center;font-size:9px;">A</span>ASSIGN
+          </button>
+          <button onClick="{{ randomLook }}" style="flex:1;display:flex;align-items:center;gap:8px;padding:6px 8px;background:oklch(0.13 0.03 265);border:2px solid oklch(0.83 0.14 80);color:oklch(0.83 0.14 80);font-family:'Press Start 2P';font-size:8px;cursor:pointer;" style-hover="background:oklch(0.22 0.06 80);">
+            <span style="flex:0 0 22px;height:22px;border-radius:50%;background:oklch(0.83 0.14 80);color:oklch(0.15 0.03 265);display:flex;align-items:center;justify-content:center;font-size:9px;">B</span>RANDOM
+          </button>
+        </div>
+      </div>
+    </section>
+    <section style="background:oklch(0.17 0.035 265);border:2px solid oklch(0.42 0.08 250);box-shadow:4px 4px 0 oklch(0.08 0.02 265);display:flex;flex-direction:column;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;background:oklch(0.24 0.06 258);border-bottom:2px solid oklch(0.42 0.08 250);font-family:'Press Start 2P';font-size:9px;letter-spacing:1px;color:oklch(0.85 0.1 200);"><span>CHOOSE YOUR CREW · 24</span><span style="color:oklch(0.65 0.05 250);font-size:7px;">ARROWS MOVE · ENTER ASSIGN</span></div>
+      <div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;padding:14px;">
+        <sc-for list="{{ chars }}" as="c" hint-placeholder-count="24">
+          <div onClick="{{ c.onClick }}" style="position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 4px 10px;background:oklch(0.3 0.035 250);border:3px solid {{ c.border }};box-shadow:{{ c.shadow }};cursor:pointer;" style-hover="background:oklch(0.35 0.04 250);">
+            <div role="img" aria-label="{{ c.name }}" style="width:80px;height:104px;background:{{ c.bg }} center/contain no-repeat;image-rendering:pixelated;"></div>
+            <span style="font-family:'Press Start 2P';font-size:7px;line-height:1.4;color:oklch(0.96 0.02 250);text-align:center;">{{ c.name }}</span>
+            <sc-if value="{{ c.isCursor }}" hint-placeholder-val="{{ false }}">
+              <span style="position:absolute;left:-3px;top:-3px;padding:3px 4px;background:oklch(0.83 0.14 80);color:oklch(0.15 0.03 265);font-family:'Press Start 2P';font-size:7px;">P1</span>
+            </sc-if>
+            <sc-if value="{{ c.hasOwner }}" hint-placeholder-val="{{ false }}">
+              <span style="position:absolute;right:-3px;top:-3px;padding:3px 4px;background:oklch(0.13 0.03 265);border:1px solid oklch(0.45 0.08 250);color:oklch(0.8 0.04 250);font-family:'Press Start 2P';font-size:6px;">{{ c.owner }}</span>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+  </main>
+  </sc-if>
+
+  <sc-if value="{{ crt }}" hint-placeholder-val="{{ true }}">
+    <div style="position:fixed;inset:0;pointer-events:none;z-index:50;background:repeating-linear-gradient(0deg,rgba(0,0,0,0.22) 0 1px,transparent 1px 3px),radial-gradient(ellipse at center,transparent 60%,rgba(0,0,0,0.45) 100%);"></div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;mapStyle&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;schematic&quot;,&quot;floorplan&quot;,&quot;wireframe&quot;],&quot;default&quot;:&quot;schematic&quot;,&quot;tsType&quot;:&quot;'schematic'|'floorplan'|'wireframe'&quot;},&quot;crt&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;traffic&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;speed&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:1,&quot;min&quot;:0.25,&quot;max&quot;:3,&quot;step&quot;:0.25,&quot;tsType&quot;:&quot;number&quot;}}">
+class Component extends DCLogic {
+  static dk(hex, f) { const n = parseInt(hex.slice(1), 16); return '#' + [n >> 16 & 255, n >> 8 & 255, n & 255].map(v => Math.max(0, Math.min(255, Math.round(v * f))).toString(16).padStart(2, '0')).join(''); }
+  static CHARS = [
+    { name: 'NOVA', role: 'Pilot', skin: '#eab38a', hair: '#e0662c', hairStyle: 'ponytail', suit: '#3d6fd0', emblem: 1, belt: '#2a2f3a', gogglesUp: 1 },
+    { name: 'BOLT', role: 'Utility Bot', skin: '#b8c0cc', robot: 'twin', glow: '#6ff0ff', suit: '#7a8494', acc: '#ff5a4a', antenna: 1, ears: false, emblem: 1 },
+    { name: 'PIP', role: 'Xeno Liaison', skin: '#8fd46a', suit: '#8a4ad0', acc: '#ffd84a', antenna: 2, mouth: 'grin', ears: false },
+    { name: 'KESTREL', role: 'Commander', skin: '#f7d4b4', hair: '#6a4a30', hairStyle: 'cap', cap: '#5f6b3a', suit: '#6f7a44', mouth: 'mustache', brows: 1, emblem: 1 },
+    { name: 'DR. ISO', role: 'Scientist', skin: '#c98c5e', hair: '#c8c8d0', hairStyle: 'bun', suit: '#3aa0a0', fit: 'labcoat', eyes: 'glasses', item: 'clipboard' },
+    { name: 'RIVET', role: 'Mechanic', skin: '#f7d4b4', hair: '#3a2a20', hairStyle: 'beanie', cap: '#d04a3a', suit: '#e8d6b0', fit: 'overalls', alt: '#3a5aa0', item: 'wrench', mouth: 'grin', blush: 1 },
+    { name: 'ZEPHYR', role: 'Comms Officer', skin: '#8e5b3b', hair: '#1e1610', hairStyle: 'afro', suit: '#f0c040', fit: 'jacket', alt: '#2a2f3a', headset: 1, acc: '#ff5a4a' },
+    { name: 'GLITCH', role: 'Netrunner', skin: '#3a3650', hairStyle: 'hood', cap: '#2a2838', suit: '#2a2838', acc: '#5affb0', eyes: 'hoodglow', visor: '#5affb0', mouth: 'none', emblem: 1 },
+    { name: 'MOSS', role: 'Botanist', skin: '#c98c5e', hair: '#7a5a3a', hairStyle: 'bald', mouth: 'beard', suit: '#4a7a3a', fit: 'jacket', alt: '#e8e0c8', item: 'mug' },
+    { name: 'LUMEN', role: 'Spacewalker', skin: '#f7d4b4', hairStyle: 'helmet', cap: '#e8ecf2', acc: '#4aa0ff', eyes: 'visor', visor: '#4aa0ff', mouth: 'none', suit: '#e8ecf2', belt: '#4aa0ff', emblem: 1 },
+    { name: 'CRUX', role: 'Vanguard', skin: '#eab38a', hair: '#1a1820', hairStyle: 'spiky', suit: '#c83a3a', fit: 'jacket', alt: '#1a1820', scarf: '#f2c14e', brows: 1, mouth: 'flat' },
+    { name: 'SABLE', role: 'Strategist', skin: '#f7d4b4', hair: '#2a1e3a', hairStyle: 'long', suit: '#3a2a5a', cape: '#8a3ad0', acc: '#d0b0ff', emblem: 1, eyes: 'sleepy' },
+    { name: 'TOCK', role: 'Clockwork Unit', skin: '#e08a3c', robot: 'mono', glow: '#ffec5a', suit: '#5a4a3a', acc: '#ffec5a', ears: false, item: 'scanner', antenna: 1 },
+    { name: 'BRAMBLE', role: 'Mystic', skin: '#d9b07a', animal: 'cat', suit: '#3a7a6a', acc: '#9affd8', item: 'staff', blush: 1, ears: false },
+    { name: 'ECHO', role: 'Analyst', skin: '#f7d4b4', hair: '#d8dce8', hairStyle: 'bob', suit: '#2aa0a0', item: 'tablet', screen: '#ffe680', emblem: 1 },
+    { name: 'HAWK', role: 'Security', skin: '#c98c5e', hair: '#e03a3a', hairStyle: 'mohawk', suit: '#4a4f5a', fit: 'armor', acc: '#e0a030', eyes: 'patch', mouth: 'flat' },
+    { name: 'MARLOW', role: 'Archivist', skin: '#eab38a', hair: '#9a9aa4', hairStyle: 'short', eyes: 'glasses', suit: '#a0603a', fit: 'jacket', alt: '#e8e0c8', item: 'mug' },
+    { name: 'VEGA', role: 'Navigator', skin: '#7fb4f0', hair: '#f4f1ea', hairStyle: 'long', suit: '#2a3a7a', cape: '#e0b040', acc: '#f4f1ea', emblem: 1 },
+    { name: 'SPROCKET', role: 'Apprentice', skin: '#eab38a', hair: '#e0a040', hairStyle: 'capback', cap: '#3a7ad0', suit: '#e05a3a', acc: '#ffffff', emblem: 1, mouth: 'grin', blush: 1 },
+    { name: 'ONYX', role: 'Operative', skin: '#5c3a27', hairStyle: 'bald', eyes: 'shades', suit: '#1e1e28', belt: '#e0b040', acc: '#e0b040', emblem: 1, mouth: 'flat' },
+    { name: 'FENNEC', role: 'Pathfinder', skin: '#e0803a', animal: 'fox', suit: '#4a5a3a', scarf: '#3a8ad0', ears: false },
+    { name: 'QUILL', role: 'Scribe', skin: '#8e5b3b', hair: '#2a1e18', hairStyle: 'bun', suit: '#e07aa0', item: 'clipboard', blush: 1 },
+    { name: 'ATLAS', role: 'Heavy Lifter', skin: '#c98c5e', hairStyle: 'helmet', cap: '#8a929e', acc: '#e05a3a', suit: '#6a727e', fit: 'armor', eyes: 'visor', visor: '#ffb040', mouth: 'none' },
+    { name: 'JUNO', role: 'Dispatcher', skin: '#c98c5e', hair: '#4a2a1a', hairStyle: 'pigtails', suit: '#40b070', acc: '#ffd84a', headset: 1, mouth: 'grin' },
+  ];
+  static draw(c) {
+    const W = 20, H = 26, O = '#14121c', D = Component.dk;
+    const g = [...Array(H)].map(() => Array(W).fill(null));
+    const P = (x, y, k) => { if (x >= 0 && x < W && y >= 0 && y < H) g[y][x] = k; };
+    const R = (x0, y0, x1, y1, k) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) P(x, y, k); };
+    const sk = c.skin, h = c.hair || O, su = c.suit, ac = c.acc || '#f2c14e', sl = D(su, 0.82), pa = D(su, 0.62), bo = '#3a2c2a', cap = c.cap || ac;
+    if (c.cape) { R(4, 14, 15, 22, c.cape); R(3, 19, 16, 22, c.cape); R(15, 14, 16, 22, D(c.cape, .8)); }
+    R(7, 20, 12, 20, pa); R(7, 21, 8, 22, pa); R(11, 21, 12, 22, pa); R(6, 23, 8, 23, bo); R(11, 23, 13, 23, bo);
+    R(6, 14, 13, 19, su); R(13, 14, 13, 19, D(su, .8)); R(4, 15, 5, 18, sl); R(14, 15, 15, 18, sl); P(5, 14, sl); P(14, 14, sl); R(4, 19, 5, 19, sk); R(14, 19, 15, 19, sk);
+    if (c.fit === 'labcoat') { const w = '#eef0f2', w2 = '#d6dbe2'; R(6, 14, 13, 19, w); R(13, 14, 13, 19, w2); R(4, 15, 5, 18, w2); R(14, 15, 15, 18, w2); P(5, 14, w2); P(14, 14, w2); R(8, 14, 11, 17, su); R(9, 15, 10, 17, D(su, .7)); }
+    if (c.fit === 'overalls') { R(7, 16, 12, 19, c.alt); R(7, 14, 7, 15, c.alt); R(12, 14, 12, 15, c.alt); P(8, 17, ac); P(11, 17, ac); R(7, 20, 12, 20, c.alt); R(7, 21, 8, 22, c.alt); R(11, 21, 12, 22, c.alt); }
+    if (c.fit === 'jacket') { R(9, 14, 10, 19, c.alt); P(8, 14, D(su, .7)); P(11, 14, D(su, .7)); }
+    if (c.fit === 'armor') { R(3, 14, 6, 15, ac); R(13, 14, 16, 15, D(ac, .85)); R(8, 16, 11, 17, D(su, 1.3)); }
+    if (c.emblem) R(9, 16, 10, 17, ac);
+    if (c.belt) { R(6, 19, 13, 19, c.belt); R(9, 19, 10, 19, ac); }
+    if (c.scarf) { R(6, 14, 13, 14, c.scarf); R(12, 15, 13, 17, c.scarf); R(13, 15, 13, 17, D(c.scarf, .8)); }
+    R(5, 5, 14, 13, sk); [[5, 5], [14, 5], [5, 13], [14, 13]].forEach(([x, y]) => P(x, y, null)); R(14, 6, 14, 12, D(sk, .86));
+    if (c.ears !== false) { R(4, 9, 4, 10, sk); R(15, 9, 15, 10, D(sk, .86)); }
+    if (c.animal === 'cat') { P(5, 3, sk); R(5, 4, 6, 4, sk); P(14, 3, sk); R(13, 4, 14, 4, sk); P(6, 4, '#f0a0a8'); P(13, 4, '#f0a0a8'); R(4, 11, 4, 11, O); R(15, 11, 15, 11, O); }
+    if (c.animal === 'fox') { P(5, 1, sk); R(5, 2, 6, 2, sk); R(5, 3, 7, 3, sk); R(5, 4, 8, 4, sk); P(14, 1, sk); R(13, 2, 14, 2, sk); R(12, 3, 14, 3, sk); R(11, 4, 14, 4, sk); P(6, 3, '#f4f1ea'); P(13, 3, '#f4f1ea'); R(7, 11, 12, 13, '#f4f1ea'); R(9, 11, 10, 11, O); }
+    const top = () => { R(5, 4, 14, 6, h); P(5, 4, null); P(14, 4, null); R(5, 7, 5, 8, h); R(14, 7, 14, 8, h); };
+    const hs = c.hairStyle;
+    if (hs === 'short') { top(); R(6, 7, 8, 7, h); }
+    if (hs === 'spiky') { top(); [[5, 3], [6, 2], [7, 3], [8, 1], [8, 2], [9, 3], [10, 2], [11, 1], [11, 2], [11, 3], [12, 3], [13, 2], [14, 3]].forEach(([x, y]) => P(x, y, h)); R(6, 7, 7, 8, h); P(12, 7, h); }
+    if (hs === 'long') { top(); R(4, 6, 5, 16, h); R(14, 6, 15, 16, h); R(6, 7, 8, 7, h); }
+    if (hs === 'bun') { top(); R(8, 1, 11, 3, h); P(8, 1, null); P(11, 1, null); R(6, 7, 7, 7, h); }
+    if (hs === 'mohawk') { R(9, 1, 10, 7, h); R(10, 1, 10, 7, D(h, .8)); }
+    if (hs === 'bald') R(7, 6, 8, 6, D(sk, 1.18));
+    if (hs === 'afro') { R(3, 2, 16, 8, h); [[3, 2], [16, 2], [3, 3], [16, 3], [4, 2], [15, 2]].forEach(([x, y]) => P(x, y, null)); R(3, 9, 4, 11, h); R(15, 9, 16, 11, h); }
+    if (hs === 'ponytail') { top(); R(15, 5, 16, 7, h); R(16, 8, 17, 13, h); R(6, 7, 8, 7, h); }
+    if (hs === 'bob') { top(); R(4, 5, 5, 12, h); R(14, 5, 15, 12, h); R(6, 7, 10, 7, h); }
+    if (hs === 'pigtails') { top(); R(2, 7, 4, 11, h); R(15, 7, 17, 11, h); P(4, 7, ac); P(15, 7, ac); R(6, 7, 8, 7, h); }
+    if (hs === 'cap') { R(5, 3, 14, 6, cap); P(5, 3, null); P(14, 3, null); R(3, 7, 9, 7, D(cap, .7)); R(10, 4, 10, 5, ac); R(14, 7, 14, 8, h); R(10, 7, 13, 7, h); }
+    if (hs === 'capback') { R(5, 3, 14, 6, cap); P(5, 3, null); P(14, 3, null); R(14, 6, 17, 6, D(cap, .7)); R(5, 7, 8, 7, h); P(5, 8, h); }
+    if (hs === 'beanie') { R(5, 3, 14, 7, cap); P(5, 3, null); P(14, 3, null); R(5, 7, 14, 7, D(cap, .75)); R(9, 1, 10, 2, ac); }
+    if (hs === 'helmet') { R(4, 3, 15, 9, cap); P(4, 3, null); P(15, 3, null); R(4, 10, 4, 13, cap); R(15, 10, 15, 13, D(cap, .85)); R(9, 3, 10, 7, ac); }
+    if (hs === 'hood') { R(4, 3, 15, 14, cap); P(4, 3, null); P(15, 3, null); R(6, 8, 13, 13, sk); R(6, 8, 13, 8, D(sk, .6)); }
+    if (c.robot) {
+      R(6, 8, 13, 12, '#16202c'); P(4, 10, ac); P(15, 10, ac);
+      if (c.robot === 'mono') { R(9, 9, 10, 11, c.glow); P(9, 9, '#ffffff'); }
+      else { R(7, 10, 8, 10, c.glow); R(11, 10, 12, 10, c.glow); R(8, 12, 11, 12, D(c.glow, .55)); }
+    } else {
+      const ey = c.eyes || 'dots';
+      if (ey === 'dots') { R(7, 10, 7, 11, O); R(12, 10, 12, 11, O); }
+      if (ey === 'sleepy') { R(6, 11, 8, 11, O); R(11, 11, 13, 11, O); }
+      if (ey === 'glasses') { R(6, 9, 8, 11, O); R(11, 9, 13, 11, O); P(7, 10, '#bfe0ff'); P(12, 10, '#bfe0ff'); R(9, 10, 10, 10, O); }
+      if (ey === 'visor') { R(5, 9, 14, 11, c.visor); R(6, 9, 8, 9, '#ffffff'); R(13, 9, 14, 11, D(c.visor, .75)); }
+      if (ey === 'shades') { R(5, 9, 14, 9, O); R(6, 10, 8, 11, O); R(11, 10, 13, 11, O); P(7, 10, '#6a7a9a'); P(12, 10, '#6a7a9a'); }
+      if (ey === 'patch') { R(7, 10, 7, 11, O); R(5, 8, 10, 8, O); R(11, 9, 13, 11, O); }
+      if (ey === 'hoodglow') { R(7, 10, 8, 10, c.visor); R(11, 10, 12, 10, c.visor); }
+      if (c.brows) { R(6, 8, 8, 8, D(h, .8)); R(11, 8, 13, 8, D(h, .8)); }
+      if (c.gogglesUp) { R(5, 7, 14, 7, '#4a3a32'); R(6, 6, 8, 8, '#d9963a'); R(11, 6, 13, 8, '#d9963a'); P(7, 7, '#9fe8ff'); P(12, 7, '#9fe8ff'); }
+      const mo = c.mouth || 'smile', m = '#8a3a3a';
+      if (mo === 'smile') R(9, 12, 10, 12, m);
+      if (mo === 'grin') { R(8, 12, 11, 12, '#ffffff'); R(8, 13, 11, 13, m); }
+      if (mo === 'flat') R(8, 12, 11, 12, O);
+      if (mo === 'beard') { R(5, 11, 14, 13, h); P(5, 13, null); P(14, 13, null); R(7, 14, 12, 14, h); R(9, 12, 10, 12, D(h, .5)); }
+      if (mo === 'mustache') { R(7, 12, 12, 12, h); R(9, 13, 10, 13, m); }
+      if (c.blush) { P(6, 12, '#f08a8a'); P(13, 12, '#e07a7a'); }
+    }
+    if (c.antenna === 1) { R(9, 1, 9, 4, '#8a8f9a'); R(9, 0, 10, 1, ac); }
+    if (c.antenna === 2) { R(7, 2, 7, 4, D(sk, .7)); R(12, 2, 12, 4, D(sk, .7)); R(6, 1, 7, 1, ac); R(12, 1, 13, 1, ac); }
+    if (c.headset) { R(3, 9, 4, 11, '#333a48'); R(5, 12, 7, 12, '#333a48'); P(7, 12, ac); }
+    const it = c.item;
+    if (it === 'wrench') { R(16, 13, 16, 20, '#a9b0bb'); R(17, 13, 17, 20, '#7d8590'); R(15, 11, 18, 12, '#a9b0bb'); R(16, 11, 17, 11, null); }
+    if (it === 'tablet') { R(16, 14, 18, 20, '#2a2f3a'); R(16, 15, 17, 19, c.screen || '#7fe0ff'); }
+    if (it === 'mug') { R(16, 17, 17, 20, '#f4f1ea'); R(18, 18, 18, 19, '#f4f1ea'); R(16, 17, 17, 17, '#7a4a2a'); }
+    if (it === 'staff') { R(17, 7, 17, 23, '#8a5a32'); R(16, 4, 18, 6, ac); P(16, 4, '#ffffff'); }
+    if (it === 'clipboard') { R(16, 14, 18, 20, '#b07a44'); R(16, 15, 18, 19, '#f4f1ea'); P(17, 14, '#9aa0aa'); R(16, 16, 17, 16, '#9aa0aa'); R(16, 18, 17, 18, '#9aa0aa'); }
+    if (it === 'scanner') { R(16, 17, 18, 18, '#5a6070'); R(16, 19, 16, 20, '#5a6070'); P(18, 17, ac); }
+    const out = g.map(r => r.slice());
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (!g[y][x] && [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => g[y + dy] && g[y + dy][x + dx])) out[y][x] = O;
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    const ctx = cv.getContext('2d');
+    out.forEach((r, y) => r.forEach((k, x) => { if (k) { ctx.fillStyle = k; ctx.fillRect(x, y, 1, 1); } }));
+    const bin = atob(cv.toDataURL().split(',')[1]), u8 = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    return URL.createObjectURL(new Blob([u8], { type: 'image/png' }));
+  }
+  static C = { cyan: 'oklch(0.82 0.12 200)', violet: 'oklch(0.78 0.13 300)', amber: 'oklch(0.83 0.14 80)', green: 'oklch(0.82 0.15 145)', red: 'oklch(0.68 0.19 25)', dim: 'oklch(0.65 0.05 250)', white: 'oklch(0.92 0.04 250)' };
+  static ROOMS = [
+    { id: 'research', name: 'RESEARCH LAB', sector: 'A-1', x: 4, y: 8, w: 28, h: 36, color: 'oklch(0.82 0.12 200)', desc: 'Gathers outside intel and files it into the Research DB.',
+      grants: [{ id: 'web', obj: 'RADAR DISH', real: 'Web Access', scope: 'READ' }, { id: 'rdb', obj: 'DATA TERMINAL', real: 'Notion · Research DB', scope: 'WRITE' }],
+      pool: ['Survey rest-timer UX patterns', 'Summarize 3 hypertrophy papers', 'Scan App Store reviews'], keys: ['research', 'find', 'look up', 'compare', 'source', 'paper'] },
+    { id: 'pm', name: 'PROJECT OPS', sector: 'B-1', x: 68, y: 8, w: 28, h: 36, color: 'oklch(0.78 0.13 300)', desc: 'Keeps the Notion project and task databases true, and ships status.',
+      grants: [{ id: 'pdb', obj: 'ARCHIVE CABINET', real: 'Notion · Projects DB', scope: 'READ/WRITE' }, { id: 'tdb', obj: 'MISSION BOARD', real: 'Notion · Tasks DB', scope: 'READ/WRITE' }, { id: 'gmail', obj: 'TRANSMITTER', real: 'Gmail', scope: 'DRAFT ONLY' }],
+      pool: ['Groom Sprint 15 backlog', 'Update Projects DB statuses', 'Draft stakeholder email'], keys: ['notion', 'task', 'project', 'status', 'sprint', 'email', 'board', 'backlog'] },
+    { id: 'dumbbell', name: 'DR. DUMBBELL BAY', sector: 'C-1', x: 28, y: 68, w: 44, h: 29, color: 'oklch(0.83 0.14 80)', desc: 'Project room for the Dr. Dumbbell strength app: build, review and QA.',
+      grants: [{ id: 'github', obj: 'FABRICATOR', real: 'GitHub · dr-dumbbell', scope: 'PR ONLY' }, { id: 'shell', obj: 'REACTOR CONSOLE', real: 'Sandbox Shell', scope: 'EXEC · GATED' }, { id: 'figma', obj: 'BLUEPRINT TABLE', real: 'Figma', scope: 'READ' }],
+      pool: ['Fix set-counter rounding bug', 'Add plate calculator', 'Polish workout history view'], keys: ['app', 'dumbbell', 'code', 'build', 'bug', 'screen', 'workout', 'pr', 'fix'] },
+  ];
+  static BRIDGE = { id: 'bridge', name: 'BRIDGE', sector: 'HQ', color: 'oklch(0.82 0.12 200)', desc: 'Command deck. The Overseer, a top-level orchestrator agent, dispatches every mission and escalates anything gated to you.', grants: [] };
+  static AGENTS = [
+    { id: 'scout', name: 'SCOUT', role: 'Researcher', room: 'research', fuel: 72 },
+    { id: 'archivist', name: 'ARCHIVIST', role: 'Librarian', room: 'research', fuel: 88 },
+    { id: 'foreman', name: 'FOREMAN', role: 'Project Mgr', room: 'pm', fuel: 64 },
+    { id: 'herald', name: 'HERALD', role: 'Status Reports', room: 'pm', fuel: 91 },
+    { id: 'wrench', name: 'WRENCH', role: 'Builder', room: 'dumbbell', fuel: 47 },
+    { id: 'lint', name: 'LINT', role: 'Reviewer', room: 'dumbbell', fuel: 80 },
+    { id: 'spotter', name: 'SPOTTER', role: 'QA Tester', room: 'dumbbell', fuel: 58 },
+  ];
+  static ROUTES = {
+    'bridge|research': [[38, 40], [32, 40]],
+    'bridge|pm': [[62, 40], [68, 40]],
+    'bridge|dumbbell': [[50, 64], [50, 68]],
+    'research|pm': [[32, 14], [68, 14]],
+    'research|dumbbell': [[18, 44], [18, 84], [28, 84]],
+    'pm|dumbbell': [[82, 44], [82, 84], [72, 84]],
+  };
+  static CHATTER = [
+    'All crews reporting in. Hallways clear, traffic nominal.',
+    'SCOUT is finishing the competitor teardown. FOREMAN gets it next over L-04.',
+    'WRENCH is burning fuel fast in Dr. Dumbbell Bay.',
+    'Type an order below and I will route it to the right room.',
+  ];
+
+  state = this.init();
+
+  init() {
+    return {
+      sel: { type: 'room', id: 'dumbbell' }, t: 0, up: 0, chars: 0, msgKey: '', chatIdx: 0, logT: 0, nextId: 109, nextLane: 6,
+      page: 'dash', cfgAgent: 'wrench', cursor: 5, looks: { scout: 0, archivist: 16, foreman: 3, herald: 6, wrench: 5, lint: 14, spotter: 15 },
+      tokens: 1284000, paused: false, held: {}, draw: null, mapStyle: null, order: '', reply: null,
+      fuel: Object.fromEntries(Component.AGENTS.map(a => [a.id, a.fuel])), revoked: {},
+      lanes: [
+        { id: 'L-01', a: 'bridge', b: 'research', purpose: 'Dispatch orders, return briefs', status: 'AUTH' },
+        { id: 'L-02', a: 'bridge', b: 'pm', purpose: 'Status digests, approvals', status: 'AUTH' },
+        { id: 'L-03', a: 'bridge', b: 'dumbbell', purpose: 'Build tickets, PR reports', status: 'AUTH' },
+        { id: 'L-04', a: 'research', b: 'pm', purpose: 'Findings → Notion Projects DB', status: 'AUTH' },
+        { id: 'L-05', a: 'research', b: 'dumbbell', purpose: 'Form-cue research → app QA', status: 'PENDING' },
+      ],
+      tasks: [
+        { id: 'T-101', title: 'Strength-app competitor teardown', agent: 'scout', status: 'RUNNING', p: 64, rate: 2.2, note: 'Web Access' },
+        { id: 'T-102', title: 'Tag sources in Research DB', agent: 'archivist', status: 'RUNNING', p: 30, rate: 1.6, note: 'Notion write' },
+        { id: 'T-103', title: 'Log teardown in Projects DB', agent: 'foreman', status: 'QUEUED', p: 0, rate: 2.4, note: 'Waiting on L-04' },
+        { id: 'T-104', title: 'Weekly status digest', agent: 'herald', status: 'RUNNING', p: 70, rate: 1.8, note: 'Gmail draft' },
+        { id: 'T-105', title: 'Build rest-timer screen', agent: 'wrench', status: 'RUNNING', p: 45, rate: 1.4, note: 'PR #48' },
+        { id: 'T-106', title: 'Review PR #48', agent: 'lint', status: 'BLOCKED', p: 20, rate: 2, note: 'Needs Shell sign-off' },
+        { id: 'T-107', title: 'Validate form cues vs research', agent: 'spotter', status: 'QUEUED', p: 0, rate: 1.8, note: 'Waiting on L-05' },
+        { id: 'T-108', title: 'Sprint 14 board cleanup', agent: 'foreman', status: 'DONE', p: 100, rate: 0, note: 'Tasks DB' },
+      ],
+      approvals: [
+        { id: 'ap1', who: 'LINT · DR. DUMBBELL BAY', text: 'Requesting the REACTOR CONSOLE (Sandbox Shell) to run tests on PR #48. Approve?' },
+        { id: 'ap2', who: 'SCOUT · RESEARCH LAB', text: 'Proposing hallway L-05 to DR. DUMBBELL BAY so form-cue research reaches SPOTTER. Authorize?' },
+      ],
+      log: [
+        this.entry('LINT', 'BLOCKED · Sandbox Shell is gated, paging Overseer', Component.C.red),
+        this.entry('WRENCH', 'Pushed rest-timer scaffold to PR #48', Component.C.amber),
+        this.entry('SCOUT', 'T-101 at 64% · 11 apps reviewed', Component.C.cyan),
+        this.entry('FOREMAN', 'T-108 complete · Sprint 14 board archived', Component.C.violet),
+      ],
+    };
+  }
+
+  componentDidMount() { this.iv = setInterval(() => this.tick(), 60); this.kh = e => this.onKey(e); window.addEventListener('keydown', this.kh); }
+  componentWillUnmount() { clearInterval(this.iv); window.removeEventListener('keydown', this.kh); }
+  onKey(e) {
+    const s = this.state; if (s.page !== 'select') return;
+    const tag = (e.target && e.target.tagName) || ''; if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    const d = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -6, ArrowDown: 6 }[e.key];
+    if (d) { e.preventDefault(); this.setState({ cursor: (s.cursor + d + 24) % 24 }); }
+    else if (e.key === 'Enter') { e.preventDefault(); this.confirmLook(); }
+  }
+  confirmLook() {
+    this.setState(s => ({ looks: { ...s.looks, [s.cfgAgent]: s.cursor }, log: this.addLog(s, 'OVERSEER', `${this.agent(s.cfgAgent).name} now appears as ${Component.CHARS[s.cursor].name}`, Component.C.green) }));
+  }
+
+  ts() { return new Date().toLocaleTimeString('en-GB'); }
+  entry(who, text, color) { return { ts: this.ts(), who, text, color }; }
+  agent(id) { return Component.AGENTS.find(a => a.id === id); }
+  room(id) { return id === 'bridge' ? Component.BRIDGE : Component.ROOMS.find(r => r.id === id); }
+  agentColor(id) { return this.room(this.agent(id).room).color; }
+  route(a, b) { return Component.ROUTES[a + '|' + b] || (Component.ROUTES[b + '|' + a] || []).slice().reverse(); }
+  laneBetween(lanes, a, b) { return lanes.find(l => (l.a === a && l.b === b) || (l.a === b && l.b === a)); }
+
+  currentMsg(s) {
+    if (s.reply) return { key: s.reply.key, who: 'OVERSEER', text: s.reply.text, approval: false, reply: true };
+    if (s.approvals.length) return { key: s.approvals[0].id, who: s.approvals[0].who, text: s.approvals[0].text, approval: true };
+    return { key: 'c' + s.chatIdx, who: 'OVERSEER', text: Component.CHATTER[s.chatIdx % Component.CHATTER.length], approval: false };
+  }
+
+  tick() {
+    const speed = this.props.speed ?? 1, dt = 0.06;
+    this.setState(s => {
+      const n = {};
+      const m = this.currentMsg(s);
+      if (m.key !== s.msgKey) { n.msgKey = m.key; n.chars = 0; }
+      else {
+        n.chars = s.chars + 1;
+        if (m.reply && n.chars > m.text.length + 60) n.reply = null;
+        else if (!m.approval && !m.reply && n.chars > m.text.length + 70) n.chatIdx = s.chatIdx + 1;
+      }
+      if (s.paused) return n;
+      const k = dt * speed;
+      n.t = s.t + k; n.up = s.up + dt;
+      let tasks = s.tasks.map(t => ({ ...t }));
+      const log = s.log.slice(), fuel = { ...s.fuel }, add = [];
+      let nextId = s.nextId, burn = 0;
+      tasks.forEach(t => {
+        if (t.status !== 'RUNNING' || s.held[t.agent]) return;
+        t.p += t.rate * k; burn += t.rate;
+        fuel[t.agent] = Math.max(5, fuel[t.agent] - 0.05 * k * t.rate);
+        if (t.p >= 100) {
+          t.p = 100; t.status = 'DONE'; t.note = 'Reported to Bridge';
+          const A = this.agent(t.agent);
+          log.unshift(this.entry(A.name, `${t.id} complete · ${t.title}`, this.agentColor(t.agent)));
+          if (t.id === 'T-101') {
+            const q = tasks.find(x => x.id === 'T-103'), L = this.laneBetween(s.lanes, 'research', 'pm');
+            if (q && q.status === 'QUEUED') {
+              if (L && L.status === 'AUTH') { q.status = 'RUNNING'; q.note = 'Teardown received via ' + L.id; log.unshift(this.entry('SCOUT', `Handoff → FOREMAN over ${L.id} · teardown`, Component.C.cyan)); }
+              else q.note = 'No open hallway to Research';
+            }
+          }
+          const R = this.room(A.room);
+          add.push({ id: 'T-' + nextId++, title: R.pool[Math.floor(Math.random() * R.pool.length)], agent: t.agent, status: 'RUNNING', p: 0, rate: 1.2 + Math.random() * 1.6, note: 'Dispatched by Overseer' });
+        }
+      });
+      tasks = tasks.concat(add);
+      const done = tasks.filter(t => t.status === 'DONE');
+      if (done.length > 4) { const drop = new Set(done.slice(0, done.length - 4).map(t => t.id)); tasks = tasks.filter(t => !drop.has(t.id)); }
+      n.tokens = s.tokens + burn * k * 900;
+      n.logT = s.logT + k;
+      if (n.logT > 3.5) {
+        n.logT = 0;
+        const running = tasks.filter(t => t.status === 'RUNNING' && !s.held[t.agent]);
+        if (running.length) {
+          const t = running[Math.floor(Math.random() * running.length)];
+          const A = this.agent(t.agent), R = this.room(A.room), live = R.grants.filter(g => !s.revoked[g.id]), r = Math.random();
+          let text = `${t.id} at ${Math.floor(t.p)}% · ${t.title}`;
+          if (r < 0.4 && live.length) { const g = live[Math.floor(Math.random() * live.length)]; text = `Using ${g.obj} (${g.real}) on ${t.id}`; }
+          else if (r > 0.8) text = `Status ping → BRIDGE · fuel ${Math.round(fuel[t.agent])}%`;
+          log.unshift(this.entry(A.name, text, R.color));
+        }
+      }
+      return { ...n, tasks, nextId, fuel, log: log.slice(0, 40) };
+    });
+  }
+
+  addLog(s, who, text, color) { return [this.entry(who, text, color), ...s.log].slice(0, 40); }
+
+  resolve(approve) {
+    this.setState(s => {
+      if (!s.approvals.length) return null;
+      const ap = s.approvals[0], C = Component.C;
+      let tasks = s.tasks.map(t => ({ ...t })), lanes = s.lanes.map(l => ({ ...l })), log;
+      if (ap.id === 'ap1') {
+        const t = tasks.find(x => x.id === 'T-106');
+        if (t) Object.assign(t, approve ? { status: 'RUNNING', note: 'Shell exec approved' } : { status: 'HALTED', note: 'Shell exec denied' });
+        log = this.addLog(s, 'OVERSEER', approve ? 'APPROVED · LINT may run Sandbox Shell on PR #48' : 'DENIED · LINT Shell request', approve ? C.green : C.red);
+      } else {
+        const L = lanes.find(l => l.id === 'L-05'); if (L) L.status = approve ? 'AUTH' : 'SEALED';
+        const t = tasks.find(x => x.id === 'T-107');
+        if (t) Object.assign(t, approve ? { status: 'RUNNING', note: 'Research received via L-05' } : { note: 'L-05 sealed' });
+        log = this.addLog(s, 'OVERSEER', approve ? 'AUTHORIZED · hallway L-05 RESEARCH ⇄ DR. DUMBBELL' : 'SEALED · hallway L-05', approve ? C.green : C.red);
+      }
+      return { approvals: s.approvals.slice(1), tasks, lanes, log };
+    });
+  }
+
+  toggleLane(id) {
+    this.setState(s => {
+      const C = Component.C;
+      const lanes = s.lanes.map(l => l.id === id ? { ...l, status: l.status === 'AUTH' ? 'SEALED' : 'AUTH' } : l);
+      const to = lanes.find(l => l.id === id).status;
+      let approvals = s.approvals, tasks = s.tasks;
+      if (id === 'L-05' && to === 'AUTH') {
+        approvals = approvals.filter(a => a.id !== 'ap2');
+        tasks = tasks.map(t => t.id === 'T-107' && t.status === 'QUEUED' ? { ...t, status: 'RUNNING', note: 'Research received via L-05' } : t);
+      }
+      return { lanes, approvals, tasks, log: this.addLog(s, 'OVERSEER', `${to === 'AUTH' ? 'AUTHORIZED' : 'SEALED'} · hallway ${id}`, to === 'AUTH' ? C.green : C.red) };
+    });
+  }
+
+  removeLane(id) {
+    this.setState(s => ({ lanes: s.lanes.filter(l => l.id !== id), approvals: id === 'L-05' ? s.approvals.filter(a => a.id !== 'ap2') : s.approvals, sel: { type: 'room', id: 'bridge' }, log: this.addLog(s, 'OVERSEER', `DEMOLISHED · hallway ${id}`, Component.C.red) }));
+  }
+
+  toggleGrant(g) {
+    this.setState(s => {
+      const revoked = { ...s.revoked, [g.id]: !s.revoked[g.id] };
+      return { revoked, log: this.addLog(s, 'OVERSEER', `${revoked[g.id] ? 'REVOKED' : 'RESTORED'} · ${g.obj} (${g.real})`, revoked[g.id] ? Component.C.red : Component.C.green) };
+    });
+  }
+
+  toggleHold(id) {
+    this.setState(s => {
+      const held = { ...s.held, [id]: !s.held[id] };
+      return { held, log: this.addLog(s, 'OVERSEER', `${held[id] ? 'HOLD' : 'RELEASE'} · ${this.agent(id).name}`, Component.C.amber) };
+    });
+  }
+
+  clickRoom(id) {
+    const d = this.state.draw;
+    if (!d) return this.setState({ sel: { type: 'room', id } });
+    if (!d.from) return this.setState({ draw: { from: id } });
+    if (d.from === id) return this.setState({ draw: { from: null } });
+    this.setState(s => {
+      const C = Component.C, a = d.from, b = id, A = this.room(a).name, B = this.room(b).name;
+      if (this.laneBetween(s.lanes, a, b)) return { draw: null, log: this.addLog(s, 'OVERSEER', `${A} and ${B} are already linked`, C.dim) };
+      const lid = 'L-0' + s.nextLane;
+      return { draw: null, nextLane: s.nextLane + 1, sel: { type: 'lane', id: lid },
+        lanes: [...s.lanes, { id: lid, a, b, purpose: `Custom handoff · ${A} ⇄ ${B}`, status: 'AUTH' }],
+        log: this.addLog(s, 'OVERSEER', `BUILT · hallway ${lid} ${A} ⇄ ${B}`, C.green) };
+    });
+  }
+
+  sendOrder() {
+    const text = (this.state.order || '').trim();
+    if (!text) return;
+    this.setState(s => {
+      const low = text.toLowerCase();
+      const R = Component.ROOMS.find(r => r.keys.some(k => low.includes(k))) || Component.ROOMS[0];
+      const crew = Component.AGENTS.filter(a => a.room === R.id);
+      const load = id => s.tasks.filter(t => t.agent === id && t.status === 'RUNNING').length;
+      const A = crew.slice().sort((x, y) => load(x.id) - load(y.id))[0];
+      const L = this.laneBetween(s.lanes, 'bridge', R.id);
+      const open = L && L.status === 'AUTH';
+      const id = 'T-' + s.nextId;
+      const title = text.length > 42 ? text.slice(0, 40) + '…' : text;
+      const task = { id, title, agent: A.id, status: open ? 'RUNNING' : 'QUEUED', p: 0, rate: 2, note: open ? 'Ordered by you' : 'No open hallway from Bridge' };
+      const reply = open ? `Copy. Routing "${title}" to ${R.name} over ${L.id}. ${A.name} is on it.` : `No authorized hallway to ${R.name}. ${id} is queued until you open one.`;
+      let log = [this.entry('YOU', text, Component.C.green), ...s.log];
+      log = [this.entry('OVERSEER', `Dispatch ${id} → ${A.name} @ ${R.name}`, Component.C.white), ...log].slice(0, 40);
+      return { order: '', nextId: s.nextId + 1, tasks: [...s.tasks, task], reply: { key: 'r' + id, text: reply }, log, sel: { type: 'room', id: R.id } };
+    });
+  }
+
+  styleTokens(ms) {
+    if (ms === 'floorplan') return {
+      mapBg: 'repeating-conic-gradient(oklch(0.14 0.02 60) 0 25%, oklch(0.12 0.02 60) 0 50%) 0 0/32px 32px', planeBg: 'transparent', plane: 'none',
+      roomBg: 'repeating-conic-gradient(oklch(0.33 0.035 70) 0 25%, oklch(0.29 0.035 70) 0 50%) 0 0/16px 16px',
+      wall: 'oklch(0.5 0.05 60)', bw: '6px', segBg: 'repeating-conic-gradient(oklch(0.33 0.035 70) 0 25%, oklch(0.29 0.035 70) 0 50%) 0 0/16px 16px', thick: 22, authCol: 'oklch(0.5 0.05 60)',
+      shadow: c => `inset 0 0 0 2px ${c}, 0 6px 0 oklch(0.26 0.04 60)`,
+    };
+    if (ms === 'wireframe') return {
+      mapBg: 'radial-gradient(1.5px 1.5px at 14% 12%, oklch(0.95 0.02 250), transparent), radial-gradient(1px 1px at 72% 8%, oklch(0.95 0.02 250), transparent), radial-gradient(1px 1px at 44% 4%, oklch(0.95 0.02 250), transparent), linear-gradient(oklch(0.16 0.07 285), oklch(0.08 0.03 268) 55%)',
+      planeBg: 'linear-gradient(oklch(0.75 0.16 145 / 0.28) 1px, transparent 1px) 0 0/32px 32px, linear-gradient(90deg, oklch(0.75 0.16 145 / 0.28) 1px, transparent 1px) 0 0/32px 32px',
+      plane: 'perspective(1100px) rotateX(38deg) scale(0.86) translateY(-6%)',
+      roomBg: 'oklch(0.2 0.06 265 / 0.6)', wall: null, bw: '2px', segBg: 'oklch(0.1 0.04 268 / 0.5)', thick: 12, authCol: 'oklch(0.75 0.16 145)',
+      shadow: c => `0 0 14px ${c}, 0 12px 0 -2px oklch(0.28 0.08 265)`,
+    };
+    return {
+      mapBg: 'oklch(0.11 0.03 268)',
+      planeBg: 'linear-gradient(oklch(0.5 0.1 230 / 0.10) 1px, transparent 1px) 0 0/24px 24px, linear-gradient(90deg, oklch(0.5 0.1 230 / 0.10) 1px, transparent 1px) 0 0/24px 24px, radial-gradient(1.5px 1.5px at 12% 56%, oklch(0.9 0.02 250), transparent), radial-gradient(1px 1px at 36% 62%, oklch(0.9 0.02 250), transparent), radial-gradient(1.5px 1.5px at 64% 28%, oklch(0.9 0.02 250), transparent), radial-gradient(1px 1px at 92% 52%, oklch(0.9 0.02 250), transparent), radial-gradient(1px 1px at 8% 96%, oklch(0.9 0.02 250), transparent)',
+      plane: 'none', roomBg: 'oklch(0.16 0.04 265)', wall: null, bw: '2px', segBg: 'oklch(0.15 0.035 265)', thick: 12, authCol: 'oklch(0.62 0.09 230)',
+      shadow: () => '3px 3px 0 oklch(0.08 0.02 265)',
+    };
+  }
+
+  renderVals() {
+    const s = this.state, C = Component.C;
+    const traffic = this.props.traffic ?? true;
+    const msName = s.mapStyle ?? this.props.mapStyle ?? 'schematic';
+    const T = this.styleTokens(msName);
+    const sel = s.sel;
+    const select = (type, id) => (e) => { if (e && e.stopPropagation) e.stopPropagation(); this.setState({ sel: { type, id } }); };
+    const blinkOn = Math.floor(s.t * 2.5) % 2 === 0 || s.paused;
+    const statusColor = { ACTIVE: C.green, IDLE: C.dim, BLOCKED: C.red, HALTED: C.amber, HELD: C.amber };
+    const taskColor = { RUNNING: C.green, QUEUED: C.cyan, BLOCKED: C.red, HALTED: C.amber, DONE: 'oklch(0.55 0.04 250)', HELD: C.amber };
+    const laneLabel = { AUTH: 'AUTHORIZED', PENDING: 'PENDING', SEALED: 'SEALED' };
+    const laneCol = st => st === 'AUTH' ? T.authCol : st === 'PENDING' ? C.amber : C.red;
+
+    const agentStatus = id => {
+      if (s.held[id]) return 'HELD';
+      const ts = s.tasks.filter(t => t.agent === id);
+      if (ts.some(t => t.status === 'BLOCKED')) return 'BLOCKED';
+      if (ts.some(t => t.status === 'RUNNING')) return 'ACTIVE';
+      if (ts.some(t => t.status === 'HALTED')) return 'HALTED';
+      return 'IDLE';
+    };
+    const lampOf = st => st === 'ACTIVE' ? (blinkOn ? 1 : 0.3) : st === 'BLOCKED' ? (blinkOn ? 1 : 0.1) : 1;
+    const ini = n => n.slice(0, 2);
+    const crewOf = rid => Component.AGENTS.filter(a => a.room === rid).map(a => {
+      const st = agentStatus(a.id);
+      return { id: a.id, name: a.name, initials: ini(a.name), status: st, statusColor: statusColor[st], lamp: lampOf(st),
+        border: sel.type === 'agent' && sel.id === a.id ? 'oklch(0.95 0.02 250)' : 'oklch(0.3 0.06 255)', onClick: (e) => { if (this.state.draw) return; select('agent', a.id)(e); } };
+    });
+    const grantsOf = R => R.grants.map(g => {
+      const rv = !!s.revoked[g.id];
+      return { ...g, opacity: rv ? 0.45 : 1, deco: rv ? 'line-through' : 'none', dot: rv ? C.red : R.color,
+        label: rv ? 'RESTORE' : 'REVOKE', btnColor: rv ? C.green : C.red, onToggle: (e) => { e.stopPropagation(); this.toggleGrant(g); } };
+    });
+    const taskView = t => {
+      const st = s.held[t.agent] && t.status === 'RUNNING' ? 'HELD' : t.status;
+      return { id: t.id, title: t.title, status: st, color: taskColor[st], agentName: this.agent(t.agent).name, note: t.note, pct: Math.floor(t.p) + '%', onClick: select('agent', t.agent) };
+    };
+    const selRoomId = sel.type === 'room' ? sel.id : sel.type === 'agent' ? this.agent(sel.id).room : null;
+    const drawFrom = s.draw && s.draw.from;
+    const roomAlert = rid => Component.AGENTS.some(a => a.room === rid && agentStatus(a.id) === 'BLOCKED');
+    const roomLook = (id, color) => {
+      const alert = roomAlert(id);
+      const edge = alert && !blinkOn ? C.red : color;
+      const hi = id === selRoomId || id === drawFrom;
+      const ring = hi ? `0 0 0 2px oklch(0.11 0.03 268), 0 0 0 4px ${id === drawFrom ? C.amber : color}, 0 0 22px ${color}` : '';
+      const base = T.shadow(color);
+      return { bg: T.roomBg, border: `${T.bw} solid ${T.wall || edge}`, shadow: [ring, base, T.wall && alert ? `inset 0 0 0 4px ${edge}` : ''].filter(Boolean).join(', '), alert, alertBlink: blinkOn ? 1 : 0.35 };
+    };
+
+    const rooms = Component.ROOMS.map(R => ({
+      id: R.id, name: R.name, sector: R.sector, color: R.color, x: R.x + '%', y: R.y + '%', w: R.w + '%', h: R.h + '%',
+      ...roomLook(R.id, R.color), crew: crewOf(R.id), grants: grantsOf(R), onClick: () => this.clickRoom(R.id),
+    }));
+    const bl = roomLook('bridge', C.cyan);
+    const bridge = { bg: msName === 'schematic' ? 'oklch(0.18 0.05 262)' : bl.bg, border: msName === 'schematic' ? `3px double ${C.white}` : bl.border, shadow: bl.shadow, onClick: () => this.clickRoom('bridge') };
+
+    const segments = [], laneTags = [], packets = [];
+    const runningIn = rid => s.tasks.filter(t => t.status === 'RUNNING' && !s.held[t.agent] && this.agent(t.agent).room === rid).length;
+    const th = T.thick, half = th / 2;
+    s.lanes.forEach(L => {
+      const pts = this.route(L.a, L.b);
+      if (!pts.length) return;
+      const isSel = sel.type === 'lane' && sel.id === L.id;
+      const col = isSel ? 'oklch(0.97 0.03 250)' : laneCol(L.status);
+      const b = `${msName === 'floorplan' ? 4 : 2}px ${L.status === 'AUTH' ? 'solid' : 'dashed'} ${col}`;
+      const onClick = select('lane', L.id);
+      let best = null, bestLen = -1, total = 0;
+      const segs = [];
+      for (let i = 0; i < pts.length - 1; i++) {
+        const [x1, y1] = pts[i], [x2, y2] = pts[i + 1];
+        if (y1 === y2) segments.push({ left: Math.min(x1, x2) + '%', top: y1 + '%', width: Math.abs(x2 - x1) + '%', height: th + 'px', ml: '0px', mt: -half + 'px', bg: T.segBg, bt: b, bb: b, bl: 'none', br: 'none', onClick });
+        else segments.push({ left: x1 + '%', top: Math.min(y1, y2) + '%', width: th + 'px', height: Math.abs(y2 - y1) + '%', ml: -half + 'px', mt: '0px', bg: T.segBg, bt: 'none', bb: 'none', bl: b, br: b, onClick });
+        const len = Math.abs(x2 - x1) * 1.5 + Math.abs(y2 - y1);
+        segs.push({ x1, y1, x2, y2, len }); total += len;
+        if (len > bestLen) { bestLen = len; best = { x: (x1 + x2) / 2, y: (y1 + y2) / 2 }; }
+      }
+      laneTags.push({ id: L.id, left: best.x + '%', top: best.y + '%', color: col, onClick });
+      if (traffic && L.status === 'AUTH') {
+        const count = Math.min(2, [L.a, L.b].filter(r => r !== 'bridge').reduce((acc, r) => acc + runningIn(r), 0));
+        const pcolor = this.room(L.b).color;
+        for (let k = 0; k < count; k++) {
+          let u = ((s.t * 9) / total + k / count + L.id.charCodeAt(3) * 0.13) % 1;
+          if (k % 2 === 1) u = 1 - u;
+          let d = u * total;
+          for (const sg of segs) {
+            if (d <= sg.len) { const f = sg.len ? d / sg.len : 0; packets.push({ left: (sg.x1 + (sg.x2 - sg.x1) * f) + '%', top: (sg.y1 + (sg.y2 - sg.y1) * f) + '%', color: pcolor }); break; }
+            d -= sg.len;
+          }
+        }
+      }
+    });
+
+    const roster = Component.AGENTS.map(a => {
+      const st = agentStatus(a.id);
+      return { name: a.name, role: a.role, initials: ini(a.name), color: this.agentColor(a.id), status: st, statusColor: statusColor[st], lamp: st === 'BLOCKED' ? lampOf(st) : 1,
+        fuelW: Math.round(s.fuel[a.id]) + '%', selBorder: sel.type === 'agent' && sel.id === a.id ? C.cyan : 'transparent', onClick: select('agent', a.id) };
+    });
+
+    const order = { BLOCKED: 0, RUNNING: 1, HELD: 1, QUEUED: 2, HALTED: 3, DONE: 4 };
+    const sortT = arr => arr.slice().sort((a, b) => order[a.status] - order[b.status]);
+    let selRoom = {}, selAgent = {}, selLane = {};
+    if (sel.type === 'room') {
+      const R = this.room(sel.id);
+      const isB = sel.id === 'bridge';
+      const crew = isB ? [{ name: 'OVERSEER', initials: 'OV', status: 'ACTIVE', statusColor: C.green, onClick: () => {} }] : crewOf(R.id);
+      const lanes = s.lanes.filter(l => l.a === R.id || l.b === R.id).map(l => ({ id: l.id, other: this.room(l.a === R.id ? l.b : l.a).name, status: laneLabel[l.status], color: laneCol(l.status), onClick: select('lane', l.id) }));
+      const tasks = sortT(s.tasks.filter(t => isB || this.agent(t.agent).room === R.id).map(taskView)).slice(0, isB ? 6 : 8);
+      selRoom = { name: R.name, sector: R.sector, desc: R.desc, color: R.color, crew, grants: grantsOf(R), hasGrants: R.grants.length > 0, lanes, tasks };
+    } else if (sel.type === 'agent') {
+      const A = this.agent(sel.id), R = this.room(A.room), st = agentStatus(A.id);
+      selAgent = { name: A.name, role: A.role, roomName: R.name, initials: ini(A.name), color: R.color, status: st, statusColor: statusColor[st],
+        fuelW: Math.round(s.fuel[A.id]) + '%', tasks: sortT(s.tasks.filter(t => t.agent === A.id).map(taskView)), grants: grantsOf(R),
+        holdLabel: s.held[A.id] ? 'RELEASE AGENT' : 'HOLD AGENT', onHold: () => this.toggleHold(A.id), back: select('room', R.id) };
+    } else if (sel.type === 'lane') {
+      const L = s.lanes.find(l => l.id === sel.id);
+      if (L) {
+        const F = this.room(L.a), To = this.room(L.b);
+        const n = L.status === 'AUTH' ? s.tasks.filter(t => t.status === 'RUNNING' && [L.a, L.b].includes(this.agent(t.agent).room)).length : 0;
+        selLane = { id: L.id, status: laneLabel[L.status], color: laneCol(L.status), from: F.name, to: To.name, fromColor: F.color, toColor: To.color, purpose: L.purpose,
+          trafficText: L.status === 'AUTH' ? (n ? `${n} active mission${n > 1 ? 's' : ''} in range` : 'Quiet') : 'No handoffs permitted',
+          action: L.status === 'AUTH' ? 'SEAL HALLWAY' : 'AUTHORIZE', btnColor: L.status === 'AUTH' ? C.red : C.green,
+          onToggle: () => this.toggleLane(L.id), onRemove: () => this.removeLane(L.id), goFrom: select('room', L.a), goTo: select('room', L.b) };
+      }
+    }
+
+    const m = this.currentMsg(s);
+    const spend = s.tokens / 1e6 * 9;
+    const upT = 3 * 86400 + 4 * 3600 + 731 + s.up;
+    const pad = v => String(Math.floor(v)).padStart(2, '0');
+    const alertCount = Component.AGENTS.filter(a => agentStatus(a.id) === 'BLOCKED').length + s.lanes.filter(l => l.status === 'PENDING').length;
+    const styleDefs = [['schematic', 'A SCHEMATIC'], ['floorplan', 'B FLOORPLAN'], ['wireframe', 'C POLYGON']];
+
+    const SPR = Component.SPR || (Component.SPR = Component.CHARS.map(c => Component.draw(c)));
+    const owners = {}; Object.entries(s.looks).forEach(([a, i]) => (owners[i] = owners[i] || []).push(a));
+    const cA = this.agent(s.cfgAgent), cur = Component.CHARS[s.cursor];
+    const others = i => (owners[i] || []).filter(a => a !== s.cfgAgent);
+    const isMineCur = s.looks[s.cfgAgent] === s.cursor;
+    const chars = Component.CHARS.map((c, i) => {
+      const isC = i === s.cursor, mine = s.looks[s.cfgAgent] === i, ow = others(i);
+      return { name: c.name, bg: 'url(' + SPR[i] + ')', isCursor: isC, hasOwner: ow.length > 0, owner: ow.map(a => this.agent(a).name.slice(0, 2)).join(' '),
+        border: isC ? (blinkOn ? C.amber : 'oklch(0.95 0.06 85)') : mine ? C.green : 'oklch(0.22 0.04 260)',
+        shadow: isC ? `0 0 0 2px oklch(0.11 0.03 268), 0 0 18px ${C.amber}` : '3px 3px 0 oklch(0.08 0.02 265)',
+        onClick: () => this.setState({ cursor: i }) };
+    });
+    const pick = { name: cur.name, role: cur.role, bg: 'url(' + SPR[s.cursor] + ')',
+      status: isMineCur ? `EQUIPPED ON ${cA.name}` : others(s.cursor).length ? `ALSO WORN BY ${others(s.cursor).map(a => this.agent(a).name).join(', ')}` : 'AVAILABLE',
+      statusColor: isMineCur ? C.green : others(s.cursor).length ? C.amber : C.cyan };
+    const cfgAgents = Component.AGENTS.map(a => ({ name: a.name, spr: 'url(' + SPR[s.looks[a.id]] + ')', bg: a.id === s.cfgAgent ? 'oklch(0.26 0.06 258)' : 'oklch(0.13 0.03 265)',
+      border: a.id === s.cfgAgent ? this.agentColor(a.id) : 'oklch(0.35 0.07 250)', onClick: () => this.setState(st => ({ cfgAgent: a.id, cursor: st.looks[a.id] })) }));
+    const pageTabs = [['dash', 'STATION'], ['select', 'CREW SELECT']].map(([k, label]) => ({ label, bg: s.page === k ? C.cyan : 'transparent', fg: s.page === k ? 'oklch(0.15 0.03 265)' : C.cyan, onClick: () => this.setState({ page: k }) }));
+
+    return {
+      isDash: s.page === 'dash', isSelect: s.page === 'select', pageTabs, chars, pick, cfgAgents,
+      cfg: { name: cA.name, role: cA.role, room: this.room(cA.room).name, color: this.agentColor(cA.id) },
+      confirmLook: () => this.confirmLook(), randomLook: () => this.setState({ cursor: Math.floor(Math.random() * 24) }),
+      activeCount: s.tasks.filter(t => t.status === 'RUNNING' && !s.held[t.agent]).length,
+      alertCount, alertBorder: alertCount && !blinkOn ? C.red : 'oklch(0.35 0.07 250)',
+      tokenText: (s.tokens / 1e6).toFixed(3) + 'M', spendText: `$${spend.toFixed(2)} / $25 DAY`, spendW: Math.min(100, spend / 25 * 100) + '%',
+      uptime: `${pad(upT / 86400)}d ${pad(upT / 3600 % 24)}:${pad(upT / 60 % 60)}:${pad(upT % 60)}`,
+      paused: s.paused, pauseLabel: s.paused ? 'START' : 'PAUSE', pauseColor: s.paused ? C.green : C.amber,
+      togglePause: () => this.setState(st => ({ paused: !st.paused, log: this.addLog(st, 'OVERSEER', st.paused ? 'Station resumed' : 'Station paused · all crews holding', C.amber) })),
+      blink: blinkOn ? 1 : 0.15, msgSpeaker: m.who, typed: m.text.slice(0, s.chars), hasApproval: m.approval, noApproval: !m.approval,
+      approve: () => this.resolve(true), deny: () => this.resolve(false), nextMsg: () => this.setState(st => ({ chatIdx: st.chatIdx + 1, reply: null })),
+      order: s.order, onOrder: e => this.setState({ order: e.target.value }), onOrderKey: e => { if (e.key === 'Enter') this.sendOrder(); }, sendOrder: () => this.sendOrder(),
+      roster, rooms, bridge, segments, laneTags, packets, log: s.log,
+      ms: { mapBg: T.mapBg, planeBg: T.planeBg, plane: T.plane },
+      styleBtns: styleDefs.map(([k, label]) => ({ label, bg: k === msName ? C.cyan : 'transparent', fg: k === msName ? 'oklch(0.15 0.03 265)' : C.cyan, onClick: () => this.setState({ mapStyle: k }) })),
+      drawing: !!s.draw, drawHint: s.draw && s.draw.from ? `LINK ${this.room(s.draw.from).name} TO…` : 'SELECT FIRST ROOM',
+      drawLabel: s.draw ? 'CANCEL' : '+ DRAW HALLWAY', drawBg: s.draw ? C.amber : 'transparent', drawFg: s.draw ? 'oklch(0.15 0.03 265)' : C.amber,
+      toggleDraw: () => this.setState(st => ({ draw: st.draw ? null : { from: null } })),
+      selKind: sel.type === 'room' ? 'ROOM' : sel.type === 'agent' ? 'CREW' : 'HALLWAY',
+      isRoom: sel.type === 'room', isAgent: sel.type === 'agent', isLane: sel.type === 'lane' && !!selLane.id, selRoom, selAgent, selLane,
+      crt: this.props.crt ?? true,
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -140,6 +140,17 @@ decisions made, open questions.
   timeline are Routines-specific; they are deleted in Phase 1 when the new schema lands (tests for
   them go with them; commit message says why).
 
+- **D26 Station dashboard redesign (Phase 11, owner 2026-10-01).** ADR-0013 records each
+  design element and how it is backed. Smaller choices made here, flagged at Checkpoint 11:
+  - The design has two page tabs. The other screens (COMMS, Crew, Memory, Notifications,
+    Connectors, Settings) join them in the same tab row, styled like the page tabs.
+  - Character specs and the pixel generator live in core (pure data and logic). ui draws them as
+    SVG rects, so tests run without canvas.
+  - The sprite index export is renamed `characters.json`, because the floor guard bans the word
+    "manifest".
+  - Lane routes come from core layout math: each room has a door at the middle of each side, and
+    a route is an orthogonal polyline between the nearest pair of doors.
+
 ## Phase 0 — Housekeeping and decisions
 
 ### 0.1 Commit the brief
@@ -281,6 +292,36 @@ decisions made, open questions.
 - [x] `docs/ARCHITECTURE.md`, `docs/SCHEMA.md` from what was built; README quickstart and status.
 
 **CHECKPOINT 10**
+
+## Phase 11 — Station dashboard redesign (ADR-0013)
+Source: `docs/design/station-dashboard/`. Dark only; sprites replace the rig; every screen restyled.
+- [x] 11.1 Docs: spec moved under `docs/design/`, ADR-0013, CLAUDE.md, CONSTRAINTS, D26.
+- [ ] 11.2 Tokens: `--st-*` replaces `--ow-*` (dark only), the Tailwind theme mapping, Fontsource
+  fonts, CRT overlay, and blink/packet/typing motion with reduced motion respected.
+- [ ] 11.3 core:
+  - character specs and the grid generator
+  - `look` replaces `rig` in agent.json
+  - room presentation: color, sector, layout rect, Bridge = the Overseer's room
+  - lane routes between doors
+  - mission and crew status mapping
+  - chatter templates
+  - glossary keys
+- [ ] 11.4 daemon/runtime: open and close hallway endpoints (config only), today's tokens on
+  `/api/spend`, `startedAt` on `/api/health`.
+- [ ] 11.5 ui primitives: Panel, StatBox, SegmentBar, Avatar, Sprite, buttons, chips.
+- [ ] 11.6 Shell: header (tabs, stats, radio chatter, stop/resume, CRT toggle), footer vitals.
+- [ ] 11.7 Station page:
+  - crew roster
+  - map: 3 styles, rooms, Bridge, hallways, packets, draw and close hallway
+  - Overseer comms: approvals, order input, typed replies, templated chatter
+  - scanner: room, crew and hallway views
+- [ ] 11.8 Crew Select: agent picker, stage, 6×4 grid with keyboard control, assign and random.
+- [ ] 11.9 Restyle COMMS, Crew, Agent, Memory, Notifications, Connectors, Settings, Onboarding.
+- [ ] 11.10 Remove the rig, the `--ow` tokens and the Reach map components; update the `/dev`
+  gallery and the package READMEs.
+- [ ] 11.11 `browser:verify` dark only (reduced motion, 375 and 1280 widths, axe).
+
+**CHECKPOINT 11**
 
 ## Follow-ups (not scheduled)
 - ~~Intermittent React #418 hydration mismatch in `browser:verify`~~ gone with `apps/web` (Next.js
