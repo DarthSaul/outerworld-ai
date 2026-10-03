@@ -17,12 +17,10 @@ import {
 } from "../queries.js";
 
 const button =
-  "h-(--ow-size-control-h-dense) rounded-control border border-border-subtle px-(--ow-size-control-pad-x) text-label text-ink-1 disabled:text-ink-3";
-const input =
-  "h-(--ow-size-control-h-dense) min-w-0 rounded-control border border-border-subtle bg-surface-raised px-(--ow-space-2) font-mono text-mono text-ink-1";
-const textarea =
-  "min-h-(--ow-size-control-h) w-full rounded-control border border-border-subtle bg-surface-raised p-(--ow-space-2) text-body text-ink-1";
-const label = "flex flex-col gap-(--ow-space-1) text-label text-ink-2";
+  "cursor-pointer border-2 border-line bg-transparent px-2.5 py-1.5 font-display text-d7 text-panel-title uppercase hover:border-cyan disabled:cursor-not-allowed disabled:opacity-50";
+const input = "min-w-0 border-2 border-line-soft bg-well px-2 py-1 font-body text-b19 text-fg-hi";
+const textarea = "w-full border-2 border-line-soft bg-well p-2 font-body text-b19 text-fg-hi";
+const label = "flex flex-col gap-1 font-display text-d7 text-fg-mute uppercase";
 
 interface Draft {
   cron: string;
@@ -79,21 +77,21 @@ function CronPreviewLine({
 }) {
   const preview = previewCron(cron, zone);
   return (
-    <div id={id} aria-live="polite" className="flex flex-col gap-(--ow-space-1)">
+    <div id={id} aria-live="polite" className="flex flex-col gap-1.5">
       {preview === undefined ? (
-        <p className="text-label text-ink-2">{term("schedule.cron.hint")}</p>
+        <p className="text-b17 text-fg-mute">{term("schedule.cron.hint")}</p>
       ) : preview.ok ? (
         <>
-          <p className="text-body text-ink-1" data-cron-description>
+          <p className="m-0 text-b19 text-fg" data-cron-description>
             {preview.description}
           </p>
-          <p className="text-label text-ink-2">
+          <p className="text-b17 text-fg-mute">
             {term("schedule.preview.next")}:{" "}
             {preview.nextRuns.map((d) => formatWhen(d.toISOString(), zone)).join(" · ")}
           </p>
         </>
       ) : (
-        <p className="text-label text-ink-1" data-cron-error>
+        <p className="text-b19 text-fg" data-cron-error>
           {term("schedule.preview.invalid")}: {preview.error}
         </p>
       )}
@@ -126,8 +124,8 @@ function ScheduleForm({
     onSave({ ...draft, cron: draft.cron.trim(), timezone: draft.timezone.trim() });
   };
   return (
-    <form aria-label={title} onSubmit={submit} className="flex flex-col gap-(--ow-space-2)">
-      <div className="flex flex-wrap items-end gap-(--ow-space-2)">
+    <form aria-label={title} onSubmit={submit} className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-end gap-2">
         <label className={label}>
           {term("schedule.cron")}
           <input
@@ -154,7 +152,7 @@ function ScheduleForm({
           onChange={(e) => set({ prompt: e.target.value })}
         />
       </label>
-      <label className="flex items-center gap-(--ow-space-2) text-label text-ink-1">
+      <label className="flex items-center gap-2 text-b19 text-fg">
         <input
           type="checkbox"
           checked={draft.catchUp}
@@ -162,7 +160,7 @@ function ScheduleForm({
         />
         {term("schedule.catchUp")}
       </label>
-      <div className="flex flex-wrap gap-(--ow-space-2)">
+      <div className="flex flex-wrap gap-2">
         <button type="submit" className={button} disabled={pending}>
           {term("schedule.save")}
         </button>
@@ -181,7 +179,7 @@ function FireLine({ fire }: { readonly fire: ScheduleFireItem }) {
       ? `${term(fire.manual ? "schedule.manual" : "schedule.fired")}${fire.runState ? ` · ${fire.runState}` : ""}`
       : `${term("schedule.missed")}: ${fire.reason ? term(`schedule.missed.${fire.reason}`) : ""}`;
   return (
-    <li data-outcome={fire.outcome} className="font-mono text-mono text-ink-2">
+    <li data-outcome={fire.outcome} className="text-b17 text-fg-mute">
       {formatWhen(fire.scheduledFor)} · {what}
       {fire.detail && fire.reason === "error" ? ` (${fire.detail})` : ""}
     </li>
@@ -209,13 +207,13 @@ function ScheduleCard({
     <section
       aria-labelledby={titleId}
       data-schedule={schedule.id}
-      className="flex flex-col gap-(--ow-space-2) rounded-panel border border-border-subtle p-(--ow-space-3)"
+      className="flex flex-col gap-2 border border-line-faint bg-well-2 p-2.5"
     >
-      <header className="flex flex-wrap items-baseline justify-between gap-(--ow-space-2)">
-        <h3 id={titleId} className="font-mono text-mono text-ink-1">
+      <header className="flex flex-wrap items-baseline justify-between gap-2">
+        <h3 id={titleId} className="m-0 font-display font-normal text-d8 text-fg-hi uppercase">
           {schedule.id}
         </h3>
-        <label className="flex items-center gap-(--ow-space-2) text-label text-ink-1">
+        <label className="flex items-center gap-2 text-b19 text-fg">
           <input
             type="checkbox"
             checked={schedule.enabled}
@@ -261,19 +259,19 @@ function ScheduleCard({
         />
       ) : (
         <>
-          <p className="text-body text-ink-1">
-            <span className="font-mono text-mono">{schedule.cron}</span>
+          <p className="m-0 text-b19 text-fg">
+            <span className="text-cyan">{schedule.cron}</span>
             {preview?.ok ? ` · ${preview.description}` : ""}
           </p>
-          <p className="text-body text-ink-1">{schedule.prompt}</p>
-          <p className="text-label text-ink-2">
+          <p className="m-0 text-b19 text-fg">{schedule.prompt}</p>
+          <p className="text-b17 text-fg-mute">
             {schedule.error
               ? schedule.error
               : schedule.nextRunAt
                 ? `${term("schedule.next")}: ${formatWhen(schedule.nextRunAt, schedule.timezone)} (${schedule.timezone})`
                 : term("schedule.off")}
           </p>
-          <div className="flex flex-wrap gap-(--ow-space-2)">
+          <div className="flex flex-wrap gap-2">
             <button
               type="button"
               className={button}
@@ -295,7 +293,7 @@ function ScheduleCard({
             </button>
             {sessionId ? (
               <Link
-                className="self-center text-label text-ink-1 underline"
+                className="self-center font-display text-d7 uppercase"
                 to={`/comms?agent=${encodeURIComponent(agentId)}&open=${encodeURIComponent(sessionId)}`}
               >
                 {term("schedule.session")}
@@ -306,11 +304,11 @@ function ScheduleCard({
         </>
       )}
       {schedule.history.length > 0 ? (
-        <div className="flex flex-col gap-(--ow-space-1)">
-          <h4 className="font-mono text-eyebrow uppercase text-ink-3">
+        <div className="flex flex-col gap-1.5">
+          <h4 className="m-0 font-display font-normal text-d7 text-fg-mute uppercase">
             {term("schedule.history")}
           </h4>
-          <ul className="flex flex-col gap-(--ow-space-1)">
+          <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
             {schedule.history.map((f) => (
               <FireLine key={`${f.at}-${f.scheduledFor}`} fire={f} />
             ))}
@@ -330,14 +328,20 @@ export function SchedulesSection({ agentId }: { readonly agentId: string }) {
   const [adding, setAdding] = useState(false);
   const list = schedules.data ?? [];
   return (
-    <section aria-labelledby="schedules-title" className="flex flex-col gap-(--ow-space-2)">
-      <h2 id="schedules-title" className="font-mono text-eyebrow uppercase text-ink-3">
+    <section
+      aria-labelledby="schedules-title"
+      className="flex flex-col gap-2 border-2 border-line bg-panel p-3 shadow-panel"
+    >
+      <h2
+        id="schedules-title"
+        className="m-0 font-display font-normal text-d7 text-fg-mute uppercase"
+      >
         {term("schedules")}
       </h2>
-      <p className="text-label text-ink-2">{term("schedule.hint")}</p>
+      <p className="text-b17 text-fg-mute">{term("schedule.hint")}</p>
       <ErrorNote error={schedules.error} />
       {schedules.isSuccess && list.length === 0 ? (
-        <p className="text-body text-ink-2">{term("schedule.none")}</p>
+        <p className="m-0 text-b17 text-fg-mute">{term("schedule.none")}</p>
       ) : null}
       {list.map((s) => (
         <ScheduleCard key={s.id} agentId={agentId} schedule={s} machineZone={machineZone} />

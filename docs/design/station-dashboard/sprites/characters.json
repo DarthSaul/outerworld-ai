@@ -1,0 +1,207 @@
+{
+  "spriteSize": {
+    "w": 20,
+    "h": 26
+  },
+  "sheet": {
+    "file": "sprites/sheet-4x.png",
+    "scale": 4,
+    "cols": 6,
+    "cellW": 80,
+    "cellH": 104
+  },
+  "characters": [
+    {
+      "index": 0,
+      "id": "nova",
+      "name": "NOVA",
+      "role": "Pilot",
+      "file1x": "sprites/1x/00-nova.png",
+      "file8x": "sprites/8x/00-nova.png"
+    },
+    {
+      "index": 1,
+      "id": "bolt",
+      "name": "BOLT",
+      "role": "Utility Bot",
+      "file1x": "sprites/1x/01-bolt.png",
+      "file8x": "sprites/8x/01-bolt.png"
+    },
+    {
+      "index": 2,
+      "id": "pip",
+      "name": "PIP",
+      "role": "Xeno Liaison",
+      "file1x": "sprites/1x/02-pip.png",
+      "file8x": "sprites/8x/02-pip.png"
+    },
+    {
+      "index": 3,
+      "id": "kestrel",
+      "name": "KESTREL",
+      "role": "Commander",
+      "file1x": "sprites/1x/03-kestrel.png",
+      "file8x": "sprites/8x/03-kestrel.png"
+    },
+    {
+      "index": 4,
+      "id": "dr-iso",
+      "name": "DR. ISO",
+      "role": "Scientist",
+      "file1x": "sprites/1x/04-dr-iso.png",
+      "file8x": "sprites/8x/04-dr-iso.png"
+    },
+    {
+      "index": 5,
+      "id": "rivet",
+      "name": "RIVET",
+      "role": "Mechanic",
+      "file1x": "sprites/1x/05-rivet.png",
+      "file8x": "sprites/8x/05-rivet.png"
+    },
+    {
+      "index": 6,
+      "id": "zephyr",
+      "name": "ZEPHYR",
+      "role": "Comms Officer",
+      "file1x": "sprites/1x/06-zephyr.png",
+      "file8x": "sprites/8x/06-zephyr.png"
+    },
+    {
+      "index": 7,
+      "id": "glitch",
+      "name": "GLITCH",
+      "role": "Netrunner",
+      "file1x": "sprites/1x/07-glitch.png",
+      "file8x": "sprites/8x/07-glitch.png"
+    },
+    {
+      "index": 8,
+      "id": "moss",
+      "name": "MOSS",
+      "role": "Botanist",
+      "file1x": "sprites/1x/08-moss.png",
+      "file8x": "sprites/8x/08-moss.png"
+    },
+    {
+      "index": 9,
+      "id": "lumen",
+      "name": "LUMEN",
+      "role": "Spacewalker",
+      "file1x": "sprites/1x/09-lumen.png",
+      "file8x": "sprites/8x/09-lumen.png"
+    },
+    {
+      "index": 10,
+      "id": "crux",
+      "name": "CRUX",
+      "role": "Vanguard",
+      "file1x": "sprites/1x/10-crux.png",
+      "file8x": "sprites/8x/10-crux.png"
+    },
+    {
+      "index": 11,
+      "id": "sable",
+      "name": "SABLE",
+      "role": "Strategist",
+      "file1x": "sprites/1x/11-sable.png",
+      "file8x": "sprites/8x/11-sable.png"
+    },
+    {
+      "index": 12,
+      "id": "tock",
+      "name": "TOCK",
+      "role": "Clockwork Unit",
+      "file1x": "sprites/1x/12-tock.png",
+      "file8x": "sprites/8x/12-tock.png"
+    },
+    {
+      "index": 13,
+      "id": "bramble",
+      "name": "BRAMBLE",
+      "role": "Mystic",
+      "file1x": "sprites/1x/13-bramble.png",
+      "file8x": "sprites/8x/13-bramble.png"
+    },
+    {
+      "index": 14,
+      "id": "echo",
+      "name": "ECHO",
+      "role": "Analyst",
+      "file1x": "sprites/1x/14-echo.png",
+      "file8x": "sprites/8x/14-echo.png"
+    },
+    {
+      "index": 15,
+      "id": "hawk",
+      "name": "HAWK",
+      "role": "Security",
+      "file1x": "sprites/1x/15-hawk.png",
+      "file8x": "sprites/8x/15-hawk.png"
+    },
+    {
+      "index": 16,
+      "id": "marlow",
+      "name": "MARLOW",
+      "role": "Archivist",
+      "file1x": "sprites/1x/16-marlow.png",
+      "file8x": "sprites/8x/16-marlow.png"
+    },
+    {
+      "index": 17,
+      "id": "vega",
+      "name": "VEGA",
+      "role": "Navigator",
+      "file1x": "sprites/1x/17-vega.png",
+      "file8x": "sprites/8x/17-vega.png"
+    },
+    {
+      "index": 18,
+      "id": "sprocket",
+      "name": "SPROCKET",
+      "role": "Apprentice",
+      "file1x": "sprites/1x/18-sprocket.png",
+      "file8x": "sprites/8x/18-sprocket.png"
+    },
+    {
+      "index": 19,
+      "id": "onyx",
+      "name": "ONYX",
+      "role": "Operative",
+      "file1x": "sprites/1x/19-onyx.png",
+      "file8x": "sprites/8x/19-onyx.png"
+    },
+    {
+      "index": 20,
+      "id": "fennec",
+      "name": "FENNEC",
+      "role": "Pathfinder",
+      "file1x": "sprites/1x/20-fennec.png",
+      "file8x": "sprites/8x/20-fennec.png"
+    },
+    {
+      "index": 21,
+      "id": "quill",
+      "name": "QUILL",
+      "role": "Scribe",
+      "file1x": "sprites/1x/21-quill.png",
+      "file8x": "sprites/8x/21-quill.png"
+    },
+    {
+      "index": 22,
+      "id": "atlas",
+      "name": "ATLAS",
+      "role": "Heavy Lifter",
+      "file1x": "sprites/1x/22-atlas.png",
+      "file8x": "sprites/8x/22-atlas.png"
+    },
+    {
+      "index": 23,
+      "id": "juno",
+      "name": "JUNO",
+      "role": "Dispatcher",
+      "file1x": "sprites/1x/23-juno.png",
+      "file8x": "sprites/8x/23-juno.png"
+    }
+  ]
+}

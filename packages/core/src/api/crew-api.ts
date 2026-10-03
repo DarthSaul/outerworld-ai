@@ -1,10 +1,8 @@
 import { z } from "zod";
-import type { AgentConfig } from "../config/agent-config.js";
-import { AgentRole, ApprovalMode, Schedule } from "../config/agent-config.js";
+import { AgentConfig, AgentRole, ApprovalMode, Schedule } from "../config/agent-config.js";
 import { Prop, type StationConfig } from "../config/station-config.js";
 import type { EffectiveTool } from "../policy/grants.js";
 import { Id, type Issue } from "../schema/common.js";
-import { Rig } from "../schema/station.js";
 
 /**
  * The HTTP contract for crew and rooms (Phase 2), shared by the daemon (validation) and the SPA
@@ -34,7 +32,7 @@ export const UpdateAgentInput = z.strictObject({
   model: z.string().min(1).optional(),
   approvalMode: ApprovalMode.optional(),
   connectorGrants: z.array(Id).optional(),
-  rig: Rig.optional(),
+  look: AgentConfig.shape.look,
 });
 
 /** A scheduled prompt is sent like a Commander's message, so it has the same practical limit. */
@@ -78,6 +76,14 @@ export const UpdateRoomInput = z.strictObject({
   description: z.string().max(500).optional(),
   props: z.array(Prop).optional(),
 });
+
+/** `POST /api/lanes`: opens a hallway between two rooms (ADR-0013 #8); the id is made by the runtime. */
+export const CreateLaneInput = z.strictObject({
+  from: Id,
+  to: Id,
+  note: z.string().trim().min(1).max(200).optional(),
+});
+export type CreateLaneInput = z.infer<typeof CreateLaneInput>;
 
 /** `PUT /api/budgets`: each cap in USD, or `null` for no cap. Missing fields keep their value. */
 const Cap = z.number().positive().max(100_000).nullable().optional();

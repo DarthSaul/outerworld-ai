@@ -1,96 +1,72 @@
 /**
  * @darthsaul/outerworld-ai-ui
  *
- * React components and design tokens. Knows nothing about Routines or GitHub.
- * Import "@darthsaul/outerworld-ai-ui/styles.css" once in the app after tailwindcss, and render
- * <RigSprite /> once near the root so every figure can reference its parts.
+ * The station dashboard's React components and design tokens (ADR-0013). Knows core, never the
+ * runtime. Import "@darthsaul/outerworld-ai-ui/styles.css" once in the app after tailwindcss.
  */
-export {
-  Character,
-  type CharacterProps,
-  RIG_UNITS,
-  type RigAccessory,
-  type RigChoice,
-  type RigDerived,
-  type RigHead,
-  type RigShoulder,
-  type RigTrace,
-} from "./character/Character.js";
-export {
-  HERO_UNITS,
-  OverseerCharacter,
-  type OverseerCharacterProps,
-  type OverseerState,
-} from "./character/OverseerCharacter.js";
-export { RIG_PARTS, type RigPartName } from "./character/rig-parts.js";
-export { RIG_SYMBOLS, RigSprite, symbolId } from "./character/sprite.js";
-export { AgentCard, type AgentCardProps } from "./components/AgentCard.js";
-export { DetailPanel, type DetailPanelProps } from "./components/DetailPanel.js";
 export { EmptyState, type EmptyStateProps } from "./components/EmptyState.js";
+// Station dashboard primitives (ADR-0013)
+export { Avatar, type AvatarProps, overseerAvatarProps } from "./station/Avatar.js";
 export {
-  clockLabel,
-  dateLabel,
-  durationLabel,
-  isHttpsUrl,
-  timeLabel,
-} from "./components/format.js";
-export { GrantChip, type GrantChipProps } from "./components/GrantChip.js";
+  ChoiceButton,
+  type ChoiceButtonProps,
+  Diamond,
+  OutlineButton,
+  type OutlineButtonProps,
+  tabClass,
+} from "./station/buttons.js";
+export { CrewRoster, type CrewRosterProps } from "./station/CrewRoster.js";
 export {
-  CHEVRON_PATH,
-  HandoffLayer,
-  type HandoffLayerItem,
-  type HandoffLayerProps,
-  type HandoffPathGeometry,
-  type HandoffVisualState,
-  Packet,
-} from "./components/HandoffLayer.js";
-export { OverseerCore, type OverseerCoreProps } from "./components/OverseerCore.js";
-export { Pane, type PaneProps } from "./components/Pane.js";
-export { StationMap, type StationMapProps } from "./components/StationMap.js";
-export { StationView, type StationViewProps } from "./components/StationView.js";
+  CrewSelect,
+  type CrewSelectAgent,
+  type CrewSelectProps,
+} from "./station/CrewSelect.js";
 export {
-  isSelected,
-  type ResolvedSelection,
-  resolveSelection,
-  type Selection,
-  type SelectionKind,
-  sameSelection,
-  teamOfSelection,
-} from "./components/selection.js";
+  DashboardMap,
+  type DashboardMapProps,
+  type DashboardSelection,
+  grantName,
+  MAP_STYLES,
+  type MapStyle,
+  roomColor,
+} from "./station/DashboardMap.js";
 export {
-  EMBLEM_UNITS,
-  type EmblemMark,
-  TeamEmblem,
-  type TeamEmblemProps,
-} from "./components/TeamEmblem.js";
+  type CommsMessage,
+  OverseerComms,
+  type OverseerCommsProps,
+  useTypewriter,
+} from "./station/OverseerComms.js";
+export { Panel, PanelLabel, type PanelProps } from "./station/Panel.js";
+export { Scanner, type ScannerProps } from "./station/Scanner.js";
+export { SegmentBar, type SegmentBarProps } from "./station/SegmentBar.js";
+export { Sprite, type SpriteProps } from "./station/Sprite.js";
+export { StatBox, type StatBoxProps } from "./station/StatBox.js";
 export {
-  TeamPanel,
-  type TeamPanelAgent,
-  type TeamPanelGrant,
-  type TeamPanelProps,
-} from "./components/TeamPanel.js";
-export { Toast, type ToastProps, ToastRegion } from "./components/Toast.js";
-export { useDesktop } from "./components/useDesktop.js";
+  CrtToggle,
+  formatTokens,
+  formatUptime,
+  RadioChatter,
+  type RadioEntry,
+  StationHeader,
+  type StationHeaderProps,
+  StationVitals,
+  type StationVitalsProps,
+  StopButton,
+  useUptime,
+} from "./station/StationChrome.js";
 export {
-  DRAG_THRESHOLD_PX,
-  type PanState,
-  type UsePanOptions,
-  usePan,
-} from "./components/usePan.js";
-export { RunDigestButton, type RunDigestButtonProps } from "./timeline/RunDigestButton.js";
-export { runDigestTimeline, type TimelineStep } from "./timeline/runDigestTimeline.js";
-export { type Timeline, type UseTimelineOptions, useTimeline } from "./timeline/useTimeline.js";
+  CREW_STATUS_TONE,
+  lampBlink,
+  RUN_STATUS_TONE,
+  type Tone,
+  toneVar,
+} from "./station/tone.js";
+export { useAnimationClock, useReducedMotion } from "./station/useClock.js";
 export {
-  BLINK_STAGGER_MS,
-  GRANT_MODES,
-  type GrantMode,
-  glowToken,
-  HEALTH_STATES,
-  type HealthState,
-  MOTION_MS,
-  RUN_STATES,
-  type RunState,
-  THEMED_TOKENS,
-  tokenVar,
-  ZOOM,
+  PACKET_SPEED,
+  ROOM_COLOR_COUNT,
+  roomColorVar,
+  STATION_MS,
+  stVar,
+  type TokenName,
 } from "./tokens/tokens.js";

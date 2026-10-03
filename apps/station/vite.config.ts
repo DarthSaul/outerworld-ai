@@ -4,7 +4,6 @@ import { join, resolve } from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig, type Plugin } from "vite";
-import { injectThemeInit } from "./src/theme-init.js";
 
 const home = (() => {
   const raw = process.env.OUTERWORLD_HOME;
@@ -35,13 +34,8 @@ function devToken(): Plugin {
   };
 }
 
-/** Dev and build: the theme init script, inlined so the first paint already has the theme. */
-function themeInit(): Plugin {
-  return { name: "outerworld-theme-init", transformIndexHtml: injectThemeInit };
-}
-
 export default defineConfig({
-  plugins: [react(), tailwindcss(), themeInit(), devToken()],
+  plugins: [react(), tailwindcss(), devToken()],
   server: {
     host: "localhost",
     port: 5173,

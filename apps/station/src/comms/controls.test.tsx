@@ -84,25 +84,29 @@ describe("Notifications", () => {
 });
 
 describe("kill switch and spend", () => {
-  it("stops everything in one click, shows a banner, and resumes", async () => {
+  it("stops everything in one click, covers the map and stops blinking, and resumes", async () => {
     const user = userEvent.setup();
-    const { calls, control, emit } = renderApp("/");
-    await user.click(await screen.findByRole("button", { name: term("killSwitch.engage") }));
+    const { calls, control, emit, container } = renderApp("/");
+    await user.click(await screen.findByRole("button", { name: term("station.stop") }));
     expect(calls).toContainEqual({ method: "PUT", path: "/kill-switch", body: { engaged: true } });
     emit({ type: "station.kill_switch", payload: { engaged: true } });
-    expect(await screen.findByRole("alert")).toHaveTextContent(term("killSwitch.on"));
+    expect(await screen.findByText(term("station.stopped.title"))).toBeInTheDocument();
+    expect(container.querySelector("[data-paused]")).not.toBeNull();
     expect(control.engaged).toBe(true);
-    await user.click(screen.getByRole("button", { name: term("killSwitch.clear") }));
+    await user.click(screen.getByRole("button", { name: term("station.resume") }));
     emit({ type: "station.kill_switch", payload: { engaged: false } });
-    await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.queryByText(term("station.stopped.title"))).not.toBeInTheDocument(),
+    );
+    expect(container.querySelector("[data-paused]")).toBeNull();
   });
 
-  it("shows today's station spend in the header and each crew member's on the Crew screen", async () => {
+  it("shows today's station spend in the footer and each crew member's on the Crew screen", async () => {
     const fake = fakeApi();
     fake.spend.stationUsd = 0.4312;
     fake.spend.agents = { vesper: 0.0042 };
     renderApp("/crew", fake);
-    expect(await screen.findByText(`${term("spend.today")} $0.43`)).toBeInTheDocument();
+    expect(await screen.findByText("Fuel · $0.43 today, no cap")).toBeInTheDocument();
     const command = await screen.findByRole("region", { name: "Command" });
     expect(within(command).getByText(`${term("spend.today")} $0.0042`)).toBeInTheDocument();
   });

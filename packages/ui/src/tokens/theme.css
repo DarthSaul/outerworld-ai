@@ -1,193 +1,138 @@
 /*
- * Tailwind v4 theme mapping. `inline` so utilities emit var(--ow-*) references and follow the
- * theme at runtime. Only tokens with a Tailwind namespace live here; everything else is used as
- * var(--ow-*) directly or via the (--ow-*) arbitrary-value syntax, e.g. duration-(--ow-dur-fast).
+ * Tailwind v4 theme mapping for the station dashboard tokens (ADR-0003, ADR-0013). `inline` so
+ * utilities emit var(--st-*) references. Stock namespaces are reset so no off-token utility
+ * exists; anything without a namespace is used as var(--st-*) directly.
  */
 @theme inline {
-  /* Reset Tailwind's palette so no non-token color utility exists. */
   --color-*: initial;
-  --color-surface-map: var(--ow-surface-map);
-  --color-surface-map-end: var(--ow-surface-map-end);
-  --color-surface-void: var(--ow-surface-void);
-  --color-surface-team: var(--ow-surface-team);
-  --color-surface-panel: var(--ow-surface-panel);
-  --color-surface-raised: var(--ow-surface-raised);
-  --color-border-subtle: var(--ow-border-subtle);
-  --color-border-strong: var(--ow-border-strong);
-  --color-ink-1: var(--ow-ink-1);
-  --color-ink-2: var(--ow-ink-2);
-  --color-ink-3: var(--ow-ink-3);
-  --color-grant-read: var(--ow-grant-read);
-  --color-grant-write: var(--ow-grant-write);
-  --color-health-ok: var(--ow-health-ok);
-  --color-health-attention: var(--ow-health-attention);
-  --color-health-stalled: var(--ow-health-stalled);
-  --color-run-working: var(--ow-run-working);
-  --color-run-idle: var(--ow-run-idle);
-  --color-run-done: var(--ow-run-done);
-  --color-run-failed: var(--ow-run-failed);
-  --color-selection-ring: var(--ow-selection-ring);
-  --color-selection-halo: var(--ow-selection-halo);
-  --color-handoff-default: var(--ow-handoff-default);
-  --color-handoff-emphasis: var(--ow-handoff-emphasis);
-  --color-handoff-carrying: var(--ow-handoff-carrying);
-  --color-chip-read: var(--ow-chip-bg-read);
-  --color-chip-write: var(--ow-chip-bg-write);
-  --color-chip-read-active: var(--ow-chip-bg-read-active);
-  --color-chip-write-active: var(--ow-chip-bg-write-active);
-  --color-chip-border-read: var(--ow-chip-border-read);
-  --color-chip-border-write: var(--ow-chip-border-write);
-  --color-rig-primary: var(--ow-rig-primary);
-  --color-rig-secondary: var(--ow-rig-secondary);
-  --color-rig-highlight: var(--ow-rig-highlight);
-  --color-rig-frame: var(--ow-rig-frame);
-  --color-rig-visor: var(--ow-rig-visor);
-  --color-rig-glow: var(--ow-rig-glow);
-  --color-overseer-primary: var(--ow-overseer-primary);
-  --color-overseer-secondary: var(--ow-overseer-secondary);
-  --color-overseer-frame: var(--ow-overseer-frame);
-  --color-emblem-base: var(--ow-emblem-base);
-  --color-emblem-shade: var(--ow-emblem-shade);
-  --color-emblem-glow: var(--ow-emblem-glow);
-  --color-emblem-mark: var(--ow-emblem-mark);
+  --color-shadow: var(--st-shadow);
+  --color-track: var(--st-track);
+  --color-map-bg: var(--st-map-bg);
+  --color-chip-bg: var(--st-chip-bg);
+  --color-bg: var(--st-bg);
+  --color-well: var(--st-well);
+  --color-input-row: var(--st-input-row);
+  --color-well-2: var(--st-well-2);
+  --color-room: var(--st-room);
+  --color-panel: var(--st-panel);
+  --color-bar: var(--st-bar);
+  --color-bridge-bg: var(--st-bridge-bg);
+  --color-btn-hover: var(--st-btn-hover);
+  --color-hover: var(--st-hover);
+  --color-panel-head: var(--st-panel-head);
+  --color-active-bg: var(--st-active-bg);
+  --color-pedestal: var(--st-pedestal);
+  --color-tile: var(--st-tile);
+  --color-tile-hover: var(--st-tile-hover);
+  --color-tile-line: var(--st-tile-line);
+  --color-portrait-a: var(--st-portrait-a);
+  --color-portrait-b: var(--st-portrait-b);
+  --color-approve-hover: var(--st-approve-hover);
+  --color-deny-hover: var(--st-deny-hover);
+  --color-random-hover: var(--st-random-hover);
+  --color-scrim: var(--st-scrim);
+  --color-line-strong: var(--st-line-strong);
+  --color-line: var(--st-line);
+  --color-line-soft: var(--st-line-soft);
+  --color-line-faint: var(--st-line-faint);
+  --color-fg-hi: var(--st-text-hi);
+  --color-fg: var(--st-text);
+  --color-fg-chip: var(--st-text-chip);
+  --color-fg-log: var(--st-text-log);
+  --color-fg-grant: var(--st-text-grant);
+  --color-fg-soft: var(--st-text-soft);
+  --color-fg-quiet: var(--st-text-quiet);
+  --color-fg-mute: var(--st-text-mute);
+  --color-fg-dim: var(--st-text-dim);
+  --color-ink: var(--st-ink);
+  --color-on-red: var(--st-on-red);
+  --color-title: var(--st-title);
+  --color-subtitle: var(--st-subtitle);
+  --color-panel-title: var(--st-panel-title);
+  --color-link-hover: var(--st-link-hover);
+  --color-star: var(--st-star);
+  --color-cyan: var(--st-cyan);
+  --color-violet: var(--st-violet);
+  --color-amber: var(--st-amber);
+  --color-amber-hi: var(--st-amber-hi);
+  --color-green: var(--st-green);
+  --color-red: var(--st-red);
+  --color-red-text: var(--st-red-text);
+  --color-white: var(--st-white);
+  --color-lane-auth: var(--st-lane-auth);
+  --color-lane-selected: var(--st-lane-selected);
+  --color-done: var(--st-done);
+  --color-room-0: var(--st-room-0);
+  --color-room-1: var(--st-room-1);
+  --color-room-2: var(--st-room-2);
+  --color-room-3: var(--st-room-3);
+  --color-room-4: var(--st-room-4);
+  --color-room-5: var(--st-room-5);
 
-  --font-sans: var(--ow-font-sans);
-  --font-mono: var(--ow-font-mono);
+  --font-sans: var(--st-font-body);
+  --font-display: var(--st-font-display);
+  --font-body: var(--st-font-body);
 
   --text-*: initial;
-  --text-display: var(--ow-text-display-size);
-  --text-display--line-height: var(--ow-text-display-line);
-  --text-display--font-weight: var(--ow-text-display-weight);
-  --text-title: var(--ow-text-title-size);
-  --text-title--line-height: var(--ow-text-title-line);
-  --text-title--font-weight: var(--ow-text-title-weight);
-  --text-heading: var(--ow-text-heading-size);
-  --text-heading--line-height: var(--ow-text-heading-line);
-  --text-heading--font-weight: var(--ow-text-heading-weight);
-  --text-body: var(--ow-text-body-size);
-  --text-body--line-height: var(--ow-text-body-line);
-  --text-body--font-weight: var(--ow-text-body-weight);
-  --text-label: var(--ow-text-label-size);
-  --text-label--line-height: var(--ow-text-label-line);
-  --text-label--font-weight: var(--ow-text-label-weight);
-  --text-caption: var(--ow-text-caption-size);
-  --text-caption--line-height: var(--ow-text-caption-line);
-  --text-caption--font-weight: var(--ow-text-caption-weight);
-  --text-mono: var(--ow-text-mono-size);
-  --text-mono--line-height: var(--ow-text-mono-line);
-  --text-mono--font-weight: var(--ow-text-mono-weight);
-  --text-eyebrow: var(--ow-text-eyebrow-size);
-  --text-eyebrow--line-height: var(--ow-text-eyebrow-line);
-  --text-eyebrow--font-weight: var(--ow-text-eyebrow-weight);
-  --text-eyebrow--letter-spacing: var(--ow-text-eyebrow-tracking);
+  --text-d6: var(--st-d6);
+  --text-d6--line-height: var(--st-display-line-height);
+  --text-d7: var(--st-d7);
+  --text-d7--line-height: var(--st-display-line-height);
+  --text-d8: var(--st-d8);
+  --text-d8--line-height: var(--st-display-line-height);
+  --text-d9: var(--st-d9);
+  --text-d9--line-height: var(--st-display-line-height);
+  --text-d10: var(--st-d10);
+  --text-d10--line-height: var(--st-display-line-height);
+  --text-d11: var(--st-d11);
+  --text-d11--line-height: var(--st-display-line-height);
+  --text-d12: var(--st-d12);
+  --text-d12--line-height: var(--st-display-line-height);
+  --text-d14: var(--st-d14);
+  --text-d14--line-height: var(--st-display-line-height);
+  --text-d18: var(--st-d18);
+  --text-d18--line-height: var(--st-display-line-height);
+  --text-d30: var(--st-d30);
+  --text-d30--line-height: var(--st-display-line-height);
+  --text-b14: var(--st-b14);
+  --text-b14--line-height: var(--st-line-height);
+  --text-b15: var(--st-b15);
+  --text-b15--line-height: var(--st-line-height);
+  --text-b16: var(--st-b16);
+  --text-b16--line-height: var(--st-line-height);
+  --text-b17: var(--st-b17);
+  --text-b17--line-height: var(--st-line-height);
+  --text-b18: var(--st-b18);
+  --text-b18--line-height: var(--st-line-height);
+  --text-b19: var(--st-b19);
+  --text-b19--line-height: var(--st-line-height);
+  --text-b20: var(--st-b20);
+  --text-b20--line-height: var(--st-line-height);
+  --text-b21: var(--st-b21);
+  --text-b21--line-height: var(--st-line-height);
+  --text-b22: var(--st-b22);
+  --text-b22--line-height: var(--st-line-height);
 
-  /* Spacing: Tailwind's default multiplier is already 4px (0.25rem), matching the 4px base.
-     Named steps exist for the design doc's vocabulary. */
-  --spacing-ow-1: var(--ow-space-1);
-  --spacing-ow-2: var(--ow-space-2);
-  --spacing-ow-3: var(--ow-space-3);
-  --spacing-ow-4: var(--ow-space-4);
-  --spacing-ow-5: var(--ow-space-5);
-  --spacing-ow-6: var(--ow-space-6);
-  --spacing-ow-8: var(--ow-space-8);
-  --spacing-ow-12: var(--ow-space-12);
+  --tracking-*: initial;
+  --tracking-st-1: var(--st-tracking-1);
+  --tracking-st-2: var(--st-tracking-2);
+  --tracking-st-4: var(--st-tracking-4);
+
+  --shadow-*: initial;
+  --shadow-panel: var(--st-shadow-panel);
+  --shadow-tile: var(--st-shadow-tile);
+  --shadow-bar-down: var(--st-shadow-bar-down);
+  --shadow-bar-up: var(--st-shadow-bar-up);
 
   --radius-*: initial;
-  --radius-team: var(--ow-radius-team);
-  --radius-panel: var(--ow-radius-panel);
-  --radius-agent: var(--ow-radius-agent);
-  --radius-control: var(--ow-radius-control);
-  --radius-chip: var(--ow-radius-chip);
-  --radius-full: var(--ow-radius-full);
+  --radius-pill: var(--st-radius-pill);
+  --radius-round: var(--st-radius-round);
 
   /* Media queries cannot read custom properties, so this is the one literal in the theme. It
-     must equal --ow-breakpoint-mobile in tokens.css; tokens.test.ts enforces that. */
+     must equal --st-breakpoint-desktop in station.css; tokens.test.ts enforces that. */
   --breakpoint-*: initial;
   --breakpoint-desktop: 720px;
 
   --ease-*: initial;
-  --ease-standard: var(--ow-ease-standard);
-  --ease-exit: var(--ow-ease-exit);
-  --ease-packet: var(--ow-ease-packet);
-  --ease-breathe: var(--ow-ease-breathe);
-
   --animate-*: initial;
-  --animate-breathe: ow-breathe var(--ow-dur-breathe) var(--ow-ease-breathe) infinite;
-  --animate-packet: ow-packet var(--ow-dur-packet) var(--ow-ease-packet) forwards;
-  --animate-chip: ow-chip var(--ow-dur-packet) var(--ow-ease-packet) forwards;
-  --animate-bob: ow-bob var(--ow-dur-breathe) var(--ow-ease-breathe) infinite;
-  --animate-nod: ow-nod var(--ow-dur-breathe) var(--ow-ease-breathe) infinite;
-  --animate-pop: ow-pop var(--ow-dur-fast) var(--ow-ease-standard) 1;
-  --animate-fail: ow-fail var(--ow-dur-fast) var(--ow-ease-standard) forwards;
-
-  @keyframes ow-breathe {
-    0%,
-    100% {
-      box-shadow: 0 0 0 0 transparent;
-    }
-    50% {
-      box-shadow: 0 0 0 var(--ow-space-1) var(--ow-breathe-halo);
-    }
-  }
-  @keyframes ow-packet {
-    0% {
-      offset-distance: 0%;
-      opacity: 0;
-    }
-    8% {
-      opacity: 1;
-    }
-    92% {
-      opacity: 1;
-    }
-    100% {
-      offset-distance: 100%;
-      opacity: 0;
-    }
-  }
-  /* Rig keyframes act on SVG groups; --ow-rig-px is set by the component as 1 unit at its scale. */
-  @keyframes ow-bob {
-    0%,
-    100% {
-      transform: translateY(0);
-    }
-    50% {
-      transform: translateY(calc(var(--ow-rig-bob-units) * var(--ow-rig-px, 1px)));
-    }
-  }
-  @keyframes ow-nod {
-    0%,
-    100% {
-      transform: translateY(0);
-    }
-    50% {
-      transform: translateY(calc(var(--ow-rig-nod-units) * var(--ow-rig-px, 1px)));
-    }
-  }
-  @keyframes ow-pop {
-    0%,
-    100% {
-      transform: scale(1);
-    }
-    50% {
-      transform: scale(var(--ow-rig-pop-scale));
-    }
-  }
-  @keyframes ow-fail {
-    to {
-      opacity: var(--ow-opacity-failed);
-    }
-  }
-  @keyframes ow-chip {
-    0% {
-      background: transparent;
-    }
-    20%,
-    70% {
-      background: var(--ow-chip-bg-write-active);
-    }
-    100% {
-      background: transparent;
-    }
-  }
 }

@@ -19,9 +19,9 @@ wins and this file gets fixed. The plan and progress are in `tasks/todo.md`.
 **Product law:** the interface never asserts state the runtime cannot prove. The map is a
 projection of events, never a simulation.
 
-Milestone 1 (a read-only dashboard for Claude Code Routines) is archived (ADR-0010). Its map model
-stays in core and ui: the station map draws the runtime through it via core's `mapModelFor` (D14, D24),
-and its own fixture `fixtures/map-demo/` feeds the ui tests and the `/dev` gallery.
+Milestone 1 (a read-only dashboard for Claude Code Routines) is archived (ADR-0010); its schemas
+and ledger parsing stay in core, tested against `fixtures/map-demo/`. The station dashboard
+(ADR-0013) draws the runtime through core's `dashboardModel`.
 
 ## Vocabulary rule
 
@@ -57,10 +57,10 @@ packages/core/     @darthsaul/outerworld-ai-core — zod schemas (station.json, 
                    prompt assembly, run state transitions, layout math. No IO, no React.
 packages/runtime/  @darthsaul/outerworld-ai-runtime — agent loop, dispatcher, scheduler, tools,
                    MCP client, memory, budgets, storage (files, SQLite, keychain).
-packages/ui/       @darthsaul/outerworld-ai-ui — React components, tokens, the rigged character,
-                   the station map. Knows core, never runtime.
+packages/ui/       @darthsaul/outerworld-ai-ui — React components and --st-* tokens of the station
+                   dashboard (map, roster, comms, scanner, Crew Select). Knows core, never runtime.
 fixtures/demo-station/  a fictional $OUTERWORLD_HOME. All tests, dev runs, screenshots use it.
-fixtures/map-demo/      the milestone 1 map fixture, for the ui map tests and the /dev gallery.
+fixtures/map-demo/      the milestone 1 ledger fixture, for core's archived ledger tests.
 docs/              ARCHITECTURE.md, SCHEMA.md, PRIVACY.md, decisions/ (ADRs), specs/, design/
 ```
 
@@ -114,22 +114,23 @@ only in manually run smoke tests gated by environment variables.
 
 ## Never hardcode tokens
 
-Every color, radius, spacing step, and motion duration is a CSS custom property in the `ui`
-tokens, consumed by Tailwind via theme extension (ADR-0003). Components in `packages/ui` and
-`apps/*` never contain a hex, `rgb()`, a pixel radius, or an `ms` literal. Per-agent recoloring
-goes through the palette contract: the agent sets only `rig: { tintHue, trimHue, head, trace }`;
-chrome, trim, emblem shade and glow are derived in token CSS; glow is owned by run state. Motion is
-state-driven CSS with `prefers-reduced-motion` respected; no animation library. Light and dark
-themes via CSS variables (dark under `prefers-color-scheme: dark` guarded by
-`:root:not([data-theme="light"])`, and again under `:root[data-theme="dark"]`).
+Every color, radius, spacing step, type size, and motion duration is a `--st-*` CSS custom
+property in the `ui` tokens, consumed by Tailwind via theme extension (ADR-0003, ADR-0013).
+Components in `packages/ui` and `apps/*` never contain a hex, `rgb()`, `oklch()`, a pixel radius,
+or an `ms` literal. An agent's appearance is `look`, an index into the 24 pixel characters in core;
+sprites are drawn at integer scales with `image-rendering: pixelated`. Motion is state-driven CSS
+(blink, packets, typing) with `prefers-reduced-motion` respected; no animation library. The theme
+is **dark only** (ADR-0013); there is no light theme or `data-theme` toggle.
 
 ## Design source of truth
 
-`docs/design/` holds the design spec, UI mock, naming workshop, and rig studies. Read
-`docs/design/README.md` before any ui work. Tokens in `packages/ui/src/tokens/` translate
-`docs/design/outerworld-spec.dc.html`; change the spec first, then the tokens. Reference renders
-under `docs/design/assets/`, `reference/`, and `studies/` are generated art and are never shipped
-or traced. `rig/rig-parts-v0.svg` is the proportion target for the hand-drawn rig.
+`docs/design/station-dashboard/` is the design source of truth (ADR-0013): its README is the
+spec, `reference/Station Dashboard.dc.html` is the interactive prototype (a spec, not code to
+copy), `src/tokens.css` is the token source, and `sprites/` are the character exports. Read
+`docs/design/README.md` before any ui work; change the spec first, then the tokens. ADR-0013 lists
+how each design element is backed by runtime state. The older Reach spec, UI mock, and rig studies
+in `docs/design/` are superseded and kept for history; their generated reference renders are never
+shipped or traced.
 
 ## Run and test
 
@@ -170,5 +171,5 @@ is wrong for this project, say so and propose a change to CONSTRAINTS.md.
 - TDD for logic: schemas, policy, prompt assembly, state machine, storage, the agent loop with
   the fake provider.
 - Every package has a README documenting its public API.
-- Browser-verify ui and SPA work in a real browser (both themes, reduced motion, narrow layout)
+- Browser-verify ui and SPA work in a real browser (reduced motion, narrow layout)
   before calling a step done: headless Playwright under `scripts/browser/`.

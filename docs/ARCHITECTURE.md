@@ -12,7 +12,7 @@ the machine is in [PRIVACY.md](PRIVACY.md).
  ┌──────────────────────────────┐   GET /api/events  ┌────────────────────────────────────────┐
  │ screens ← TanStack Query     │◄──── SSE ──────────│ Hono: token + Origin/Host checks        │
  │ invalidateFor(event)         │                    │  ├─ routes → packages/runtime services  │
- │ map = core.mapModelFor(...)  │──── POST/PUT ─────►│  └─ SSE: EventStore subscribe + replay │
+ │ map = core.dashboardModel(.) │──── POST/PUT ─────►│  └─ SSE: EventStore subscribe + replay │
  └──────────────────────────────┘   /api/*           │ packages/runtime                        │
                                                      │  RunService (agent loop) ─► OpenRouter │
                                                      │  DispatchService · Scheduler · Memory   │
@@ -27,7 +27,7 @@ the machine is in [PRIVACY.md](PRIVACY.md).
 |---|---|---|
 | `packages/core` | Pure logic and contracts: zod schemas (`station.json`, `agent.json`, events, API inputs), glossary, grant resolution, dispatch reach and depth, budget math, prompt assembly, the run state machine, the Notifications projection, crew activity, and the map adapter. No IO, no React. | nothing else |
 | `packages/runtime` | Everything that does something: the agent loop, dispatch, scheduler, tools, MCP client, memory, budgets, and storage (station directory, SQLite, keychain). | core |
-| `packages/ui` | React components, tokens, the rigged character, the station map. Renders core types. | core |
+| `packages/ui` | React components and `--st-*` tokens of the station dashboard (ADR-0013). Renders core types. | core |
 | `apps/daemon` | Thin wiring: config, Hono routes over runtime services, SSE, auth, serving the built SPA. | core, runtime |
 | `apps/station` | Thin SPA: routes, data fetching, the SSE client, screens. | core, ui (never runtime) |
 
@@ -141,10 +141,13 @@ The product law is that the interface never asserts state the runtime cannot pro
     which refetches only the queries an event affects.
   - Mutations do not patch the cache; the events that follow refresh it, so another tab's change
     shows up the same way.
-- **The station map:**
-  - core's `mapModelFor` draws the station config plus crew activity, which comes from
-    `GET /api/activity` and is folded from the event log by `foldCrewActivity`.
-  - It is rendered by ui's `StationMap` (D24).
+- **The station dashboard (ADR-0013):**
+  - core's `dashboardModel` projects the station config, crew activity (`GET /api/activity`,
+    folded from the event log by `foldCrewActivity`), recent runs (`GET /api/runs`), running
+    dispatches and pending proposals into rooms, hallways, the roster and missions.
+  - ui's `DashboardMap`, `CrewRoster`, `OverseerComms` and `Scanner` render it. The header radio
+    is the notification feed. The footer shows `GET /api/spend` (tokens and fuel) and
+    `GET /api/health` (uptime).
 - **Notifications** are core's `notificationFor` over the event log, with one persisted read
   marker.
 - **Onboarding** shows whenever `station.json` is missing.
