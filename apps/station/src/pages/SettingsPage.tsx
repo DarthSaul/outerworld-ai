@@ -13,7 +13,7 @@ import {
 } from "../queries.js";
 
 const button =
-  "h-(--ow-size-control-h-dense) rounded-control border border-border-subtle px-(--ow-size-control-pad-x) text-label text-ink-1 disabled:text-ink-3";
+  "cursor-pointer border-2 border-line bg-transparent px-2.5 py-1.5 font-display text-d7 text-panel-title uppercase no-underline hover:border-cyan disabled:cursor-not-allowed disabled:opacity-50";
 
 const CAPS = [
   ["perRunUsd", "budgets.perRun"],
@@ -45,40 +45,49 @@ function BudgetsSection() {
   };
   if (!station.data?.station) return null;
   return (
-    <section aria-labelledby="budgets-title" className="flex flex-col gap-(--ow-space-2)">
-      <h2 id="budgets-title" className="font-mono text-eyebrow uppercase text-ink-3">
+    <section
+      aria-labelledby="budgets-title"
+      className="flex flex-col gap-2 border-2 border-line bg-panel p-3 shadow-panel"
+    >
+      <h2
+        id="budgets-title"
+        className="m-0 font-display font-normal text-d9 text-panel-title uppercase tracking-st-1"
+      >
         {term("budgets")}
       </h2>
-      <p className="text-label text-ink-2">{term("budgets.hint")}</p>
-      <form onSubmit={submit} className="flex flex-col gap-(--ow-space-2)">
-        <div className="flex flex-wrap items-end gap-(--ow-space-3)">
+      <p className="m-0 text-b17 text-fg-soft">{term("budgets.hint")}</p>
+      <form onSubmit={submit} className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-end gap-3">
           {CAPS.map(([cap, label]) => (
-            <label key={cap} className="flex flex-col gap-(--ow-space-1) text-label text-ink-2">
+            <label
+              key={cap}
+              className="flex flex-col gap-1 font-display text-d7 text-fg-mute uppercase"
+            >
               {term(label)}
               <input
                 type="number"
                 inputMode="decimal"
                 min="0.01"
                 step="any"
-                className="h-(--ow-size-control-h-dense) rounded-control border border-border-subtle bg-surface-raised px-(--ow-space-2) font-mono text-mono text-ink-1"
+                className="min-w-0 border-2 border-line-soft bg-well px-2 py-1 font-body text-b19 text-fg-hi"
                 value={value(cap)}
                 onChange={(e) => setDraft((d) => ({ ...d, [cap]: e.target.value }))}
               />
             </label>
           ))}
         </div>
-        <p className="text-caption text-ink-2">{term("budgets.none")}</p>
+        <p className="m-0 text-b17 text-fg-mute">{term("budgets.none")}</p>
         {spend.data ? (
-          <p className="font-mono text-mono text-ink-1">
+          <p className="m-0 text-b19 text-fg">
             {term("budgets.today")}: {formatUsd(spend.data.stationUsd)}
           </p>
         ) : null}
-        <div className="flex items-center gap-(--ow-space-2)">
+        <div className="flex items-center gap-2">
           <button type="submit" className={button} disabled={update.isPending}>
             {term("budgets.save")}
           </button>
           {update.isSuccess && Object.keys(draft).length === 0 ? (
-            <span role="status" className="text-label text-ink-2">
+            <span role="status" className="m-0 text-b17 text-fg-soft">
               {term("budgets.saved")}
             </span>
           ) : null}
@@ -98,7 +107,7 @@ export function SettingsPage() {
   const [key, setKeyText] = useState("");
   const refresh = () => void client.invalidateQueries({ queryKey: ["settings"] });
 
-  if (settings.isPending) return <p className="text-body text-ink-2">Loading…</p>;
+  if (settings.isPending) return <p className="m-0 text-b19 text-fg-soft">Loading…</p>;
   if (settings.error) return <ErrorNote error={settings.error} />;
   const { modelMode, openrouter } = settings.data;
   const submit = (e: FormEvent) => {
@@ -112,44 +121,59 @@ export function SettingsPage() {
   };
 
   return (
-    <section aria-labelledby="screen-title" className="flex flex-col gap-(--ow-space-5)">
-      <h1 id="screen-title" className="text-heading text-ink-1">
+    <section aria-labelledby="screen-title" className="flex flex-col gap-3.5">
+      <h1
+        id="screen-title"
+        className="m-0 font-display font-normal text-d14 text-title uppercase leading-[1.4] tracking-st-2"
+      >
         {term("settings")}
       </h1>
-      <section aria-labelledby="models-title" className="flex flex-col gap-(--ow-space-1)">
-        <h2 id="models-title" className="font-mono text-eyebrow uppercase text-ink-3">
+      <section
+        aria-labelledby="models-title"
+        className="flex flex-col gap-2 border-2 border-line bg-panel p-3 shadow-panel"
+      >
+        <h2
+          id="models-title"
+          className="m-0 font-display font-normal text-d9 text-panel-title uppercase tracking-st-1"
+        >
           {term("settings.models")}
         </h2>
-        <p className="text-body text-ink-1" data-model-mode={modelMode}>
+        <p className="m-0 text-b19 text-fg-hi" data-model-mode={modelMode}>
           {term(`settings.model.${modelMode}`)}
         </p>
       </section>
-      <section aria-labelledby="key-title" className="flex flex-col gap-(--ow-space-2)">
-        <h2 id="key-title" className="font-mono text-eyebrow uppercase text-ink-3">
+      <section
+        aria-labelledby="key-title"
+        className="flex flex-col gap-2 border-2 border-line bg-panel p-3 shadow-panel"
+      >
+        <h2
+          id="key-title"
+          className="m-0 font-display font-normal text-d9 text-panel-title uppercase tracking-st-1"
+        >
           {term("settings.key")}
         </h2>
-        <p role="status" aria-label="Key status" className="text-body text-ink-1">
+        <p role="status" aria-label="Key status" className="m-0 text-b19 text-fg-hi">
           {openrouter.source
             ? term(`settings.key.${openrouter.source}`)
             : term("settings.key.none")}
         </p>
         {openrouter.keychainError ? (
-          <p className="text-caption text-ink-2">
+          <p className="m-0 text-b17 text-fg-mute">
             Keychain unavailable: {openrouter.keychainError}
           </p>
         ) : null}
         <form
           onSubmit={submit}
           aria-label={term("settings.key.save")}
-          className="flex flex-wrap items-end gap-(--ow-space-2)"
+          className="flex flex-wrap items-end gap-2"
         >
-          <label className="flex flex-col gap-(--ow-space-1) text-label text-ink-2">
+          <label className="flex flex-col gap-1 font-display text-d7 text-fg-mute uppercase">
             {term("settings.key.new")}
             <input
               type="password"
               autoComplete="off"
               spellCheck={false}
-              className="h-(--ow-size-control-h-dense) rounded-control border border-border-subtle bg-surface-raised px-(--ow-space-2) text-body text-ink-1"
+              className="min-w-0 border-2 border-line-soft bg-well px-2 py-1 font-body text-b19 text-fg-hi"
               value={key}
               onChange={(e) => setKeyText(e.target.value)}
             />
@@ -168,7 +192,7 @@ export function SettingsPage() {
             </button>
           ) : null}
         </form>
-        <p className="text-caption text-ink-2">{term("settings.key.hint")}</p>
+        <p className="m-0 text-b17 text-fg-mute">{term("settings.key.hint")}</p>
         <ErrorNote error={setKey.error ?? clearKey.error} />
       </section>
       <BudgetsSection />

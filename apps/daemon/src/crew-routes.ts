@@ -1,6 +1,7 @@
 import {
   AgentDocumentName,
   CreateAgentInput,
+  CreateLaneInput,
   CreateRoomInput,
   CrewTemplate,
   DocumentInput,
@@ -16,7 +17,8 @@ import { Hono } from "hono";
 import { jsonApi, readBody } from "./http.js";
 
 /**
- * `/api/station`, `/api/models`, `/api/agents/*`, `/api/rooms/*` (Phase 2): thin handlers over the
+ * `/api/station`, `/api/models`, `/api/agents/*`, `/api/rooms/*`, `/api/lanes/*` (Phase 2,
+ * ADR-0013): thin handlers over the
  * runtime's CrewService. Validation errors are 400, unknown ids 404, changes that would break the
  * station 409 (with the issues), non-JSON bodies 415.
  */
@@ -56,6 +58,14 @@ export function crewRoutes(crew: CrewService): Hono {
   );
   app.delete("/rooms/:id", async (c) => {
     await crew.deleteRoom(c.req.param("id"));
+    return c.body(null, 204);
+  });
+
+  app.post("/lanes", async (c) =>
+    c.json(await crew.createLane(await readBody(c, CreateLaneInput)), 201),
+  );
+  app.delete("/lanes/:id", async (c) => {
+    await crew.deleteLane(c.req.param("id"));
     return c.body(null, 204);
   });
 

@@ -122,6 +122,7 @@ describe("Notifications feed", () => {
     expect(await screen.findByText(term("notifications.none.title"))).toBeInTheDocument();
     fake.notifications.push({ seq: 1, at, kind: "kill_switch", level: "alert" });
     emit({ type: "station.kill_switch", payload: { engaged: true } });
-    expect(await screen.findByText(term("notification.kill_switch"))).toBeInTheDocument();
+    const main = screen.getByRole("main");
+    expect(await within(main).findByText(term("notification.kill_switch"))).toBeInTheDocument();
   });
 });

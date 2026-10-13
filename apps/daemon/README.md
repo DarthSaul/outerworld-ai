@@ -27,7 +27,7 @@ allowed `Origin` and a `Sec-Fetch-Site` other than `cross-site`. Every `/api/*` 
 
 | Route | Description |
 |-------|-------------|
-| `GET /api/health` | `{ ok, version, latestSeq }`. |
+| `GET /api/health` | `{ ok, version, latestSeq, startedAt }`; `startedAt` is when this daemon started (the dashboard's uptime). |
 | `GET /api/events` | SSE: every runtime event as `id: <seq>` + `data: <event JSON>`, replaying after `Last-Event-ID`, then live; a `: ping` comment every 15 s while idle. |
 | `GET /api/station` | `StationView`: station config, crew (`{ id, config }`), and every load issue. |
 | `GET /api/models` | The supported model list from core. |
@@ -37,6 +37,7 @@ allowed `Origin` and a `Sec-Fetch-Site` other than `cross-site`. Every `/api/*` 
 | `PUT /api/agents/:id/documents/:name` | `{ text }` for `identity`, `purpose`, `standing-orders`, or `context` → 204. |
 | `DELETE /api/agents/:id` | 204; the agent's workspace files stay. |
 | `POST /api/rooms`, `PATCH /api/rooms/:id`, `DELETE /api/rooms/:id` | Rooms and their props; deleting a room with crew or hallways is 409. |
+| `POST /api/lanes {from, to, note?}`, `DELETE /api/lanes/:id` | Open and close a hallway (ADR-0013). Config only: hallways are drawn, not enforced, in v1. A loop or a second hallway between linked rooms is 409. |
 
 | `GET /api/agents/:id/sessions` | The agent's sessions, newest first; `?archived=1` includes archived ones. |
 | `POST /api/agents/:id/sessions` | `{ title? }` → 201 session. |
@@ -49,7 +50,8 @@ allowed `Origin` and a `Sec-Fetch-Site` other than `cross-site`. Every `/api/*` 
 | `GET /api/consents` | Pending consent requests (write-class calls under *Ask first*). |
 | `POST /api/consents/:id` | `{ decision: "approved" \| "denied" }`; the paused run continues. 409 if already decided or expired. |
 | `GET /api/kill-switch`, `PUT /api/kill-switch` | `{ engaged }`. Engaging is persisted first, then cancels every queued, running, or waiting run; sends are 409 until cleared. |
-| `GET /api/spend?day=YYYY-MM-DD` | USD spent that UTC day (default today), station-wide and per agent. Session detail carries `spend` and `runSpend`. |
+| `GET /api/spend?day=YYYY-MM-DD` | USD spent that UTC day (default today), station-wide and per agent, and `tokens` (input plus output) for the day. Session detail carries `spend` and `runSpend`. |
+| `GET /api/runs?limit=1..200` | The station's latest runs (default 40), newest first, each with a `title`: the task for a dispatch, else the session title. The dashboard's missions. |
 | `GET /api/connectors` | Each connector: status (`disconnected`, `needs_auth`, `connected`, `error`), its classified tools, and `grantedTo`. |
 | `POST /api/connectors` | `{ preset: "notion" }` installs Notion's hosted MCP server (ADR-0012). |
 | `PATCH /api/connectors/:id` | `{ url?, name? }`; `DELETE` removes it (409 while any crew member is granted it). |

@@ -208,6 +208,43 @@ describe("CrewService: rooms", () => {
   });
 });
 
+describe("CrewService: hallways", () => {
+  it("opens a hallway with an id from its rooms, then closes it, reporting each change", async () => {
+    const { crew, types } = setup();
+    const lane = await crew.createLane({ from: "research", to: "operations" });
+    expect(lane).toEqual({ id: "research-to-operations", from: "research", to: "operations" });
+    expect((await crew.view()).station?.lanes.map((l) => l.id)).toContain(lane.id);
+    await crew.deleteLane(lane.id);
+    expect((await crew.view()).station?.lanes.map((l) => l.id)).not.toContain(lane.id);
+    expect(types()).toEqual(["station.updated", "station.updated"]);
+  });
+
+  it("frees a room for deletion once its hallways are closed", async () => {
+    const { crew } = setup();
+    const room = await crew.createRoom({ name: "Spare" });
+    const lane = await crew.createLane({ from: room.id, to: "command", note: "Overflow" });
+    expect(lane.note).toBe("Overflow");
+    await expect(crew.deleteRoom(room.id)).rejects.toThrow(/hallway/);
+    await crew.deleteLane(lane.id);
+    await crew.deleteRoom(room.id);
+  });
+
+  it("refuses a loop, a second hallway between linked rooms (either way), and unknown ids", async () => {
+    const { crew, types } = setup();
+    await expect(crew.createLane({ from: "research", to: "research" })).rejects.toBeInstanceOf(
+      ConflictError,
+    );
+    await expect(crew.createLane({ from: "command", to: "research" })).rejects.toBeInstanceOf(
+      ConflictError,
+    );
+    await expect(crew.createLane({ from: "attic", to: "research" })).rejects.toBeInstanceOf(
+      NotFoundError,
+    );
+    await expect(crew.deleteLane("nowhere")).rejects.toBeInstanceOf(NotFoundError);
+    expect(types()).toEqual([]);
+  });
+});
+
 describe("CrewService: connectors", () => {
   it("adds a connector, changes its URL, and reports station changes", async () => {
     const { crew, types } = setup();

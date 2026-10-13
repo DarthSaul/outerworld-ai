@@ -4,7 +4,7 @@ import {
   type RuntimeEvent,
   term,
 } from "@darthsaul/outerworld-ai-core";
-import { EmptyState } from "@darthsaul/outerworld-ai-ui";
+import { EmptyState, OutlineButton } from "@darthsaul/outerworld-ai-ui";
 import { type FormEvent, useEffect, useState } from "react";
 import { ErrorNote } from "../components/ErrorNote.js";
 import { formatUsd } from "../components/format.js";
@@ -20,9 +20,6 @@ import {
   useUpdateSession,
 } from "../queries.js";
 import { ConsentCard } from "./ConsentCard.js";
-
-const button =
-  "h-(--ow-size-control-h-dense) rounded-control border border-border-subtle px-(--ow-size-control-pad-x) text-label text-ink-1 disabled:text-ink-3";
 
 /**
  * Text streamed for each run in this session, from ephemeral `run.delta` events. It is only a
@@ -70,24 +67,20 @@ function DispatchCard({
       aria-labelledby={labelId}
       data-dispatch={dispatch.id}
       data-dispatch-status={dispatch.status}
-      className="flex flex-col gap-(--ow-space-2) rounded-panel border border-border-subtle p-(--ow-space-3)"
+      className="flex flex-col gap-2 border border-line-faint bg-well-2 px-2 py-1.5"
     >
-      <div className="flex flex-wrap items-baseline justify-between gap-(--ow-space-2)">
-        <p id={labelId} className="text-label text-ink-1">
-          {term("dispatch.to")} {workerName}: {dispatch.task}
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <p id={labelId} className="m-0 text-b17 text-fg">
+          <span className="font-display text-cyan text-d7 uppercase">{term("dispatch.to")}</span>{" "}
+          {workerName}: {dispatch.task}
         </p>
-        <div className="flex items-center gap-(--ow-space-2)">
-          <span className="font-mono text-mono text-ink-2">
+        <div className="flex items-center gap-2">
+          <span className="font-display text-d7 text-fg-mute uppercase">
             {term(`dispatchStatus.${dispatch.status}`)}
           </span>
-          <button
-            type="button"
-            className={button}
-            aria-expanded={open}
-            onClick={() => setOpen((o) => !o)}
-          >
+          <OutlineButton tone="line" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
             {open ? term("dispatch.hide") : term("dispatch.watch")}
-          </button>
+          </OutlineButton>
         </div>
       </div>
       {open ? <ChatWindow sessionId={dispatch.workerSessionId} embedded /> : null}
@@ -117,7 +110,7 @@ function Message({
     }
     const outcome = message.isError ? term("comms.tool.error") : term("comms.tool.call");
     return (
-      <li data-message="tool" className="font-mono text-mono text-ink-2">
+      <li data-message="tool" className="text-b15 text-fg-mute">
         {message.name} {outcome}
         {message.isError ? `: ${String(message.output)}` : ""}
       </li>
@@ -128,12 +121,12 @@ function Message({
       <li
         data-message="report"
         data-report-status={message.status}
-        className="flex flex-col gap-(--ow-space-1) rounded-panel border border-border-subtle p-(--ow-space-3)"
+        className="flex flex-col gap-1 border border-dashed border-cyan bg-well-2 px-2 py-1.5"
       >
-        <span className="font-mono text-eyebrow uppercase text-ink-3">
+        <span className="font-display text-cyan text-d7 uppercase">
           {term("report.from")} {nameOf(message.from)} · {term(`dispatchStatus.${message.status}`)}
         </span>
-        <p className="whitespace-pre-wrap text-body text-ink-1">{message.text}</p>
+        <p className="m-0 whitespace-pre-wrap text-b19 text-fg-hi">{message.text}</p>
       </li>
     );
   }
@@ -146,13 +139,19 @@ function Message({
         ? agentName
         : undefined;
   return (
-    <li data-message={message.role} className="flex flex-col gap-(--ow-space-1)">
-      {who ? <span className="font-mono text-eyebrow uppercase text-ink-3">{who}</span> : null}
+    <li data-message={message.role} className="flex flex-col gap-1">
+      {who ? (
+        <span
+          className={`font-display text-d8 uppercase ${message.role === "user" ? "text-green" : "text-amber"}`}
+        >
+          {who}
+        </span>
+      ) : null}
       {message.text ? (
-        <p className="whitespace-pre-wrap text-body text-ink-1">{message.text}</p>
+        <p className="m-0 whitespace-pre-wrap text-b19 text-fg-hi">{message.text}</p>
       ) : null}
       {message.role === "assistant" && message.toolCalls?.length ? (
-        <p className="font-mono text-mono text-ink-2">
+        <p className="m-0 text-b15 text-fg-mute">
           → {message.toolCalls.map((c) => c.name).join(", ")}
         </p>
       ) : null}
@@ -184,7 +183,7 @@ export function ChatWindow({
   const streams = useStreamingText(sessionId);
   const [text, setText] = useState("");
 
-  if (detail.isPending) return <p className="text-body text-ink-2">Loading…</p>;
+  if (detail.isPending) return <p className="m-0 text-b17 text-fg-mute">Loading…</p>;
   if (detail.error) return <ErrorNote error={detail.error} />;
   const { session, messages, runs } = detail.data;
   const nameOf = (id: string) => station.data?.agents.find((a) => a.id === id)?.config.name ?? id;
@@ -206,92 +205,102 @@ export function ChatWindow({
     <section
       aria-labelledby={titleId}
       data-session={sessionId}
-      className="flex min-w-0 flex-1 flex-col gap-(--ow-space-3) rounded-panel border border-border-subtle p-(--ow-space-3)"
+      className={`flex min-w-0 flex-1 flex-col gap-2.5 border-2 border-line bg-panel ${embedded ? "" : "shadow-panel"}`}
     >
-      <header className="flex flex-wrap items-baseline justify-between gap-(--ow-space-2)">
-        <h2 id={titleId} className={embedded ? "text-label text-ink-1" : "text-heading text-ink-1"}>
+      <header className="flex flex-wrap items-center justify-between gap-2 border-line border-b-2 bg-panel-head px-2.5 py-2">
+        <h2
+          id={titleId}
+          className="m-0 font-display font-normal text-d9 text-panel-title uppercase tracking-st-1"
+        >
           {agentName} · {session.title}
         </h2>
         {onClose && !embedded ? (
-          <div className="flex gap-(--ow-space-2)">
-            <button
-              type="button"
-              className={button}
+          <div className="flex gap-2">
+            <OutlineButton
+              tone="line"
               disabled={active}
               onClick={() => update.mutate({ archived: true }, { onSuccess: () => onClose?.() })}
             >
               {term("comms.archive")}
-            </button>
-            <button type="button" className={button} onClick={onClose}>
+            </OutlineButton>
+            <OutlineButton tone="line" onClick={onClose}>
               {term("comms.close")}
-            </button>
+            </OutlineButton>
           </div>
         ) : null}
       </header>
-      {messages.length === 0 && !live ? (
-        <EmptyState title={term("comms.empty.title")} body={term("comms.empty.body")} />
-      ) : (
-        <ol aria-label="Transcript" className="flex flex-col gap-(--ow-space-3)">
-          {messages.map((m) => (
-            <Message
-              key={m.id}
-              message={m.message}
-              agentName={agentName}
-              nameOf={nameOf}
-              dispatches={detail.data.dispatches}
-              fromOverseer={
-                m.message.role === "user" &&
-                !m.message.text.startsWith("[Direction") &&
-                runs.find((r) => r.id === m.runId)?.trigger === "dispatch"
-              }
-            />
+      <div className="flex flex-col gap-2.5 px-2.5">
+        {messages.length === 0 && !live ? (
+          <EmptyState title={term("comms.empty.title")} body={term("comms.empty.body")} />
+        ) : (
+          <ol aria-label="Transcript" className="m-0 flex list-none flex-col gap-3 p-0">
+            {messages.map((m) => (
+              <Message
+                key={m.id}
+                message={m.message}
+                agentName={agentName}
+                nameOf={nameOf}
+                dispatches={detail.data.dispatches}
+                fromOverseer={
+                  m.message.role === "user" &&
+                  !m.message.text.startsWith("[Direction") &&
+                  runs.find((r) => r.id === m.runId)?.trigger === "dispatch"
+                }
+              />
+            ))}
+            {live ? (
+              <li data-message="streaming" className="whitespace-pre-wrap text-b19 text-fg-hi">
+                {live}
+                <span
+                  aria-hidden="true"
+                  className="st-blink ml-0.5 inline-block h-3.75 w-2.25 bg-cyan align-[-2px]"
+                />
+              </li>
+            ) : null}
+          </ol>
+        )}
+        {consents.data
+          ?.filter((c) => c.sessionId === sessionId)
+          .map((c) => (
+            <ConsentCard key={c.id} consent={c} agentName={agentName} />
           ))}
-          {live ? (
-            <li data-message="streaming" className="whitespace-pre-wrap text-body text-ink-1">
-              {live}
-            </li>
-          ) : null}
-        </ol>
-      )}
-      {consents.data
-        ?.filter((c) => c.sessionId === sessionId)
-        .map((c) => (
-          <ConsentCard key={c.id} consent={c} agentName={agentName} />
-        ))}
-      {latest ? (
-        <p className="flex flex-wrap items-center gap-(--ow-space-2) font-mono text-mono text-ink-2">
-          <span role="status" aria-label="Run" data-run-state={latest.state}>
-            {term(`runState.${latest.state}`)}
-          </span>
-          {latest.error ? <span>· {latest.error}</span> : null}
-          <span data-session-spend>
-            · {term("spend.session")} {formatUsd(detail.data.spend.costUsd)}
-            {detail.data.spend.unpriced > 0 ? ` (${term("spend.unpriced")})` : ""}
-          </span>
-          {active ? (
-            <button
-              type="button"
-              className={button}
-              disabled={cancel.isPending}
-              onClick={() => cancel.mutate(latest.id)}
-            >
-              {term("comms.cancel")}
-            </button>
-          ) : null}
-        </p>
-      ) : null}
+        {latest ? (
+          <p className="m-0 flex flex-wrap items-center gap-2 text-b15 text-fg-mute">
+            <span role="status" aria-label="Run" data-run-state={latest.state}>
+              {term(`runState.${latest.state}`)}
+            </span>
+            {latest.error ? <span>· {latest.error}</span> : null}
+            <span data-session-spend>
+              · {term("spend.session")} {formatUsd(detail.data.spend.costUsd)}
+              {detail.data.spend.unpriced > 0 ? ` (${term("spend.unpriced")})` : ""}
+            </span>
+            {active ? (
+              <OutlineButton
+                tone="amber"
+                disabled={cancel.isPending}
+                onClick={() => cancel.mutate(latest.id)}
+              >
+                {term("comms.cancel")}
+              </OutlineButton>
+            ) : null}
+          </p>
+        ) : null}
+      </div>
       <form
         onSubmit={submit}
-        className="flex items-end gap-(--ow-space-2)"
+        className="flex items-end gap-1.5 border-line-faint border-t-2 bg-input-row p-2.5"
         aria-label={`Message ${agentName}`}
       >
+        <span aria-hidden="true" className="self-center font-display text-d9 text-green">
+          &gt;
+        </span>
         <label className="sr-only" htmlFor={`${titleId}-input`}>
           {term("comms.placeholder")}
         </label>
         <textarea
           id={`${titleId}-input`}
           rows={3}
-          className="min-w-0 flex-1 rounded-control border border-border-subtle bg-surface-raised p-(--ow-space-2) text-body text-ink-1"
+          className="min-w-0 flex-1 resize-y border-none bg-transparent font-body text-b19 text-fg-hi outline-none"
           placeholder={term("comms.placeholder")}
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -301,13 +310,15 @@ export function ChatWindow({
         />
         <button
           type="submit"
-          className={button}
+          className="cursor-pointer border-none bg-green px-2 py-1.25 font-display text-d7 text-ink uppercase disabled:cursor-not-allowed disabled:opacity-50"
           disabled={send.isPending || steer.isPending || !text.trim()}
         >
           {active ? term("comms.direct") : term("comms.send")}
         </button>
       </form>
-      {active ? <p className="text-caption text-ink-2">{term("comms.direct.hint")}</p> : null}
+      {active ? (
+        <p className="m-0 px-2.5 pb-2.5 text-b15 text-fg-mute">{term("comms.direct.hint")}</p>
+      ) : null}
       <ErrorNote error={send.error ?? steer.error ?? cancel.error ?? update.error} />
     </section>
   );

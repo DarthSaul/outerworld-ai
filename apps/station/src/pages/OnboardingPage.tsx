@@ -12,12 +12,10 @@ import {
 } from "../queries.js";
 
 const button =
-  "h-(--ow-size-control-h-dense) rounded-control border border-border-subtle px-(--ow-size-control-pad-x) text-label text-ink-1 disabled:text-ink-3";
-const input =
-  "h-(--ow-size-control-h-dense) min-w-0 rounded-control border border-border-subtle bg-surface-raised px-(--ow-space-2) text-body text-ink-1";
-const label = "flex flex-col gap-(--ow-space-1) text-label text-ink-2";
-const panel =
-  "flex flex-col gap-(--ow-space-3) rounded-panel border border-border-subtle bg-surface-panel p-(--ow-space-4)";
+  "cursor-pointer border-2 border-line bg-transparent px-2.5 py-1.5 font-display text-d7 text-panel-title uppercase no-underline hover:border-cyan disabled:cursor-not-allowed disabled:opacity-50";
+const input = "min-w-0 border-2 border-line-soft bg-well px-2 py-1 font-body text-b19 text-fg-hi";
+const label = "flex flex-col gap-1 font-display text-d7 text-fg-mute uppercase";
+const panel = "flex flex-col gap-3 border-2 border-line bg-panel p-4 shadow-panel";
 
 /** Step 1: the key. The fake model needs none; a key already configured needs no form. */
 function KeyStep({ onDone }: { readonly onDone: () => void }) {
@@ -33,12 +31,12 @@ function KeyStep({ onDone }: { readonly onDone: () => void }) {
   };
   return (
     <section aria-labelledby="key-step" className={panel}>
-      <h2 id="key-step" className="text-heading text-ink-1">
+      <h2 id="key-step" className="m-0 font-display font-normal text-d10 text-cyan uppercase">
         {term("onboarding.key.title")}
       </h2>
       {ready ? (
         <>
-          <p className="text-body text-ink-1">
+          <p className="m-0 text-b19 text-fg-hi">
             {modelMode === "fake" ? term("onboarding.key.fake") : term("onboarding.key.ready")}
           </p>
           <button type="button" className={`${button} self-start`} onClick={onDone}>
@@ -47,8 +45,8 @@ function KeyStep({ onDone }: { readonly onDone: () => void }) {
         </>
       ) : (
         <>
-          <p className="text-body text-ink-2">{term("onboarding.key.body")}</p>
-          <form onSubmit={submit} className="flex flex-wrap items-end gap-(--ow-space-2)">
+          <p className="m-0 text-b19 text-fg-soft">{term("onboarding.key.body")}</p>
+          <form onSubmit={submit} className="flex flex-wrap items-end gap-2">
             <label className={label}>
               {term("settings.key.new")}
               <input
@@ -109,10 +107,10 @@ function OverseerStep() {
   };
   return (
     <form aria-labelledby="overseer-step" onSubmit={(e) => void submit(e)} className={panel}>
-      <h2 id="overseer-step" className="text-heading text-ink-1">
+      <h2 id="overseer-step" className="m-0 font-display font-normal text-d10 text-cyan uppercase">
         {term("onboarding.overseer.title")}
       </h2>
-      <p className="text-body text-ink-2">{term("onboarding.overseer.body")}</p>
+      <p className="m-0 text-b19 text-fg-soft">{term("onboarding.overseer.body")}</p>
       <label className={label}>
         {term("onboarding.stationName")}
         <input
@@ -132,13 +130,15 @@ function OverseerStep() {
           onChange={(e) => setName(e.target.value)}
         />
       </label>
-      <p id="overseer-name-hint" className="text-caption text-ink-2">
+      <p id="overseer-name-hint" className="m-0 text-b17 text-fg-mute">
         {term("onboarding.overseerName.hint")}
       </p>
-      <fieldset className="flex flex-col gap-(--ow-space-1)">
-        <legend className="text-label text-ink-2">{term("onboarding.tone")}</legend>
+      <fieldset className="flex flex-col gap-1">
+        <legend className="font-display text-d7 text-fg-mute uppercase">
+          {term("onboarding.tone")}
+        </legend>
         {OVERSEER_TONES.map((t) => (
-          <label key={t} className="flex items-center gap-(--ow-space-2) text-body text-ink-1">
+          <label key={t} className="flex items-center gap-2 text-b19 text-fg-hi">
             <input
               type="radio"
               name="tone"
@@ -150,7 +150,7 @@ function OverseerStep() {
           </label>
         ))}
       </fieldset>
-      <label className="flex items-center gap-(--ow-space-2) text-body text-ink-1">
+      <label className="flex items-center gap-2 text-b19 text-fg-hi">
         <input type="checkbox" checked={withPm} onChange={(e) => setWithPm(e.target.checked)} />
         {term("onboarding.pm")}
       </label>
@@ -169,8 +169,10 @@ function OverseerStep() {
 export function OnboardingPage() {
   const [step, setStep] = useState<"key" | "overseer">("key");
   return (
-    <main className="mx-auto flex w-full max-w-(--ow-size-panel-w-max) flex-col gap-(--ow-space-4) p-(--ow-space-4)">
-      <h1 className="text-heading text-ink-1">{term("onboarding.title")}</h1>
+    <main className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col justify-center gap-4 bg-bg p-4 text-fg">
+      <h1 className="m-0 font-display font-normal text-d14 text-title uppercase leading-[1.4] tracking-st-2">
+        {term("onboarding.title")}
+      </h1>
       {step === "key" ? <KeyStep onDone={() => setStep("overseer")} /> : <OverseerStep />}
     </main>
   );

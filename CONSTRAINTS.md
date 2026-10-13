@@ -17,9 +17,16 @@ in the same change that was failing it. Tightening is silent; loosening is a rev
   (`foo.test.ts` with `foo.ts`) is retired with that code, not made easier; the guard allows it,
   and the commit message still names the reason (usually an ADR). Added 2026-09-29 by the owner's
   decision for the ADR-0010 archive.
+  - A deleted test is also retired when every module it imports by relative path is gone (shared
+    test helpers aside). A module is gone when it was deleted, or when it no longer exports any
+    name the test imported. This covers a test of several deleted modules, or of symbols removed
+    from a kept module. Added 2026-10-01 by the owner's decision for the ADR-0013 cleanup.
 - Assertion lines in a kept test file may change but not shrink: the guard flags a file whose
   diff removes more `expect`/`assert` lines than it adds. A changed assertion is reviewed in the
   diff (a weaker matcher is a review finding). Added 2026-09-29 by the owner's decision.
+  - Retired assertions don't count against this. A removed assertion is retired when its diff
+    hunk names an import its module no longer exports, a constant read from a deleted file, or a
+    removed helper built on either. Added 2026-10-01 by the owner's decision.
 - No secrets in source, generated files, fixtures, or docs. Fixture webhook URLs are obviously fake
 - No hardcoded design tokens in `packages/ui` or `apps/web`: no hex, `rgb()`, `hsl()`, pixel radius,
   or `ms` literal outside the token definitions
@@ -46,7 +53,7 @@ in the same change that was failing it. Tightening is silent; loosening is a rev
 | Coverage: station | lines >= 85%, branches >= 80% | `vitest run --coverage` in `apps/station` (`src/main.tsx` and `src/dev/`, the component gallery, excluded) | task end, CI |
 | Coverage: generator | lines >= 90%, branches >= 85% | Retired 2026-09-29: `packages/generator` archived (ADR-0010); nothing left to measure. Row stays until the owner removes it | n/a |
 | Accessibility: components | Zero axe violations of any impact in rendered component tests | `vitest-axe` assertions in `packages/ui` tests | task end, CI |
-| Accessibility: app | Zero critical or serious axe violations on `/` and `/dev` in both themes | `pnpm browser:verify` (`@axe-core/playwright` inside `scripts/browser/screenshot.mjs`, against the built SPA served by the built daemon on a copy of the fixture) | CI (browser job); locally before a ui or SPA step closes |
+| Accessibility: app | Zero critical or serious axe violations on `/` and `/dev` (dark only since ADR-0013) | `pnpm browser:verify` (`@axe-core/playwright` inside `scripts/browser/screenshot.mjs`, against the built SPA served by the built daemon on a copy of the fixture) | CI (browser job); locally before a ui or SPA step closes |
 | Schema | Demo fixture validates against the current Station and StationState schemas; exported JSON Schema matches the committed copy | Vitest tests in `packages/core` | task end, CI |
 | Generator output | Emitted ledger files match committed snapshots for the demo fixture | Retired 2026-09-29 with `packages/generator` (ADR-0010). Row stays until the owner removes it | task end, CI |
 

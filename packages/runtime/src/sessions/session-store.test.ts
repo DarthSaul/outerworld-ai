@@ -131,4 +131,19 @@ describe("SessionStore: runs", () => {
     const b = s.createRun({ sessionId, agentId: "vesper", trigger: "user", model: "m" });
     expect(s.runs(sessionId).map((r) => r.id)).toEqual([b.id, a.id]);
   });
+
+  it("lists the station's recent runs newest first, across sessions, with session titles", () => {
+    const s = store();
+    const chat = s.createSession("vesper", "Chat");
+    const brief = s.createSession("quill", "Briefing");
+    const a = s.createRun({ sessionId: chat.id, agentId: "vesper", trigger: "user", model: "m" });
+    const b = s.createRun({ sessionId: brief.id, agentId: "quill", trigger: "user", model: "m" });
+    const c = s.createRun({ sessionId: chat.id, agentId: "vesper", trigger: "user", model: "m" });
+    expect(s.recentRuns(10).map((r) => [r.run.id, r.sessionTitle])).toEqual([
+      [c.id, "Chat"],
+      [b.id, "Briefing"],
+      [a.id, "Chat"],
+    ]);
+    expect(s.recentRuns(1).map((r) => r.run.id)).toEqual([c.id]);
+  });
 });

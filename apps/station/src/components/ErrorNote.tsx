@@ -7,11 +7,11 @@ export function ErrorNote({ error }: { readonly error: Error | null | undefined 
   return (
     <div
       role="alert"
-      className="flex flex-col gap-(--ow-space-1) rounded-control border border-health-attention p-(--ow-space-2) text-label text-ink-1"
+      className="flex flex-col gap-1 border-2 border-red bg-well px-2.5 py-1.5 text-b17 text-red-text"
     >
-      <p>{error.message}</p>
+      <p className="m-0">{error.message}</p>
       {issues.length > 0 ? (
-        <ul className="font-mono text-mono">
+        <ul className="m-0 list-none p-0 text-b15 text-fg-soft">
           {issues.map((i) => (
             <li key={`${i.path}:${i.message}`}>
               {i.path ? `${i.path}: ` : ""}

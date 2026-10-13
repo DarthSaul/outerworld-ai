@@ -150,6 +150,7 @@ describe("consents, kill switch, and spend", () => {
       day: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
       stationUsd: 0,
       agents: {},
+      tokens: 0,
     });
     expect((await call("GET", "/spend?day=yesterday")).status).toBe(400);
     const s = await call("POST", "/agents/vesper/sessions", {});
@@ -157,6 +158,10 @@ describe("consents, kill switch, and spend", () => {
     const detail = await untilSettled(call, s.json.id);
     expect(detail.spend).toMatchObject({ calls: 1, unpriced: 1, costUsd: 0 });
     expect(Object.keys(detail.runSpend)).toEqual([detail.runs[0]?.id]);
+    const run = detail.runs[0]?.id ?? "";
+    const tokens =
+      (detail.runSpend[run]?.inputTokens ?? 0) + (detail.runSpend[run]?.outputTokens ?? 0);
+    expect((await call("GET", "/spend")).json.tokens).toBe(tokens);
   });
 });
 
@@ -186,6 +191,31 @@ describe("dispatch, steering, and activity", () => {
       status: "completed",
       text: expect.stringContaining("Summarize the hub"),
     });
+    // The worker's run is titled with its task, the lead's with its session title.
+    const recent = (await call("GET", "/runs")).json as { agentId: string; title: string }[];
+    expect(recent.find((r) => r.agentId === "quill")?.title).toBe("Summarize the hub");
+    expect(recent.find((r) => r.agentId === "vesper")?.title).toBe(s.json.title);
+  });
+
+  it("GET /runs lists recent runs newest first, limited, and validates the limit", async () => {
+    const { call } = setup();
+    expect((await call("GET", "/runs")).json).toEqual([]);
+    const s = await call("POST", "/agents/vesper/sessions", { title: "Plan the week" });
+    const first = await call("POST", `/sessions/${s.json.id}/messages`, { text: "one" });
+    await untilSettled(call, s.json.id);
+    const second = await call("POST", `/sessions/${s.json.id}/messages`, { text: "two" });
+    await untilSettled(call, s.json.id);
+    const runs = (await call("GET", "/runs")).json as {
+      id: string;
+      title: string;
+      state: string;
+    }[];
+    expect(runs.map((r) => r.id)).toEqual([second.json.runId, first.json.runId]);
+    expect(runs[0]).toMatchObject({ title: "Plan the week", state: "completed" });
+    expect((await call("GET", "/runs?limit=1")).json).toHaveLength(1);
+    for (const bad of ["0", "201", "x", "1.5"]) {
+      expect((await call("GET", `/runs?limit=${bad}`)).status).toBe(400);
+    }
   });
 
   it("steers only a running run (409 otherwise, 404 unknown) and lists activity", async () => {

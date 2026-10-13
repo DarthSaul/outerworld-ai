@@ -129,9 +129,11 @@ export function fakeApi() {
   const control = { engaged: false };
   const spend = {
     stationUsd: 0,
+    tokens: 0,
     agents: {} as Record<string, number>,
     sessions: {} as Record<string, SpendTotal>,
   };
+  const health = { startedAt: "2026-09-29T08:00:00.000Z" };
   const zero: SpendTotal = { costUsd: 0, inputTokens: 0, outputTokens: 0, calls: 0, unpriced: 0 };
   let ids = 0;
   const nextId = (prefix: string) => `${prefix}${++ids}`;
@@ -222,7 +224,12 @@ export function fakeApi() {
       return budgets;
     }
     if (path === "/spend")
-      return { day: "2026-09-29", stationUsd: spend.stationUsd, agents: spend.agents };
+      return {
+        day: "2026-09-29",
+        stationUsd: spend.stationUsd,
+        agents: spend.agents,
+        tokens: spend.tokens,
+      };
     if (path === "/settings/openrouter") {
       if (method === "PUT") {
         if (!String(b.key).startsWith("sk-or-"))
@@ -403,8 +410,40 @@ export function fakeApi() {
       return {
         runs,
         dispatches: dispatches.filter((d) => d.status === "running"),
-        crew: crewActivity,
+        // A fresh object, as JSON from the daemon would be, so a changed entry is a new value.
+        crew: { ...crewActivity },
       };
+    }
+    if (method === "GET" && path === "/runs") {
+      return [...sessions.values()]
+        .flatMap((e) => e.runs.map((r) => ({ ...r, title: e.session.title })))
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    }
+    if (path === "/health") {
+      return { ok: true, version: "test", latestSeq: 0, startedAt: health.startedAt };
+    }
+    if (parts[0] === "lanes") {
+      const lanes = state.station.lanes;
+      if (method === "POST") {
+        const linked = lanes.some(
+          (l) => (l.from === b.from && l.to === b.to) || (l.from === b.to && l.to === b.from),
+        );
+        if (b.from === b.to || linked) throw new ApiError(409, "already linked");
+        const lane = {
+          id: slugify(
+            `${b.from} to ${b.to}`,
+            lanes.map((l) => l.id),
+          ),
+          from: String(b.from),
+          to: String(b.to),
+          ...(b.note ? { note: String(b.note) } : {}),
+        };
+        state.station = { ...state.station, lanes: [...lanes, lane] };
+        return lane;
+      }
+      if (!lanes.some((l) => l.id === parts[1])) throw new ApiError(404, "no hallway");
+      state.station = { ...state.station, lanes: lanes.filter((l) => l.id !== parts[1]) };
+      return undefined;
     }
     if (parts[0] === "runs" && parts[2] === "steer") return undefined;
     if (parts[0] === "runs" && parts[2] === "cancel") {
@@ -510,6 +549,7 @@ export function fakeApi() {
     consents,
     control,
     spend,
+    health,
     dispatches,
     seedSession,
   };

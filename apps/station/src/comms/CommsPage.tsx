@@ -1,12 +1,9 @@
-import { term } from "@darthsaul/outerworld-ai-core";
-import { EmptyState } from "@darthsaul/outerworld-ai-ui";
+import { lookFor, term } from "@darthsaul/outerworld-ai-core";
+import { EmptyState, OutlineButton, Sprite } from "@darthsaul/outerworld-ai-ui";
 import { useSearchParams } from "react-router";
 import { ErrorNote } from "../components/ErrorNote.js";
 import { useCreateSession, useSessions, useStationView } from "../queries.js";
 import { ChatWindow } from "./ChatWindow.js";
-
-const button =
-  "h-(--ow-size-control-h-dense) rounded-control border border-border-subtle px-(--ow-size-control-pad-x) text-label text-ink-1 disabled:text-ink-3";
 
 /** At most this many chat windows side by side; opening another closes the oldest. */
 const MAX_OPEN = 3;
@@ -41,52 +38,55 @@ export function CommsPage() {
     sessions.data?.find((s) => s.id === sessionId)?.agentId;
 
   return (
-    <section aria-labelledby="screen-title" className="flex flex-col gap-(--ow-space-4)">
-      <h1 id="screen-title" className="text-heading text-ink-1">
+    <section
+      aria-labelledby="screen-title"
+      className="flex flex-col border-2 border-line bg-panel shadow-panel"
+    >
+      <h1
+        id="screen-title"
+        className="m-0 border-line border-b-2 bg-panel-head px-2.5 py-2 font-display font-normal text-d9 text-panel-title uppercase tracking-st-1"
+      >
         {term("comms")}
       </h1>
-      <div className="flex flex-col gap-(--ow-space-4) desktop:flex-row">
-        <nav
-          aria-label={term("agents")}
-          className="flex shrink-0 flex-col gap-(--ow-space-3) desktop:w-(--ow-size-panel-w-min)"
-        >
-          <ul className="flex flex-wrap gap-(--ow-space-2) desktop:flex-col">
-            {station.data?.agents.map((a) => (
-              <li key={a.id}>
-                <button
-                  type="button"
-                  aria-pressed={a.id === agentId}
-                  className={`${button} aria-pressed:border-border-strong`}
-                  onClick={() => update({ agent: a.id })}
-                >
-                  {a.config.name}
-                </button>
-              </li>
-            ))}
+      <div className="flex flex-col gap-3.5 p-3 desktop:flex-row">
+        <nav aria-label={term("agents")} className="flex shrink-0 flex-col gap-3 desktop:w-56">
+          <ul className="m-0 flex list-none flex-wrap gap-1.5 p-0 desktop:flex-col">
+            {station.data?.agents.map((a) => {
+              const active = a.id === agentId;
+              return (
+                <li key={a.id}>
+                  <button
+                    type="button"
+                    aria-pressed={active}
+                    className={`flex w-full cursor-pointer items-center gap-1.5 border-2 py-0.75 pr-2 pl-0.75 text-left font-body text-b17 text-fg-chip uppercase ${active ? "border-cyan bg-active-bg" : "border-line-soft bg-well hover:bg-hover"}`}
+                    onClick={() => update({ agent: a.id })}
+                  >
+                    <Sprite look={lookFor(a.id, a.config.look)} />
+                    {a.config.name}
+                  </button>
+                </li>
+              );
+            })}
           </ul>
           {agentId ? (
-            <section
-              aria-label={term("comms.sessions")}
-              className="flex flex-col gap-(--ow-space-2)"
-            >
-              <button
-                type="button"
-                className={button}
+            <section aria-label={term("comms.sessions")} className="flex flex-col gap-2">
+              <OutlineButton
+                tone="green"
                 disabled={create.isPending}
                 onClick={() => create.mutate(agentId, { onSuccess: (s) => openSession(s.id) })}
               >
                 {term("comms.new")}
-              </button>
+              </OutlineButton>
               <ErrorNote error={create.error ?? sessions.error} />
               {sessions.data?.length === 0 ? (
-                <p className="text-caption text-ink-2">{term("comms.none.body")}</p>
+                <p className="m-0 text-b17 text-fg-mute">{term("comms.none.body")}</p>
               ) : null}
-              <ul className="flex flex-col gap-(--ow-space-1)">
+              <ul className="m-0 flex list-none flex-col gap-1 p-0">
                 {sessions.data?.map((s) => (
                   <li key={s.id}>
                     <button
                       type="button"
-                      className="text-label text-ink-1 underline"
+                      className="w-full cursor-pointer border border-line-faint bg-transparent px-1.5 py-1 text-left text-b17 text-fg hover:border-cyan aria-[current=true]:border-cyan aria-[current=true]:text-cyan"
                       aria-current={open.includes(s.id) ? "true" : undefined}
                       onClick={() => openSession(s.id)}
                     >
@@ -98,7 +98,7 @@ export function CommsPage() {
             </section>
           ) : null}
         </nav>
-        <div className="flex min-w-0 flex-1 flex-col gap-(--ow-space-4) desktop:flex-row">
+        <div className="flex min-w-0 flex-1 flex-col gap-3.5 desktop:flex-row">
           {open.length === 0 ? (
             <EmptyState title={term("comms.pick.title")} body={term("comms.pick.body")} />
           ) : (

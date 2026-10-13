@@ -4,9 +4,12 @@ import type {
   AgentView,
   ChatMessage,
   CreateAgentInput,
+  CreateLaneInput,
   CreateRoomInput,
   CreateScheduleInput,
   CrewActivityEntry,
+  HealthView,
+  Lane,
   Notification,
   OnboardInput,
   Room,
@@ -20,7 +23,7 @@ import type {
   UpdateRoomInput,
   UpdateScheduleInput,
 } from "@darthsaul/outerworld-ai-core";
-import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQueries, useQuery } from "@tanstack/react-query";
 import { useDaemon } from "./daemon-context.js";
 
 /**
@@ -524,5 +527,57 @@ export function useAddProjectManager() {
   const { api } = useDaemon();
   return useMutation({
     mutationFn: () => api.send<AgentView>("POST", "/templates/project-manager", {}),
+  });
+}
+
+/** Sets which pixel character a crew member appears as (Crew Select). */
+export function useSetLook() {
+  const { api } = useDaemon();
+  return useMutation({
+    mutationFn: ({ agentId, look }: { agentId: string; look: number }) =>
+      api.send<AgentView>("PATCH", `/agents/${encodeURIComponent(agentId)}`, { look }),
+  });
+}
+
+/** A recent run with its title (mirrors the daemon's RecentRun): the dashboard's missions. */
+export type RecentRun = RunRecord & { readonly title: string };
+
+export function useRecentRuns() {
+  const { api } = useDaemon();
+  return useQuery({ queryKey: ["runs"], queryFn: () => api.get<RecentRun[]>("/runs") });
+}
+
+export function useHealth() {
+  const { api } = useDaemon();
+  return useQuery({ queryKey: ["health"], queryFn: () => api.get<HealthView>("/health") });
+}
+
+export function useCreateLane() {
+  const { api } = useDaemon();
+  return useMutation({
+    mutationFn: (input: CreateLaneInput) => api.send<Lane>("POST", "/lanes", input),
+  });
+}
+
+export function useDeleteLane() {
+  const { api } = useDaemon();
+  return useMutation({
+    mutationFn: (id: string) => api.send("DELETE", `/lanes/${encodeURIComponent(id)}`),
+  });
+}
+
+/** Memory proposals awaiting a decision from every crew member, oldest first. */
+export function useMemoryProposals(agentIds: readonly string[]): MemoryItem[] {
+  const { api } = useDaemon();
+  return useQueries({
+    queries: agentIds.map((id) => ({
+      queryKey: ["memories", id],
+      queryFn: () => api.get<MemoryView>(`/agents/${encodeURIComponent(id)}/memories`),
+    })),
+    combine: (results) =>
+      results
+        .flatMap((r) => r.data?.proposals ?? [])
+        .filter((m, i, all) => all.findIndex((x) => x.id === m.id) === i)
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
   });
 }

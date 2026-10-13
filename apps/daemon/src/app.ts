@@ -1,6 +1,6 @@
 import { readFile, realpath } from "node:fs/promises";
 import { extname, join, sep } from "node:path";
-import type { RuntimeEvent } from "@darthsaul/outerworld-ai-core";
+import type { HealthView, RuntimeEvent } from "@darthsaul/outerworld-ai-core";
 import type {
   ConnectorManager,
   EventStore,
@@ -31,6 +31,8 @@ export interface AppOptions extends CommsDeps {
   readonly scheduler: Scheduler;
   readonly notifications: NotificationService;
   readonly version: string;
+  /** When this daemon started (ISO); defaults to when the app is created, which is at boot. */
+  readonly startedAt?: string;
   /** The built SPA (`apps/station/dist`). Absent in development, where Vite serves it. */
   readonly spaDir?: string;
   /** Keepalive interval for idle SSE connections. */
@@ -63,6 +65,7 @@ export function createApp(options: AppOptions): Hono {
   const app = new Hono();
   const origins = new Set(options.allowedOrigins);
   const hosts = new Set(options.allowedHosts);
+  const startedAt = options.startedAt ?? new Date().toISOString();
 
   app.use("*", async (c, next) => {
     if (!hosts.has(new URL(c.req.url).host)) return c.json({ error: "forbidden host" }, 403);
@@ -88,9 +91,15 @@ export function createApp(options: AppOptions): Hono {
 
   apiRequestRules(app, "/api/*");
 
-  app.get("/api/health", (c) =>
-    c.json({ ok: true, version: options.version, latestSeq: options.events.latestSeq() }),
-  );
+  app.get("/api/health", (c) => {
+    const view: HealthView = {
+      ok: true,
+      version: options.version,
+      latestSeq: options.events.latestSeq(),
+      startedAt,
+    };
+    return c.json(view);
+  });
 
   app.get("/api/events", (c) => {
     const lastId = Number.parseInt(c.req.header("last-event-id") ?? "", 10);

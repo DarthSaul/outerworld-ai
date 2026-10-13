@@ -25,11 +25,21 @@ export const KillSwitchInput = z.strictObject({ engaged: z.boolean() });
 export type ConsentDecisionInput = z.infer<typeof ConsentDecisionInput>;
 export type KillSwitchInput = z.infer<typeof KillSwitchInput>;
 
-/** `GET /api/spend`: USD spent on one UTC day, station-wide and per agent. */
+/** `GET /api/spend`: USD spent on one UTC day, station-wide and per agent, and the day's tokens. */
 export interface SpendView {
   readonly day: string;
   readonly stationUsd: number;
   readonly agents: Readonly<Record<string, number>>;
+  /** Input plus output tokens over every model call that day (the footer's TOKENS, ADR-0013). */
+  readonly tokens: number;
+}
+
+/** `GET /api/health`. `startedAt` is when this daemon process started (the footer's UPTIME). */
+export interface HealthView {
+  readonly ok: true;
+  readonly version: string;
+  readonly latestSeq: number;
+  readonly startedAt: string;
 }
 
 /** Connectors (ADR-0012): the Notion preset, a URL change, and disconnecting. */

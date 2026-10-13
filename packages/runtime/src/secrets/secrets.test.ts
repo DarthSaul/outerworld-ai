@@ -3,7 +3,8 @@ import { ApiKeyService, InvalidKeyError, OPENROUTER_KEY_URL } from "./api-key.js
 import { createRedactor } from "./redact.js";
 import { MemorySecretStore } from "./store.js";
 
-const KEY = "sk-or-v1-0123456789abcdef0123456789abcdef";
+// Obviously fake and low-entropy, so it reads as a fixture to people and to secret scanners.
+const KEY = "sk-or-v1-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
 
 const fakeFetch = (status: number) => {
   const calls: Array<{ url: string; auth: string | null }> = [];
@@ -86,7 +87,7 @@ describe("ApiKeyService", () => {
     const store = new MemorySecretStore();
     const svc = new ApiKeyService({
       store,
-      env: { OPENROUTER_API_KEY: "sk-or-env-key-1234567890" },
+      env: { OPENROUTER_API_KEY: "sk-or-env-xxxxxxxxxxxx" },
       fetch: fakeFetch(200).fetch,
     });
     await svc.setKey(KEY);

@@ -1,6 +1,10 @@
 # Design assets and guidelines
 
-This folder is the design source of truth for the ui package. When a token, size, motion value,
+> **Current design: [`station-dashboard/`](station-dashboard/README.md)** (ADR-0013). Its README is
+> the spec, `reference/Station Dashboard.dc.html` the prototype, `src/tokens.css` the token source.
+> Everything below this note describes the superseded Reach spec and rig, kept for history.
+
+This folder was the design source of truth for the ui package. When a token, size, motion value,
 or component state is in question, the answer is in `outerworld-spec.dc.html`; the code in
 `packages/ui/src/tokens/` is a translation of it and must not drift. Vocabulary in the design
 docs is themed (Outpost, Clearance, Relay, Hand); code stays neutral per CLAUDE.md, and the map

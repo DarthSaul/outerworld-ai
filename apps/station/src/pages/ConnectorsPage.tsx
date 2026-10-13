@@ -14,9 +14,9 @@ import {
 } from "../queries.js";
 
 const button =
-  "h-(--ow-size-control-h-dense) rounded-control border border-border-subtle px-(--ow-size-control-pad-x) text-label text-ink-1 disabled:text-ink-3";
+  "cursor-pointer border-2 border-line bg-transparent px-2.5 py-1.5 font-display text-d7 text-panel-title uppercase no-underline hover:border-cyan disabled:cursor-not-allowed disabled:opacity-50";
 const input =
-  "h-(--ow-size-control-h-dense) min-w-0 flex-1 rounded-control border border-border-subtle bg-surface-raised px-(--ow-space-2) font-mono text-mono text-ink-1";
+  "flex-1 min-w-0 border-2 border-line-soft bg-well px-2 py-1 font-body text-b19 text-fg-hi";
 
 function ConnectorCard({
   connector,
@@ -43,23 +43,23 @@ function ConnectorCard({
       aria-labelledby={titleId}
       data-connector={connector.id}
       data-connector-status={connector.status}
-      className="flex flex-col gap-(--ow-space-3) rounded-panel border border-border-subtle p-(--ow-space-4)"
+      className="flex flex-col gap-3 border-2 border-line bg-panel p-4 shadow-panel"
     >
-      <header className="flex flex-wrap items-baseline justify-between gap-(--ow-space-2)">
-        <h2 id={titleId} className="text-heading text-ink-1">
+      <header className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 id={titleId} className="m-0 font-display font-normal text-d10 text-cyan uppercase">
           {connector.name}
         </h2>
         <span
           role="status"
           aria-label={`${connector.name} status`}
-          className="font-mono text-mono text-ink-2"
+          className="text-b17 text-fg-mute"
         >
           {term(`connectorStatus.${connector.status}`)}
           {connector.detail && connector.status === "error" ? `: ${connector.detail}` : ""}
         </span>
       </header>
-      <form onSubmit={save} className="flex flex-wrap items-end gap-(--ow-space-2)">
-        <label className="flex min-w-0 flex-1 flex-col gap-(--ow-space-1) text-label text-ink-2">
+      <form onSubmit={save} className="flex flex-wrap items-end gap-2">
+        <label className="flex min-w-0 flex-1 flex-col gap-1 font-display text-d7 text-fg-mute uppercase">
           {term("connector.url")}
           <input
             className={input}
@@ -71,7 +71,7 @@ function ConnectorCard({
           {term("connector.save")}
         </button>
       </form>
-      <div className="flex flex-wrap items-center gap-(--ow-space-2)">
+      <div className="flex flex-wrap items-center gap-2">
         {connector.status === "connected" ? (
           <>
             <button
@@ -106,7 +106,7 @@ function ConnectorCard({
             href={signIn}
             target="_blank"
             rel="noopener noreferrer"
-            className={`${button} inline-flex items-center border-health-attention`}
+            className={`${button} inline-flex items-center border-amber`}
           >
             {term("connector.signIn")} {connector.name}
           </a>
@@ -122,20 +122,23 @@ function ConnectorCard({
           </button>
         ) : null}
       </div>
-      {signIn ? <p className="text-caption text-ink-2">{term("connector.signInHint")}</p> : null}
+      {signIn ? <p className="m-0 text-b17 text-fg-mute">{term("connector.signInHint")}</p> : null}
       <ErrorNote error={connect.error ?? disconnect.error ?? update.error ?? remove.error} />
-      <p className="text-label text-ink-2">
+      <p className="m-0 text-b17 text-fg-soft">
         {term("connector.grantedTo")}:{" "}
         {connector.grantedTo.length
           ? connector.grantedTo.map(nameOf).join(", ")
           : term("connector.nobody")}
       </p>
       {connector.tools.length > 0 ? (
-        <section aria-labelledby={`${titleId}-tools`} className="flex flex-col gap-(--ow-space-1)">
-          <h3 id={`${titleId}-tools`} className="font-mono text-eyebrow uppercase text-ink-3">
+        <section aria-labelledby={`${titleId}-tools`} className="flex flex-col gap-1">
+          <h3
+            id={`${titleId}-tools`}
+            className="m-0 font-display font-normal text-d7 text-fg-mute uppercase"
+          >
             {term("connector.tools")}
           </h3>
-          <ul className="flex flex-col gap-(--ow-space-1) font-mono text-mono text-ink-1">
+          <ul className="m-0 flex list-none flex-col gap-1 p-0 text-b17 text-fg">
             {connector.tools.map((t) => (
               <li key={t.name} data-tool={t.name} data-class={t.class}>
                 {t.name} · {term(`grant.${t.class}`)}
@@ -156,8 +159,11 @@ export function ConnectorsPage() {
   const nameOf = (id: string) => station.data?.agents.find((a) => a.id === id)?.config.name ?? id;
   const list = connectors.data ?? [];
   return (
-    <section aria-labelledby="screen-title" className="flex flex-col gap-(--ow-space-4)">
-      <h1 id="screen-title" className="text-heading text-ink-1">
+    <section aria-labelledby="screen-title" className="flex flex-col gap-4">
+      <h1
+        id="screen-title"
+        className="m-0 font-display font-normal text-d14 text-title uppercase leading-[1.4] tracking-st-2"
+      >
         {term("connectors")}
       </h1>
       <ErrorNote error={connectors.error ?? add.error} />

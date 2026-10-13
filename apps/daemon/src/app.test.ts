@@ -89,7 +89,12 @@ describe("auth", () => {
   it("accepts the right token", async () => {
     const res = await setup().authed("/api/health");
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ok: true, version: "0.0.0-test", latestSeq: 0 });
+    expect(await res.json()).toEqual({
+      ok: true,
+      version: "0.0.0-test",
+      latestSeq: 0,
+      startedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+    });
   });
 
   it("rejects a request from another website's Origin (403), even with the token", async () => {

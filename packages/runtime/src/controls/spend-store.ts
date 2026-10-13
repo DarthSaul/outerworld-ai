@@ -75,6 +75,11 @@ export class SpendStore {
     return this.#total("day = ?", day).costUsd;
   }
 
+  /** Everything spent station-wide on one UTC day: cost, tokens, and calls. */
+  stationDayTotal(day: string): SpendTotal {
+    return this.#total("day = ?", day);
+  }
+
   /** USD per agent for one UTC day. */
   byAgent(day: string): Record<string, number> {
     const rows = this.#db

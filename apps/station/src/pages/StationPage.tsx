@@ -1,139 +1,197 @@
-import { mapModelFor, term } from "@darthsaul/outerworld-ai-core";
-import { EmptyState, type Selection, StationMap, useDesktop } from "@darthsaul/outerworld-ai-ui";
-import { useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router";
-import { useDaemon } from "../daemon-context.js";
-import { useActivity, useStationView } from "../queries.js";
+import { type Dashboard, term, termWith } from "@darthsaul/outerworld-ai-core";
+import {
+  CrewRoster,
+  DashboardMap,
+  type DashboardSelection,
+  MAP_STYLES,
+  OutlineButton,
+  OverseerComms,
+  Scanner,
+  tabClass,
+} from "@darthsaul/outerworld-ai-ui";
+import { useState } from "react";
+import { ErrorNote } from "../components/ErrorNote.js";
+import {
+  useActivity,
+  useCancelRun,
+  useCreateLane,
+  useDeleteLane,
+  useKillSwitch,
+} from "../queries.js";
+import { useComms } from "../station/use-comms.js";
+import { useDashboard, useMapStyle } from "../station/use-dashboard.js";
 
-/** Every run in flight and every running dispatch, each linking to its session in COMMS. */
-function Activity() {
-  const activity = useActivity();
-  const station = useStationView();
-  const nameOf = (id: string) => station.data?.agents.find((a) => a.id === id)?.config.name ?? id;
-  const runs = activity.data?.runs ?? [];
-  return (
-    <section aria-labelledby="activity-title" className="flex flex-col gap-(--ow-space-2)">
-      <h2 id="activity-title" className="font-mono text-eyebrow uppercase text-ink-3">
-        {term("activity.title")}
-      </h2>
-      {runs.length === 0 ? (
-        <p className="text-body text-ink-2">{term("activity.none")}</p>
-      ) : (
-        <ul className="flex flex-col gap-(--ow-space-1)">
-          {runs.map((r) => {
-            const dispatch = activity.data?.dispatches.find((d) => d.workerRunId === r.id);
-            return (
-              <li
-                key={r.id}
-                data-activity-run={r.id}
-                className="flex flex-wrap gap-(--ow-space-2) text-label text-ink-1"
-              >
-                <Link
-                  to={`/comms?agent=${encodeURIComponent(r.agentId)}&open=${encodeURIComponent(r.sessionId)}`}
-                  className="underline"
-                >
-                  {nameOf(r.agentId)}
-                </Link>
-                <span className="font-mono text-mono text-ink-2">
-                  {term(`runState.${r.state}`)}
-                </span>
-                {dispatch ? (
-                  <span className="text-ink-2">
-                    · {term("dispatch.from")} {nameOf(dispatch.leadAgentId)}: {dispatch.task}
-                  </span>
-                ) : null}
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </section>
-  );
+const STYLE_LABEL = {
+  schematic: "mapStyle.schematic",
+  floorplan: "mapStyle.floorplan",
+  polygon: "mapStyle.polygon",
+} as const;
+
+/** Falls back to the Bridge (or the first room) when nothing, or something gone, is selected. */
+function current(d: Dashboard, s: DashboardSelection | undefined): DashboardSelection | undefined {
+  const exists =
+    s &&
+    ((s.type === "room" && d.rooms.some((r) => r.id === s.id)) ||
+      (s.type === "agent" && d.crew.some((c) => c.id === s.id)) ||
+      (s.type === "lane" && d.lanes.some((l) => l.id === s.id)));
+  if (exists) return s;
+  const first = d.bridgeId ?? d.rooms[0]?.id;
+  return first ? { type: "room", id: first } : undefined;
 }
 
 /**
- * The map (brief §3 goal 9): rooms, their props and crew, hallways, and the Overseer, with live
- * state folded from runtime events (D24). A crew member opens their page; the Overseer opens
- * COMMS with it; anything else is selected, which highlights its room's hallways.
- */
-function StationMapSection() {
-  const station = useStationView();
-  const activity = useActivity();
-  const desktop = useDesktop();
-  const navigate = useNavigate();
-  const [selection, setSelection] = useState<Selection | null>(null);
-  const config = station.data?.station;
-  const agents = station.data?.agents;
-  const crew = activity.data?.crew;
-  const updatedAt = activity.dataUpdatedAt;
-  const model = useMemo(
-    () =>
-      config && agents
-        ? mapModelFor(config, agents, crew ?? {}, new Date(updatedAt || Date.now()).toISOString())
-        : undefined,
-    [config, agents, crew, updatedAt],
-  );
-  if (!model || !agents) return null;
-  const overseer = agents.find((a) => a.config.role === "overseer");
-  const select = (s: Selection) => {
-    if (s.kind === "agent") {
-      void navigate(`/crew/${encodeURIComponent(s.id)}`);
-    } else if (s.kind === "overseer" && overseer) {
-      void navigate(`/comms?agent=${encodeURIComponent(overseer.id)}`);
-    } else if (
-      s.kind === "grant" &&
-      model.station.grants.find((g) => g.id === s.id)?.kind === "connector"
-    ) {
-      void navigate("/connectors");
-    } else {
-      setSelection((cur) => (cur?.kind === s.kind && cur.id === s.id ? null : s));
-    }
-  };
-  return (
-    <section aria-label={term("station.map")} className="min-w-0">
-      <StationMap
-        station={model.station}
-        state={model.state}
-        selection={selection}
-        onSelect={select}
-        {...(desktop ? {} : { stacked: true })}
-      />
-    </section>
-  );
-}
-
-/**
- * The Station screen: the map, what is running now, and what the event log proves (the latest
- * event and the most recent ones, newest first).
+ * The Station (ADR-0013): crew roster, the station map, Overseer comms and the scanner, every
+ * piece a projection of runtime state. Drawing a hallway opens one in station.json.
  */
 export function StationPage() {
-  const { latestSeq, recent } = useDaemon();
+  const { dashboard, proposals, error } = useDashboard();
+  const comms = useComms(dashboard, proposals);
+  const activity = useActivity();
+  const kill = useKillSwitch();
+  const createLane = useCreateLane();
+  const deleteLane = useDeleteLane();
+  const cancelRun = useCancelRun();
+  const [mapStyle, setMapStyle] = useMapStyle();
+  const [picked, setPicked] = useState<DashboardSelection>();
+  const [draw, setDraw] = useState<{ from: string | null }>();
+  const [note, setNote] = useState<string>();
+
+  if (!dashboard) return <ErrorNote error={error} />;
+  const selection = current(dashboard, picked);
+  const roomName = (id: string) => dashboard.rooms.find((r) => r.id === id)?.name ?? id;
+
+  const clickRoom = (id: string) => {
+    setNote(undefined);
+    if (!draw) return setPicked({ type: "room", id });
+    if (!draw.from) return setDraw({ from: id });
+    if (draw.from === id) return setDraw({ from: null });
+    const from = draw.from;
+    setDraw(undefined);
+    const linked = dashboard.lanes.some(
+      (l) => (l.from === from && l.to === id) || (l.from === id && l.to === from),
+    );
+    if (linked) {
+      setNote(termWith("map.alreadyLinked", { from: roomName(from), to: roomName(id) }));
+      return;
+    }
+    createLane.mutate(
+      {
+        from,
+        to: id,
+        note: termWith("map.laneNote", { from: roomName(from), to: roomName(id) }),
+      },
+      { onSuccess: (lane) => setPicked({ type: "lane", id: lane.id }) },
+    );
+  };
+
+  const stopRuns = (agentId: string) => {
+    for (const run of activity.data?.runs ?? []) {
+      if (run.agentId === agentId) cancelRun.mutate(run.id);
+    }
+  };
+
+  const paused = kill.data?.engaged ?? false;
+  const mapControls = (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {MAP_STYLES.map((s) => (
+        <button
+          key={s}
+          type="button"
+          aria-pressed={s === mapStyle}
+          className={tabClass(s === mapStyle, "map")}
+          onClick={() => setMapStyle(s)}
+        >
+          {term(STYLE_LABEL[s])}
+        </button>
+      ))}
+      <span aria-hidden="true" className="h-5 w-0.5 bg-line" />
+      <OutlineButton
+        tone="amber"
+        filled={draw !== undefined}
+        aria-pressed={draw !== undefined}
+        className="px-2 py-1.25"
+        onClick={() => {
+          setNote(undefined);
+          setDraw(draw ? undefined : { from: null });
+        }}
+      >
+        {term(draw ? "map.drawCancel" : "map.draw")}
+      </OutlineButton>
+    </div>
+  );
+
   return (
-    <section aria-labelledby="screen-title" className="flex flex-col gap-(--ow-space-4)">
-      <h1 id="screen-title" className="text-heading text-ink-1">
-        {term("station")}
-      </h1>
-      <StationMapSection />
-      <Activity />
-      <p className="font-mono text-mono text-ink-2">
-        {term("events.latest")} #{latestSeq}
-      </p>
-      {recent.length === 0 ? (
-        <EmptyState title={term("empty.events.title")} body={term("empty.events.body")} />
-      ) : (
-        <section aria-labelledby="recent-title" className="flex flex-col gap-(--ow-space-2)">
-          <h2 id="recent-title" className="font-mono text-eyebrow uppercase text-ink-3">
-            {term("events.recent")}
-          </h2>
-          <ol className="flex flex-col gap-(--ow-space-1) font-mono text-mono text-ink-2">
-            {recent.map((e) => (
-              <li key={e.seq} data-event-type={e.type}>
-                #{e.seq} · {e.at} · {e.type}
-              </li>
-            ))}
-          </ol>
+    <div className="grid grid-cols-1 items-stretch gap-3.5 p-3.5 desktop:grid-cols-[minmax(0,1fr)_minmax(0,3fr)_minmax(0,2fr)]">
+      <h1 className="sr-only">{term("tab.station")}</h1>
+      <div className="flex min-w-0 flex-col">
+        <CrewRoster
+          dashboard={dashboard}
+          {...(selection ? { selection } : {})}
+          onSelectAgent={(id) => setPicked({ type: "agent", id })}
+          className="flex-1"
+        />
+      </div>
+      <div className="flex min-w-0 flex-col gap-3.5">
+        <section
+          aria-labelledby="map-title"
+          className="flex min-w-0 flex-1 flex-col border-2 border-line bg-panel shadow-panel"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-line border-b-2 bg-panel-head px-2.5 py-1.5 font-display text-d9 text-panel-title uppercase tracking-st-1">
+            <h2 id="map-title" className="m-0 font-normal text-inherit">
+              {term("map.title")}
+            </h2>
+            {mapControls}
+          </div>
+          {note ? (
+            <p role="status" className="m-0 px-2.5 py-1 text-b17 text-fg-mute">
+              {note}
+            </p>
+          ) : null}
+          <ErrorNote error={createLane.error ?? deleteLane.error ?? cancelRun.error} />
+          <DashboardMap
+            dashboard={dashboard}
+            {...(selection ? { selection } : {})}
+            mapStyle={mapStyle}
+            {...(draw ? { drawFrom: draw.from } : {})}
+            paused={paused}
+            onSelectRoom={clickRoom}
+            onSelectAgent={(id) => setPicked({ type: "agent", id })}
+            onSelectLane={(id) => setPicked({ type: "lane", id })}
+          />
         </section>
-      )}
-    </section>
+      </div>
+      <div className="flex min-w-0 flex-col gap-3.5">
+        <OverseerComms
+          {...(comms.message ? { message: comms.message } : {})}
+          {...(dashboard.overseer ? { overseerLook: dashboard.overseer.look } : {})}
+          onApprove={comms.approve}
+          onDeny={comms.deny}
+          onNext={comms.next}
+          onOrder={(text) => {
+            comms.order(text);
+            if (dashboard.bridgeId) setPicked({ type: "room", id: dashboard.bridgeId });
+          }}
+          busy={comms.busy}
+        />
+        <ErrorNote error={comms.error} />
+        {selection ? (
+          <Scanner
+            dashboard={dashboard}
+            selection={selection}
+            onSelect={setPicked}
+            onStopRun={stopRuns}
+            onDemolish={(id) =>
+              deleteLane.mutate(id, {
+                onSuccess: () =>
+                  setPicked(
+                    dashboard.bridgeId ? { type: "room", id: dashboard.bridgeId } : undefined,
+                  ),
+              })
+            }
+            busy={deleteLane.isPending || cancelRun.isPending}
+          />
+        ) : null}
+      </div>
+    </div>
   );
 }

@@ -19,12 +19,19 @@ const valid = (): Record<string, unknown> => ({
       enabled: false,
     },
   ],
-  rig: { tintHue: 230, trimHue: 40, head: "dome", trace: "bar" },
 });
 
 const paths = (input: unknown) => parseAgentConfig(input).issues.map((i) => `${i.level} ${i.path}`);
 
 describe("parseAgentConfig", () => {
+  it("accepts a look that indexes one of the 24 characters, and nothing else", () => {
+    expect(parseAgentConfig({ ...valid(), look: 0 }).ok).toBe(true);
+    expect(parseAgentConfig({ ...valid(), look: 23 }).ok).toBe(true);
+    expect(paths({ ...valid(), look: 24 })).toEqual(["error look"]);
+    expect(paths({ ...valid(), look: -1 })).toEqual(["error look"]);
+    expect(paths({ ...valid(), look: 1.5 })).toEqual(["error look"]);
+  });
+
   it("accepts a full valid agent.json with no issues", () => {
     const r = parseAgentConfig(valid());
     expect(r.issues).toEqual([]);
@@ -95,14 +102,6 @@ describe("parseAgentConfig", () => {
     const input = valid();
     input.schedules = [{ id: "a", cron: "0 9 * * *", prompt: "x" }];
     expect(paths(input)).toEqual([]);
-  });
-
-  it("reserves the overseer's rig parts (crest head, frame trace) for the overseer", () => {
-    const input = { ...valid(), rig: { tintHue: 1, trimHue: 2, head: "crest", trace: "frame" } };
-    const p = paths(input);
-    expect(p).toContain("error rig.head");
-    expect(p).toContain("error rig.trace");
-    expect(parseAgentConfig({ ...input, role: "overseer" }).ok).toBe(true);
   });
 
   it("never throws on garbage", () => {

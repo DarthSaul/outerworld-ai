@@ -16,6 +16,7 @@ export {
   CreateSessionInput,
   DisconnectInput,
   EditMemoryInput,
+  type HealthView,
   KillSwitchInput,
   MAX_MESSAGE_CHARS,
   MarkReadInput,
@@ -32,6 +33,7 @@ export {
   type AgentView,
   CREW_TEMPLATES,
   CreateAgentInput,
+  CreateLaneInput,
   CreateRoomInput,
   CreateScheduleInput,
   CrewTemplate,
@@ -48,6 +50,23 @@ export {
   UpdateRoomInput,
   UpdateScheduleInput,
 } from "./api/crew-api.js";
+// Pixel characters an agent can appear as (ADR-0013)
+export {
+  type Cell,
+  CHARACTER_COUNT,
+  CHARACTERS,
+  type CharacterGrid,
+  type CharacterSpec,
+  characterGrid,
+  gridRuns,
+  type HairStyle,
+  lookFor,
+  OUTLINE,
+  type PixelRun,
+  SPRITE_H,
+  SPRITE_W,
+  shade,
+} from "./characters.js";
 // Station runtime config (station.json, agent.json) — ADR-0010
 export {
   AgentConfig,
@@ -78,7 +97,45 @@ export {
   stationConfigIssues,
 } from "./config/station-config.js";
 export { type CrewMember, stationCrewIssues } from "./config/station-crew.js";
-// Milestone 1 map model: the ui map renders it until Phase 9 adapts it to rooms and crew.
+// Station dashboard: layout, hallway routes, status words, chatter (ADR-0013)
+export { type ChatterLine, type ChatterSnapshot, chatterLines } from "./dashboard/chatter.js";
+export {
+  BRIDGE_RECT,
+  BRIDGE_SECTOR,
+  laneLabel,
+  type Point,
+  placeRooms,
+  pointAlong,
+  type Rect,
+  type RoomPlacement,
+  routeBetween,
+  routeLength,
+  sectorFor,
+  tagPoint,
+} from "./dashboard/layout.js";
+export {
+  type Dashboard,
+  type DashboardCrew,
+  type DashboardGrant,
+  type DashboardInput,
+  type DashboardLane,
+  type DashboardMission,
+  type DashboardRoom,
+  type DashboardRun,
+  dashboardModel,
+} from "./dashboard/model.js";
+export {
+  alertCount,
+  CREW_DISPLAY_STATUSES,
+  type CrewDisplayStatus,
+  crewDisplayStatus,
+  initials,
+  isLive,
+  RUN_DISPLAY_STATUSES,
+  type RunDisplayStatus,
+  runDisplayStatus,
+  sortRuns,
+} from "./dashboard/status.js";
 // Events
 export {
   applyEvent,
@@ -89,18 +146,6 @@ export {
 // Glossary
 export { GLOSSARY_KEYS, type GlossaryKey, glossary, term, termWith } from "./glossary.js";
 export { deriveHealth, type HealthInputs } from "./health.js";
-// Layout
-export {
-  type Box,
-  type HandoffGeometry,
-  handoffGeometry,
-  LAYOUT_SIZE,
-  type Layout,
-  layoutStation,
-  overseerLinkGeometry,
-  RINGS_MAX,
-  type TeamBox,
-} from "./layout.js";
 // Ledger
 export {
   DEGRADED_AFTER_MS,
@@ -109,7 +154,6 @@ export {
   parseLedger,
   parseLedgerMarkdown,
 } from "./ledger/parse.js";
-export { mapModelFor } from "./map-model.js";
 // Notifications: a projection of the event log (brief §10)
 export {
   NOTIFICATION_EVENT_TYPES,
@@ -149,14 +193,6 @@ export {
   type ToolSource,
   type ToolSpec,
 } from "./policy/grants.js";
-// Rig
-export {
-  type DerivedRig,
-  deriveRig,
-  overseerRig,
-  type RigAccessory,
-  type RigShoulder,
-} from "./rig.js";
 // Live crew state and the station map from runtime state (Phase 9, D24)
 export {
   activityOf,

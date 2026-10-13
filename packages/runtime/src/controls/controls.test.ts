@@ -94,6 +94,13 @@ describe("SpendStore", () => {
     expect(spend.stationDay("2026-09-29")).toBe(0.75);
     expect(spend.forSession(sessionId).costUsd).toBe(1.75);
     expect(spend.byAgent("2026-09-29")).toEqual({ quill: 0.25, vesper: 0.5 });
+    expect(spend.stationDayTotal("2026-09-29")).toEqual({
+      costUsd: 0.75,
+      inputTokens: 300,
+      outputTokens: 60,
+      calls: 3,
+      unpriced: 1,
+    });
   });
 
   it("is zero for nothing", () => {

@@ -9,6 +9,8 @@ export default defineConfig({
     // CONSTRAINTS.md: no network in tests.
     setupFiles: ["../../packages/runtime/src/test/no-network.ts", "src/test/setup.ts"],
     css: false,
+    // Room for several 5 s Testing Library waits in one test on a slow CI runner (see setup.ts).
+    testTimeout: 20_000,
     coverage: {
       provider: "v8",
       include: ["src/**/*.{ts,tsx}"],

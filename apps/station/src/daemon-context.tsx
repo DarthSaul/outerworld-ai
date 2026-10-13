@@ -48,9 +48,13 @@ export function invalidateFor(event: RuntimeEvent, client: QueryClient): void {
     // A connector's tools change what granted crew members can use.
     void client.invalidateQueries({ queryKey: ["connectors"] });
     void client.invalidateQueries({ queryKey: ["agent"] });
+  } else if (event.type === "station.started") {
+    void client.invalidateQueries({ queryKey: ["health"] });
   } else if (event.type.startsWith("session.")) {
     void client.invalidateQueries({ queryKey: ["sessions", event.agentId] });
     void client.invalidateQueries({ queryKey: ["session", event.sessionId] });
+    // A run's mission title is its session's title.
+    void client.invalidateQueries({ queryKey: ["runs"] });
   } else if (event.type.startsWith("schedule.")) {
     void client.invalidateQueries({ queryKey: ["schedules", event.agentId] });
     void client.invalidateQueries({ queryKey: ["sessions", event.agentId] });
@@ -59,6 +63,7 @@ export function invalidateFor(event: RuntimeEvent, client: QueryClient): void {
     // A schedule's history shows the state of the runs it started.
     void client.invalidateQueries({ queryKey: ["schedules", event.agentId] });
     void client.invalidateQueries({ queryKey: ["activity"] });
+    void client.invalidateQueries({ queryKey: ["runs"] });
     void client.invalidateQueries({ queryKey: ["spend"] });
     // A run that ends while waiting expires its request; one that pauses creates one.
     void client.invalidateQueries({ queryKey: ["consents"] });
@@ -66,6 +71,7 @@ export function invalidateFor(event: RuntimeEvent, client: QueryClient): void {
     // The lead's session shows the dispatch card and, when it ends, the worker's report.
     void client.invalidateQueries({ queryKey: ["session", event.sessionId] });
     void client.invalidateQueries({ queryKey: ["activity"] });
+    void client.invalidateQueries({ queryKey: ["runs"] });
   } else if (event.type.startsWith("consent.")) {
     void client.invalidateQueries({ queryKey: ["consents"] });
     // A decision puts a waiting crew member back to work on the map.
@@ -80,6 +86,7 @@ export function invalidateFor(event: RuntimeEvent, client: QueryClient): void {
     // A cap ends a run with budget.blocked alone (no run.* event follows): refresh what it ended.
     if (event.type === "budget.blocked") {
       void client.invalidateQueries({ queryKey: ["activity"] });
+      void client.invalidateQueries({ queryKey: ["runs"] });
       if (event.sessionId)
         void client.invalidateQueries({ queryKey: ["session", event.sessionId] });
     }
