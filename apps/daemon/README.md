@@ -39,8 +39,8 @@ allowed `Origin` and a `Sec-Fetch-Site` other than `cross-site`. Every `/api/*` 
 | `POST /api/rooms`, `PATCH /api/rooms/:id`, `DELETE /api/rooms/:id` | Rooms and their props; deleting a room with crew or hallways is 409. |
 | `POST /api/lanes {from, to, note?}`, `DELETE /api/lanes/:id` | Open and close a hallway (ADR-0013). Config only: hallways are drawn, not enforced, in v1. A loop or a second hallway between linked rooms is 409. |
 
-| `GET /api/agents/:id/sessions` | The agent's sessions, newest first; `?archived=1` includes archived ones. |
-| `POST /api/agents/:id/sessions` | `{ title? }` → 201 session. |
+| `GET /api/agents/:id/sessions` | The agent's sessions, most recently active first, each with `messageCount`, `lastMessageAt?`, `lastMessage? {role, text}` (clipped), and `active`; `?archived=1` includes archived ones. |
+| `POST /api/agents/:id/sessions` | `{ title? }` → 201 session. Without a title, the first message names it (one short model call, ADR-0014). |
 | `GET /api/sessions/:id` | `{ session, messages, runs }`: messages oldest first, runs newest first. |
 | `PATCH /api/sessions/:id` | `{ title? , archived?: true }`. |
 | `POST /api/sessions/:id/messages` | `{ text }` → 202 `{ runId }`; the reply streams as events (deltas are ephemeral, D18). 409 while a run is active or the session is archived. |

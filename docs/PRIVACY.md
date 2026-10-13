@@ -38,7 +38,9 @@ agent you created:
 1. **Model calls to OpenRouter** (`openrouter.ai`): the assembled prompt (the agent's documents,
    its role briefing, approved memories, recent session history, and the new input), tool
    definitions, and tool results. OpenRouter forwards them to the model provider you picked. One
-   extra call checks your key when you save it.
+   extra call checks your key when you save it. A new session's first message (up to 2,000
+   characters) is also sent once, to the same crew member's model, to name the session
+   (ADR-0014).
 2. **Connector calls to Notion** (`mcp.notion.com`) for agents granted Notion: searches, fetches,
    and page changes the agent requests, plus the OAuth flow when you connect (discovery, client
    registration, token exchange and refresh). Notion's sign-in page opens in your browser and

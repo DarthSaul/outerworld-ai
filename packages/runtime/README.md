@@ -25,6 +25,12 @@ imported by core, ui, or the SPA.
 | `CrewService({ home, events, connectorTools? })` | `view()`, `agent(id)` (config, documents, effective tools from core's `resolveGrants`), `createAgent`, `updateAgent`, `putDocument`, `deleteAgent` (keeps the workspace), `createRoom`, `updateRoom`, `deleteRoom` (refused while crew or hallways use it), `addSchedule` / `updateSchedule` / `removeSchedule` (every cron checked with croner), `updateBudgets`, `onboard({ overseerName, tone, stationName? })` (an empty station only: station.json with the Command room and `DEFAULT_BUDGETS`, and the Overseer), `addFromTemplate("project-manager", { name? })` (adds the Operations room, a hallway to Command, and the Notion connector when missing; daily briefing disabled). Reads from disk every call; writes run one at a time, are validated across the whole station, and emit `agent.updated` / `station.updated`. Refuses only errors a change would introduce. |
 | `NotFoundError`, `ConflictError` | What the daemon maps to 404 and 409; `ConflictError.issues` says why. |
 
+### Sessions and session titles (ADR-0014)
+| Export | Description |
+|--------|-------------|
+| `SessionStore.sessionSummaries(agentId, { includeArchived? })` → `SessionSummary[]` | An agent's sessions, most recently active first, each with `messageCount`, `lastMessageAt`, `lastMessage` (the newest user or assistant line with text, clipped to 160 characters), and `active` (a run is queued, running, or waiting for consent). |
+| `RunService({ …, titles? })` | With `titles: true`, the first message of a session still titled "New session" names it: one short call to the crew member's model beside the run, budget-checked and recorded as that run's spend, falling back to the message itself. Emits `session.renamed`; a name the Commander set first is kept. |
+
 ### Scheduler (Phase 8, brief §13)
 | Export | Description |
 |--------|-------------|
