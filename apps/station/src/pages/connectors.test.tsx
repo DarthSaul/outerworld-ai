@@ -24,10 +24,10 @@ const withNotion = (status: "connected" | "disconnected" = "connected") => {
   return fake;
 };
 
-describe("Connectors screen", () => {
+describe("Connectors, a section of Settings", () => {
   it("offers to add Notion when the station has no connectors", async () => {
     const user = userEvent.setup();
-    const { calls } = renderApp("/connectors");
+    const { calls } = renderApp("/settings");
     await user.click(await screen.findByRole("button", { name: term("connector.addNotion") }));
     expect(calls).toContainEqual({
       method: "POST",
@@ -37,7 +37,7 @@ describe("Connectors screen", () => {
   });
 
   it("shows a connected Notion's status, tools with their class, and who is granted it", async () => {
-    renderApp("/connectors", withNotion());
+    renderApp("/settings", withNotion());
     const card = await screen.findByRole("region", { name: "Notion" });
     expect(within(card).getByRole("status", { name: "Notion status" })).toHaveTextContent(
       term("connectorStatus.connected"),
@@ -57,7 +57,7 @@ describe("Connectors screen", () => {
     const fake = withNotion("disconnected");
     fake.connectAnswer.status = "needs_auth";
     fake.connectAnswer.authorizationUrl = "https://auth.example.test/authorize?state=s1";
-    renderApp("/connectors", fake);
+    renderApp("/settings", fake);
     const card = await screen.findByRole("region", { name: "Notion" });
     await user.click(within(card).getByRole("button", { name: term("connector.connect") }));
     const link = await within(card).findByRole("link", {
@@ -71,7 +71,7 @@ describe("Connectors screen", () => {
 
   it("disconnects, or disconnects and forgets the sign-in", async () => {
     const user = userEvent.setup();
-    const { calls } = renderApp("/connectors", withNotion());
+    const { calls } = renderApp("/settings", withNotion());
     const card = await screen.findByRole("region", { name: "Notion" });
     await user.click(within(card).getByRole("button", { name: term("connector.forget") }));
     expect(calls).toContainEqual({
@@ -83,7 +83,7 @@ describe("Connectors screen", () => {
 
   it("saves a new server URL", async () => {
     const user = userEvent.setup();
-    const { calls } = renderApp("/connectors", withNotion("disconnected"));
+    const { calls } = renderApp("/settings", withNotion("disconnected"));
     const card = await screen.findByRole("region", { name: "Notion" });
     const field = within(card).getByLabelText(term("connector.url"));
     await user.clear(field);
@@ -100,15 +100,27 @@ describe("Connectors screen", () => {
     const fake = withNotion("disconnected");
     const first = fake.connectors[0];
     if (first) fake.connectors[0] = { ...first, status: "error", detail: "connect ECONNREFUSED" };
-    renderApp("/connectors", fake);
+    renderApp("/settings", fake);
     const card = await screen.findByRole("region", { name: "Notion" });
     expect(within(card).getByRole("status", { name: "Notion status" })).toHaveTextContent(
       `${term("connectorStatus.error")}: connect ECONNREFUSED`,
     );
   });
 
+  it("lives under Settings: no tab of its own, and the old address lands on the section", async () => {
+    renderApp("/connectors", withNotion());
+    expect(
+      await screen.findByRole("heading", { level: 1, name: term("settings") }),
+    ).toBeInTheDocument();
+    const section = await screen.findByRole("region", { name: term("connectors") });
+    expect(section).toHaveAttribute("id", "connectors");
+    expect(within(section).getByRole("region", { name: "Notion" })).toBeInTheDocument();
+    const nav = screen.getByRole("navigation", { name: "Primary" });
+    expect(within(nav).queryByRole("link", { name: term("connectors") })).toBeNull();
+  });
+
   it("has no axe violations", async () => {
-    const { container } = renderApp("/connectors", withNotion());
+    const { container } = renderApp("/settings", withNotion());
     await screen.findByRole("region", { name: "Notion" });
     expect(await axe(container)).toHaveNoViolations();
   });

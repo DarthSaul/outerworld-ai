@@ -21,7 +21,7 @@ export function linkFor(n: Notification): string | undefined {
     case "budget_blocked":
       return "/settings";
     case "connector":
-      return "/connectors";
+      return "/settings#connectors";
     case "kill_switch":
     case "kill_switch_cleared":
       return undefined;

@@ -85,7 +85,8 @@ describe("App shell", () => {
 });
 
 describe("Station chrome", () => {
-  it("names the station, counts live tasks and alerts, and plays the radio from notifications", async () => {
+  it("names the station; live tasks, alerts, and the radio wait in the status drawer", async () => {
+    const user = userEvent.setup();
     const fake = fakeApi();
     fake.crewActivity.quill = { state: "awaiting_consent", runs: 1, sessionId: "s1" };
     fake.notifications.push({
@@ -100,12 +101,32 @@ describe("Station chrome", () => {
     const header = screen.getByRole("banner");
     expect(await within(header).findByText("Test Station")).toBeInTheDocument();
     expect(within(header).getByText("Overseer console · 2 rooms · 2 crew")).toBeInTheDocument();
-    await waitFor(() =>
-      expect(within(header).getByText(term("stat.alerts")).nextSibling).toHaveTextContent("1"),
-    );
-    const radio = within(header).getByRole("region", { name: term("radio.title") });
+    expect(within(header).queryByText(term("stat.alerts"))).toBeNull();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    const toggle = await within(header).findByRole("button", {
+      name: "Station status: 0 tasks live, 1 alerts",
+    });
+    await user.click(toggle);
+    const drawer = screen.getByRole("dialog", { name: term("drawer.title") });
+    expect(within(drawer).getByText(term("stat.alerts")).nextSibling).toHaveTextContent("1");
+    const radio = within(drawer).getByRole("region", { name: term("radio.title") });
     expect(await within(radio).findByText("A run by Quill failed: HTTP 500")).toBeInTheDocument();
     expect(within(radio).getByText("Quill")).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("keeps the kill switch at the footer's right end", async () => {
+    const user = userEvent.setup();
+    const { calls } = renderApp("/");
+    const footer = screen.getByRole("contentinfo");
+    expect(within(screen.getByRole("banner")).queryByRole("button", { name: "Stop" })).toBeNull();
+    await user.click(await within(footer).findByRole("button", { name: "Stop" }));
+    expect(calls).toContainEqual({
+      method: "PUT",
+      path: "/kill-switch",
+      body: { engaged: true },
+    });
   });
 
   it("shows vitals in the footer: today's tokens, fuel against the daily cap, uptime", async () => {

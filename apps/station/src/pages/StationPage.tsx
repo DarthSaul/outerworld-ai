@@ -121,7 +121,7 @@ export function StationPage() {
   );
 
   return (
-    <div className="grid grid-cols-1 items-stretch gap-3.5 p-3.5 desktop:grid-cols-[minmax(0,1fr)_minmax(0,3fr)_minmax(0,2fr)]">
+    <div className="grid flex-1 grid-cols-1 items-stretch gap-3.5 p-3.5 desktop:grid-cols-[minmax(0,1fr)_minmax(0,3fr)_minmax(0,2fr)]">
       <h1 className="sr-only">{term("tab.station")}</h1>
       <div className="flex min-w-0 flex-col">
         <CrewRoster

@@ -43,12 +43,12 @@ function ConnectorCard({
       aria-labelledby={titleId}
       data-connector={connector.id}
       data-connector-status={connector.status}
-      className="flex flex-col gap-3 border-2 border-line bg-panel p-4 shadow-panel"
+      className="flex flex-col gap-3 border-2 border-line-soft bg-well p-3"
     >
       <header className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 id={titleId} className="m-0 font-display font-normal text-d10 text-cyan uppercase">
+        <h3 id={titleId} className="m-0 font-display font-normal text-d10 text-cyan uppercase">
           {connector.name}
-        </h2>
+        </h3>
         <span
           role="status"
           aria-label={`${connector.name} status`}
@@ -132,12 +132,12 @@ function ConnectorCard({
       </p>
       {connector.tools.length > 0 ? (
         <section aria-labelledby={`${titleId}-tools`} className="flex flex-col gap-1">
-          <h3
+          <h4
             id={`${titleId}-tools`}
             className="m-0 font-display font-normal text-d7 text-fg-mute uppercase"
           >
             {term("connector.tools")}
-          </h3>
+          </h4>
           <ul className="m-0 flex list-none flex-col gap-1 p-0 text-b17 text-fg">
             {connector.tools.map((t) => (
               <li key={t.name} data-tool={t.name} data-class={t.class}>
@@ -151,21 +151,29 @@ function ConnectorCard({
   );
 }
 
-/** Connectors (brief §12): installed once for the station; crew members are granted them. */
-export function ConnectorsPage() {
+/**
+ * Connectors (brief §12): installed once for the station; crew members are granted them. A
+ * section of Settings (ADR-0014), reachable at `/settings#connectors`.
+ */
+export function ConnectorsSection() {
   const connectors = useConnectors();
   const station = useStationView();
   const add = useAddNotion();
   const nameOf = (id: string) => station.data?.agents.find((a) => a.id === id)?.config.name ?? id;
   const list = connectors.data ?? [];
   return (
-    <section aria-labelledby="screen-title" className="flex flex-col gap-4">
-      <h1
-        id="screen-title"
-        className="m-0 font-display font-normal text-d14 text-title uppercase leading-[1.4] tracking-st-2"
+    <section
+      id="connectors"
+      aria-labelledby="connectors-title"
+      className="flex scroll-mt-3.5 flex-col gap-3 border-2 border-line bg-panel p-3 shadow-panel"
+    >
+      <h2
+        id="connectors-title"
+        className="m-0 font-display font-normal text-d9 text-panel-title uppercase tracking-st-1"
       >
         {term("connectors")}
-      </h1>
+      </h2>
+      <p className="m-0 text-b17 text-fg-soft">{term("connectors.hint")}</p>
       <ErrorNote error={connectors.error ?? add.error} />
       {connectors.isSuccess && list.length === 0 ? (
         <EmptyState

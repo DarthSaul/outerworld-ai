@@ -142,6 +142,12 @@
   --st-dur-type-tick: 60ms; /* one character per tick */
   --st-dur-chatter-hold: 4200ms; /* chatter stays this long after it finishes typing */
   --st-dur-reply-hold: 3600ms; /* an Overseer reply stays this long */
+  --st-dur-drawer: 180ms; /* the status drawer slides in, in steps */
+  --st-drawer-width: 380px;
+
+  /* The station map's plane is never smaller than this; a smaller viewport pans over it. */
+  --st-map-min-w: 860px;
+  --st-map-min-h: 580px;
   --st-packet-speed: 9; /* map percent per second */
   --st-blink-low: 0.15;
 }
@@ -254,6 +260,64 @@
   pointer-events: none;
   z-index: 50;
   background: var(--st-crt);
+}
+
+/* The status drawer (ADR-0014): an overlay from the right, over a scrim, in stepped motion. */
+.st-drawer-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+}
+.st-drawer-layer[data-open] {
+  pointer-events: auto;
+}
+.st-drawer-scrim {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--st-dur-drawer) steps(3);
+}
+.st-drawer-layer[data-open] .st-drawer-scrim {
+  opacity: 1;
+}
+.st-drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(var(--st-drawer-width), 100%);
+  transform: translateX(100%);
+  visibility: hidden;
+  transition:
+    transform var(--st-dur-drawer) steps(6),
+    visibility 0s linear var(--st-dur-drawer);
+}
+.st-drawer-layer[data-open] .st-drawer {
+  transform: none;
+  visibility: visible;
+  transition: transform var(--st-dur-drawer) steps(6);
+}
+@media (prefers-reduced-motion: reduce) {
+  .st-drawer,
+  .st-drawer-scrim,
+  .st-drawer-layer[data-open] .st-drawer {
+    transition: none;
+  }
+}
+
+/* The station map: a plane at least --st-map-min-* in size, panned and scaled in its viewport. */
+.st-map-plane {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: max(100%, var(--st-map-min-w));
+  height: max(100%, var(--st-map-min-h));
+  transform-origin: 0 0;
 }
 
 .st-pixelated {

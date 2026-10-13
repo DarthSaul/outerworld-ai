@@ -23,7 +23,7 @@ const arg = (name, fallback) => {
 };
 const routes = arg(
   "routes",
-  "/dev,/,/crew-select,/crew,/crew/vesper,/crew/quill,/comms,/memory,/memory?agent=wren,/settings,/notifications,/connectors",
+  "/dev,/,/crew-select,/crew,/crew/vesper,/crew/quill,/comms,/memory,/memory?agent=wren,/settings,/notifications",
 ).split(",");
 const port = Number(arg("port", "3300"));
 const outDir = join(process.cwd(), ".outerworld", "screenshots");
@@ -74,6 +74,54 @@ async function waitForServer() {
 
 const failures = [];
 const report = [];
+
+/** axe on the page as it is now; critical and serious violations fail the run. */
+async function axeBlocking(page, name) {
+  const results = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+    .analyze();
+  for (const v of results.violations.filter(
+    (v) => v.impact === "critical" || v.impact === "serious",
+  )) {
+    failures.push(
+      `${name}: axe ${v.impact} ${v.id}: ${v.help} (e.g. ${v.nodes[0]?.target?.join(" ") ?? "?"})`,
+    );
+  }
+}
+
+/**
+ * The Station's interactions in a real browser (ADR-0014): dragging pans the map and Recenter
+ * fits it again; the status drawer opens as a dialog, passes axe, and closes on Escape.
+ */
+async function stationInteractions(page, width) {
+  const transform = () => page.locator("[data-map-plane]").evaluate((el) => el.style.transform);
+  const fitted = await transform();
+  const box = await page.locator("[data-map-viewport]").boundingBox();
+  if (box) {
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 4;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x + 60, y + 30, { steps: 6 });
+    await page.mouse.up();
+    if ((await transform()) === fitted)
+      failures.push(`home-${width}: dragging did not pan the map`);
+    await page.getByRole("button", { name: /Recenter/ }).click();
+    if ((await transform()) !== fitted)
+      failures.push(`home-${width}: Recenter did not fit the map again`);
+  } else {
+    failures.push(`home-${width}: no map viewport`);
+  }
+  await page.locator('[aria-controls="station-status"]').click();
+  await page.getByRole("dialog").waitFor();
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: join(outDir, `home-drawer-${width}.png`) });
+  await axeBlocking(page, `home-drawer-${width}`);
+  await page.keyboard.press("Escape");
+  if (await page.getByRole("dialog").isVisible()) {
+    failures.push(`home-${width}: Escape did not close the status drawer`);
+  }
+}
 
 try {
   await waitForServer();
@@ -158,6 +206,9 @@ try {
             console.warn(
               `${name}: axe ${minor.map((v) => `${v.impact}:${v.id}`).join(", ")} (not blocking)`,
             );
+        }
+        if (route === "/" && reducedMotion === "no-preference") {
+          await stationInteractions(page, width);
         }
         const line = {
           route,
