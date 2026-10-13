@@ -23,6 +23,7 @@ export function linkFor(n: Notification): string | undefined {
     case "connector":
       return "/connectors";
     case "kill_switch":
+    case "kill_switch_cleared":
       return undefined;
     default:
       return session(n);

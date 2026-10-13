@@ -193,6 +193,8 @@ export const glossary = {
   "notification.budget_blocked": "The {subject} budget stopped a run: {detail}.",
   "notification.connector": "{subject} needs attention: {detail}",
   "notification.kill_switch": "The kill switch is on. Nothing runs until it is cleared.",
+  "notification.kill_switch_cleared":
+    "The kill switch has been switched off. The station is running again: new runs can start.",
   "notification.open": "Open",
   budgets: "Budgets",
   "budgets.hint":

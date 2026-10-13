@@ -30,6 +30,16 @@ describe("NotificationService", () => {
     expect(page.nextBefore).toBeUndefined();
   });
 
+  it("posts a line when the kill switch is cleared, so the feed says the station runs again", () => {
+    const t = setup();
+    t.events.append({ type: "station.kill_switch", payload: { engaged: true } });
+    t.events.append({ type: "station.kill_switch", payload: { engaged: false } });
+    expect(t.service.page().items.map((n) => [n.kind, n.level])).toEqual([
+      ["kill_switch_cleared", "info"],
+      ["kill_switch", "alert"],
+    ]);
+  });
+
   it("pages back with `before`, even past long stretches of events that project to none", () => {
     const t = setup();
     for (let i = 0; i < 5; i++) t.failed();
