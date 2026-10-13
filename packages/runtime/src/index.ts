@@ -91,6 +91,7 @@ export {
   type RunTrigger,
   type SessionRecord,
   SessionStore,
+  type SessionSummary,
   type StoredMessage,
 } from "./sessions/session-store.js";
 export { type AtomicWriteOptions, writeFileAtomic } from "./storage/atomic-write.js";

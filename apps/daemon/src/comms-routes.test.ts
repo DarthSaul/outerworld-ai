@@ -16,7 +16,7 @@ const TOKEN = "d".repeat(64);
 const KEY = "sk-or-v1-abcdefabcdefabcdefabcdefabcdef";
 const fixture = join(import.meta.dirname, "..", "..", "..", "fixtures", "demo-station");
 
-const setup = (keyCheckStatus = 200) => {
+const setup = (keyCheckStatus = 200, options: { titles?: boolean } = {}) => {
   const home = join(mkdtempSync(join(tmpdir(), "ow-comms-")), "home");
   cpSync(fixture, home, { recursive: true });
   const events = new EventStore(openDatabase(":memory:"));
@@ -25,7 +25,7 @@ const setup = (keyCheckStatus = 200) => {
     env: {},
     fetch: (async () => new Response("{}", { status: keyCheckStatus })) as unknown as typeof fetch,
   });
-  const services = testServices(home, events);
+  const services = testServices(home, events, undefined, options);
   const { runs } = services;
   const app = createApp({
     token: TOKEN,
@@ -84,6 +84,31 @@ describe("sessions and runs", () => {
       (await call("GET", "/agents/vesper/sessions")).json.map((s: { title: string }) => s.title),
     ).toEqual(["Second"]);
     expect((await call("GET", "/agents/vesper/sessions?archived=1")).json).toHaveLength(2);
+  });
+
+  it("names a new session from its first message and lists it with its last message", async () => {
+    const { call } = setup(200, { titles: true });
+    const s = await call("POST", "/agents/vesper/sessions", {});
+    expect(s.json.title).toBe("New session");
+    await call("POST", `/sessions/${s.json.id}/messages`, {
+      text: "Draft the launch notes please",
+    });
+    await untilSettled(call, s.json.id);
+    for (let i = 0; i < 100; i++) {
+      const [listed] = (await call("GET", "/agents/vesper/sessions")).json;
+      if (listed.title !== "New session") break;
+      await new Promise((r) => setTimeout(r, 5));
+    }
+    const [listed] = (await call("GET", "/agents/vesper/sessions")).json;
+    // The scripted fake model titles a session with the message's first words.
+    expect(listed).toMatchObject({
+      id: s.json.id,
+      title: "Draft the launch notes please",
+      messageCount: 2,
+      lastMessageAt: expect.any(String),
+      lastMessage: { role: "assistant", text: expect.stringContaining("Scripted reply") },
+      active: false,
+    });
   });
 
   it("renames a session", async () => {

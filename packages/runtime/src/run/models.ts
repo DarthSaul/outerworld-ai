@@ -1,3 +1,4 @@
+import { TITLE_INSTRUCTIONS } from "@darthsaul/outerworld-ai-core";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import type { LanguageModel } from "ai";
 import { MockLanguageModelV4, simulateReadableStream } from "ai/test";
@@ -62,6 +63,22 @@ export function scriptedModels(options: { chunkDelayInMs?: number } = {}): Model
         const messages = prompt as ReadonlyArray<{ role: string; content: unknown }>;
         const said = lastUserText(messages);
         const last = messages.at(-1);
+        if (messages.find((m) => m.role === "system")?.content === TITLE_INSTRUCTIONS) {
+          // A session title: the message's first few words, so dev sessions read sensibly.
+          const title = said.split(/\s+/).filter(Boolean).slice(0, 5).join(" ");
+          return {
+            stream: simulateReadableStream({
+              chunkDelayInMs: options.chunkDelayInMs ?? 40,
+              chunks: [
+                { type: "stream-start", warnings: [] },
+                { type: "text-start", id: "t" },
+                { type: "text-delta", id: "t", delta: title || "Scripted session" },
+                { type: "text-end", id: "t" },
+                { type: "finish", finishReason: { unified: "stop", raw: "stop" }, usage },
+              ],
+            }),
+          } as never;
+        }
         const request = TOOL_REQUEST.exec(said);
         if (request && last?.role === "user") {
           return {
