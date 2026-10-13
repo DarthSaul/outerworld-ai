@@ -113,6 +113,13 @@ export interface SessionRecord {
   readonly createdAt: string;
   readonly archivedAt?: string;
 }
+/** A session in a list: `GET /agents/:id/sessions`, most recently active first. */
+export interface SessionSummary extends SessionRecord {
+  readonly messageCount: number;
+  readonly lastMessageAt?: string;
+  readonly lastMessage?: { readonly role: "user" | "assistant"; readonly text: string };
+  readonly active: boolean;
+}
 export interface RunRecord {
   readonly id: string;
   readonly sessionId: string;
@@ -181,7 +188,7 @@ export function useSessions(agentId: string | undefined) {
   return useQuery({
     queryKey: ["sessions", agentId],
     queryFn: () =>
-      api.get<SessionRecord[]>(`/agents/${encodeURIComponent(agentId ?? "")}/sessions`),
+      api.get<SessionSummary[]>(`/agents/${encodeURIComponent(agentId ?? "")}/sessions`),
     enabled: agentId !== undefined,
   });
 }

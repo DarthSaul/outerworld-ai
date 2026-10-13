@@ -1,5 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { formatUsd, formatWhen } from "./format.js";
+import { formatAgo, formatUsd, formatWhen } from "./format.js";
+
+describe("formatAgo", () => {
+  const now = Date.parse("2026-10-01T12:00:00.000Z");
+  it("counts minutes, hours, and days, then gives the date", () => {
+    expect(formatAgo("2026-10-01T11:59:30.000Z", now)).toBe("just now");
+    expect(formatAgo("2026-10-01T11:55:00.000Z", now)).toBe("5m ago");
+    expect(formatAgo("2026-10-01T09:00:00.000Z", now)).toBe("3h ago");
+    expect(formatAgo("2026-09-29T12:00:00.000Z", now)).toBe("2d ago");
+    expect(formatAgo("2026-09-01T12:00:00.000Z", now)).toMatch(/2026/);
+  });
+
+  it("says nothing for a date it cannot read, and never counts into the future", () => {
+    expect(formatAgo("nope", now)).toBe("");
+    expect(formatAgo("2026-10-01T12:30:00.000Z", now)).toBe("just now");
+  });
+});
 
 describe("formatUsd", () => {
   it("shows cents, and four decimals below a cent", () => {

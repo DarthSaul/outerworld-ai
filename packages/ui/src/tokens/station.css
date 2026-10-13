@@ -310,6 +310,59 @@
   }
 }
 
+/* Checkbox (ADR-0014): the native input is hidden but focusable; the box after it is drawn. */
+.st-check {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+}
+.st-check-box {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  border: 2px solid var(--st-line-soft);
+  background: var(--st-well);
+}
+/* The check mark: 2px pixels drawn as shadows of one transparent pixel, on a 6×5 grid. */
+.st-check-box::after {
+  content: "";
+  display: none;
+  width: 2px;
+  height: 2px;
+  transform: translate(-5px, -4px);
+  box-shadow:
+    0 4px 0 0 var(--st-ink),
+    2px 6px 0 0 var(--st-ink),
+    4px 8px 0 0 var(--st-ink),
+    6px 6px 0 0 var(--st-ink),
+    8px 4px 0 0 var(--st-ink),
+    10px 2px 0 0 var(--st-ink),
+    2px 4px 0 0 var(--st-ink),
+    4px 6px 0 0 var(--st-ink),
+    6px 4px 0 0 var(--st-ink),
+    8px 2px 0 0 var(--st-ink);
+}
+label:hover .st-check:not(:disabled) + .st-check-box {
+  border-color: var(--st-cyan);
+}
+.st-check:checked + .st-check-box {
+  border-color: var(--st-cyan);
+  background: var(--st-cyan);
+}
+.st-check:checked + .st-check-box::after {
+  display: block;
+}
+.st-check:focus-visible + .st-check-box {
+  outline: 2px solid var(--st-cyan);
+  outline-offset: 2px;
+}
+
 /* The station map: a plane at least --st-map-min-* in size, panned and scaled in its viewport. */
 .st-map-plane {
   position: absolute;

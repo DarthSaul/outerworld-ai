@@ -142,6 +142,60 @@ describe("COMMS", () => {
     ]);
   });
 
+  it("shows who you are talking to: room, role, status, approval, model, and spend", async () => {
+    const user = userEvent.setup();
+    const fake = fakeApi();
+    fake.spend.agents = { quill: 0.42 };
+    renderApp("/comms", fake);
+    await user.click(await screen.findByRole("button", { name: "Quill" }));
+    const profile = await screen.findByRole("region", { name: "About Quill" });
+    const facts = Object.fromEntries(
+      [...profile.querySelectorAll("dt")].map((dt) => [
+        dt.textContent,
+        dt.nextElementSibling?.textContent,
+      ]),
+    );
+    expect(facts).toMatchObject({
+      [term("comms.profile.role")]: term("agent"),
+      [term("comms.profile.status")]: term("crewStatus.idle"),
+      [term("comms.profile.approval")]: term("approvalMode.full"),
+      [term("comms.profile.model")]: "anthropic/claude-sonnet-5.5",
+      [term("comms.profile.spend")]: "$0.42",
+    });
+    expect(within(profile).getByText("Operations")).toBeInTheDocument();
+    expect(within(profile).getByRole("link", { name: /Crew file/ })).toHaveAttribute(
+      "href",
+      "/crew/quill",
+    );
+  });
+
+  it("lists sessions with their title, last line, size, and when, and follows a new title", async () => {
+    const { user, sessions, emit } = await startChat();
+    await user.type(
+      within(screen.getByRole("region", { name: /Vesper · New session/ })).getByRole("textbox"),
+      "Plan the launch",
+    );
+    await user.keyboard("{Enter}");
+    const entry = sessions.get("s1");
+    if (entry) {
+      entry.messages.push({ role: "assistant", text: "Here is a plan." });
+      entry.session = { ...entry.session, title: "Launch plan" };
+    }
+    emit({
+      type: "session.renamed",
+      agentId: "vesper",
+      sessionId: "s1",
+      payload: { title: "Launch plan" },
+    });
+    const list = screen.getByRole("region", { name: term("comms.sessions") });
+    const item = await within(list).findByRole("button", { name: "Launch plan" });
+    expect(item).toHaveAccessibleDescription(/Vesper: Here is a plan\./);
+    expect(item).toHaveAccessibleDescription(/2 messages/);
+    expect(item).toHaveAccessibleDescription(new RegExp(term("comms.session.working")));
+    expect(within(item).getByRole("time")).toHaveAttribute("datetime", "2026-09-29T12:05:00.000Z");
+    expect(item).toHaveAttribute("aria-current", "true");
+  });
+
   it("keeps several chat windows open at once", async () => {
     const { user } = await startChat();
     await user.click(screen.getByRole("button", { name: "Quill" }));

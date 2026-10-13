@@ -58,6 +58,18 @@ describe("Crew screen", () => {
     expect(await screen.findByRole("heading", { level: 1, name: "Scout" })).toBeInTheDocument();
   });
 
+  it("titles each add panel and says what it is for", async () => {
+    renderApp("/crew");
+    const crew = await screen.findByRole("region", { name: term("agent.verb") });
+    expect(within(crew).getByText(term("agent.add.hint"))).toBeInTheDocument();
+    expect(
+      within(crew).getByRole("button", { name: term("template.projectManager") }),
+    ).toBeInTheDocument();
+    const room = screen.getByRole("region", { name: term("room.verb") });
+    expect(within(room).getByText(term("room.add.hint"))).toBeInTheDocument();
+    expect(within(room).getByLabelText(term("room.name"))).toBeInTheDocument();
+  });
+
   it("adds a room", async () => {
     const user = userEvent.setup();
     const { calls } = renderApp("/crew");

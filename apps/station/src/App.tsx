@@ -168,7 +168,7 @@ function Chrome({ children }: { readonly children: ReactNode }) {
 
 /** Every screen but the Station and Crew Select sits in a padded page area. */
 function Page({ children }: { readonly children: ReactNode }) {
-  return <div className="p-3.5">{children}</div>;
+  return <div className="flex flex-1 flex-col p-3.5">{children}</div>;
 }
 
 /** An empty station (no station.json yet) shows onboarding instead of the screens. */

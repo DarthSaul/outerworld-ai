@@ -30,6 +30,7 @@ import type {
   ScheduleItem,
   SessionDetail,
   SessionRecord,
+  SessionSummary,
   SpendTotal,
 } from "../queries.js";
 
@@ -315,7 +316,22 @@ export function fakeApi() {
       if (method === "GET") {
         return [...sessions.values()]
           .filter((x) => x.session.agentId === agentId)
-          .map((x) => x.session)
+          .map((x): SessionSummary => {
+            const last = [...x.messages]
+              .reverse()
+              .find((m) => (m.role === "user" || m.role === "assistant") && m.text !== "");
+            return {
+              ...x.session,
+              messageCount: x.messages.length,
+              ...(x.messages.length ? { lastMessageAt: "2026-09-29T12:05:00.000Z" } : {}),
+              ...(last && (last.role === "user" || last.role === "assistant")
+                ? { lastMessage: { role: last.role, text: last.text } }
+                : {}),
+              active: x.runs.some((r) =>
+                ["queued", "running", "awaiting_consent"].includes(r.state),
+              ),
+            };
+          })
           .reverse();
       }
       const session: SessionRecord = {

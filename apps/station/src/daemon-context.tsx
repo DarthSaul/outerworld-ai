@@ -59,6 +59,8 @@ export function invalidateFor(event: RuntimeEvent, client: QueryClient): void {
     void client.invalidateQueries({ queryKey: ["schedules", event.agentId] });
     void client.invalidateQueries({ queryKey: ["sessions", event.agentId] });
   } else if (event.type.startsWith("run.") && !event.ephemeral) {
+    // A session list shows each one's last message and whether it is working.
+    void client.invalidateQueries({ queryKey: ["sessions", event.agentId] });
     void client.invalidateQueries({ queryKey: ["session", event.sessionId] });
     // A schedule's history shows the state of the runs it started.
     void client.invalidateQueries({ queryKey: ["schedules", event.agentId] });

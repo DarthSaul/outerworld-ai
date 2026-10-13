@@ -9,7 +9,7 @@ import {
   type StationConfig,
   term,
 } from "@darthsaul/outerworld-ai-core";
-import { Sprite } from "@darthsaul/outerworld-ai-ui";
+import { Checkbox, Sprite } from "@darthsaul/outerworld-ai-ui";
 import { type FormEvent, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { ErrorNote } from "../components/ErrorNote.js";
@@ -204,23 +204,21 @@ function ConfigForm({
         ))}
       </fieldset>
       {station.connectors.length > 0 ? (
-        <fieldset className="m-0 flex flex-wrap gap-3 border-0 p-0">
+        <fieldset className="m-0 flex flex-wrap gap-x-5 gap-y-2 border-0 p-0">
           <legend className={`mb-1.5 ${label}`}>{term("connectors")}</legend>
           {station.connectors.map((c) => (
-            <label key={c.id} className="flex items-center gap-1.5 text-b19 text-fg">
-              <input
-                type="checkbox"
-                checked={grants.has(c.id)}
-                onChange={() =>
-                  set({
-                    connectorGrants: grants.has(c.id)
-                      ? value.connectorGrants.filter((g) => g !== c.id)
-                      : [...value.connectorGrants, c.id],
-                  })
-                }
-              />
-              {c.name}
-            </label>
+            <Checkbox
+              key={c.id}
+              label={c.name}
+              checked={grants.has(c.id)}
+              onChange={() =>
+                set({
+                  connectorGrants: grants.has(c.id)
+                    ? value.connectorGrants.filter((g) => g !== c.id)
+                    : [...value.connectorGrants, c.id],
+                })
+              }
+            />
           ))}
         </fieldset>
       ) : null}
