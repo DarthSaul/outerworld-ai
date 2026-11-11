@@ -52,6 +52,9 @@ describe("App shell", () => {
     const nav = screen.getByRole("navigation", { name: "Primary" });
     const links = within(nav).getAllByRole("link");
     expect(links.map((l) => l.textContent)).toEqual(SCREENS.map((s) => term(s.label)));
+    const labels = SCREENS.map((s) => s.label);
+    expect(labels.indexOf("tab.crewSelect")).toBe(labels.indexOf("agents") + 1);
+    expect(labels.indexOf("memory")).toBe(labels.indexOf("tab.crewSelect") + 1);
     expect(within(nav).getByRole("link", { name: term("tab.station") })).toHaveAttribute(
       "aria-current",
       "page",

@@ -169,12 +169,12 @@ function AddPanel({
       aria-labelledby={titleId}
       className="flex min-w-0 flex-col border-2 border-line bg-panel shadow-panel"
     >
-      <h2
+      <h3
         id={titleId}
         className="m-0 border-line border-b-2 bg-panel-head px-2.5 py-2 font-display font-normal text-d9 text-panel-title uppercase tracking-st-1"
       >
         {title}
-      </h2>
+      </h3>
       <div className="flex flex-col gap-3 p-3">
         <p className="m-0 text-b17 text-fg-soft">{hint}</p>
         <form aria-labelledby={titleId} onSubmit={onSubmit} className="flex flex-col gap-2">
@@ -186,7 +186,7 @@ function AddPanel({
   );
 }
 
-/** Crew and rooms: every room with its props and crew, and panels to add both. */
+/** Crew and rooms: panels to add both, then every room with its props and crew. */
 export function CrewPage() {
   const station = useStationView();
   const { dashboard } = useDashboard();
@@ -230,104 +230,118 @@ export function CrewPage() {
   );
 
   return (
-    <section aria-labelledby="screen-title" className="flex flex-col gap-3.5">
-      <h1
-        id="screen-title"
-        className="m-0 font-display font-normal text-d14 text-title uppercase tracking-st-2"
-      >
-        {term("agents")}
-      </h1>
-      {view.agents.length === 0 ? (
-        <EmptyState title={term("empty.crew.title")} body={term("empty.crew.body")} />
-      ) : null}
-      <div className="grid grid-cols-1 gap-3.5 desktop:grid-cols-2">
-        {rooms.map((room) => {
-          const mapped = dashboard?.rooms.find((r) => r.id === room.id);
-          return (
-            <RoomSection
-              key={room.id}
-              room={room}
-              color={mapped ? roomColor(mapped) : stVar("line")}
-              crew={view.agents
-                .filter((a) => a.config.roomId === room.id)
-                .map((a) => ({
-                  id: a.id,
-                  name: a.config.name,
-                  role: a.config.role,
-                  approvalMode: a.config.approvalMode,
-                  look: a.config.look,
-                }))}
-            />
-          );
-        })}
-      </div>
-      <div className="grid grid-cols-1 items-start gap-3.5 desktop:grid-cols-2">
-        <AddPanel
-          title={term("agent.verb")}
-          hint={term("agent.add.hint")}
-          onSubmit={addAgent}
-          after={
-            <>
-              <ErrorNote error={createAgent.error} />
-              <div className="flex flex-wrap items-center gap-2 border-line-faint border-t-2 pt-3">
-                <span className="text-b17 text-fg-mute">{term("template.hint")}</span>
-                <OutlineButton
-                  tone="cyan"
-                  disabled={addPm.isPending}
-                  onClick={() =>
-                    addPm.mutate(undefined, { onSuccess: (pm) => void navigate(`/crew/${pm.id}`) })
-                  }
-                >
-                  {term("template.projectManager")}
-                </OutlineButton>
-              </div>
-              <ErrorNote error={addPm.error} />
-            </>
-          }
+    <div className="flex flex-col gap-3.5">
+      <h1 className="sr-only">{term("agents")}</h1>
+      <section aria-labelledby="crew-add-title" className="flex flex-col gap-3.5">
+        <h2
+          id="crew-add-title"
+          className="m-0 font-display font-normal text-d14 text-title uppercase tracking-st-2"
         >
-          <label className={`${fieldClass} flex-1`}>
-            {term("field.name")}
-            <input
-              className={inputClass}
-              value={agentName}
-              required
-              onChange={(e) => setAgentName(e.target.value)}
-            />
-          </label>
-          <label className={fieldClass}>
-            {term("room")}
-            <select
-              className={inputClass}
-              value={roomForNew}
-              onChange={(e) => setAgentRoom(e.target.value)}
-            >
-              {rooms.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          {submit(term("agent.verb"), createAgent.isPending)}
-        </AddPanel>
-        <AddPanel
-          title={term("room.verb")}
-          hint={term("room.add.hint")}
-          onSubmit={addRoom}
-          after={<ErrorNote error={createRoom.error} />}
+          {term("crewPage.add")}
+        </h2>
+        <div className="grid grid-cols-1 items-start gap-3.5 desktop:grid-cols-2">
+          <AddPanel
+            title={term("agent.verb")}
+            hint={term("agent.add.hint")}
+            onSubmit={addAgent}
+            after={
+              <>
+                <ErrorNote error={createAgent.error} />
+                <div className="flex flex-wrap items-center gap-2 border-line-faint border-t-2 pt-3">
+                  <span className="text-b17 text-fg-mute">{term("template.hint")}</span>
+                  <OutlineButton
+                    tone="cyan"
+                    disabled={addPm.isPending}
+                    onClick={() =>
+                      addPm.mutate(undefined, {
+                        onSuccess: (pm) => void navigate(`/crew/${pm.id}`),
+                      })
+                    }
+                  >
+                    {term("template.projectManager")}
+                  </OutlineButton>
+                </div>
+                <ErrorNote error={addPm.error} />
+              </>
+            }
+          >
+            <label className={`${fieldClass} flex-1`}>
+              {term("field.name")}
+              <input
+                className={inputClass}
+                value={agentName}
+                required
+                onChange={(e) => setAgentName(e.target.value)}
+              />
+            </label>
+            <label className={fieldClass}>
+              {term("room")}
+              <select
+                className={inputClass}
+                value={roomForNew}
+                onChange={(e) => setAgentRoom(e.target.value)}
+              >
+                {rooms.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {submit(term("agent.verb"), createAgent.isPending)}
+          </AddPanel>
+          <AddPanel
+            title={term("room.verb")}
+            hint={term("room.add.hint")}
+            onSubmit={addRoom}
+            after={<ErrorNote error={createRoom.error} />}
+          >
+            <label className={`${fieldClass} flex-1`}>
+              {term("room.name")}
+              <input
+                className={inputClass}
+                value={roomName}
+                required
+                onChange={(e) => setRoomName(e.target.value)}
+              />
+            </label>
+            {submit(term("room.verb"), createRoom.isPending)}
+          </AddPanel>
+        </div>
+      </section>
+      <hr className="m-0 h-0.5 border-0 bg-line-faint" />
+      <section aria-labelledby="crew-rooms-title" className="flex flex-col gap-3.5">
+        <h2
+          id="crew-rooms-title"
+          className="m-0 font-display font-normal text-d14 text-title uppercase tracking-st-2"
         >
-          <label className={`${fieldClass} flex-1`}>
-            {term("room.name")}
-            <input
-              className={inputClass}
-              value={roomName}
-              required
-              onChange={(e) => setRoomName(e.target.value)}
-            />
-          </label>
-          {submit(term("room.verb"), createRoom.isPending)}
-        </AddPanel>
-      </div>
+          {term("crewPage.rooms")}
+        </h2>
+        {view.agents.length === 0 ? (
+          <EmptyState title={term("empty.crew.title")} body={term("empty.crew.body")} />
+        ) : null}
+        <div className="grid grid-cols-1 gap-3.5 desktop:grid-cols-2">
+          {rooms.map((room) => {
+            const mapped = dashboard?.rooms.find((r) => r.id === room.id);
+            return (
+              <RoomSection
+                key={room.id}
+                room={room}
+                color={mapped ? roomColor(mapped) : stVar("line")}
+                crew={view.agents
+                  .filter((a) => a.config.roomId === room.id)
+                  .map((a) => ({
+                    id: a.id,
+                    name: a.config.name,
+                    role: a.config.role,
+                    approvalMode: a.config.approvalMode,
+                    look: a.config.look,
+                  }))}
+              />
+            );
+          })}
+        </div>
+      </section>
       {view.issues.length > 0 ? (
         <section aria-label={term("issues")} className="flex flex-col gap-1">
           <PanelLabel>{term("issues")}</PanelLabel>
@@ -338,6 +352,6 @@ export function CrewPage() {
           ))}
         </section>
       ) : null}
-    </section>
+    </div>
   );
 }

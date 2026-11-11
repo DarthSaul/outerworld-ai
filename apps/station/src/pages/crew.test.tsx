@@ -70,6 +70,18 @@ describe("Crew screen", () => {
     expect(within(room).getByLabelText(term("room.name"))).toBeInTheDocument();
   });
 
+  it("puts the add panels first, then the rooms below a divider", async () => {
+    renderApp("/crew");
+    const add = await screen.findByRole("region", { name: term("crewPage.add") });
+    const rooms = screen.getByRole("region", { name: term("crewPage.rooms") });
+    expect(screen.getByRole("heading", { level: 1, name: term("agents") })).toBeInTheDocument();
+    expect(within(add).getByRole("heading", { level: 3, name: term("agent.verb") })).toBeVisible();
+    expect(within(add).getByRole("heading", { level: 3, name: term("room.verb") })).toBeVisible();
+    expect(within(rooms).getByRole("heading", { name: "Command" })).toBeInTheDocument();
+    expect(add.compareDocumentPosition(rooms) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(add.nextElementSibling).toBe(screen.getByRole("separator"));
+  });
+
   it("adds a room", async () => {
     const user = userEvent.setup();
     const { calls } = renderApp("/crew");

@@ -34,14 +34,14 @@ import { useCrt, useDashboard, useRadio } from "./station/use-dashboard.js";
 const Gallery = lazy(() => import("./dev/GalleryPage.js"));
 
 /**
- * The page tabs: the design's two (Station, Crew Select), then the other v1 screens in the same
- * row (D26). Connectors is a section of Settings (ADR-0014).
+ * The page tabs: the Station, then the other v1 screens in the same row (D26). Appearance (the
+ * design's Crew Select) sits after Crew; Connectors is a section of Settings (ADR-0014).
  */
 export const SCREENS: ReadonlyArray<{ path: string; label: GlossaryKey }> = [
   { path: "/", label: "tab.station" },
-  { path: "/crew-select", label: "tab.crewSelect" },
   { path: "/comms", label: "comms" },
   { path: "/crew", label: "agents" },
+  { path: "/crew-select", label: "tab.crewSelect" },
   { path: "/memory", label: "memory" },
   { path: "/notifications", label: "notifications" },
   { path: "/settings", label: "settings" },
