@@ -96,14 +96,14 @@ export function OverseerComms({
         <div
           role="img"
           aria-label={term("comms.portrait")}
-          className="flex h-24 w-21 shrink-0 items-end justify-center border-2 border-cyan p-1"
+          className="flex h-16 w-14 shrink-0 items-end justify-center border-2 border-cyan p-1"
           style={{ background: "var(--st-portrait-stripes)" }}
         >
-          {overseerLook === undefined ? null : <Sprite look={overseerLook} scale={3} />}
+          {overseerLook === undefined ? null : <Sprite look={overseerLook} scale={2} />}
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-1.5" aria-live="polite">
           <div className="font-display text-d8 text-amber uppercase">{message?.speaker ?? ""}</div>
-          <p className="m-0 min-h-22 text-b19 text-fg-hi">
+          <p className="m-0 min-h-16 text-b19 text-fg-hi">
             <span aria-hidden="true">{typed}</span>
             <span className="sr-only">{message?.text}</span>
             <span

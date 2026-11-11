@@ -39,7 +39,7 @@ describe("CrewRoster", () => {
   it("lists crew but the Overseer, with room and status, and selects one", async () => {
     const onSelectAgent = vi.fn();
     render(<CrewRoster dashboard={busy()} onSelectAgent={onSelectAgent} />);
-    expect(screen.getByRole("region", { name: "Crew roster" })).toHaveTextContent("2 + OV");
+    expect(screen.getByRole("region", { name: "Crew" })).toHaveTextContent("2 + OV");
     const rows = screen.getAllByRole("button");
     expect(rows.map((r) => r.textContent)).toEqual([
       "QUQuill OperationsActive",

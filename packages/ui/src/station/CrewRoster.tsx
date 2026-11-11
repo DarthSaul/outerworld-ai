@@ -13,8 +13,9 @@ export interface CrewRosterProps {
 }
 
 /**
- * Column 1: every crew member but the Overseer ("N + OV"), with room and status. No fuel bar:
- * budgets are per agent per day in dollars, not a token tank (ADR-0013 #2).
+ * Column 1: every crew member but the Overseer ("N + OV"), with room and status. Rows fit their
+ * column: one line when wide, the status under the name when narrower, stacked when narrowest.
+ * No fuel bar: budgets are per agent per day in dollars, not a token tank (ADR-0013 #2).
  */
 export function CrewRoster({
   dashboard,
@@ -30,7 +31,7 @@ export function CrewRoster({
       meta={termWith("roster.meta", { crew: String(crew.length) })}
       className={className}
     >
-      <ul className="m-0 flex list-none flex-col p-1.5">
+      <ul className="@container m-0 flex list-none flex-col p-1.5">
         {crew.map((c) => {
           const selected = selection?.type === "agent" && selection.id === c.id;
           return (
@@ -39,9 +40,10 @@ export function CrewRoster({
                 type="button"
                 aria-pressed={selected}
                 onClick={() => onSelectAgent?.(c.id)}
-                className={`grid w-full cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2.5 border-2 bg-transparent p-1.5 text-left hover:bg-hover ${selected ? "border-cyan" : "border-transparent"}`}
+                className={`grid w-full cursor-pointer grid-cols-[minmax(0,1fr)] items-center gap-x-2.5 gap-y-1 @min-[10rem]:grid-cols-[auto_minmax(0,1fr)] @min-[10rem]:gap-y-0 @min-[13rem]:grid-cols-[auto_minmax(0,1fr)_auto] border-2 bg-transparent p-1.5 text-left hover:bg-hover ${selected ? "border-cyan" : "border-transparent"}`}
               >
                 <Avatar
+                  className="@min-[10rem]:row-span-2 @min-[13rem]:row-span-1"
                   name={c.name}
                   color={
                     c.roomId === dashboard.bridgeId ? stVar("cyan") : roomColorVar(c.colorIndex)
@@ -53,7 +55,7 @@ export function CrewRoster({
                   <span className="text-b16 text-fg-mute">{roomName(c.roomId)}</span>
                 </span>
                 <span
-                  className="font-display text-d7 uppercase"
+                  className="font-display text-d7 uppercase @min-[10rem]:col-start-2 @min-[13rem]:col-start-3"
                   style={{ color: toneVar(CREW_STATUS_TONE[c.status]) }}
                 >
                   {term(`crewStatus.${c.status}`)}
