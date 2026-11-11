@@ -7,6 +7,7 @@
 > - the kill switch moves to the footer;
 > - Connectors becomes a Settings section;
 > - the map pans, zooms, and recenters;
+> - the map takes 2fr beside comms and the scanner, and the crew roster merges into the scanner;
 > - forms use the pixel checkbox.
 >
 > Everything below this note describes the superseded Reach spec and rig, kept for history.

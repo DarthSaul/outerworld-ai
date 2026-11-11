@@ -30,15 +30,15 @@ the runtime (one extra model call per new session), so they are recorded here.
   the footer. The map keeps a 580px minimum height on desktop.
 
 **Station layout** (amended 2026-11-11)
-- **Resizable columns.** On desktop the gaps beside the map are drag handles (`ResizeHandle`, an
-  `<hr>` separator: drag, arrow keys, Enter or double-click to reset). Of the row's 6fr, the crew
-  column ranges 0.6fr–2fr (twice its default), the comms column 1.25fr–3fr, and the map takes the
-  rest, never under 2fr: when both sides would squeeze it, the column being dragged stops. Widths are kept per viewer in localStorage (`outerworld.columns`).
-- **Phones.** The crew list and the map share the first row (1fr / 2fr); Overseer comms and the
-  scanner each get their own row below. Roster rows fit their column with container queries:
-  one line when wide, status under the name when narrower, stacked when narrowest.
-- **Names.** The roster panel is titled "Crew"; the Crew Select tab is "Appearance" and sits after
-  Crew. The Overseer's comms portrait is drawn at 2× (was 3×).
+- **Two columns.** On tablet and desktop the map always takes 2fr of a 3fr row; Overseer comms and
+  the scanner share the remaining 1fr. Phones stack the map, comms, then the scanner. (A first
+  pass with drag-resizable columns and a separate crew roster was replaced the same day.)
+- **Crew lives in the scanner.** Picking a crew member only ever led to the scanner, so the
+  roster panel is gone: the scanner opens with a crew picker (a native select grouped by room,
+  each option with its status; its label carries the crew count). Choosing one scans them; the
+  picker shows whoever is being scanned.
+- **Names.** The Crew Select tab is "Appearance" and sits after Crew. The Overseer's comms
+  portrait is the 2× character alone, without the striped frame.
 
 **Station map**
 - **The plane and its viewport.** The map draws on a plane at least `--st-map-min-w` ×
