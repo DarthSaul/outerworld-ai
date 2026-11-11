@@ -31,7 +31,11 @@ the runtime (one extra model call per new session), so they are recorded here.
 
 **Station layout** (amended 2026-11-11)
 - **Two columns.** On tablet and desktop the map always takes 2fr of a 3fr row; Overseer comms and
-  the scanner share the remaining 1fr. Phones stack the map, comms, then the scanner. (A first
+  the scanner share the remaining 1fr, stacked 1fr / 2fr and held to the map's height (the
+  column never sets the row's height); each scrolls inside when its content is longer. Phones
+  stack the map, comms, then the scanner at their natural heights.
+- **Order line.** The "Give the Overseer an order" field wraps, grows to three lines, then
+  scrolls; Enter sends and Shift+Enter starts a new line. It never grows the comms panel. (A first
   pass with drag-resizable columns and a separate crew roster was replaced the same day.)
 - **Crew lives in the scanner.** Picking a crew member only ever led to the scanner, so the
   roster panel is gone: the scanner opens with a crew picker (the station-styled `Dropdown`, not
