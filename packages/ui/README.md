@@ -36,6 +36,7 @@ the glossary.
 | `Avatar`, `overseerAvatarProps` | A square initials chip, with an optional double ring and status lamp. |
 | `Sprite` | One of core's 24 characters as SVG rects, at an integer scale. |
 | `OutlineButton`, `ChoiceButton`, `tabClass`, `Diamond` | Outline buttons (also `type="submit"`), the (A)/(B) buttons, tab classes for router links, and the placed-object diamond. |
+| `Dropdown` | A select drawn in the station style: a button opening a listbox of grouped options with rich labels (avatar, colored status). Arrow keys, Home/End, type-ahead, Enter/Space, Escape and Tab; focus moves to the options while open; a click outside closes it. |
 | `Checkbox`, `fieldClass`, `inputClass` | A checkbox drawn as a pixel box (the native input stays, visually hidden and focusable), and the classes for a labelled field and an input or select at the shared form height. |
 | `EmptyState` | A status region: a title, one sentence, and at most one action. |
 | `toneVar`, `CREW_STATUS_TONE`, `RUN_STATUS_TONE`, `lampBlink` | Status colors and lamp blink classes. |

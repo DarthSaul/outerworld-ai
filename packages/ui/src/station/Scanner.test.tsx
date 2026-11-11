@@ -44,30 +44,23 @@ describe("Scanner", () => {
         onSelect={onSelect}
       />,
     );
-    const picker = screen.getByRole("combobox", { name: "Crew · 3" });
-    expect(picker).toHaveValue("");
-    const groups = [...picker.querySelectorAll("optgroup")].map((g) => g.label);
-    expect(groups).toEqual(["Command", "Operations", "Research"]);
-    expect(
-      within(picker)
-        .getAllByRole("option")
-        .map((o) => o.textContent),
-    ).toEqual([
-      "Pick a crew member",
-      "Vesper (Overseer) · Idle",
-      "Quill · Active",
-      "Wren · Blocked",
+    const picker = screen.getByRole("button", { name: "Crew · 3 Pick a crew member" });
+    await userEvent.click(picker);
+    expect(screen.getAllByRole("option").map((o) => o.getAttribute("aria-label"))).toEqual([
+      "Vesper (Overseer) · Idle, Command",
+      "Quill · Active, Operations",
+      "Wren · Blocked, Research",
     ]);
-    await userEvent.selectOptions(picker, "wren");
-    expect(onSelect).toHaveBeenCalledWith({ type: "agent", id: "wren" });
     expect(await axe(container)).toHaveNoViolations();
+    await userEvent.click(screen.getByRole("option", { name: /^Wren/ }));
+    expect(onSelect).toHaveBeenCalledWith({ type: "agent", id: "wren" });
   });
 
   it("shows the scanned crew member in the picker", () => {
     render(
       <Scanner dashboard={busy()} selection={{ type: "agent", id: "quill" }} onSelect={vi.fn()} />,
     );
-    expect(screen.getByRole("combobox", { name: "Crew · 3" })).toHaveValue("quill");
+    expect(screen.getByRole("button", { name: "Crew · 3 Quill · Active" })).toBeInTheDocument();
   });
 
   it("scans a room: crew, placed objects, hallways, and its missions", async () => {

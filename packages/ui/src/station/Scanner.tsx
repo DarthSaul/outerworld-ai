@@ -6,12 +6,12 @@ import {
   term,
   termWith,
 } from "@darthsaul/outerworld-ai-core";
-import type { ReactNode } from "react";
+import { type ReactNode, useId } from "react";
 import { stVar } from "../tokens/tokens.js";
 import { Avatar } from "./Avatar.js";
 import { Diamond, OutlineButton } from "./buttons.js";
 import { type DashboardSelection, grantName, roomColor } from "./DashboardMap.js";
-import { inputClass } from "./form.js";
+import { Dropdown } from "./Dropdown.js";
 import { Panel, PanelLabel } from "./Panel.js";
 import { SegmentBar } from "./SegmentBar.js";
 import { CREW_STATUS_TONE, RUN_STATUS_TONE, toneVar } from "./tone.js";
@@ -362,44 +362,61 @@ function LaneScan({ laneId, props }: { readonly laneId: string; readonly props: 
 }
 
 /**
- * The crew picker at the top of the scanner: every crew member, grouped by room, with status.
- * Picking one scans them; the label carries the crew count.
+ * The crew picker at the top of the scanner: every crew member, grouped by room, with avatar and
+ * status. Picking one scans them; the label carries the crew count.
  */
 function CrewPicker({ props }: { readonly props: ScannerProps }) {
   const { dashboard, selection, onSelect } = props;
-  const value = selection.type === "agent" ? selection.id : "";
+  const labelId = useId();
+  const groups = dashboard.rooms.map((room) => ({
+    id: room.id,
+    label: room.name,
+    options: dashboard.crew
+      .filter((c) => c.roomId === room.id)
+      .map((c) => {
+        const status = term(`crewStatus.${c.status}`);
+        const role = c.overseer ? ` (${term("overseer.role")})` : "";
+        return {
+          value: c.id,
+          text: `${c.name}${role} · ${status}`,
+          label: (
+            <span className="flex min-w-0 flex-1 items-center gap-2">
+              <Avatar
+                name={c.name}
+                color={c.overseer ? stVar("white") : roomColor(room)}
+                size={22}
+              />
+              <span className="min-w-0 flex-1 truncate uppercase">
+                {c.name}
+                {c.overseer ? (
+                  <span className="text-b16 text-fg-mute normal-case">{role}</span>
+                ) : null}
+              </span>
+              <span
+                className="shrink-0 font-display text-d7 uppercase"
+                style={{ color: toneVar(CREW_STATUS_TONE[c.status]) }}
+              >
+                {status}
+              </span>
+            </span>
+          ),
+        };
+      }),
+  }));
   return (
-    <label className="flex items-center gap-2.5 border-line-faint border-b-2 px-3 py-2">
-      <span className="shrink-0 font-display text-d7 text-fg-mute uppercase">
+    <div className="flex items-center gap-2.5 border-line-faint border-b-2 px-3 py-2">
+      <span id={labelId} className="shrink-0 font-display text-d7 text-fg-mute uppercase">
         {termWith("scanner.crewCount", { count: String(dashboard.crew.length) })}
       </span>
-      <select
-        className={`${inputClass} flex-1 cursor-pointer`}
-        value={value}
-        onChange={(e) => {
-          if (e.target.value) onSelect({ type: "agent", id: e.target.value });
-        }}
-      >
-        <option value="" disabled>
-          {term("scanner.crewPick")}
-        </option>
-        {dashboard.rooms.map((room) => {
-          const crew = dashboard.crew.filter((c) => c.roomId === room.id);
-          if (crew.length === 0) return null;
-          return (
-            <optgroup key={room.id} label={room.name}>
-              {crew.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                  {c.overseer ? ` (${term("overseer.role")})` : ""} ·{" "}
-                  {term(`crewStatus.${c.status}`)}
-                </option>
-              ))}
-            </optgroup>
-          );
-        })}
-      </select>
-    </label>
+      <Dropdown
+        labelledBy={labelId}
+        value={selection.type === "agent" ? selection.id : ""}
+        placeholder={term("scanner.crewPick")}
+        groups={groups}
+        onChange={(id) => onSelect({ type: "agent", id })}
+        className="flex-1"
+      />
+    </div>
   );
 }
 

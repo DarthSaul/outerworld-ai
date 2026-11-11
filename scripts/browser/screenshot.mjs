@@ -112,6 +112,21 @@ async function stationInteractions(page, width) {
   } else {
     failures.push(`home-${width}: no map viewport`);
   }
+  // The scanner's crew picker: opens, passes axe, picks from the keyboard, closes.
+  const picker = page.getByRole("button", { name: /^Crew · \d+/ });
+  await picker.click();
+  await page.getByRole("listbox").waitFor();
+  await page.screenshot({ path: join(outDir, `home-crew-picker-${width}.png`) });
+  await axeBlocking(page, `home-crew-picker-${width}`);
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter");
+  if (await page.getByRole("listbox").isVisible()) {
+    failures.push(`home-${width}: choosing crew did not close the picker`);
+  }
+  if ((await picker.textContent())?.includes("Pick a crew member")) {
+    failures.push(`home-${width}: the crew picker did not show the chosen crew member`);
+  }
+
   await page.locator('[aria-controls="station-status"]').click();
   await page.getByRole("dialog").waitFor();
   await page.waitForTimeout(400);

@@ -30,7 +30,10 @@ describe("Station map", () => {
     if (!ops) throw new Error("no operations room");
     expect(within(ops).getByRole("button", { name: "Quill, Idle" })).toBeInTheDocument();
     expect(within(ops).getByTitle("Archive cabinet")).toHaveTextContent("Files");
-    expect(within(scanner()).getByRole("combobox", { name: "Crew · 2" })).toBeInTheDocument();
+    expect(within(scanner()).getByRole("button", { name: /^Crew · 2/ })).toHaveAttribute(
+      "aria-haspopup",
+      "listbox",
+    );
     expect(await axe(container)).toHaveNoViolations();
   });
 
@@ -75,7 +78,8 @@ describe("Station map", () => {
     expect(scanner()).toHaveTextContent("Most urgent missions");
     await user.click(within(m).getByRole("button", { name: "Hallway L-01: Operations ⇄ Command" }));
     expect(scanner()).toHaveTextContent("Briefings");
-    await user.selectOptions(within(scanner()).getByRole("combobox"), "quill");
+    await user.click(within(scanner()).getByRole("button", { name: /^Crew · 2/ }));
+    await user.click(within(scanner()).getByRole("option", { name: /^Quill/ }));
     expect(scanner()).toHaveTextContent("Crew member · Operations");
     await user.click(within(scanner()).getByRole("button", { name: "◀ Operations" }));
     expect(scanner()).toHaveTextContent(term("scanner.grants"));
