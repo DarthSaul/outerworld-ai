@@ -34,6 +34,18 @@ the runtime (one extra model call per new session), so they are recorded here.
   the scanner share the remaining 1fr, stacked 1fr / 2fr and held to the map's height (the
   column never sets the row's height); each scrolls inside when its content is longer. Phones
   stack the map, comms, then the scanner at their natural heights.
+- **Rooms picker.** Under the crew picker, the same `Dropdown` lists the rooms (sector, color,
+  crew count); the two share one grid so their controls line up.
+- **Comms tabs.** The comms card is a `PanelTabs`: *Overseer comms* (as before) and *Crew comms*,
+  the active tab filled. Crew comms is COMMS condensed: crew on the left, the chosen crew
+  member's sessions (one-line previews) on the right, New session above them. Opening a session
+  fills the card with the chat and a ◀ Back button that takes focus; Back returns to the list
+  with focus on that session. In the card the chat drops its frame, its transcript scrolls and
+  follows new lines, its message box grows from one line to three, and the steer hint is read
+  by screen readers only. Both tabs stay mounted, so switching keeps your place.
+- **Characters on the map.** Crew chips and the Overseer on the Bridge show the crew member's
+  pixel character (`Avatar` with `look`) in a frame of the room color, with the status lamp and
+  the Overseer's ring as before, instead of initials.
 - **Order line.** The "Give the Overseer an order" field wraps, grows to three lines, then
   scrolls; Enter sends and Shift+Enter starts a new line. It never grows the comms panel. (A first
   pass with drag-resizable columns and a separate crew roster was replaced the same day.)
