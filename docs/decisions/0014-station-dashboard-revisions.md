@@ -31,14 +31,14 @@ the runtime (one extra model call per new session), so they are recorded here.
 
 **Station layout** (amended 2026-11-11)
 - **Two columns.** On tablet and desktop the map always takes 2fr of a 3fr row; Overseer comms and
-  the scanner share the remaining 1fr, stacked 1fr / 2fr and held to the map's height (the
+  the scanner share the remaining 1fr, stacked 1fr / 1fr and held to the map's height (the
   column never sets the row's height); each scrolls inside when its content is longer. Phones
   stack the map, comms, then the scanner at their natural heights.
 - **Rooms picker.** Under the crew picker, the same `Dropdown` lists the rooms (sector, color,
   crew count); the two share one grid so their controls line up.
 - **Comms tabs.** The comms card is a `PanelTabs`: *Overseer comms* (as before) and *Crew comms*,
-  the active tab filled. Crew comms is COMMS condensed: crew on the left, the chosen crew
-  member's sessions (one-line previews) on the right, New session above them. Opening a session
+  the active tab filled. Crew comms is COMMS condensed: the scanner's crew dropdown on top, then
+  the chosen crew member's sessions (one-line previews) with New session. Opening a session
   fills the card with the chat and a ◀ Back button that takes focus; Back returns to the list
   with focus on that session. In the card the chat drops its frame, its transcript scrolls and
   follows new lines, its message box grows from one line to three, and the steer hint is read
@@ -51,7 +51,8 @@ the runtime (one extra model call per new session), so they are recorded here.
   pass with drag-resizable columns and a separate crew roster was replaced the same day.)
 - **Crew lives in the scanner.** Picking a crew member only ever led to the scanner, so the
   roster panel is gone: the scanner opens with a crew picker (the station-styled `Dropdown`, not
-  a native select: grouped by room, each option with its avatar and colored status; its label
+  a native select: grouped by room, each option with the crew member's character and colored
+  status, built by `crewOptionGroups` so crew comms shows the same list; its label
   carries the crew count). `browser:verify` opens it, runs axe, and picks from the keyboard. Choosing one scans them; the
   picker shows whoever is being scanned.
 - **Names.** The Crew Select tab is "Appearance" and sits after Crew. The Overseer's comms

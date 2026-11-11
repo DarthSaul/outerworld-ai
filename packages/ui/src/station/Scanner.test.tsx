@@ -51,6 +51,10 @@ describe("Scanner", () => {
       "Quill · Active, Operations",
       "Wren · Blocked, Research",
     ]);
+    // Each crew member is drawn as their own character, not initials.
+    for (const option of screen.getAllByRole("option")) {
+      expect(option.querySelector("[data-look] svg rect")).not.toBeNull();
+    }
     expect(await axe(container)).toHaveNoViolations();
     await userEvent.click(screen.getByRole("option", { name: /^Wren/ }));
     expect(onSelect).toHaveBeenCalledWith({ type: "agent", id: "wren" });

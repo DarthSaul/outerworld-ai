@@ -136,12 +136,12 @@ async function stationInteractions(page, width) {
     if (scan !== map) {
       failures.push(`home-${width}: the scanner ends at ${scan}px, the map at ${map}px`);
     }
-    // Comms over the scanner is 1fr / 2fr (the panels plus their share of the gap).
+    // Comms over the scanner is 1fr / 1fr.
     const height = (name) =>
       page.getByRole("region", { name }).evaluate((el) => el.getBoundingClientRect().height);
     const ratio = (await height("Scanner")) / (await height("Overseer comms"));
-    if (ratio < 1.85 || ratio > 2.15) {
-      failures.push(`home-${width}: scanner / comms height is ${ratio.toFixed(2)}, not 2`);
+    if (ratio < 0.95 || ratio > 1.05) {
+      failures.push(`home-${width}: scanner / comms height is ${ratio.toFixed(2)}, not 1`);
     }
   }
   // The order line wraps, grows to three lines, then scrolls without growing the panel.
@@ -171,8 +171,14 @@ async function stationInteractions(page, width) {
   // Crew comms: the second comms tab, a session opened across the panel, and back.
   await page.getByRole("tab", { name: "Crew comms" }).click();
   const crewComms = page.getByRole("tabpanel", { name: "Crew comms" });
-  await crewComms.getByRole("navigation").waitFor();
+  const crewPicker = crewComms.getByRole("button", { name: /^Crew · \d+/ });
+  await crewPicker.waitFor();
   await page.screenshot({ path: join(outDir, `home-crew-comms-${width}.png`) });
+  await crewPicker.click();
+  await crewComms.getByRole("listbox").waitFor();
+  await page.screenshot({ path: join(outDir, `home-crew-comms-picker-${width}.png`) });
+  await axeBlocking(page, `home-crew-comms-picker-${width}`);
+  await page.keyboard.press("Escape");
   await axeBlocking(page, `home-crew-comms-${width}`);
   const firstSession = crewComms.locator("[data-session]").first();
   if (await firstSession.count()) {
@@ -183,7 +189,7 @@ async function stationInteractions(page, width) {
     await page.screenshot({ path: join(outDir, `home-crew-chat-${width}.png`) });
     await axeBlocking(page, `home-crew-chat-${width}`);
     await back.click();
-    await crewComms.getByRole("navigation").waitFor();
+    await crewPicker.waitFor();
   } else {
     failures.push(`home-${width}: crew comms listed no sessions to open`);
   }

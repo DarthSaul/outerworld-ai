@@ -1,16 +1,16 @@
 import { term, termWith } from "@darthsaul/outerworld-ai-core";
-import { OutlineButton, PanelLabel } from "@darthsaul/outerworld-ai-ui";
-import { useEffect, useRef, useState } from "react";
+import { crewOptionGroups, Dropdown, OutlineButton, PanelLabel } from "@darthsaul/outerworld-ai-ui";
+import { useEffect, useId, useRef, useState } from "react";
 import { ErrorNote } from "../components/ErrorNote.js";
 import { useCreateSession, useSessions, useStationView } from "../queries.js";
 import { useDashboard } from "../station/use-dashboard.js";
 import { ChatWindow } from "./ChatWindow.js";
-import { CrewButton, SessionButton } from "./CommsPage.js";
+import { SessionButton } from "./CommsPage.js";
 
 /**
- * COMMS, condensed for the Station's comms card (ADR-0014): crew on the left, the chosen crew
- * member's sessions on the right. Opening a session fills the panel with the chat and a back
- * button; going back returns focus to that session in the list.
+ * COMMS, condensed for the Station's comms card (ADR-0014): a crew dropdown (the scanner's, with
+ * each crew member's character), then the chosen crew member's sessions. Opening a session fills
+ * the panel with the chat and a back button; going back returns focus to that session.
  */
 export function CrewComms() {
   const station = useStationView();
@@ -23,6 +23,7 @@ export function CrewComms() {
   const [open, setOpen] = useState<string>();
   const [returnTo, setReturnTo] = useState<string>();
   const list = useRef<HTMLDivElement>(null);
+  const labelId = useId();
 
   // Back from a chat: focus the session it came from.
   useEffect(() => {
@@ -43,33 +44,26 @@ export function CrewComms() {
     );
   }
 
-  const roomName = (id: string) =>
-    station.data?.station?.rooms.find((r) => r.id === id)?.name ?? id;
-  const crewOf = (id: string) => dashboard?.crew.find((c) => c.id === id);
   return (
-    <div
-      ref={list}
-      className="grid min-h-0 flex-1 grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-2.5 p-2.5"
-    >
-      <nav aria-label={term("agents")} className="min-h-0 overflow-y-auto">
-        <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
-          {agents.map((a) => (
-            <li key={a.id}>
-              <CrewButton
-                agent={a}
-                crew={crewOf(a.id)}
-                roomName={roomName(a.config.roomId)}
-                active={a.id === current?.id}
-                onPick={() => setAgentId(a.id)}
-              />
-            </li>
-          ))}
-        </ul>
-      </nav>
+    <div ref={list} className="flex min-h-0 flex-1 flex-col">
+      <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2.5 border-line-faint border-b-2 px-3 py-2">
+        <span id={labelId} className="font-display text-d7 text-fg-mute uppercase">
+          {termWith("scanner.crewCount", { count: String(agents.length) })}
+        </span>
+        {dashboard ? (
+          <Dropdown
+            labelledBy={labelId}
+            value={current?.id ?? ""}
+            placeholder={term("scanner.crewPick")}
+            groups={crewOptionGroups(dashboard)}
+            onChange={setAgentId}
+          />
+        ) : null}
+      </div>
       {current ? (
         <section
           aria-label={termWith("comms.crew.sessions", { name: current.config.name })}
-          className="flex min-h-0 flex-col gap-1.5"
+          className="flex min-h-0 flex-1 flex-col gap-1.5 p-2.5"
         >
           <div className="flex items-center justify-between gap-2">
             <PanelLabel>

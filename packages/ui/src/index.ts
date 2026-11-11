@@ -20,6 +20,7 @@ export {
   type CrewSelectAgent,
   type CrewSelectProps,
 } from "./station/CrewSelect.js";
+export { crewOptionGroups } from "./station/crew-options.js";
 export {
   DashboardMap,
   type DashboardMapProps,

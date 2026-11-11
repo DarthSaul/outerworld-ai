@@ -156,9 +156,9 @@ export function StationPage() {
           />
         </section>
       </div>
-      {/* Tablet and desktop: comms over the scanner, 1fr / 2fr of the map's height; neither panel
+      {/* Tablet and desktop: comms over the scanner, half the map's height each; neither panel
           sets the row's height (contain-size), and each scrolls inside when it needs to. */}
-      <div className="flex min-w-0 flex-col gap-3.5 desktop:grid desktop:contain-size desktop:grid-rows-[minmax(0,1fr)_minmax(0,2fr)]">
+      <div className="flex min-w-0 flex-col gap-3.5 desktop:grid desktop:contain-size desktop:grid-rows-[minmax(0,1fr)_minmax(0,1fr)]">
         <div className="flex min-h-0 flex-col gap-3.5">
           <PanelTabs
             label={term("comms.tabs")}

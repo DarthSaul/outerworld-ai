@@ -284,7 +284,7 @@ describe("Overseer comms", () => {
 describe("Crew comms", () => {
   const crewTab = () => screen.getByRole("tab", { name: term("comms.crew.title") });
 
-  it("is a second comms tab: crew on the left, the chosen crew member's sessions on the right", async () => {
+  it("is a second comms tab: a crew dropdown, then the chosen crew member's sessions", async () => {
     const fake = fakeApi();
     fake.seedSession("quill", "Hub audit");
     const user = userEvent.setup();
@@ -297,13 +297,17 @@ describe("Crew comms", () => {
     await user.click(crewTab());
     expect(crewTab()).toHaveAttribute("aria-selected", "true");
     const panel = screen.getByRole("tabpanel", { name: term("comms.crew.title") });
-    const crew = within(panel).getByRole("navigation", { name: term("agents") });
-    expect(
-      within(crew)
-        .getAllByRole("button")
-        .map((b) => b.getAttribute("aria-label")),
-    ).toEqual(["Vesper", "Quill"]);
-    await user.click(within(crew).getByRole("button", { name: "Quill" }));
+    // The scanner's dropdown: grouped by room, each crew member drawn as their character.
+    const picker = within(panel).getByRole("button", { name: /^Crew · 2/ });
+    await user.click(picker);
+    const options = within(panel).getAllByRole("option");
+    expect(options.map((o) => o.getAttribute("aria-label"))).toEqual([
+      "Vesper (Overseer) · Idle, Command",
+      "Quill · Idle, Operations",
+    ]);
+    for (const o of options) expect(o.querySelector("[data-look] svg")).not.toBeNull();
+    await user.click(within(panel).getByRole("option", { name: /^Quill/ }));
+    expect(picker).toHaveAccessibleName("Crew · 2 Quill · Idle");
     const sessions = await within(panel).findByRole("region", { name: "Sessions · Quill" });
     expect(await within(sessions).findByText("Hub audit")).toBeInTheDocument();
     expect(await axe(container)).toHaveNoViolations();
@@ -321,7 +325,7 @@ describe("Crew comms", () => {
     const chat = await within(panel).findByRole("region", { name: /Vesper · Launch plan/ });
     const back = within(chat).getByRole("button", { name: term("comms.back") });
     await waitFor(() => expect(back).toHaveFocus());
-    expect(within(panel).queryByRole("navigation", { name: term("agents") })).toBeNull();
+    expect(within(panel).queryByRole("button", { name: /^Crew · / })).toBeNull();
     expect(within(chat).getByRole("textbox")).toBeInTheDocument();
     await user.click(back);
     const again = await within(panel).findByRole("button", { name: "Launch plan" });
