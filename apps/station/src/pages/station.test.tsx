@@ -279,7 +279,7 @@ describe("Overseer comms", () => {
 });
 
 describe("Station columns", () => {
-  it("resizes the side columns from their handles, the crew column no wider than 1fr", async () => {
+  it("resizes the side columns from their handles, the crew column up to 2fr", async () => {
     localStorage.removeItem("outerworld.columns");
     const user = userEvent.setup();
     const { container } = renderApp("/");
@@ -288,7 +288,7 @@ describe("Station columns", () => {
     const right = screen.getByRole("separator", { name: term("station.resize.right") });
     const grid = () => container.querySelector<HTMLElement>("[style*='--st-station-cols']");
     expect(left).toHaveAttribute("aria-valuenow", "17");
-    expect(left).toHaveAttribute("aria-valuemax", "17");
+    expect(left).toHaveAttribute("aria-valuemax", "33");
 
     left.focus();
     await user.keyboard("{ArrowRight}");

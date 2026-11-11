@@ -12,19 +12,29 @@ export interface Columns {
 /** The whole row, in fr: the design's 1fr / 3fr / 2fr. */
 export const COLUMN_TOTAL = 6;
 export const DEFAULT_COLUMNS: Columns = { left: 1, right: 2 };
-/** The crew column never grows past its default 1fr; the map always keeps at least 2fr. */
+/** The crew column grows to 2fr, twice its default; each side column has its own range. */
 export const COLUMN_LIMITS = {
-  left: { min: 0.6, max: 1 },
+  left: { min: 0.6, max: 2 },
   right: { min: 1.25, max: 3 },
 } as const;
+/** The map always keeps at least this much, whatever the side columns ask for. */
+export const MIN_MAP_COLUMN = 2;
 
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 
-export function clampColumns(c: Columns): Columns {
-  return {
+/**
+ * Each column within its range, then the map's floor: when both sides together would leave the
+ * map under MIN_MAP_COLUMN, the column named by `moving` (the one being dragged) gives way.
+ */
+export function clampColumns(c: Columns, moving: keyof Columns = "left"): Columns {
+  const out = {
     left: clamp(c.left, COLUMN_LIMITS.left.min, COLUMN_LIMITS.left.max),
     right: clamp(c.right, COLUMN_LIMITS.right.min, COLUMN_LIMITS.right.max),
   };
+  const other = moving === "left" ? "right" : "left";
+  const room = COLUMN_TOTAL - MIN_MAP_COLUMN - out[other];
+  out[moving] = Math.max(COLUMN_LIMITS[moving].min, Math.min(out[moving], room));
+  return out;
 }
 
 /**
@@ -41,6 +51,7 @@ export function resizeColumns(
   const fr = (dx * COLUMN_TOTAL) / width;
   return clampColumns(
     handle === "left" ? { ...c, left: c.left + fr } : { ...c, right: c.right - fr },
+    handle,
   );
 }
 

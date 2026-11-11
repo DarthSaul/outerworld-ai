@@ -4,6 +4,7 @@ import {
   clampColumns,
   columnsTemplate,
   DEFAULT_COLUMNS,
+  MIN_MAP_COLUMN,
   parseColumns,
   resizeColumns,
 } from "./columns.js";
@@ -15,14 +16,22 @@ describe("station columns", () => {
     );
   });
 
-  it("never lets the crew column grow past 1fr, and the map keeps at least 2fr", () => {
-    const wide = resizeColumns(DEFAULT_COLUMNS, "left", 500, 1200);
+  it("lets the crew column grow to twice its default, and no further", () => {
+    const wide = resizeColumns(DEFAULT_COLUMNS, "left", 2000, 1200);
     expect(wide.left).toBe(COLUMN_LIMITS.left.max);
+    expect(COLUMN_LIMITS.left.max).toBe(2 * DEFAULT_COLUMNS.left);
     const narrow = resizeColumns(DEFAULT_COLUMNS, "left", -500, 1200);
     expect(narrow.left).toBe(COLUMN_LIMITS.left.min);
-    const comms = resizeColumns(DEFAULT_COLUMNS, "right", -2000, 1200);
-    expect(comms.right).toBe(COLUMN_LIMITS.right.max);
-    expect(6 - COLUMN_LIMITS.left.max - COLUMN_LIMITS.right.max).toBeGreaterThanOrEqual(2);
+  });
+
+  it("keeps the map at least 2fr: the column being dragged gives way", () => {
+    const comms = resizeColumns({ left: 2, right: 2 }, "right", -2000, 1200);
+    expect(comms).toEqual({ left: 2, right: 6 - MIN_MAP_COLUMN - 2 });
+    const crew = resizeColumns({ left: 1, right: 3 }, "left", 2000, 1200);
+    expect(crew).toEqual({ left: 6 - MIN_MAP_COLUMN - 3, right: 3 });
+    expect(resizeColumns(DEFAULT_COLUMNS, "right", -2000, 1200).right).toBe(
+      COLUMN_LIMITS.right.max,
+    );
   });
 
   it("converts pixels to fr across the row; the right handle widens comms as it moves left", () => {

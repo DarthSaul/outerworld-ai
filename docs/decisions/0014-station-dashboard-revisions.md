@@ -31,9 +31,9 @@ the runtime (one extra model call per new session), so they are recorded here.
 
 **Station layout** (amended 2026-11-11)
 - **Resizable columns.** On desktop the gaps beside the map are drag handles (`ResizeHandle`, an
-  `<hr>` separator: drag, arrow keys, Enter or double-click to reset). The crew column can shrink
-  but never grows past its default 1fr; the comms column ranges 1.25fr–3fr; the map takes the
-  rest, never under 2fr. Widths are kept per viewer in localStorage (`outerworld.columns`).
+  `<hr>` separator: drag, arrow keys, Enter or double-click to reset). Of the row's 6fr, the crew
+  column ranges 0.6fr–2fr (twice its default), the comms column 1.25fr–3fr, and the map takes the
+  rest, never under 2fr: when both sides would squeeze it, the column being dragged stops. Widths are kept per viewer in localStorage (`outerworld.columns`).
 - **Phones.** The crew list and the map share the first row (1fr / 2fr); Overseer comms and the
   scanner each get their own row below. Roster rows fit their column with container queries:
   one line when wide, status under the name when narrower, stacked when narrowest.
