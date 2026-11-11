@@ -11,6 +11,7 @@ import { stVar } from "../tokens/tokens.js";
 import { Avatar } from "./Avatar.js";
 import { Diamond, OutlineButton } from "./buttons.js";
 import { type DashboardSelection, grantName, roomColor } from "./DashboardMap.js";
+import { inputClass } from "./form.js";
 import { Panel, PanelLabel } from "./Panel.js";
 import { SegmentBar } from "./SegmentBar.js";
 import { CREW_STATUS_TONE, RUN_STATUS_TONE, toneVar } from "./tone.js";
@@ -360,7 +361,49 @@ function LaneScan({ laneId, props }: { readonly laneId: string; readonly props: 
   );
 }
 
-/** Column 3, below comms: what is selected on the map, in detail. */
+/**
+ * The crew picker at the top of the scanner: every crew member, grouped by room, with status.
+ * Picking one scans them; the label carries the crew count.
+ */
+function CrewPicker({ props }: { readonly props: ScannerProps }) {
+  const { dashboard, selection, onSelect } = props;
+  const value = selection.type === "agent" ? selection.id : "";
+  return (
+    <label className="flex items-center gap-2.5 border-line-faint border-b-2 px-3 py-2">
+      <span className="shrink-0 font-display text-d7 text-fg-mute uppercase">
+        {termWith("scanner.crewCount", { count: String(dashboard.crew.length) })}
+      </span>
+      <select
+        className={`${inputClass} flex-1 cursor-pointer`}
+        value={value}
+        onChange={(e) => {
+          if (e.target.value) onSelect({ type: "agent", id: e.target.value });
+        }}
+      >
+        <option value="" disabled>
+          {term("scanner.crewPick")}
+        </option>
+        {dashboard.rooms.map((room) => {
+          const crew = dashboard.crew.filter((c) => c.roomId === room.id);
+          if (crew.length === 0) return null;
+          return (
+            <optgroup key={room.id} label={room.name}>
+              {crew.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                  {c.overseer ? ` (${term("overseer.role")})` : ""} ·{" "}
+                  {term(`crewStatus.${c.status}`)}
+                </option>
+              ))}
+            </optgroup>
+          );
+        })}
+      </select>
+    </label>
+  );
+}
+
+/** Beside the map, below comms: pick a crew member, or what is selected on the map, in detail. */
 export function Scanner(props: ScannerProps) {
   const { dashboard, selection, className = "" } = props;
   const kind = term(`scanner.kind.${selection.type}`);
@@ -376,6 +419,7 @@ export function Scanner(props: ScannerProps) {
   }
   return (
     <Panel title={term("scanner.title")} meta={kind} className={className}>
+      {dashboard.crew.length > 0 ? <CrewPicker props={props} /> : null}
       {body}
     </Panel>
   );

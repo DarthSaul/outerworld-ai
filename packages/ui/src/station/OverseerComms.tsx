@@ -93,12 +93,7 @@ export function OverseerComms({
       className={className}
     >
       <div className="flex gap-2.5 p-2.5">
-        <div
-          role="img"
-          aria-label={term("comms.portrait")}
-          className="flex h-16 w-14 shrink-0 items-end justify-center border-2 border-cyan p-1"
-          style={{ background: "var(--st-portrait-stripes)" }}
-        >
+        <div role="img" aria-label={term("comms.portrait")} className="flex shrink-0 items-start">
           {overseerLook === undefined ? null : <Sprite look={overseerLook} scale={2} />}
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-1.5" aria-live="polite">

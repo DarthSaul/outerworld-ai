@@ -1,7 +1,7 @@
 import { term } from "@darthsaul/outerworld-ai-core";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { axe } from "vitest-axe";
 import { fakeApi, renderApp } from "../test/fake-daemon.js";
 
@@ -30,7 +30,7 @@ describe("Station map", () => {
     if (!ops) throw new Error("no operations room");
     expect(within(ops).getByRole("button", { name: "Quill, Idle" })).toBeInTheDocument();
     expect(within(ops).getByTitle("Archive cabinet")).toHaveTextContent("Files");
-    expect(screen.getByRole("region", { name: term("roster.title") })).toHaveTextContent("1 + OV");
+    expect(within(scanner()).getByRole("combobox", { name: "Crew · 2" })).toBeInTheDocument();
     expect(await axe(container)).toHaveNoViolations();
   });
 
@@ -68,15 +68,14 @@ describe("Station map", () => {
     expect(await within(m).findByRole("button", { name: "Quill, Blocked" })).toBeInTheDocument();
   });
 
-  it("scans the Bridge by default, then whatever is picked on the map or the roster", async () => {
+  it("scans the Bridge by default, then whatever is picked on the map or the crew picker", async () => {
     const user = userEvent.setup();
     renderApp("/", withLane());
     const m = await map();
     expect(scanner()).toHaveTextContent("Most urgent missions");
     await user.click(within(m).getByRole("button", { name: "Hallway L-01: Operations ⇄ Command" }));
     expect(scanner()).toHaveTextContent("Briefings");
-    const roster = screen.getByRole("region", { name: term("roster.title") });
-    await user.click(within(roster).getByRole("button", { name: /Quill/ }));
+    await user.selectOptions(within(scanner()).getByRole("combobox"), "quill");
     expect(scanner()).toHaveTextContent("Crew member · Operations");
     await user.click(within(scanner()).getByRole("button", { name: "◀ Operations" }));
     expect(scanner()).toHaveTextContent(term("scanner.grants"));
@@ -275,40 +274,5 @@ describe("Overseer comms", () => {
     await waitFor(() =>
       expect(calls).toContainEqual({ method: "POST", path: "/agents/vesper/sessions", body: {} }),
     );
-  });
-});
-
-describe("Station columns", () => {
-  it("resizes the side columns from their handles, the crew column up to 2fr", async () => {
-    localStorage.removeItem("outerworld.columns");
-    const user = userEvent.setup();
-    const { container } = renderApp("/");
-    await map();
-    const left = screen.getByRole("separator", { name: term("station.resize.left") });
-    const right = screen.getByRole("separator", { name: term("station.resize.right") });
-    const grid = () => container.querySelector<HTMLElement>("[style*='--st-station-cols']");
-    expect(left).toHaveAttribute("aria-valuenow", "17");
-    expect(left).toHaveAttribute("aria-valuemax", "33");
-
-    left.focus();
-    await user.keyboard("{ArrowRight}");
-    expect(left).toHaveAttribute("aria-valuenow", "17");
-    // happy-dom lays nothing out, so give the row a width for the pixel-to-fr conversion.
-    vi.spyOn(grid() as HTMLElement, "clientWidth", "get").mockReturnValue(1200);
-    await user.keyboard("{ArrowLeft}");
-    expect(Number(left.getAttribute("aria-valuenow"))).toBeLessThan(17);
-    right.focus();
-    await user.keyboard("{ArrowLeft}");
-    expect(Number(right.getAttribute("aria-valuenow"))).toBeGreaterThan(33);
-    expect(grid()?.style.getPropertyValue("--st-station-cols")).toMatch(/^minmax\(0,0\.880fr\)/);
-    expect(JSON.parse(localStorage.getItem("outerworld.columns") ?? "{}")).toEqual({
-      left: 0.88,
-      right: 2.12,
-    });
-
-    await user.keyboard("{Enter}");
-    expect(right).toHaveAttribute("aria-valuenow", "33");
-    expect(await axe(container)).toHaveNoViolations();
-    localStorage.removeItem("outerworld.columns");
   });
 });

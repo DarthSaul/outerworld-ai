@@ -1,16 +1,14 @@
 import { type Dashboard, term, termWith } from "@darthsaul/outerworld-ai-core";
 import {
-  CrewRoster,
   DashboardMap,
   type DashboardSelection,
   MAP_STYLES,
   OutlineButton,
   OverseerComms,
-  ResizeHandle,
   Scanner,
   tabClass,
 } from "@darthsaul/outerworld-ai-ui";
-import { type CSSProperties, useRef, useState } from "react";
+import { useState } from "react";
 import { ErrorNote } from "../components/ErrorNote.js";
 import {
   useActivity,
@@ -19,15 +17,6 @@ import {
   useDeleteLane,
   useKillSwitch,
 } from "../queries.js";
-import {
-  COLUMN_LIMITS,
-  type Columns,
-  columnsTemplate,
-  DEFAULT_COLUMNS,
-  percentOf,
-  resizeColumns,
-  useColumns,
-} from "../station/columns.js";
 import { useComms } from "../station/use-comms.js";
 import { useDashboard, useMapStyle } from "../station/use-dashboard.js";
 
@@ -50,7 +39,7 @@ function current(d: Dashboard, s: DashboardSelection | undefined): DashboardSele
 }
 
 /**
- * The Station (ADR-0013): crew roster, the station map, Overseer comms and the scanner, every
+ * The Station (ADR-0013): the station map, Overseer comms and the scanner (which picks crew), every
  * piece a projection of runtime state. Drawing a hallway opens one in station.json.
  */
 export function StationPage() {
@@ -65,8 +54,6 @@ export function StationPage() {
   const [picked, setPicked] = useState<DashboardSelection>();
   const [draw, setDraw] = useState<{ from: string | null }>();
   const [note, setNote] = useState<string>();
-  const [columns, setColumns] = useColumns();
-  const grid = useRef<HTMLDivElement>(null);
 
   if (!dashboard) return <ErrorNote error={error} />;
   const selection = current(dashboard, picked);
@@ -132,37 +119,11 @@ export function StationPage() {
     </div>
   );
 
-  const resize = (handle: "left" | "right") => (dx: number) =>
-    setColumns(resizeColumns(columns, handle, dx, grid.current?.clientWidth ?? 0));
-  const reset = (handle: keyof Columns) => () =>
-    setColumns({ ...columns, [handle]: DEFAULT_COLUMNS[handle] });
-  const handleProps = (handle: keyof Columns) => ({
-    valueNow: percentOf(columns[handle]),
-    valueMin: percentOf(COLUMN_LIMITS[handle].min),
-    valueMax: percentOf(COLUMN_LIMITS[handle].max),
-    onResize: resize(handle),
-    onReset: reset(handle),
-    className: "hidden desktop:block",
-  });
-
-  // Phones: the crew list and the map share a row (1fr / 2fr), then comms, then the scanner.
-  // Desktop: three columns split by drag handles, widths kept per viewer.
+  // Tablet and desktop: the map takes 2fr of a 3fr row; comms and the scanner (with the crew
+  // picker) share the remaining 1fr. Phones stack the map, comms, then the scanner.
   return (
-    <div
-      ref={grid}
-      style={{ "--st-station-cols": columnsTemplate(columns) } as CSSProperties}
-      className="grid flex-1 grid-cols-[minmax(0,1fr)_minmax(0,2fr)] items-stretch gap-3.5 p-3.5 desktop:grid-cols-(--st-station-cols) desktop:gap-0"
-    >
+    <div className="grid flex-1 grid-cols-1 items-stretch gap-3.5 p-3.5 desktop:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
       <h1 className="sr-only">{term("tab.station")}</h1>
-      <div className="flex min-w-0 flex-col">
-        <CrewRoster
-          dashboard={dashboard}
-          {...(selection ? { selection } : {})}
-          onSelectAgent={(id) => setPicked({ type: "agent", id })}
-          className="flex-1"
-        />
-      </div>
-      <ResizeHandle label={term("station.resize.left")} {...handleProps("left")} />
       <div className="flex min-w-0 flex-col gap-3.5">
         <section
           aria-labelledby="map-title"
@@ -192,8 +153,7 @@ export function StationPage() {
           />
         </section>
       </div>
-      <ResizeHandle label={term("station.resize.right")} {...handleProps("right")} />
-      <div className="col-span-2 flex min-w-0 flex-col gap-3.5 desktop:col-span-1">
+      <div className="flex min-w-0 flex-col gap-3.5">
         <OverseerComms
           {...(comms.message ? { message: comms.message } : {})}
           {...(dashboard.overseer ? { overseerLook: dashboard.overseer.look } : {})}

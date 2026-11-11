@@ -11,7 +11,6 @@ import {
   Avatar,
   ChoiceButton,
   CREW_STATUS_TONE,
-  CrewRoster,
   DashboardMap,
   EmptyState,
   lampBlink,
@@ -202,8 +201,7 @@ export function Gallery({ input }: { readonly input: DashboardInput }) {
         </div>
       </Panel>
 
-      <div className="grid grid-cols-1 gap-3.5 desktop:grid-cols-3">
-        <CrewRoster dashboard={live} selection={{ type: "agent", id: "wren" }} />
+      <div className="grid grid-cols-1 gap-3.5 desktop:grid-cols-2">
         <OverseerComms
           message={{
             key: "gallery",

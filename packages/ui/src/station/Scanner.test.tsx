@@ -4,7 +4,6 @@ import { userEvent } from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { axe } from "vitest-axe";
 import { demoDashboard } from "../test/dashboard.js";
-import { CrewRoster } from "./CrewRoster.js";
 import { Scanner } from "./Scanner.js";
 
 const run = (
@@ -35,22 +34,42 @@ const busy = () =>
     ],
   });
 
-describe("CrewRoster", () => {
-  it("lists crew but the Overseer, with room and status, and selects one", async () => {
-    const onSelectAgent = vi.fn();
-    render(<CrewRoster dashboard={busy()} onSelectAgent={onSelectAgent} />);
-    expect(screen.getByRole("region", { name: "Crew" })).toHaveTextContent("2 + OV");
-    const rows = screen.getAllByRole("button");
-    expect(rows.map((r) => r.textContent)).toEqual([
-      "QUQuill OperationsActive",
-      "WRWren ResearchBlocked",
-    ]);
-    await userEvent.click(rows[1] as HTMLElement);
-    expect(onSelectAgent).toHaveBeenCalledWith("wren");
-  });
-});
-
 describe("Scanner", () => {
+  it("picks crew from a list grouped by room, with the crew count and each status", async () => {
+    const onSelect = vi.fn();
+    const { container } = render(
+      <Scanner
+        dashboard={busy()}
+        selection={{ type: "room", id: "operations" }}
+        onSelect={onSelect}
+      />,
+    );
+    const picker = screen.getByRole("combobox", { name: "Crew · 3" });
+    expect(picker).toHaveValue("");
+    const groups = [...picker.querySelectorAll("optgroup")].map((g) => g.label);
+    expect(groups).toEqual(["Command", "Operations", "Research"]);
+    expect(
+      within(picker)
+        .getAllByRole("option")
+        .map((o) => o.textContent),
+    ).toEqual([
+      "Pick a crew member",
+      "Vesper (Overseer) · Idle",
+      "Quill · Active",
+      "Wren · Blocked",
+    ]);
+    await userEvent.selectOptions(picker, "wren");
+    expect(onSelect).toHaveBeenCalledWith({ type: "agent", id: "wren" });
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it("shows the scanned crew member in the picker", () => {
+    render(
+      <Scanner dashboard={busy()} selection={{ type: "agent", id: "quill" }} onSelect={vi.fn()} />,
+    );
+    expect(screen.getByRole("combobox", { name: "Crew · 3" })).toHaveValue("quill");
+  });
+
   it("scans a room: crew, placed objects, hallways, and its missions", async () => {
     const onSelect = vi.fn();
     render(
