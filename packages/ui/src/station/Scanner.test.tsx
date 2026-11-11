@@ -51,10 +51,18 @@ describe("Scanner", () => {
       "Quill · Active, Operations",
       "Wren · Blocked, Research",
     ]);
-    // Each crew member is drawn as their own character, not initials.
+    // Each crew member is drawn as their own character (no frame), the name underlined in their
+    // color: the room's, white for the Overseer.
     for (const option of screen.getAllByRole("option")) {
       expect(option.querySelector("[data-look] svg rect")).not.toBeNull();
+      expect(option.querySelector("[data-look]")?.className).not.toMatch(/border/);
     }
+    const underline = (name: RegExp) =>
+      (screen.getByRole("option", { name }).querySelector("[data-crew-color]") as HTMLElement).style
+        .textDecorationColor;
+    expect(underline(/^Vesper/)).toBe("var(--st-white)");
+    expect(underline(/^Quill/)).toMatch(/^var\(--st-/);
+    expect(underline(/^Quill/)).not.toBe(underline(/^Wren/));
     expect(await axe(container)).toHaveNoViolations();
     await userEvent.click(screen.getByRole("option", { name: /^Wren/ }));
     expect(onSelect).toHaveBeenCalledWith({ type: "agent", id: "wren" });
