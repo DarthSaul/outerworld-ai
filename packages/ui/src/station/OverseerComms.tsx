@@ -80,7 +80,7 @@ export function OverseerComms({
   }, [finished, message, onNext]);
 
   /** The order line grows with its text up to three lines (its max height), then scrolls. */
-  const fit = (el: HTMLTextAreaElement) => {
+  const growToText = (el: HTMLTextAreaElement) => {
     el.style.height = "auto";
     el.style.height = `${el.scrollHeight}px`;
   };
@@ -154,7 +154,7 @@ export function OverseerComms({
           value={order}
           onChange={(e) => {
             setOrder(e.target.value);
-            fit(e.target);
+            growToText(e.target);
           }}
           onKeyDown={onOrderKey}
           placeholder={term("comms.order")}
