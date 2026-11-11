@@ -30,9 +30,12 @@ the runtime (one extra model call per new session), so they are recorded here.
   the footer. The map keeps a 580px minimum height on desktop.
 
 **Station layout** (amended 2026-11-11)
-- **Two columns.** On tablet and desktop the map always takes 2fr of a 3fr row; Overseer comms and
-  the scanner share the remaining 1fr, stacked 1fr / 1fr and held to the map's height (the
-  column never sets the row's height); each scrolls inside when its content is longer. Phones
+- **Two columns.** On tablet and desktop the map takes 2fr of a 3fr row by default; Overseer comms
+  and the scanner share the remaining 1fr. A splitter between them (`ResizeHandle`: drag, arrow
+  keys, Enter or double-click to reset) sets the side column from a quarter to half the row, kept
+  per viewer (`outerworld.split`). The side column holds comms and the scanner stacked 1fr / 1fr,
+  held to the map's height (the column never sets the row's height); each scrolls inside when
+  its content is longer. Phones
   stack the map, comms, then the scanner at their natural heights.
 - **Rooms picker.** Under the crew picker, the same `Dropdown` lists the rooms (sector, color,
   crew count); the two share one grid so their controls line up.
@@ -51,8 +54,8 @@ the runtime (one extra model call per new session), so they are recorded here.
   pass with drag-resizable columns and a separate crew roster was replaced the same day.)
 - **Crew lives in the scanner.** Picking a crew member only ever led to the scanner, so the
   roster panel is gone: the scanner opens with a crew picker (the station-styled `Dropdown`, not
-  a native select: grouped by room, each option with the crew member's character and colored
-  status, built by `crewOptionGroups` so crew comms shows the same list; its label
+  a native select: grouped by room, each option with the crew member's character inline, the
+  name underlined in their color, and a colored status, built by `crewOptionGroups` so crew comms shows the same list; its label
   carries the crew count). `browser:verify` opens it, runs axe, and picks from the keyboard. Choosing one scans them; the
   picker shows whoever is being scanned.
 - **Names.** The Crew Select tab is "Appearance" and sits after Crew. The Overseer's comms
