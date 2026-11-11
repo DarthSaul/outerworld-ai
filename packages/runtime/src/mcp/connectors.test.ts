@@ -9,7 +9,7 @@ import { MemorySecretStore } from "../secrets/store.js";
 import { openDatabase } from "../storage/database.js";
 import { EventStore } from "../storage/event-store.js";
 import { ConnectorManager, type TransportFactory } from "./connector-manager.js";
-import { KeychainOAuthProvider } from "./oauth-provider.js";
+import { connectorSecretKey, KeychainOAuthProvider } from "./oauth-provider.js";
 
 const fixture = join(import.meta.dirname, "..", "..", "..", "..", "fixtures", "demo-station");
 
@@ -88,6 +88,11 @@ const setup = (transports: TransportFactory, secrets = new MemorySecretStore()) 
 };
 
 const ctxSignal = () => new AbortController().signal;
+
+/** The demo station's Notion server, and where a sign-in for it is kept. */
+const DEMO_SERVER = "https://mcp.notion.example/mcp";
+const demoTokens = connectorSecretKey("notion", DEMO_SERVER, "tokens");
+const aToken = JSON.stringify({ access_token: "a", token_type: "Bearer" });
 
 describe("ConnectorManager", () => {
   it("lists the station's connectors as disconnected until connected", async () => {
@@ -219,16 +224,13 @@ describe("ConnectorManager", () => {
 
   it("disconnects and, when asked, forgets the stored sign-in", async () => {
     const secrets = new MemorySecretStore();
-    await secrets.set(
-      "mcp.notion.tokens",
-      JSON.stringify({ access_token: "a", token_type: "Bearer" }),
-    );
+    await secrets.set(demoTokens, aToken);
     const t = setup(inMemory(), secrets);
     await t.manager.refresh();
     await t.manager.connect("notion");
     await t.manager.disconnect("notion", { forget: true });
     expect(t.manager.views()[0]?.status).toBe("disconnected");
-    expect(await secrets.get("mcp.notion.tokens")).toBeUndefined();
+    expect(await secrets.get(demoTokens)).toBeUndefined();
   });
 
   it("follows station.json: a removed connector disappears, a changed URL reconnects fresh", async () => {
@@ -248,21 +250,37 @@ describe("ConnectorManager", () => {
     const t = setup(inMemory(), secrets);
     await t.manager.start();
     expect(t.manager.views()[0]?.status).toBe("disconnected");
-    await secrets.set(
-      "mcp.notion.tokens",
-      JSON.stringify({ access_token: "a", token_type: "Bearer" }),
-    );
+    await secrets.set(demoTokens, aToken);
     const again = setup(inMemory(), secrets);
     await again.manager.start();
     expect(again.manager.views()[0]?.status).toBe("connected");
     await again.manager.stop();
   });
+
+  it("never offers a sign-in to a server other than the one it was made for", async () => {
+    // A sign-in for the real server, and one stored before sign-ins were tied to a server: the
+    // demo station's connector has the same id but a different URL, so it must use neither.
+    const secrets = new MemorySecretStore();
+    await secrets.set(connectorSecretKey("notion", "https://mcp.notion.com/mcp", "tokens"), aToken);
+    await secrets.set("mcp.notion.tokens", aToken);
+    const opened: string[] = [];
+    const transports: TransportFactory = (connector, provider) => {
+      opened.push(connector.id);
+      return inMemory()(connector, provider);
+    };
+    const t = setup(transports, secrets);
+    await t.manager.start();
+    expect(opened).toEqual([]);
+    expect(t.manager.views()[0]?.status).toBe("disconnected");
+    expect(t.statuses()).toEqual([]);
+  });
 });
 
 describe("KeychainOAuthProvider", () => {
-  const provider = (secrets = new MemorySecretStore(), port = 4317) =>
+  const provider = (secrets = new MemorySecretStore(), port = 4317, server = DEMO_SERVER) =>
     new KeychainOAuthProvider({
       connectorId: "notion",
+      server,
       secrets,
       redirectUrl: `http://127.0.0.1:${port}/oauth/callback/notion`,
       onAuthorizationUrl: () => {},
@@ -298,6 +316,38 @@ describe("KeychainOAuthProvider", () => {
       redirect_uris: ["http://127.0.0.1:4317/oauth/callback/notion"],
     });
     expect(await provider(secrets, 5000).clientInformation()).toBeUndefined();
+  });
+
+  it("ties tokens and registration to the server they were issued by", async () => {
+    const secrets = new MemorySecretStore();
+    const real = provider(secrets, 4317, "https://mcp.notion.com/mcp");
+    await real.saveTokens({ access_token: "at", token_type: "Bearer" });
+    await real.saveClientInformation?.({
+      client_id: "c1",
+      redirect_uris: ["http://127.0.0.1:4317/oauth/callback/notion"],
+    });
+    const other = provider(secrets);
+    expect(await other.hasTokens()).toBe(false);
+    expect(await other.tokens()).toBeUndefined();
+    expect(await other.clientInformation()).toBeUndefined();
+    // Signing in on the other station does not overwrite the first one's sign-in.
+    await other.saveTokens({ access_token: "demo", token_type: "Bearer" });
+    expect(await real.tokens()).toMatchObject({ access_token: "at" });
+    expect(connectorSecretKey("notion", DEMO_SERVER, "tokens")).toMatch(
+      /^mcp\.notion\.[0-9a-f]{16}\.tokens$/,
+    );
+  });
+
+  it("ignores a sign-in stored before sign-ins were tied to a server, and forgets it", async () => {
+    const secrets = new MemorySecretStore();
+    await secrets.set("mcp.notion.tokens", "{}");
+    await secrets.set("mcp.notion.client", "{}");
+    const p = provider(secrets);
+    expect(await p.hasTokens()).toBe(false);
+    expect(await p.tokens()).toBeUndefined();
+    await p.forget();
+    expect(await secrets.get("mcp.notion.tokens")).toBeUndefined();
+    expect(await secrets.get("mcp.notion.client")).toBeUndefined();
   });
 
   it("keeps the PKCE verifier in memory and checks state once", async () => {

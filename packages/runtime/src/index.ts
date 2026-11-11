@@ -33,7 +33,7 @@ export {
   type ConnectorView,
   type TransportFactory,
 } from "./mcp/connector-manager.js";
-export { KeychainOAuthProvider } from "./mcp/oauth-provider.js";
+export { connectorSecretKey, KeychainOAuthProvider } from "./mcp/oauth-provider.js";
 export { MemoryService } from "./memory/memory-service.js";
 export {
   type MemoryRecord,

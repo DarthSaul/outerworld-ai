@@ -34,8 +34,15 @@ the pages you want agents to touch.
 
 The daemon registers itself with Notion as a public OAuth client named "Outerworld AI" whose
 redirect is the loopback callback above. The registration and the tokens are stored in your OS
-keychain (service `outerworld-ai`, accounts `mcp.notion.client` and `mcp.notion.tokens`), never on
-disk or in the browser. The daemon refreshes tokens itself and reconnects on its next start.
+keychain (service `outerworld-ai`, accounts `mcp.notion.<server hash>.client` and
+`.tokens`), never on disk or in the browser. They are tied to the server URL they were issued
+for: change the card's URL and you sign in again, and a station whose Notion card points elsewhere
+(the demo placeholder) never uses them. The daemon refreshes tokens itself and reconnects on its
+next start.
+
+Sign-ins stored before they were tied to a server (accounts `mcp.notion.client` and
+`mcp.notion.tokens`) are no longer used: sign in once more. **Disconnect and forget sign-in**
+removes the old entries too.
 
 If the daemon's port changes, it registers again (the redirect changed) and you sign in once more.
 
