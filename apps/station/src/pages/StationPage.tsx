@@ -153,26 +153,31 @@ export function StationPage() {
           />
         </section>
       </div>
-      <div className="flex min-w-0 flex-col gap-3.5">
-        <OverseerComms
-          {...(comms.message ? { message: comms.message } : {})}
-          {...(dashboard.overseer ? { overseerLook: dashboard.overseer.look } : {})}
-          onApprove={comms.approve}
-          onDeny={comms.deny}
-          onNext={comms.next}
-          onOrder={(text) => {
-            comms.order(text);
-            if (dashboard.bridgeId) setPicked({ type: "room", id: dashboard.bridgeId });
-          }}
-          busy={comms.busy}
-        />
-        <ErrorNote error={comms.error} />
+      {/* Tablet and desktop: comms over the scanner, 1fr / 2fr of the map's height; neither panel
+          sets the row's height (contain-size), and each scrolls inside when it needs to. */}
+      <div className="flex min-w-0 flex-col gap-3.5 desktop:grid desktop:contain-size desktop:grid-rows-[minmax(0,1fr)_minmax(0,2fr)]">
+        <div className="flex min-h-0 flex-col gap-3.5">
+          <OverseerComms
+            {...(comms.message ? { message: comms.message } : {})}
+            {...(dashboard.overseer ? { overseerLook: dashboard.overseer.look } : {})}
+            onApprove={comms.approve}
+            onDeny={comms.deny}
+            onNext={comms.next}
+            onOrder={(text) => {
+              comms.order(text);
+              if (dashboard.bridgeId) setPicked({ type: "room", id: dashboard.bridgeId });
+            }}
+            busy={comms.busy}
+            className="min-h-0 flex-1"
+          />
+          <ErrorNote error={comms.error} />
+        </div>
         {selection ? (
           <Scanner
             dashboard={dashboard}
             selection={selection}
             onSelect={setPicked}
-            className="flex-1"
+            className="min-h-0 flex-1"
             onStopRun={stopRuns}
             onDemolish={(id) =>
               deleteLane.mutate(id, {

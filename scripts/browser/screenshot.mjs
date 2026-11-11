@@ -136,7 +136,36 @@ async function stationInteractions(page, width) {
     if (scan !== map) {
       failures.push(`home-${width}: the scanner ends at ${scan}px, the map at ${map}px`);
     }
+    // Comms over the scanner is 1fr / 2fr (the panels plus their share of the gap).
+    const height = (name) =>
+      page.getByRole("region", { name }).evaluate((el) => el.getBoundingClientRect().height);
+    const ratio = (await height("Scanner")) / (await height("Overseer comms"));
+    if (ratio < 1.85 || ratio > 2.15) {
+      failures.push(`home-${width}: scanner / comms height is ${ratio.toFixed(2)}, not 2`);
+    }
   }
+  // The order line wraps, grows to three lines, then scrolls without growing the panel.
+  const order = page.getByRole("textbox", { name: /order/ });
+  const commsBefore = await page
+    .getByRole("region", { name: "Overseer comms" })
+    .evaluate((el) => el.getBoundingClientRect().height);
+  await order.fill("Draft the plan. ".repeat(40));
+  await order.dispatchEvent("input");
+  const field = await order.evaluate((el) => {
+    const line = Number.parseFloat(getComputedStyle(el).lineHeight);
+    return { lines: el.clientHeight / line, scrolls: el.scrollHeight > el.clientHeight };
+  });
+  if (Math.round(field.lines) !== 3 || !field.scrolls) {
+    failures.push(`home-${width}: the order line shows ${field.lines.toFixed(1)} lines`);
+  }
+  const commsAfter = await page
+    .getByRole("region", { name: "Overseer comms" })
+    .evaluate((el) => el.getBoundingClientRect().height);
+  if (width >= 720 && Math.round(commsAfter) !== Math.round(commsBefore)) {
+    failures.push(`home-${width}: a long order grew the comms panel`);
+  }
+  await page.screenshot({ path: join(outDir, `home-order-${width}.png`) });
+  await order.fill("");
   await page.screenshot({ path: join(outDir, `home-crew-picked-${width}.png`) });
 
   await page.locator('[aria-controls="station-status"]').click();

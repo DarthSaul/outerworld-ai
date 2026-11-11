@@ -1,5 +1,5 @@
 import { term } from "@darthsaul/outerworld-ai-core";
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { STATION_MS } from "../tokens/tokens.js";
 import { ChoiceButton, OutlineButton } from "./buttons.js";
 import { Panel } from "./Panel.js";
@@ -67,6 +67,7 @@ export function OverseerComms({
   const typed = useTypewriter(message?.key ?? "", message?.text ?? "");
   const finished = message !== undefined && typed.length >= message.text.length;
   const [order, setOrder] = useState("");
+  const field = useRef<HTMLTextAreaElement>(null);
 
   // Chatter and replies move on by themselves once typed, after the design's hold.
   useEffect(() => {
@@ -78,12 +79,28 @@ export function OverseerComms({
     return () => clearTimeout(timer);
   }, [finished, message, onNext]);
 
+  /** The order line grows with its text up to three lines (its max height), then scrolls. */
+  const fit = (el: HTMLTextAreaElement) => {
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  };
+
+  // Enter sends, as a one-line field did; Shift+Enter starts a new line.
+  const onOrderKey = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+      e.preventDefault();
+      e.currentTarget.form?.requestSubmit();
+    }
+  };
+
   const submit = (e: FormEvent) => {
     e.preventDefault();
     const text = order.trim();
     if (!text || busy) return;
     onOrder?.(text);
     setOrder("");
+    // Back to one line once sent.
+    if (field.current) field.current.style.height = "";
   };
 
   return (
@@ -92,13 +109,13 @@ export function OverseerComms({
       meta={<span aria-hidden="true" className="st-blink size-2 bg-red" />}
       className={className}
     >
-      <div className="flex gap-2.5 p-2.5">
+      <div className="flex min-h-0 flex-1 gap-2.5 overflow-y-auto p-2.5">
         <div role="img" aria-label={term("comms.portrait")} className="flex shrink-0 items-start">
           {overseerLook === undefined ? null : <Sprite look={overseerLook} scale={2} />}
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-1.5" aria-live="polite">
           <div className="font-display text-d8 text-amber uppercase">{message?.speaker ?? ""}</div>
-          <p className="m-0 min-h-16 text-b19 text-fg-hi">
+          <p className="m-0 text-b19 text-fg-hi">
             <span aria-hidden="true">{typed}</span>
             <span className="sr-only">{message?.text}</span>
             <span
@@ -109,7 +126,7 @@ export function OverseerComms({
         </div>
       </div>
       {message?.kind === "approval" ? (
-        <div className="flex gap-2.5 px-2.5 pb-2.5">
+        <div className="flex shrink-0 gap-2.5 px-2.5 pb-2.5">
           <ChoiceButton glyph="A" tone="green" disabled={busy} onClick={onApprove}>
             {term("comms.approve")}
           </ChoiceButton>
@@ -118,7 +135,7 @@ export function OverseerComms({
           </ChoiceButton>
         </div>
       ) : (
-        <div className="flex justify-end px-2.5 pb-2.5">
+        <div className="flex shrink-0 justify-end px-2.5 pb-2.5">
           <OutlineButton tone="line" className="text-d8" onClick={onNext}>
             {term("comms.next")}
           </OutlineButton>
@@ -126,22 +143,28 @@ export function OverseerComms({
       )}
       <form
         onSubmit={submit}
-        className="flex gap-1.5 border-line-faint border-t-2 bg-input-row p-2.5"
+        className="flex shrink-0 items-start gap-1.5 border-line-faint border-t-2 bg-input-row p-2.5"
       >
-        <span aria-hidden="true" className="self-center font-display text-d9 text-green">
+        <span aria-hidden="true" className="font-display text-d9 text-green leading-[inherit]">
           &gt;
         </span>
-        <input
+        <textarea
+          ref={field}
+          rows={1}
           value={order}
-          onChange={(e) => setOrder(e.target.value)}
+          onChange={(e) => {
+            setOrder(e.target.value);
+            fit(e.target);
+          }}
+          onKeyDown={onOrderKey}
           placeholder={term("comms.order")}
           aria-label={term("comms.order")}
-          className="min-w-0 flex-1 border-none bg-transparent font-body text-b19 text-fg-hi outline-none"
+          className="max-h-[3lh] min-w-0 flex-1 resize-none overflow-y-auto border-none bg-transparent p-0 font-body text-b19 text-fg-hi outline-none"
         />
         <button
           type="submit"
           disabled={busy}
-          className="cursor-pointer border-none bg-green px-2 py-1.25 font-display text-d7 text-ink uppercase disabled:opacity-50"
+          className="shrink-0 cursor-pointer border-none bg-green px-2 py-1.25 font-display text-d7 text-ink uppercase disabled:opacity-50"
         >
           {term("comms.send")}
         </button>

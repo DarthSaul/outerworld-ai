@@ -88,6 +88,26 @@ describe("OverseerComms", () => {
     expect(input).toHaveValue("");
   });
 
+  it("wraps a long order, growing to three lines and then scrolling; Shift+Enter adds a line", () => {
+    const onOrder = vi.fn();
+    render(<OverseerComms message={chatter} onOrder={onOrder} />);
+    const input = screen.getByRole("textbox", { name: "Give the Overseer an order…" });
+    expect(input.tagName).toBe("TEXTAREA");
+    expect(input).toHaveAttribute("rows", "1");
+    expect(input.className).toMatch(/max-h-\[3lh\]/);
+    expect(input.className).toMatch(/overflow-y-auto/);
+    // happy-dom lays nothing out; give the text a height to grow to.
+    vi.spyOn(input, "scrollHeight", "get").mockReturnValue(60);
+    fireEvent.change(input, { target: { value: "Line one" } });
+    expect(input.style.height).toBe("60px");
+    fireEvent.keyDown(input, { key: "Enter", shiftKey: true });
+    expect(onOrder).not.toHaveBeenCalled();
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(onOrder).toHaveBeenCalledWith("Line one");
+    expect(input).toHaveValue("");
+    expect(input.style.height).toBe("");
+  });
+
   it("shows the Overseer's sprite in the portrait slot", () => {
     const { container } = render(<OverseerComms message={chatter} overseerLook={3} />);
     expect(screen.getByRole("img", { name: "Overseer portrait" })).toBeInTheDocument();

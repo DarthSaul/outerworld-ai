@@ -437,7 +437,9 @@ export function Scanner(props: ScannerProps) {
   return (
     <Panel title={term("scanner.title")} meta={kind} className={className}>
       {dashboard.crew.length > 0 ? <CrewPicker props={props} /> : null}
-      {body}
+      <div data-scanner-body className="min-h-0 flex-1 overflow-y-auto">
+        {body}
+      </div>
     </Panel>
   );
 }
