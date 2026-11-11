@@ -27,7 +27,7 @@ import { ChatWindow } from "./ChatWindow.js";
 /** At most this many chat windows side by side; opening another closes the oldest. */
 const MAX_OPEN = 3;
 
-type AgentItem = NonNullable<ReturnType<typeof useStationView>["data"]>["agents"][number];
+export type AgentItem = NonNullable<ReturnType<typeof useStationView>["data"]>["agents"][number];
 
 /** A status lamp in the crew member's status color; it blinks as the map's do. */
 function Lamp({ crew }: { readonly crew: DashboardCrew | undefined }) {
@@ -42,7 +42,7 @@ function Lamp({ crew }: { readonly crew: DashboardCrew | undefined }) {
 }
 
 /** One crew member in the picker: sprite, name, room, and live status. */
-function CrewButton({
+export function CrewButton({
   agent,
   crew,
   roomName,
@@ -176,17 +176,22 @@ function Profile({
   );
 }
 
-/** A session in the list: title, when it last spoke, how much, the last line, and a work lamp. */
-function SessionButton({
+/**
+ * A session in the list: title, when it last spoke, how much, the last line, and a work lamp.
+ * `compact` keeps the last line to one line (the Station's crew comms).
+ */
+export function SessionButton({
   session,
   agentName,
   open,
   onOpen,
+  compact = false,
 }: {
   readonly session: SessionSummary;
   readonly agentName: string;
   readonly open: boolean;
   readonly onOpen: () => void;
+  readonly compact?: boolean;
 }) {
   const titleId = useId();
   const metaId = useId();
@@ -218,7 +223,7 @@ function SessionButton({
         </time>
       </span>
       <span id={metaId} className="flex w-full flex-col gap-0.5">
-        <span className="line-clamp-2 text-b15 text-fg-soft">
+        <span className={`${compact ? "line-clamp-1" : "line-clamp-2"} text-b15 text-fg-soft`}>
           {session.lastMessage ? (
             <>
               <span className="text-fg-mute">

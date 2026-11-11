@@ -168,6 +168,27 @@ async function stationInteractions(page, width) {
   await order.fill("");
   await page.screenshot({ path: join(outDir, `home-crew-picked-${width}.png`) });
 
+  // Crew comms: the second comms tab, a session opened across the panel, and back.
+  await page.getByRole("tab", { name: "Crew comms" }).click();
+  const crewComms = page.getByRole("tabpanel", { name: "Crew comms" });
+  await crewComms.getByRole("navigation").waitFor();
+  await page.screenshot({ path: join(outDir, `home-crew-comms-${width}.png`) });
+  await axeBlocking(page, `home-crew-comms-${width}`);
+  const firstSession = crewComms.locator("[data-session]").first();
+  if (await firstSession.count()) {
+    await firstSession.click();
+    const back = crewComms.getByRole("button", { name: /Back/ });
+    await back.waitFor();
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: join(outDir, `home-crew-chat-${width}.png`) });
+    await axeBlocking(page, `home-crew-chat-${width}`);
+    await back.click();
+    await crewComms.getByRole("navigation").waitFor();
+  } else {
+    failures.push(`home-${width}: crew comms listed no sessions to open`);
+  }
+  await page.getByRole("tab", { name: "Overseer comms" }).click();
+
   await page.locator('[aria-controls="station-status"]').click();
   await page.getByRole("dialog").waitFor();
   await page.waitForTimeout(400);

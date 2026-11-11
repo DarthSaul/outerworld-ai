@@ -9,7 +9,7 @@ const at = "2026-10-01T09:00:00.000Z";
 
 const map = () => screen.findByRole("region", { name: term("map.title") });
 const scanner = () => screen.getByRole("region", { name: term("scanner.title") });
-const comms = () => screen.getByRole("region", { name: term("comms.title") });
+const comms = () => screen.getByRole("tabpanel", { name: term("comms.title") });
 
 const withLane = () => {
   const fake = fakeApi();
@@ -278,5 +278,67 @@ describe("Overseer comms", () => {
     await waitFor(() =>
       expect(calls).toContainEqual({ method: "POST", path: "/agents/vesper/sessions", body: {} }),
     );
+  });
+});
+
+describe("Crew comms", () => {
+  const crewTab = () => screen.getByRole("tab", { name: term("comms.crew.title") });
+
+  it("is a second comms tab: crew on the left, the chosen crew member's sessions on the right", async () => {
+    const fake = fakeApi();
+    fake.seedSession("quill", "Hub audit");
+    const user = userEvent.setup();
+    const { container } = renderApp("/", fake);
+    await map();
+    expect(screen.getByRole("tab", { name: term("comms.title") })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await user.click(crewTab());
+    expect(crewTab()).toHaveAttribute("aria-selected", "true");
+    const panel = screen.getByRole("tabpanel", { name: term("comms.crew.title") });
+    const crew = within(panel).getByRole("navigation", { name: term("agents") });
+    expect(
+      within(crew)
+        .getAllByRole("button")
+        .map((b) => b.getAttribute("aria-label")),
+    ).toEqual(["Vesper", "Quill"]);
+    await user.click(within(crew).getByRole("button", { name: "Quill" }));
+    const sessions = await within(panel).findByRole("region", { name: "Sessions · Quill" });
+    expect(await within(sessions).findByText("Hub audit")).toBeInTheDocument();
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it("opens a session across the whole panel with a back button, and goes back to the list", async () => {
+    const fake = fakeApi();
+    const seeded = fake.seedSession("vesper", "Launch plan");
+    const user = userEvent.setup();
+    renderApp("/", fake);
+    await map();
+    await user.click(crewTab());
+    const panel = screen.getByRole("tabpanel", { name: term("comms.crew.title") });
+    await user.click(await within(panel).findByRole("button", { name: "Launch plan" }));
+    const chat = await within(panel).findByRole("region", { name: /Vesper · Launch plan/ });
+    const back = within(chat).getByRole("button", { name: term("comms.back") });
+    await waitFor(() => expect(back).toHaveFocus());
+    expect(within(panel).queryByRole("navigation", { name: term("agents") })).toBeNull();
+    expect(within(chat).getByRole("textbox")).toBeInTheDocument();
+    await user.click(back);
+    const again = await within(panel).findByRole("button", { name: "Launch plan" });
+    await waitFor(() => expect(again).toHaveFocus());
+    expect(again).toHaveAttribute("data-session", seeded.session.id);
+  });
+
+  it("starts a new session and opens it", async () => {
+    const user = userEvent.setup();
+    const { calls } = renderApp("/");
+    await map();
+    await user.click(crewTab());
+    const panel = screen.getByRole("tabpanel", { name: term("comms.crew.title") });
+    await user.click(await within(panel).findByRole("button", { name: term("comms.new") }));
+    expect(
+      await within(panel).findByRole("region", { name: /Vesper · New session/ }),
+    ).toBeVisible();
+    expect(calls).toContainEqual({ method: "POST", path: "/agents/vesper/sessions", body: {} });
   });
 });

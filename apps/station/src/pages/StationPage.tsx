@@ -4,11 +4,13 @@ import {
   type DashboardSelection,
   MAP_STYLES,
   OutlineButton,
-  OverseerComms,
+  OverseerCommsBody,
+  PanelTabs,
   Scanner,
   tabClass,
 } from "@darthsaul/outerworld-ai-ui";
 import { useState } from "react";
+import { CrewComms } from "../comms/CrewComms.js";
 import { ErrorNote } from "../components/ErrorNote.js";
 import {
   useActivity,
@@ -54,6 +56,7 @@ export function StationPage() {
   const [picked, setPicked] = useState<DashboardSelection>();
   const [draw, setDraw] = useState<{ from: string | null }>();
   const [note, setNote] = useState<string>();
+  const [commsTab, setCommsTab] = useState("overseer");
 
   if (!dashboard) return <ErrorNote error={error} />;
   const selection = current(dashboard, picked);
@@ -157,18 +160,33 @@ export function StationPage() {
           sets the row's height (contain-size), and each scrolls inside when it needs to. */}
       <div className="flex min-w-0 flex-col gap-3.5 desktop:grid desktop:contain-size desktop:grid-rows-[minmax(0,1fr)_minmax(0,2fr)]">
         <div className="flex min-h-0 flex-col gap-3.5">
-          <OverseerComms
-            {...(comms.message ? { message: comms.message } : {})}
-            {...(dashboard.overseer ? { overseerLook: dashboard.overseer.look } : {})}
-            onApprove={comms.approve}
-            onDeny={comms.deny}
-            onNext={comms.next}
-            onOrder={(text) => {
-              comms.order(text);
-              if (dashboard.bridgeId) setPicked({ type: "room", id: dashboard.bridgeId });
-            }}
-            busy={comms.busy}
+          <PanelTabs
+            label={term("comms.tabs")}
+            active={commsTab}
+            onChange={setCommsTab}
+            meta={<span aria-hidden="true" className="st-blink size-2 bg-red" />}
             className="min-h-0 flex-1"
+            tabs={[
+              {
+                id: "overseer",
+                label: term("comms.title"),
+                content: (
+                  <OverseerCommsBody
+                    {...(comms.message ? { message: comms.message } : {})}
+                    {...(dashboard.overseer ? { overseerLook: dashboard.overseer.look } : {})}
+                    onApprove={comms.approve}
+                    onDeny={comms.deny}
+                    onNext={comms.next}
+                    onOrder={(text) => {
+                      comms.order(text);
+                      if (dashboard.bridgeId) setPicked({ type: "room", id: dashboard.bridgeId });
+                    }}
+                    busy={comms.busy}
+                  />
+                ),
+              },
+              { id: "crew", label: term("comms.crew.title"), content: <CrewComms /> },
+            ]}
           />
           <ErrorNote error={comms.error} />
         </div>
