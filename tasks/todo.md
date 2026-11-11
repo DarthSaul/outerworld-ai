@@ -345,6 +345,9 @@ Source: `docs/design/station-dashboard/`. Dark only; sprites replace the rig; ev
   labels.
 - [x] 12.7 `browser:verify`: map drag and recenter, the drawer (axe, Escape), COMMS with a crew
   member selected.
+- [x] 12.8 Station: resizable side columns (crew column capped at 1fr), phone layout with crew
+  and map in one row, smaller comms portrait; "Crew" roster title; Appearance tab after Crew;
+  Crew page "Add" panels first, then the "Manifest" of rooms.
 
 **CHECKPOINT 12**
 

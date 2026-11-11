@@ -29,6 +29,17 @@ the runtime (one extra model call per new session), so they are recorded here.
 - **Pages fill the height.** The main area is a flex column, so the Station grid and COMMS reach
   the footer. The map keeps a 580px minimum height on desktop.
 
+**Station layout** (amended 2026-11-11)
+- **Resizable columns.** On desktop the gaps beside the map are drag handles (`ResizeHandle`, an
+  `<hr>` separator: drag, arrow keys, Enter or double-click to reset). The crew column can shrink
+  but never grows past its default 1fr; the comms column ranges 1.25fr–3fr; the map takes the
+  rest, never under 2fr. Widths are kept per viewer in localStorage (`outerworld.columns`).
+- **Phones.** The crew list and the map share the first row (1fr / 2fr); Overseer comms and the
+  scanner each get their own row below. Roster rows fit their column with container queries:
+  one line when wide, status under the name when narrower, stacked when narrowest.
+- **Names.** The roster panel is titled "Crew"; the Crew Select tab is "Appearance" and sits after
+  Crew. The Overseer's comms portrait is drawn at 2× (was 3×).
+
 **Station map**
 - **The plane and its viewport.** The map draws on a plane at least `--st-map-min-w` ×
   `--st-map-min-h` (860 × 580), which replaces the horizontal scroll. The viewport shows the plane
@@ -89,6 +100,8 @@ the runtime (one extra model call per new session), so they are recorded here.
     what props do.
   - *Add crew member* and *Add room* are titled panels, each with a line saying what it is for.
   - The Project Manager template sits inside *Add crew member*.
+  - The page opens with the add panels under an "Add" heading, then a divider, then the rooms
+    under "Manifest" (amended 2026-11-11).
   - Labels that were hard-coded English are now glossary keys.
 
 ## Consequences

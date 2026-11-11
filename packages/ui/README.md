@@ -19,10 +19,10 @@ the glossary.
 | Export | What it is |
 |--------|------------|
 | `DashboardMap` | The station map in three styles (`MAP_STYLES`: schematic, floorplan, polygon). It draws rooms around the Bridge, hallways routed between doors, packets while a dispatch runs, a draw-hallway mode (`drawFrom`), and the stopped scrim (`paused`). Room, crew and hallway selection go through callbacks. The plane is never smaller than `--st-map-min-*`: drag to pan, zoom buttons, and Recenter to fit every room (ADR-0014). |
-| `CrewRoster` | Crew members other than the Overseer ("N + OV"), with room and status. |
+| `CrewRoster` | Crew members other than the Overseer ("N + OV"), with room and status. Rows reflow to their column's width (container queries). |
 | `OverseerComms` | The typed Overseer message (`useTypewriter`), (A)/(B) approvals, Next, and the order line. Chatter and replies move on after the design's hold; a streaming reply waits. |
 | `Scanner` | The selected room, crew member, or hallway. It has Stop run (`onStopRun`) and Demolish (`onDemolish`). |
-| `CrewSelect` | Crew Select. The agent picker, an 8× stage on a pedestal, and the 6×4 character grid. Arrow keys move the P1 cursor and Enter assigns. |
+| `CrewSelect` | Crew Select (the Appearance tab). The agent picker, an 8× stage on a pedestal, and the 6×4 character grid. Arrow keys move the P1 cursor and Enter assigns. |
 | `StationHeader`, `CrtToggle` | The header bar: station name, tabs, and controls (the status drawer's toggle, the scanline switch). |
 | `StatusDrawer`, `StatusDrawerToggle`, `RadioChatter` | The status drawer: TASKS LIVE, ALERTS and the radio (lines open where they point) in a modal overlay from the right; the toggle keeps a live dot and the alert count in sight (ADR-0014). |
 | `StationVitals`, `StopButton`, `formatTokens`, `formatUptime`, `useUptime` | The footer: today's tokens, fuel against the daily cap, uptime, and `controls` at its right end (stop/resume). |
@@ -37,6 +37,7 @@ the glossary.
 | `Avatar`, `overseerAvatarProps` | A square initials chip, with an optional double ring and status lamp. |
 | `Sprite` | One of core's 24 characters as SVG rects, at an integer scale. |
 | `OutlineButton`, `ChoiceButton`, `tabClass`, `Diamond` | Outline buttons (also `type="submit"`), the (A)/(B) buttons, tab classes for router links, and the placed-object diamond. |
+| `ResizeHandle`, `RESIZE_KEY_STEP` | A vertical column splitter (an `<hr>` separator with aria values): drag, arrow keys, Enter or double-click to reset (ADR-0014). |
 | `Checkbox`, `fieldClass`, `inputClass` | A checkbox drawn as a pixel box (the native input stays, visually hidden and focusable), and the classes for a labelled field and an input or select at the shared form height. |
 | `EmptyState` | A status region: a title, one sentence, and at most one action. |
 | `toneVar`, `CREW_STATUS_TONE`, `RUN_STATUS_TONE`, `lampBlink` | Status colors and lamp blink classes. |
