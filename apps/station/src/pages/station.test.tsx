@@ -1,7 +1,7 @@
 import { term } from "@darthsaul/outerworld-ai-core";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { axe } from "vitest-axe";
 import { fakeApi, renderApp } from "../test/fake-daemon.js";
 
@@ -344,5 +344,32 @@ describe("Crew comms", () => {
       await within(panel).findByRole("region", { name: /Vesper · New session/ }),
     ).toBeVisible();
     expect(calls).toContainEqual({ method: "POST", path: "/agents/vesper/sessions", body: {} });
+  });
+});
+
+describe("Station split", () => {
+  it("resizes the map against the comms column from the handle, kept per viewer", async () => {
+    localStorage.removeItem("outerworld.split");
+    const user = userEvent.setup();
+    const { container } = renderApp("/");
+    await map();
+    const handle = screen.getByRole("separator", { name: term("station.resize") });
+    const grid = () => container.querySelector<HTMLElement>("[style*='--st-station-cols']");
+    expect(handle).toHaveAttribute("aria-valuenow", "33");
+    expect(handle).toHaveAttribute("aria-valuemin", "25");
+    expect(handle).toHaveAttribute("aria-valuemax", "50");
+    // happy-dom lays nothing out, so give the row a width for the pixel-to-fr conversion.
+    vi.spyOn(grid() as HTMLElement, "clientWidth", "get").mockReturnValue(1200);
+    handle.focus();
+    await user.keyboard("{ArrowLeft}");
+    expect(Number(handle.getAttribute("aria-valuenow"))).toBeGreaterThan(33);
+    expect(grid()?.style.getPropertyValue("--st-station-cols")).toBe(
+      "minmax(0,1.940fr) auto minmax(0,1.060fr)",
+    );
+    expect(localStorage.getItem("outerworld.split")).toBe("1.06");
+    await user.keyboard("{Enter}");
+    expect(handle).toHaveAttribute("aria-valuenow", "33");
+    expect(await axe(container)).toHaveNoViolations();
+    localStorage.removeItem("outerworld.split");
   });
 });

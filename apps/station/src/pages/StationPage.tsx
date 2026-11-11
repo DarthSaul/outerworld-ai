@@ -6,10 +6,11 @@ import {
   OutlineButton,
   OverseerCommsBody,
   PanelTabs,
+  ResizeHandle,
   Scanner,
   tabClass,
 } from "@darthsaul/outerworld-ai-ui";
-import { useState } from "react";
+import { type CSSProperties, useRef, useState } from "react";
 import { CrewComms } from "../comms/CrewComms.js";
 import { ErrorNote } from "../components/ErrorNote.js";
 import {
@@ -19,6 +20,14 @@ import {
   useDeleteLane,
   useKillSwitch,
 } from "../queries.js";
+import {
+  DEFAULT_SIDE,
+  percentOf,
+  resizeSide,
+  SIDE_LIMITS,
+  splitTemplate,
+  useSplit,
+} from "../station/split.js";
 import { useComms } from "../station/use-comms.js";
 import { useDashboard, useMapStyle } from "../station/use-dashboard.js";
 
@@ -57,6 +66,8 @@ export function StationPage() {
   const [draw, setDraw] = useState<{ from: string | null }>();
   const [note, setNote] = useState<string>();
   const [commsTab, setCommsTab] = useState("overseer");
+  const [side, setSide] = useSplit();
+  const grid = useRef<HTMLDivElement>(null);
 
   if (!dashboard) return <ErrorNote error={error} />;
   const selection = current(dashboard, picked);
@@ -122,10 +133,15 @@ export function StationPage() {
     </div>
   );
 
-  // Tablet and desktop: the map takes 2fr of a 3fr row; comms and the scanner (with the crew
-  // picker) share the remaining 1fr. Phones stack the map, comms, then the scanner.
+  // Tablet and desktop: the map and the side column (comms over the scanner) split a 3fr row,
+  // 2fr / 1fr by default; the handle between them resizes the split, kept per viewer. Phones
+  // stack the map, comms, then the scanner.
   return (
-    <div className="grid flex-1 grid-cols-1 items-stretch gap-3.5 p-3.5 desktop:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+    <div
+      ref={grid}
+      style={{ "--st-station-cols": splitTemplate(side) } as CSSProperties}
+      className="grid flex-1 grid-cols-1 items-stretch gap-3.5 p-3.5 desktop:grid-cols-(--st-station-cols) desktop:gap-0"
+    >
       <h1 className="sr-only">{term("tab.station")}</h1>
       <div className="flex min-w-0 flex-col gap-3.5">
         <section
@@ -156,6 +172,15 @@ export function StationPage() {
           />
         </section>
       </div>
+      <ResizeHandle
+        label={term("station.resize")}
+        valueNow={percentOf(side)}
+        valueMin={percentOf(SIDE_LIMITS.min)}
+        valueMax={percentOf(SIDE_LIMITS.max)}
+        onResize={(dx) => setSide(resizeSide(side, dx, grid.current?.clientWidth ?? 0))}
+        onReset={() => setSide(DEFAULT_SIDE)}
+        className="hidden desktop:block"
+      />
       {/* Tablet and desktop: comms over the scanner, half the map's height each; neither panel
           sets the row's height (contain-size), and each scrolls inside when it needs to. */}
       <div className="flex min-w-0 flex-col gap-3.5 desktop:grid desktop:contain-size desktop:grid-rows-[minmax(0,1fr)_minmax(0,1fr)]">

@@ -348,6 +348,7 @@ export const glossary = {
   "drawer.title": "Station status",
   "drawer.open": "Station status: {live} tasks live, {alerts} alerts",
   "drawer.close": "Close",
+  "station.resize": "Resize the map and the comms column",
   "station.stop": "Stop",
   "station.resume": "Resume",
   "station.stopped.title": "Stopped",

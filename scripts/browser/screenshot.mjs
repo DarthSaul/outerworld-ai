@@ -112,6 +112,36 @@ async function stationInteractions(page, width) {
   } else {
     failures.push(`home-${width}: no map viewport`);
   }
+  // The splitter between the map and the side column: dragging it left widens the side column;
+  // a double-click puts it back.
+  if (width >= 720) {
+    const splitter = page.getByRole("separator", { name: /Resize the map/ });
+    const mapWidth = () =>
+      page
+        .getByRole("region", { name: /^Station map/ })
+        .evaluate((el) => el.getBoundingClientRect().width);
+    const before = await mapWidth();
+    const box = await splitter.boundingBox();
+    if (box) {
+      const y = box.y + box.height / 2;
+      await page.mouse.move(box.x + box.width / 2, y);
+      await page.mouse.down();
+      await page.mouse.move(box.x + box.width / 2 - 120, y, { steps: 6 });
+      await page.mouse.up();
+      const after = await mapWidth();
+      if (!(after < before - 60)) {
+        failures.push(`home-${width}: dragging the splitter did not resize the map`);
+      }
+      await page.screenshot({ path: join(outDir, `home-split-${width}.png`) });
+      await splitter.dblclick();
+      if (Math.abs((await mapWidth()) - before) > 2) {
+        failures.push(`home-${width}: double-clicking the splitter did not reset it`);
+      }
+    } else {
+      failures.push(`home-${width}: no splitter`);
+    }
+  }
+
   // The scanner's crew picker: opens, passes axe, picks from the keyboard, closes.
   const picker = page.getByRole("button", { name: /^Crew · \d+/ });
   await picker.click();
