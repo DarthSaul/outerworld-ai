@@ -172,6 +172,7 @@ export function StationPage() {
             dashboard={dashboard}
             selection={selection}
             onSelect={setPicked}
+            className="flex-1"
             onStopRun={stopRuns}
             onDemolish={(id) =>
               deleteLane.mutate(id, {

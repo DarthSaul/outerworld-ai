@@ -126,6 +126,18 @@ async function stationInteractions(page, width) {
   if ((await picker.textContent())?.includes("Pick a crew member")) {
     failures.push(`home-${width}: the crew picker did not show the chosen crew member`);
   }
+  // A crew member's scan is short: the scanner still fills its column, down to the map's edge.
+  if (width >= 720) {
+    const bottom = (name) =>
+      page
+        .getByRole("region", { name })
+        .evaluate((el) => Math.round(el.getBoundingClientRect().bottom));
+    const [scan, map] = [await bottom("Scanner"), await bottom(/^Station map/)];
+    if (scan !== map) {
+      failures.push(`home-${width}: the scanner ends at ${scan}px, the map at ${map}px`);
+    }
+  }
+  await page.screenshot({ path: join(outDir, `home-crew-picked-${width}.png`) });
 
   await page.locator('[aria-controls="station-status"]').click();
   await page.getByRole("dialog").waitFor();
