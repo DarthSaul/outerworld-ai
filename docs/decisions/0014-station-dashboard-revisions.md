@@ -34,8 +34,9 @@ the runtime (one extra model call per new session), so they are recorded here.
   the scanner share the remaining 1fr. Phones stack the map, comms, then the scanner. (A first
   pass with drag-resizable columns and a separate crew roster was replaced the same day.)
 - **Crew lives in the scanner.** Picking a crew member only ever led to the scanner, so the
-  roster panel is gone: the scanner opens with a crew picker (a native select grouped by room,
-  each option with its status; its label carries the crew count). Choosing one scans them; the
+  roster panel is gone: the scanner opens with a crew picker (the station-styled `Dropdown`, not
+  a native select: grouped by room, each option with its avatar and colored status; its label
+  carries the crew count). `browser:verify` opens it, runs axe, and picks from the keyboard. Choosing one scans them; the
   picker shows whoever is being scanned.
 - **Names.** The Crew Select tab is "Appearance" and sits after Crew. The Overseer's comms
   portrait is the 2× character alone, without the striped frame.
