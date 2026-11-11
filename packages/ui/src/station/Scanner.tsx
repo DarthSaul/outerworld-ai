@@ -11,7 +11,7 @@ import { stVar } from "../tokens/tokens.js";
 import { Avatar } from "./Avatar.js";
 import { Diamond, OutlineButton } from "./buttons.js";
 import { type DashboardSelection, grantName, roomColor } from "./DashboardMap.js";
-import { Dropdown } from "./Dropdown.js";
+import { Dropdown, type DropdownGroup } from "./Dropdown.js";
 import { Panel, PanelLabel } from "./Panel.js";
 import { SegmentBar } from "./SegmentBar.js";
 import { CREW_STATUS_TONE, RUN_STATUS_TONE, toneVar } from "./tone.js";
@@ -361,14 +361,44 @@ function LaneScan({ laneId, props }: { readonly laneId: string; readonly props: 
   );
 }
 
-/**
- * The crew picker at the top of the scanner: every crew member, grouped by room, with avatar and
- * status. Picking one scans them; the label carries the crew count.
- */
-function CrewPicker({ props }: { readonly props: ScannerProps }) {
-  const { dashboard, selection, onSelect } = props;
+/** One picker row: its label (with a count) and the dropdown, on the pickers' shared grid. */
+function PickerRow({
+  label,
+  value,
+  placeholder,
+  groups,
+  onChange,
+}: {
+  readonly label: string;
+  readonly value: string;
+  readonly placeholder: string;
+  readonly groups: readonly DropdownGroup[];
+  readonly onChange: (value: string) => void;
+}) {
   const labelId = useId();
-  const groups = dashboard.rooms.map((room) => ({
+  return (
+    <>
+      <span id={labelId} className="font-display text-d7 text-fg-mute uppercase">
+        {label}
+      </span>
+      <Dropdown
+        labelledBy={labelId}
+        value={value}
+        placeholder={placeholder}
+        groups={groups}
+        onChange={onChange}
+      />
+    </>
+  );
+}
+
+/**
+ * The pickers at the top of the scanner: crew (grouped by room, with avatar and status) and rooms
+ * (with sector, color, and crew count). Picking either scans it; each label carries its count.
+ */
+function Pickers({ props }: { readonly props: ScannerProps }) {
+  const { dashboard, selection, onSelect } = props;
+  const crewGroups = dashboard.rooms.map((room) => ({
     id: room.id,
     label: room.name,
     options: dashboard.crew
@@ -403,18 +433,51 @@ function CrewPicker({ props }: { readonly props: ScannerProps }) {
         };
       }),
   }));
+  const roomGroups = [
+    {
+      id: "rooms",
+      label: "",
+      options: dashboard.rooms.map((room) => {
+        const color = roomColor(room);
+        const crew = termWith("scanner.roomCrew", { count: String(room.crew.length) });
+        return {
+          value: room.id,
+          text: `${room.name} · ${room.sector} · ${crew}`,
+          label: (
+            <span className="flex min-w-0 flex-1 items-center gap-2">
+              <span
+                className="shrink-0 px-1 py-0.5 font-display text-d7 text-ink"
+                style={{ background: color }}
+              >
+                {room.sector}
+              </span>
+              <span className="min-w-0 flex-1 truncate uppercase" style={{ color }}>
+                {room.name}
+              </span>
+              <span className="shrink-0 font-display text-d7 text-fg-mute uppercase">{crew}</span>
+            </span>
+          ),
+        };
+      }),
+    },
+  ];
   return (
-    <div className="flex items-center gap-2.5 border-line-faint border-b-2 px-3 py-2">
-      <span id={labelId} className="shrink-0 font-display text-d7 text-fg-mute uppercase">
-        {termWith("scanner.crewCount", { count: String(dashboard.crew.length) })}
-      </span>
-      <Dropdown
-        labelledBy={labelId}
-        value={selection.type === "agent" ? selection.id : ""}
-        placeholder={term("scanner.crewPick")}
-        groups={groups}
-        onChange={(id) => onSelect({ type: "agent", id })}
-        className="flex-1"
+    <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2.5 gap-y-2 border-line-faint border-b-2 px-3 py-2">
+      {dashboard.crew.length > 0 ? (
+        <PickerRow
+          label={termWith("scanner.crewCount", { count: String(dashboard.crew.length) })}
+          value={selection.type === "agent" ? selection.id : ""}
+          placeholder={term("scanner.crewPick")}
+          groups={crewGroups}
+          onChange={(id) => onSelect({ type: "agent", id })}
+        />
+      ) : null}
+      <PickerRow
+        label={termWith("scanner.roomCount", { count: String(dashboard.rooms.length) })}
+        value={selection.type === "room" ? selection.id : ""}
+        placeholder={term("scanner.roomPick")}
+        groups={roomGroups}
+        onChange={(id) => onSelect({ type: "room", id })}
       />
     </div>
   );
@@ -436,7 +499,7 @@ export function Scanner(props: ScannerProps) {
   }
   return (
     <Panel title={term("scanner.title")} meta={kind} className={className}>
-      {dashboard.crew.length > 0 ? <CrewPicker props={props} /> : null}
+      {dashboard.rooms.length > 0 ? <Pickers props={props} /> : null}
       <div data-scanner-body className="min-h-0 flex-1 overflow-y-auto">
         {body}
       </div>

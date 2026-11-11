@@ -74,6 +74,8 @@ function CrewChip({
       <Avatar
         name={member.name}
         color={color}
+        look={member.look}
+        size={30}
         lamp={{
           color: toneVar(CREW_STATUS_TONE[member.status]),
           className: lampBlink(member.status),
@@ -156,7 +158,12 @@ function Room({
                 }}
                 className="pointer-events-auto z-10 cursor-pointer bg-transparent"
               >
-                <Avatar name={overseer.name} size={38} {...overseerAvatarProps()} />
+                <Avatar
+                  name={overseer.name}
+                  look={overseer.look}
+                  size={38}
+                  {...overseerAvatarProps()}
+                />
               </button>
               <span className="bg-chip-bg px-1 py-0.75 font-display text-d8 text-title uppercase">
                 {overseer.name}

@@ -56,6 +56,40 @@ describe("Scanner", () => {
     expect(onSelect).toHaveBeenCalledWith({ type: "agent", id: "wren" });
   });
 
+  it("picks a room from a second list under crew, with sector and crew count", async () => {
+    const onSelect = vi.fn();
+    const { container } = render(
+      <Scanner dashboard={busy()} selection={{ type: "agent", id: "quill" }} onSelect={onSelect} />,
+    );
+    const rooms = screen.getByRole("button", { name: "Rooms · 3 Pick a room" });
+    const crew = screen.getByRole("button", { name: /^Crew · 3/ });
+    // The same control as the crew picker, on the same grid, below it.
+    expect(rooms.className).toBe(crew.className);
+    expect(crew.compareDocumentPosition(rooms) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await userEvent.click(rooms);
+    expect(screen.getAllByRole("option").map((o) => o.getAttribute("aria-label"))).toEqual([
+      "Command · HQ · 1 crew",
+      "Operations · A-1 · 1 crew",
+      "Research · B-1 · 1 crew",
+    ]);
+    expect(await axe(container)).toHaveNoViolations();
+    await userEvent.click(screen.getByRole("option", { name: /^Research/ }));
+    expect(onSelect).toHaveBeenCalledWith({ type: "room", id: "research" });
+  });
+
+  it("shows the scanned room in the rooms picker", () => {
+    render(
+      <Scanner
+        dashboard={busy()}
+        selection={{ type: "room", id: "operations" }}
+        onSelect={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByRole("button", { name: "Rooms · 3 Operations · A-1 · 1 crew" }),
+    ).toBeInTheDocument();
+  });
+
   it("shows the scanned crew member in the picker", () => {
     render(
       <Scanner dashboard={busy()} selection={{ type: "agent", id: "quill" }} onSelect={vi.fn()} />,

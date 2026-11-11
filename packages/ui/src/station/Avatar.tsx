@@ -1,6 +1,7 @@
 import { initials } from "@darthsaul/outerworld-ai-core";
 import type { CSSProperties } from "react";
 import { stVar } from "../tokens/tokens.js";
+import { Sprite } from "./Sprite.js";
 
 export interface AvatarProps {
   readonly name: string;
@@ -12,6 +13,11 @@ export interface AvatarProps {
   readonly ring?: string;
   /** What shows through the ring's gap; defaults to the room surface. */
   readonly ringGap?: string;
+  /**
+   * The crew member's pixel character (core's look index). With it, the chip draws the character
+   * at 1× in a frame of `color` instead of initials; use 30 or larger so the 26px sprite fits.
+   */
+  readonly look?: number;
   /** A 6px status lamp at the top-right corner. */
   readonly lamp?: { readonly color: string; readonly className?: string };
   readonly className?: string;
@@ -24,10 +30,14 @@ const SIZE = {
   52: "size-13 text-d12",
 } as const;
 
-/** A square chip with two-letter initials. Decorative: the name is always written beside it. */
+/**
+ * A square chip with two-letter initials, or the crew member's character when `look` is given.
+ * Decorative: the name is always written beside it.
+ */
 export function Avatar({
   name,
   color,
+  look,
   size = 22,
   ring,
   ringGap,
@@ -35,17 +45,18 @@ export function Avatar({
   className = "",
 }: AvatarProps) {
   const style = {
-    background: color,
+    ...(look === undefined ? { background: color } : { borderColor: color }),
     ...(ring ? { "--st-ring-color": ring } : {}),
     ...(ringGap ? { "--st-ring-gap": ringGap } : {}),
   } as CSSProperties;
   return (
     <span
       aria-hidden="true"
-      className={`relative inline-flex shrink-0 items-center justify-center font-display text-ink ${SIZE[size]} ${ring ? "st-ring" : ""} ${className}`}
+      data-look={look}
+      className={`relative inline-flex shrink-0 justify-center font-display text-ink ${look === undefined ? "items-center" : "items-end border bg-well"} ${SIZE[size]} ${ring ? "st-ring" : ""} ${className}`}
       style={style}
     >
-      {initials(name)}
+      {look === undefined ? initials(name) : <Sprite look={look} />}
       {lamp ? (
         <span
           className={`-right-0.75 -top-0.75 absolute size-1.5 ${lamp.className ?? ""}`}

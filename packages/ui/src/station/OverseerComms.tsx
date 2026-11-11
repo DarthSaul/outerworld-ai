@@ -53,8 +53,24 @@ export interface OverseerCommsProps {
   readonly className?: string;
 }
 
-/** Column 3, top: the Overseer talking, approvals, and the order line. */
-export function OverseerComms({
+/** The Overseer talking, approvals, and the order line, in a panel of its own. */
+export function OverseerComms({ className = "", ...props }: OverseerCommsProps) {
+  return (
+    <Panel
+      title={term("comms.title")}
+      meta={<span aria-hidden="true" className="st-blink size-2 bg-red" />}
+      className={className}
+    >
+      <OverseerCommsBody {...props} />
+    </Panel>
+  );
+}
+
+/**
+ * What `OverseerComms` holds, without the panel: for a panel of tabs (the Station's comms card).
+ * Fills a flex column; the message scrolls when the space is short.
+ */
+export function OverseerCommsBody({
   message,
   overseerLook,
   onApprove,
@@ -62,8 +78,7 @@ export function OverseerComms({
   onNext,
   onOrder,
   busy = false,
-  className = "",
-}: OverseerCommsProps) {
+}: Omit<OverseerCommsProps, "className">) {
   const typed = useTypewriter(message?.key ?? "", message?.text ?? "");
   const finished = message !== undefined && typed.length >= message.text.length;
   const [order, setOrder] = useState("");
@@ -104,11 +119,7 @@ export function OverseerComms({
   };
 
   return (
-    <Panel
-      title={term("comms.title")}
-      meta={<span aria-hidden="true" className="st-blink size-2 bg-red" />}
-      className={className}
-    >
+    <>
       <div className="flex min-h-0 flex-1 gap-2.5 overflow-y-auto p-2.5">
         <div role="img" aria-label={term("comms.portrait")} className="flex shrink-0 items-start">
           {overseerLook === undefined ? null : <Sprite look={overseerLook} scale={2} />}
@@ -169,6 +180,6 @@ export function OverseerComms({
           {term("comms.send")}
         </button>
       </form>
-    </Panel>
+    </>
   );
 }

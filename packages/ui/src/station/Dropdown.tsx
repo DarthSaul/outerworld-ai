@@ -18,6 +18,7 @@ export interface DropdownOption {
 
 export interface DropdownGroup {
   readonly id: string;
+  /** The heading over the group's options; empty for a list with no headings. */
   readonly label: string;
   readonly options: readonly DropdownOption[];
 }
@@ -165,12 +166,14 @@ export function Dropdown({
         {groups.map((group) =>
           group.options.length === 0 ? null : (
             <div key={group.id} role="presentation">
-              <div
-                aria-hidden="true"
-                className="px-1.5 pt-1.5 pb-1 font-display text-d7 text-fg-mute uppercase"
-              >
-                {group.label}
-              </div>
+              {group.label ? (
+                <div
+                  aria-hidden="true"
+                  className="px-1.5 pt-1.5 pb-1 font-display text-d7 text-fg-mute uppercase"
+                >
+                  {group.label}
+                </div>
+              ) : null}
               {group.options.map((option) => {
                 index++;
                 const i = index;
@@ -183,7 +186,7 @@ export function Dropdown({
                     }}
                     role="option"
                     aria-selected={selected}
-                    aria-label={`${option.text}, ${group.label}`}
+                    aria-label={group.label ? `${option.text}, ${group.label}` : option.text}
                     tabIndex={i === active ? 0 : -1}
                     onPointerMove={() => setActive(i)}
                     onClick={() => choose(i)}
