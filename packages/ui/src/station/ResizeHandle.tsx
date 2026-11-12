@@ -34,11 +34,12 @@ export function ResizeHandle({
   onReset,
   className = "",
 }: ResizeHandleProps) {
-  const last = useRef<number | null>(null);
+  /** The drag in progress: the pointer that started it, and where it was last. */
+  const drag = useRef<{ id: number; x: number } | null>(null);
 
   const down = (e: PointerEvent<HTMLHRElement>) => {
-    if (e.button !== 0) return;
-    last.current = e.clientX;
+    if (e.button !== 0 || drag.current) return;
+    drag.current = { id: e.pointerId, x: e.clientX };
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
     } catch {
@@ -47,14 +48,15 @@ export function ResizeHandle({
     e.preventDefault();
   };
   const move = (e: PointerEvent<HTMLHRElement>) => {
-    if (last.current === null) return;
-    const dx = e.clientX - last.current;
+    const d = drag.current;
+    if (!d || d.id !== e.pointerId) return;
+    const dx = e.clientX - d.x;
     if (dx === 0) return;
-    last.current = e.clientX;
+    d.x = e.clientX;
     onResize(dx);
   };
-  const up = () => {
-    last.current = null;
+  const up = (e: PointerEvent<HTMLHRElement>) => {
+    if (drag.current?.id === e.pointerId) drag.current = null;
   };
   const key = (e: KeyboardEvent<HTMLHRElement>) => {
     if (e.key === "ArrowLeft") onResize(-RESIZE_KEY_STEP);

@@ -67,6 +67,7 @@ export function Dropdown({
   );
 
   const show = (index: number) => {
+    if (options.length === 0) return;
     setActive(Math.max(0, Math.min(options.length - 1, index)));
     setOpen(true);
   };
@@ -79,6 +80,11 @@ export function Dropdown({
     if (option) onChange(option.value);
     close(true);
   };
+
+  // The list changed under an open dropdown: keep the active index inside it.
+  useEffect(() => {
+    setActive((a) => Math.max(0, Math.min(options.length - 1, a)));
+  }, [options.length]);
 
   // While open, the active option holds focus.
   useEffect(() => {
@@ -102,13 +108,14 @@ export function Dropdown({
     e.preventDefault();
     show(e.key === "ArrowUp" && !chosen ? options.length - 1 : chosenIndex);
   };
-  const onOptionKey = (e: KeyboardEvent<HTMLDivElement>) => {
+  /** `focused` is the option the key came from, which is what Enter and Space choose. */
+  const onOptionKey = (e: KeyboardEvent<HTMLDivElement>, focused: number) => {
     const last = options.length - 1;
     if (e.key === "ArrowDown") setActive((a) => Math.min(last, a + 1));
     else if (e.key === "ArrowUp") setActive((a) => Math.max(0, a - 1));
     else if (e.key === "Home") setActive(0);
     else if (e.key === "End") setActive(last);
-    else if (e.key === "Enter" || e.key === " ") choose(active);
+    else if (e.key === "Enter" || e.key === " ") choose(focused);
     else if (e.key === "Escape") close(true);
     else if (e.key === "Tab") {
       // Back to the button first, so Tab moves on from the control rather than from the list.
@@ -116,7 +123,7 @@ export function Dropdown({
       return;
     } else if (e.key.length === 1 && /\S/.test(e.key)) {
       const letter = e.key.toLowerCase();
-      const order = [...options.slice(active + 1), ...options.slice(0, active + 1)];
+      const order = [...options.slice(focused + 1), ...options.slice(0, focused + 1)];
       const next = order.find((o) => o.text.toLowerCase().startsWith(letter));
       if (next) setActive(options.indexOf(next));
     } else return;
@@ -190,7 +197,7 @@ export function Dropdown({
                     tabIndex={i === active ? 0 : -1}
                     onPointerMove={() => setActive(i)}
                     onClick={() => choose(i)}
-                    onKeyDown={onOptionKey}
+                    onKeyDown={(e) => onOptionKey(e, i)}
                     className={`flex cursor-pointer items-center gap-2 border-2 px-1.5 py-1 text-b19 outline-none ${i === active ? "border-cyan bg-hover" : "border-transparent"} ${selected ? "text-fg-hi" : "text-fg"}`}
                   >
                     <span aria-hidden="true" className="w-2 shrink-0 text-cyan">

@@ -42,6 +42,16 @@ describe("ResizeHandle", () => {
     expect(onResize.mock.calls).toEqual([[30], [-10]]);
   });
 
+  it("follows only the pointer that started the drag", () => {
+    const { handle, onResize } = setup();
+    fireEvent.pointerDown(handle, { button: 0, clientX: 100, pointerId: 1 });
+    fireEvent.pointerDown(handle, { button: 0, clientX: 300, pointerId: 2 });
+    fireEvent.pointerMove(handle, { clientX: 320, pointerId: 2 });
+    fireEvent.pointerUp(handle, { pointerId: 2 });
+    fireEvent.pointerMove(handle, { clientX: 110, pointerId: 1 });
+    expect(onResize.mock.calls).toEqual([[10]]);
+  });
+
   it("moves with the arrow keys and resets on Enter or double-click", () => {
     const { handle, onResize, onReset } = setup();
     fireEvent.keyDown(handle, { key: "ArrowRight" });

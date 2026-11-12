@@ -114,4 +114,60 @@ describe("Dropdown", () => {
     fireEvent.pointerDown(screen.getByRole("button", { name: "Elsewhere" }));
     expect(screen.queryByRole("listbox")).toBeNull();
   });
+
+  it("does not open with no options", async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <span id="none-label">Crew · 0</span>
+        <Dropdown
+          labelledBy="none-label"
+          value=""
+          placeholder="Pick"
+          groups={[]}
+          onChange={() => {}}
+        />
+      </>,
+    );
+    const button = screen.getByRole("button", { name: /^Crew · 0/ });
+    await user.click(button);
+    expect(button).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("listbox")).toBeNull();
+  });
+
+  it("chooses the focused option when the list changes while open", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const view = (g: typeof groups) => (
+      <>
+        <span id="crew-label">Crew · 3</span>
+        <Dropdown
+          labelledBy="crew-label"
+          value=""
+          placeholder="Pick"
+          groups={g}
+          onChange={onChange}
+        />
+      </>
+    );
+    const { rerender } = render(view(groups));
+    trigger().focus();
+    await user.keyboard("{ArrowDown}{ArrowDown}");
+    expect(screen.getByRole("option", { name: /^Quill/ })).toHaveFocus();
+    // A crew member joins Command, ahead of Quill in the list.
+    const [command, ...rest] = groups;
+    if (!command) throw new Error("no group");
+    rerender(
+      view([
+        {
+          ...command,
+          options: [...command.options, { value: "ash", label: <b>Ash</b>, text: "Ash · Idle" }],
+        },
+        ...rest,
+      ]),
+    );
+    expect(screen.getByRole("option", { name: /^Quill/ })).toHaveFocus();
+    await user.keyboard("{Enter}");
+    expect(onChange).toHaveBeenCalledWith("quill");
+  });
 });
