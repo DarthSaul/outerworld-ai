@@ -41,6 +41,7 @@ export interface DropdownProps {
  * Space choose, a letter jumps to the next option starting with it, Escape closes, Tab closes and
  * moves on. Focus moves to the options while it is open and back to the button when it closes; a
  * click outside closes it. Each option's name includes its group, since the headings are visual.
+ * The options are in the page only while the list is open.
  */
 export function Dropdown({
   labelledBy,
@@ -176,8 +177,10 @@ export function Dropdown({
         hidden={!open}
         className="absolute inset-x-0 top-full z-30 mt-1 max-h-80 overflow-y-auto border-2 border-cyan bg-panel p-1 shadow-panel"
       >
+        {/* Options render only while open: each can draw a character, and a closed list of
+            them would weigh down every page that holds a dropdown. */}
         {groups.map((group) =>
-          group.options.length === 0 ? null : (
+          !open || group.options.length === 0 ? null : (
             <div key={group.id} role="presentation">
               {group.label ? (
                 <div
