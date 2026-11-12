@@ -25,6 +25,13 @@ const withNotion = (status: "connected" | "disconnected" = "connected") => {
 };
 
 describe("Connectors, a section of Settings", () => {
+  it("ignores a malformed fragment in the address", async () => {
+    renderApp("/settings#%E0%A4%A");
+    expect(
+      await screen.findByRole("heading", { name: term("settings"), level: 1 }),
+    ).toBeInTheDocument();
+  });
+
   it("offers to add Notion when the station has no connectors", async () => {
     const user = userEvent.setup();
     const { calls } = renderApp("/settings");

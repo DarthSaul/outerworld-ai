@@ -149,7 +149,7 @@ function Profile({
           {config.role === "overseer" ? term("overseer.role") : term("agent")}
         </Fact>
         <Fact label={term("comms.profile.status")}>
-          <span className="flex items-center gap-1.5">
+          <span aria-live="polite" aria-atomic="true" className="flex items-center gap-1.5">
             <Lamp crew={crew} />
             {crew ? term(`crewStatus.${crew.status}`) : "—"}
           </span>

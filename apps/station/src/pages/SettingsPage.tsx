@@ -105,7 +105,14 @@ function useHashTarget(ready: boolean) {
   const { hash } = useLocation();
   useEffect(() => {
     if (!ready || !hash) return;
-    document.getElementById(decodeURIComponent(hash.slice(1)))?.scrollIntoView?.();
+    let id: string;
+    try {
+      id = decodeURIComponent(hash.slice(1));
+    } catch {
+      // A malformed fragment names no section.
+      return;
+    }
+    document.getElementById(id)?.scrollIntoView?.();
   }, [ready, hash]);
 }
 
