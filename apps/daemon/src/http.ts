@@ -1,4 +1,10 @@
-import { ConflictError, InvalidKeyError, NotFoundError } from "@darthsaul/outerworld-ai-runtime";
+import {
+  ConflictError,
+  InvalidKeyError,
+  KeyCheckUnavailableError,
+  KeychainWriteError,
+  NotFoundError,
+} from "@darthsaul/outerworld-ai-runtime";
 import type { Context, Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import type { z } from "zod";
@@ -61,13 +67,19 @@ export function apiRequestRules(app: Hono, path: string): void {
   });
 }
 
-/** Error mapping for a JSON API router: 400 (bad input or a rejected key), 404, 409. */
+/**
+ * Error mapping for a JSON API router: 400 (bad input or a rejected key), 404, 409, 502 (a key
+ * check the provider could not answer), 500 with a reason (the keychain refused a key).
+ */
 export function jsonApi(app: Hono): Hono {
   app.onError((error, c) => {
     if (error instanceof BadRequest) {
       return c.json({ error: error.message, issues: error.issues }, 400);
     }
     if (error instanceof InvalidKeyError) return c.json({ error: error.message }, 400);
+    // The key could not be checked (provider unreachable or unexpected), or not stored.
+    if (error instanceof KeyCheckUnavailableError) return c.json({ error: error.message }, 502);
+    if (error instanceof KeychainWriteError) return c.json({ error: error.message }, 500);
     if (error instanceof NotFoundError) return c.json({ error: error.message }, 404);
     if (error instanceof ConflictError) {
       return c.json({ error: error.message, issues: error.issues }, 409);

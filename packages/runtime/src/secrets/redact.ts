@@ -1,5 +1,5 @@
-/** Anything shaped like an OpenRouter key, whether or not it is ours. */
-const KEY_SHAPE = /sk-or-[A-Za-z0-9_-]{10,}/g;
+/** Anything shaped like an OpenRouter or Anthropic key, whether or not it is ours. */
+const KEY_SHAPE = /sk-(?:or|ant)-[A-Za-z0-9_-]{10,}/g;
 /** Known values shorter than this are not redacted, so ordinary words are never blanked. */
 const MIN_SECRET_LENGTH = 8;
 const REDACTED = "[redacted]";

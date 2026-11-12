@@ -120,10 +120,22 @@ describe("OverseerComms", () => {
     expect(input.style.height).toBe("");
   });
 
-  it("shows the Overseer's sprite in the portrait slot", () => {
+  it("shows the Overseer's sprite, small, in the portrait slot beside the words", () => {
     const { container } = render(<OverseerComms message={chatter} overseerLook={3} />);
-    expect(screen.getByRole("img", { name: "Overseer portrait" })).toBeInTheDocument();
+    const portrait = screen.getByRole("img", { name: "Overseer portrait" });
     expect(container.querySelectorAll("rect").length).toBeGreaterThan(0);
+    // 1.5× (30px wide): smaller than the old 2× portrait, with a tight gap to the text.
+    expect(portrait.querySelector("svg")).toHaveAttribute("width", "30");
+    expect(portrait.parentElement?.className).toMatch(/gap-1\.5/);
+  });
+
+  it("puts the app's settings row under the order box", () => {
+    render(
+      <OverseerComms message={chatter} orderFoot={<div data-testid="foot">Model settings</div>} />,
+    );
+    const box = screen.getByRole("textbox", { name: "Give the Overseer an order…" });
+    const foot = screen.getByTestId("foot");
+    expect(box.closest("form")?.nextElementSibling).toBe(foot);
   });
 
   it("has no axe violations", async () => {

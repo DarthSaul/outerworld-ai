@@ -27,7 +27,7 @@ export interface CheckboxProps
 export function Checkbox({ label, hint, className = "", ...input }: CheckboxProps) {
   return (
     <label
-      className={`inline-flex cursor-pointer items-start gap-2 text-b17 text-fg has-disabled:cursor-not-allowed has-disabled:opacity-60 ${className}`}
+      className={`relative inline-flex cursor-pointer items-start gap-2 text-b17 text-fg has-disabled:cursor-not-allowed has-disabled:opacity-60 ${className}`}
     >
       <input type="checkbox" className="st-check" {...input} />
       <span aria-hidden="true" className="st-check-box" />

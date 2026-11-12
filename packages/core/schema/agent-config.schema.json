@@ -76,6 +76,36 @@
           "enabled": {
             "default": true,
             "type": "boolean"
+          },
+          "modelSettings": {
+            "type": "object",
+            "properties": {
+              "model": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "provider": {
+                "type": "string",
+                "enum": [
+                  "auto",
+                  "anthropic",
+                  "openrouter"
+                ]
+              },
+              "reasoning": {
+                "type": "string",
+                "enum": [
+                  "default",
+                  "none",
+                  "low",
+                  "medium",
+                  "high",
+                  "xhigh"
+                ]
+              }
+            },
+            "additionalProperties": false
           }
         },
         "required": [
@@ -91,7 +121,7 @@
     "look": {
       "type": "integer",
       "minimum": 0,
-      "maximum": 23
+      "maximum": 30
     }
   },
   "required": [

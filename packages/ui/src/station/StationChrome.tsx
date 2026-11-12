@@ -105,10 +105,10 @@ export function StopButton({
       aria-pressed={stopped}
       disabled={busy}
       onClick={onToggle}
-      className="flex cursor-pointer items-center gap-2 border-2 bg-well px-3.5 font-display text-d8 uppercase hover:bg-btn-hover disabled:opacity-50"
+      className="flex cursor-pointer items-center gap-1.5 border-2 bg-well px-2.5 font-display text-d7 uppercase hover:bg-btn-hover disabled:opacity-50"
       style={{ borderColor: color, color }}
     >
-      <span aria-hidden="true" className="h-2.5 w-6.5 rounded-pill" style={{ background: color }} />
+      <span aria-hidden="true" className="h-2 w-5 rounded-pill" style={{ background: color }} />
       {term(stopped ? "station.resume" : "station.stop")}
     </button>
   );
@@ -129,7 +129,7 @@ export function CrtToggle({
       title={term("crt.label")}
       aria-label={term("crt.label")}
       onClick={onToggle}
-      className={`cursor-pointer border-2 border-line-soft px-2 font-display text-d7 uppercase ${on ? "bg-line-soft text-fg-hi" : "bg-well text-fg-mute"}`}
+      className={`cursor-pointer border-2 border-line-soft px-1.75 font-display text-d6 uppercase ${on ? "bg-line-soft text-fg-hi" : "bg-well text-fg-mute"}`}
     >
       {term("crt")}
     </button>
@@ -152,26 +152,29 @@ export interface StationHeaderProps {
  */
 export function StationHeader(p: StationHeaderProps) {
   return (
-    <header className="flex flex-wrap items-center justify-between gap-x-5 gap-y-3 border-line border-b-3 bg-bar px-4 py-3 shadow-bar-down">
-      <div className="flex flex-wrap items-center gap-3">
-        <div
-          aria-hidden="true"
-          className="size-8.5 bg-cyan [clip-path:polygon(50%_0,100%_100%,50%_78%,0_100%)]"
-        />
-        <div className="flex flex-col gap-1.5">
-          <div className="font-display text-d14 text-title uppercase tracking-st-2">
-            {p.stationName}
+    <header className="border-line border-b-3 bg-bar px-3.5 py-2 shadow-bar-down">
+      {/* The bar spans the page; its contents keep to the app's width (--st-app-max-width). */}
+      <div className="mx-auto flex w-full max-w-app flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <div
+            aria-hidden="true"
+            className="size-7 bg-cyan [clip-path:polygon(50%_0,100%_100%,50%_78%,0_100%)]"
+          />
+          <div className="flex flex-col gap-1">
+            <div className="font-display text-d12 text-title uppercase tracking-st-2">
+              {p.stationName}
+            </div>
+            <div className="text-b16 text-subtitle uppercase tracking-st-1">
+              {termWith("dashboard.subtitle", { rooms: String(p.rooms), crew: String(p.crew) })}
+            </div>
           </div>
-          <div className="text-b17 text-subtitle uppercase tracking-st-1">
-            {termWith("dashboard.subtitle", { rooms: String(p.rooms), crew: String(p.crew) })}
-          </div>
+          <nav aria-label="Primary" className="ml-1.5">
+            {p.tabs}
+          </nav>
         </div>
-        <nav aria-label="Primary" className="ml-2">
-          {p.tabs}
-        </nav>
-      </div>
-      <div className="flex min-w-0 flex-auto flex-wrap items-stretch justify-end gap-2 self-stretch">
-        {p.controls}
+        <div className="flex min-w-0 flex-auto flex-wrap items-stretch justify-end gap-1.5 self-stretch">
+          {p.controls}
+        </div>
       </div>
     </header>
   );
@@ -209,6 +212,8 @@ export interface StationVitalsProps {
   readonly startedAt?: string;
   /** Right end, after the vitals: the kill switch (ADR-0014). */
   readonly controls?: ReactNode;
+  /** Left end: the app's own links (Settings). */
+  readonly start?: ReactNode;
 }
 
 const usd = (n: number) => `$${n.toFixed(2)}`;
@@ -220,6 +225,7 @@ export function StationVitals({
   capUsd,
   startedAt,
   controls,
+  start,
 }: StationVitalsProps) {
   const uptime = useUptime(startedAt);
   const spent = spendUsd ?? 0;
@@ -228,38 +234,40 @@ export function StationVitals({
       ? termWith("vitals.fuelNoCap", { spent: usd(spent) })
       : termWith("vitals.fuel", { spent: usd(spent), cap: usd(capUsd) });
   return (
-    <footer className="flex flex-wrap items-center justify-between gap-x-5 gap-y-3 border-line border-t-3 bg-bar px-4 py-3 shadow-bar-up">
-      <div className="flex flex-col gap-1.5">
-        <h2 className="m-0 font-display font-normal text-d10 text-title uppercase tracking-st-2">
-          {term("vitals.title")}
-        </h2>
-        <div className="text-b17 text-subtitle uppercase tracking-st-1">
-          {term("vitals.subtitle")}
-        </div>
-      </div>
-      <div className="flex flex-wrap items-stretch justify-end gap-2">
-        <StatBox
-          label={term("vitals.tokens")}
-          value={tokens === undefined ? "—" : formatTokens(tokens)}
-          tone="cyan"
-        />
-        <StatBox label={fuelLabel} className="min-w-42.5 gap-1.5">
-          {capUsd === undefined ? null : (
-            <SegmentBar
-              color={stVar("amber")}
-              percent={(spent / capUsd) * 100}
-              size="lg"
-              label={fuelLabel}
-            />
+    <footer className="border-line border-t-3 bg-bar px-3.5 py-1.5 shadow-bar-up">
+      <div className="mx-auto flex w-full max-w-app flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        {/* The vitals keep their name for screen readers; the left end holds the app's links. */}
+        <h2 className="sr-only">{term("vitals.title")}</h2>
+        <div className="flex items-center gap-1.5">{start}</div>
+        <div className="flex flex-wrap items-stretch justify-end gap-1.5">
+          <StatBox
+            size="compact"
+            label={term("vitals.tokens")}
+            value={tokens === undefined ? "—" : formatTokens(tokens)}
+            tone="cyan"
+          />
+          <StatBox size="compact" label={fuelLabel} className="min-w-38">
+            {capUsd === undefined ? null : (
+              <SegmentBar
+                color={stVar("amber")}
+                percent={(spent / capUsd) * 100}
+                size="md"
+                label={fuelLabel}
+              />
+            )}
+          </StatBox>
+          <StatBox
+            size="compact"
+            label={term("vitals.uptime")}
+            value={startedAt ? formatUptime(uptime) : "—"}
+          />
+          {controls === undefined ? null : (
+            <>
+              <span aria-hidden="true" className="w-0.5 self-stretch bg-line" />
+              {controls}
+            </>
           )}
-        </StatBox>
-        <StatBox label={term("vitals.uptime")} value={startedAt ? formatUptime(uptime) : "—"} />
-        {controls === undefined ? null : (
-          <>
-            <span aria-hidden="true" className="w-0.5 self-stretch bg-line" />
-            {controls}
-          </>
-        )}
+        </div>
       </div>
     </footer>
   );

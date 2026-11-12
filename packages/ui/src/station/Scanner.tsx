@@ -6,15 +6,15 @@ import {
   term,
   termWith,
 } from "@darthsaul/outerworld-ai-core";
-import { type ReactNode, useId } from "react";
+import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { stVar } from "../tokens/tokens.js";
-import { Avatar } from "./Avatar.js";
-import { Diamond, OutlineButton } from "./buttons.js";
+import { Diamond, OutlineButton, tabClass } from "./buttons.js";
 import { crewOptionGroups } from "./crew-options.js";
 import { type DashboardSelection, grantName, roomColor } from "./DashboardMap.js";
 import { Dropdown, type DropdownGroup } from "./Dropdown.js";
 import { Panel, PanelLabel } from "./Panel.js";
 import { SegmentBar } from "./SegmentBar.js";
+import { Sprite } from "./Sprite.js";
 import { CREW_STATUS_TONE, RUN_STATUS_TONE, toneVar } from "./tone.js";
 
 export interface ScannerProps {
@@ -27,6 +27,10 @@ export interface ScannerProps {
   readonly onDemolish?: (laneId: string) => void;
   /** An action is in flight; its buttons are disabled. */
   readonly busy?: boolean;
+  /** Folded to its title strip: no picker, no body, no Crew / Rooms toggle. */
+  readonly collapsed?: boolean;
+  /** Shows a caret beside the title that folds and unfolds the scanner. */
+  readonly onToggleCollapsed?: () => void;
   readonly className?: string;
 }
 
@@ -57,9 +61,14 @@ function CrewRow({
 }) {
   return (
     <li>
-      <button type="button" className={rowButton} onClick={onSelect}>
-        <Avatar name={member.name} color={member.overseer ? stVar("white") : color} />
-        <span className="flex-1 uppercase">{member.name}</span>
+      <button type="button" className={rowButton} onClick={onSelect} data-crew={member.id}>
+        <Sprite look={member.look} />
+        <span
+          className="flex-1 uppercase"
+          style={{ color: member.overseer ? stVar("white") : color }}
+        >
+          {member.name}
+        </span>
         <span
           className="font-display text-d7 uppercase"
           style={{ color: toneVar(CREW_STATUS_TONE[member.status]) }}
@@ -241,7 +250,10 @@ function AgentScan({
   return (
     <div className="flex flex-col gap-3.5 p-3">
       <div className="flex items-center gap-3">
-        <Avatar name={member.name} color={color} size={52} ring={color} ringGap={stVar("room")} />
+        {/* The crew member's own character, standing on its own (no lettered badge). */}
+        <span data-look={member.look} className="flex shrink-0">
+          <Sprite look={member.look} scale={2} />
+        </span>
         <div className="flex flex-col gap-1">
           <span className="font-display text-d11 text-fg-hi uppercase">{member.name}</span>
           <span className="text-b18 text-fg-soft">
@@ -393,11 +405,17 @@ function PickerRow({
   );
 }
 
+/** What the scanner's picker shows: the crew dropdown or the rooms dropdown. */
+type PickerView = "crew" | "rooms";
+const PICKER_VIEWS: readonly PickerView[] = ["crew", "rooms"];
+
 /**
- * The pickers at the top of the scanner: crew (grouped by room, with avatar and status) and rooms
- * (with sector, color, and crew count). Picking either scans it; each label carries its count.
+ * The picker at the top of the scanner: the dropdown for the list the title strip's Crew / Rooms
+ * toggle shows (Crew first, and the default): crew grouped by room with character and status, or rooms with sector,
+ * color, and crew count. Picking scans it. Selecting a room or a crew member elsewhere (the map)
+ * turns the toggle to match, so the dropdown always names what is being scanned.
  */
-function Pickers({ props }: { readonly props: ScannerProps }) {
+function Pickers({ props, view }: { readonly props: ScannerProps; readonly view: PickerView }) {
   const { dashboard, selection, onSelect } = props;
   const crewGroups = crewOptionGroups(dashboard);
   const roomGroups = [
@@ -428,32 +446,66 @@ function Pickers({ props }: { readonly props: ScannerProps }) {
       }),
     },
   ];
+  const showCrew = view === "crew" && dashboard.crew.length > 0;
   return (
-    <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2.5 gap-y-2 border-line-faint border-b-2 px-3 py-2">
-      {dashboard.crew.length > 0 ? (
-        <PickerRow
-          label={termWith("scanner.crewCount", { count: String(dashboard.crew.length) })}
-          value={selection.type === "agent" ? selection.id : ""}
-          placeholder={term("scanner.crewPick")}
-          groups={crewGroups}
-          onChange={(id) => onSelect({ type: "agent", id })}
-        />
-      ) : null}
-      <PickerRow
-        label={termWith("scanner.roomCount", { count: String(dashboard.rooms.length) })}
-        value={selection.type === "room" ? selection.id : ""}
-        placeholder={term("scanner.roomPick")}
-        groups={roomGroups}
-        onChange={(id) => onSelect({ type: "room", id })}
-      />
+    <div className="border-line-faint border-b-2 px-3 py-2">
+      <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2.5">
+        {showCrew ? (
+          <PickerRow
+            label={termWith("scanner.crewCount", { count: String(dashboard.crew.length) })}
+            value={selection.type === "agent" ? selection.id : ""}
+            placeholder={term("scanner.crewPick")}
+            groups={crewGroups}
+            onChange={(id) => onSelect({ type: "agent", id })}
+          />
+        ) : (
+          <PickerRow
+            label={termWith("scanner.roomCount", { count: String(dashboard.rooms.length) })}
+            value={selection.type === "room" ? selection.id : ""}
+            placeholder={term("scanner.roomPick")}
+            groups={roomGroups}
+            onChange={(id) => onSelect({ type: "room", id })}
+          />
+        )}
+      </div>
     </div>
   );
 }
 
 /** Beside the map, below comms: pick a crew member, or what is selected on the map, in detail. */
 export function Scanner(props: ScannerProps) {
-  const { dashboard, selection, className = "" } = props;
-  const kind = term(`scanner.kind.${selection.type}`);
+  const { dashboard, selection, collapsed = false, onToggleCollapsed, className = "" } = props;
+  const bodyId = useId();
+  const [view, setView] = useState<PickerView>("crew");
+  const first = useRef(true);
+  // Any new selection (another room, too) turns the toggle to its list.
+  const selected = `${selection.type}:${selection.id}`;
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    if (selected.startsWith("agent:")) setView("crew");
+    else if (selected.startsWith("room:")) setView("rooms");
+  }, [selected]);
+  const pickers = dashboard.rooms.length > 0 && !collapsed;
+  // The Crew / Rooms toggle sits in the title strip, where the scanned kind used to be.
+  const toggle = pickers ? (
+    <fieldset className="m-0 flex gap-1.5 border-0 p-0">
+      <legend className="sr-only">{term("scanner.view")}</legend>
+      {PICKER_VIEWS.map((v) => (
+        <button
+          key={v}
+          type="button"
+          aria-pressed={view === v}
+          className={tabClass(view === v, "map")}
+          onClick={() => setView(v)}
+        >
+          {term(v === "crew" ? "agents" : "rooms")}
+        </button>
+      ))}
+    </fieldset>
+  ) : undefined;
   let body: ReactNode = null;
   if (selection.type === "room") {
     const room = dashboard.rooms.find((r) => r.id === selection.id);
@@ -465,10 +517,43 @@ export function Scanner(props: ScannerProps) {
     body = <LaneScan laneId={selection.id} props={props} />;
   }
   return (
-    <Panel title={term("scanner.title")} meta={kind} className={className}>
-      {dashboard.rooms.length > 0 ? <Pickers props={props} /> : null}
-      <div data-scanner-body className="min-h-0 flex-1 overflow-y-auto">
-        {body}
+    <Panel
+      title={term("scanner.title")}
+      titleAction={
+        onToggleCollapsed ? (
+          <button
+            type="button"
+            aria-expanded={!collapsed}
+            aria-controls={bodyId}
+            aria-label={term(collapsed ? "scanner.expand" : "scanner.collapse")}
+            title={term(collapsed ? "scanner.expand" : "scanner.collapse")}
+            onClick={onToggleCollapsed}
+            data-caret
+            className="inline-flex size-5 cursor-pointer items-center justify-center border-2 border-transparent bg-transparent p-0 text-cyan hover:border-line-soft hover:text-fg-hi focus-visible:border-cyan"
+          >
+            {/* A pixel triangle: down while open, turned to point right while folded. */}
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 5 3"
+              shapeRendering="crispEdges"
+              className={`h-1.5 w-2.5 fill-current ${collapsed ? "-rotate-90" : ""}`}
+            >
+              <rect x="0" y="0" width="5" height="1" />
+              <rect x="1" y="1" width="3" height="1" />
+              <rect x="2" y="2" width="1" height="1" />
+            </svg>
+          </button>
+        ) : undefined
+      }
+      meta={toggle}
+      dense
+      className={className}
+    >
+      <div id={bodyId} hidden={collapsed} className={collapsed ? "hidden" : "contents"}>
+        {pickers ? <Pickers props={props} view={view} /> : null}
+        <div data-scanner-body className="min-h-0 flex-1 overflow-y-auto">
+          {body}
+        </div>
       </div>
     </Panel>
   );

@@ -8,13 +8,18 @@ import {
   checkBudget,
   cleanTitle,
   DEFAULT_SESSION_TITLE,
+  estimateCostUsd,
   fallbackTitle,
+  findModel,
   historyBudget,
   isTerminal,
+  type ModelSettings,
   needsConsent,
+  type ProviderChoice,
+  type ReasoningLevel,
   resolveGrants,
+  resolveModelSettings,
   roleBriefing,
-  SUPPORTED_MODELS,
   type ToolCallRecord,
   type ToolClass,
   titlePrompt,
@@ -81,8 +86,14 @@ export interface RunServiceOptions {
   readonly spend: SpendStore;
   readonly killSwitch: KillSwitch;
   readonly now?: () => Date;
-  /** The model for an id; throws (e.g. no API key) to fail the run with that message. */
-  readonly models: (modelId: string) => LanguageModel | Promise<LanguageModel>;
+  /**
+   * The model for an id and a key choice; throws (e.g. no API key) to fail the run with that
+   * message.
+   */
+  readonly models: (
+    modelId: string,
+    options?: { provider?: ProviderChoice },
+  ) => LanguageModel | Promise<LanguageModel>;
   readonly tools?: Readonly<Record<string, ToolImpl>>;
   /** Approved beliefs to put in each run's prompt (brief §14). */
   readonly beliefs?: (agentId: string) => readonly string[];
@@ -155,6 +166,27 @@ class Slots {
   }
 }
 
+/** How a send may start a run: what caused it, and a model choice over the session's. */
+export interface SendOptions {
+  readonly trigger?: RunTrigger;
+  readonly depth?: number;
+  readonly dispatchId?: string;
+  /** Overrides the session's model settings for this run only (a scheduled job's, ADR-0016). */
+  readonly modelSettings?: ModelSettings | undefined;
+}
+
+/**
+ * The reasoning level as call settings (ADR-0016): the AI SDK's `reasoning`, which the Anthropic
+ * provider maps to effort, and OpenRouter's own `reasoning.effort`. `default` sends neither.
+ */
+const reasoningOptions = (level: ReasoningLevel) =>
+  level === "default"
+    ? {}
+    : {
+        reasoning: level,
+        providerOptions: { openrouter: { reasoning: { effort: level } } },
+      };
+
 const retryable = (error: unknown): error is APICallError =>
   APICallError.isInstance(error) &&
   error.statusCode !== 402 &&
@@ -177,7 +209,7 @@ const retryAfterMs = (error: APICallError): number | undefined => {
 
 const describeError = (error: unknown): string => {
   if (APICallError.isInstance(error) && error.statusCode === 402) {
-    return "OpenRouter says the account is out of credits (HTTP 402)";
+    return "the model provider says the account is out of credits (HTTP 402)";
   }
   if (APICallError.isInstance(error) && error.statusCode !== undefined) {
     // The provider's own reason (e.g. "x is not a valid model ID") is what makes this fixable.
@@ -290,6 +322,15 @@ export class RunService {
     return renamed;
   }
 
+  /**
+   * This conversation's model, key, and reasoning level (ADR-0016). Takes effect from the next
+   * run; a run already going keeps what it started with. `null` goes back to the crew member's.
+   */
+  setSessionModel(sessionId: string, settings: ModelSettings | null): SessionRecord {
+    this.#session(sessionId);
+    return this.#o.sessions.setModelSettings(sessionId, settings);
+  }
+
   archiveSession(sessionId: string): SessionRecord {
     const s = this.#session(sessionId);
     const archived = this.#o.sessions.archiveSession(sessionId);
@@ -301,7 +342,7 @@ export class RunService {
   async send(
     sessionId: string,
     text: string,
-    options: { trigger?: RunTrigger; depth?: number; dispatchId?: string } = {},
+    options: SendOptions = {},
   ): Promise<{ runId: string }> {
     return this.#start(sessionId, text, options);
   }
@@ -320,7 +361,7 @@ export class RunService {
   async #start(
     sessionId: string,
     text: string | undefined,
-    options: { trigger?: RunTrigger; depth?: number; dispatchId?: string },
+    options: SendOptions,
   ): Promise<{ runId: string }> {
     const trigger = options.trigger ?? "user";
     const session = this.#session(sessionId);
@@ -332,12 +373,18 @@ export class RunService {
       throw new ConflictError("a run is already running in this session");
     }
     const loaded = await loadStationDir(this.#o.home);
-    const model = loaded.agents.find((a) => a.id === session.agentId)?.config.model ?? "unknown";
+    const agentModel =
+      loaded.agents.find((a) => a.id === session.agentId)?.config.model ?? "unknown";
+    // The crew member's model, then this conversation's choice, then this send's (a schedule's).
+    const settings = resolveModelSettings(agentModel, session.modelSettings, options.modelSettings);
+    const model = settings.model;
     const run = this.#o.sessions.createRun({
       sessionId,
       agentId: session.agentId,
       trigger,
       model,
+      provider: settings.provider,
+      reasoning: settings.reasoning,
       ...(options.depth !== undefined ? { depth: options.depth } : {}),
       ...(options.dispatchId !== undefined ? { dispatchId: options.dispatchId } : {}),
     });
@@ -350,7 +397,9 @@ export class RunService {
       this.#o.sessions.messages(sessionId).length === 1
     ) {
       // Runs beside the agent's run; a failure only means the message names the session.
-      void this.#nameSession(session, text, run.id, model).catch(() => undefined);
+      void this.#nameSession(session, text, run.id, model, settings.provider).catch(
+        () => undefined,
+      );
     }
     this.#o.events.append({
       type: "run.queued",
@@ -432,6 +481,7 @@ export class RunService {
     text: string,
     runId: string,
     modelId: string,
+    provider: ProviderChoice,
   ): Promise<void> {
     const ids = { agentId: session.agentId, sessionId: session.id, runId };
     let title: string | undefined;
@@ -447,7 +497,7 @@ export class RunService {
         if (this.#o.killSwitch.engaged() || this.#budgetCheck(station.budgets, ids)) {
           throw new Cancelled("budget");
         }
-        const model = await this.#o.models(modelId);
+        const model = await this.#o.models(modelId, { provider });
         const prompt = titlePrompt(text);
         const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(TITLE_TIMEOUT_MS)]);
         let reply = "";
@@ -479,23 +529,51 @@ export class RunService {
     this.renameSession(session.id, this.#o.redact ? this.#o.redact(named) : named);
   }
 
-  /** Spend per model call: tokens, and OpenRouter's cost in USD when it reports one. */
+  /**
+   * Spend per model call: tokens, and the cost in USD. OpenRouter reports its cost; the Anthropic
+   * API reports only tokens, so its cost is estimated at the model's list price (ADR-0015).
+   */
   #recordSpend(
     ids: { agentId: string; sessionId: string; runId: string },
     modelId: string,
     part: {
-      usage: { inputTokens?: number | undefined; outputTokens?: number | undefined };
+      usage: {
+        inputTokens?: number | undefined;
+        outputTokens?: number | undefined;
+        inputTokenDetails?: {
+          noCacheTokens?: number | undefined;
+          cacheReadTokens?: number | undefined;
+          cacheWriteTokens?: number | undefined;
+        };
+      };
       providerMetadata?: Record<string, unknown> | undefined;
     },
   ): void {
-    const cost = (part.providerMetadata?.openrouter as { usage?: { cost?: unknown } } | undefined)
-      ?.usage?.cost;
+    const reported = (
+      part.providerMetadata?.openrouter as { usage?: { cost?: unknown } } | undefined
+    )?.usage?.cost;
+    const { usage } = part;
+    const details = usage.inputTokenDetails;
+    const cacheRead = details?.cacheReadTokens ?? 0;
+    const cacheWrite = details?.cacheWriteTokens ?? 0;
+    const estimated =
+      part.providerMetadata?.anthropic !== undefined
+        ? estimateCostUsd(modelId, {
+            input:
+              details?.noCacheTokens ??
+              Math.max(0, (usage.inputTokens ?? 0) - cacheRead - cacheWrite),
+            cacheRead,
+            cacheWrite,
+            output: usage.outputTokens ?? 0,
+          })
+        : undefined;
+    const cost = typeof reported === "number" ? reported : estimated;
     this.#o.spend.record({
       ...ids,
       model: modelId,
-      inputTokens: part.usage.inputTokens ?? 0,
-      outputTokens: part.usage.outputTokens ?? 0,
-      costUsd: typeof cost === "number" ? cost : null,
+      inputTokens: usage.inputTokens ?? 0,
+      outputTokens: usage.outputTokens ?? 0,
+      costUsd: cost ?? null,
       at: this.#now().toISOString(),
     });
   }
@@ -518,10 +596,14 @@ export class RunService {
       const loaded = await loadStationDir(this.#o.home);
       const agent = loaded.agents.find((a) => a.id === run.agentId);
       sessions.transition(run.id, "start");
-      events.append({ type: "run.started", ...ids, payload: { model: run.model } });
+      events.append({
+        type: "run.started",
+        ...ids,
+        payload: { model: run.model, provider: run.provider, reasoning: run.reasoning },
+      });
       if (!agent || !loaded.station) throw new Error(`no agent "${run.agentId}"`);
       const station = loaded.station;
-      const model = await this.#o.models(agent.config.model);
+      const model = await this.#o.models(run.model, { provider: run.provider });
 
       const connectors = this.#o.connectors;
       const granted = resolveGrants(agent.config, station, connectors?.catalog() ?? {});
@@ -548,8 +630,7 @@ export class RunService {
           }),
         ]),
       ) as ToolSet;
-      const context =
-        SUPPORTED_MODELS.find((m) => m.id === agent.config.model)?.contextTokens ?? DEFAULT_CONTEXT;
+      const context = findModel(run.model)?.contextTokens ?? DEFAULT_CONTEXT;
       const briefing = roleBriefing(agent.id, station, loaded.agents);
 
       const maxSteps = this.#o.maxSteps ?? 12;
@@ -575,12 +656,13 @@ export class RunService {
           history,
           budgetTokens: historyBudget(context),
         });
-        const result = await this.#callWithRetry(ids, agent.config.model, signal, () =>
+        const result = await this.#callWithRetry(ids, run.model, signal, () =>
           streamText({
             model,
             instructions: prompt.system,
             messages: toModelMessages(prompt.messages),
             ...(offered.length ? { tools } : {}),
+            ...reasoningOptions(run.reasoning),
             abortSignal: signal,
             maxRetries: 0,
           }),

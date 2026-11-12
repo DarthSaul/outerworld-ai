@@ -64,11 +64,12 @@ copy of the fictional demo station (`fixtures/demo-station/`, copied to `.outerw
 On that copy, replies come from a scripted fake model (no key, no network). To chat for real:
 
 ```
-OUTERWORLD_MODEL=openrouter pnpm dev   # then Settings → paste your OpenRouter key
+OUTERWORLD_MODEL=live pnpm dev   # then Settings → Providers → paste an Anthropic or OpenRouter key
 ```
 
-The key is checked with OpenRouter and stored in your OS keychain, never on disk or in the
-browser. `OUTERWORLD_HOME=~/.outerworld pnpm dev` runs your own station directory instead; on a
+An Anthropic key runs Claude models directly; an OpenRouter key runs any listed model (Claude too,
+when there is no Anthropic key). The key is checked with its provider and stored in your OS
+keychain, never on disk or in the browser. `OUTERWORLD_HOME=~/.outerworld pnpm dev` runs your own station directory instead; on a
 new directory, onboarding asks for the key, creates your Overseer, and opens a first chat.
 `pnpm dev:fresh` walks through the same onboarding on an empty throwaway station with the fake
 model.

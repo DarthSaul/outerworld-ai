@@ -1,13 +1,17 @@
 import {
   type ChatMessage,
+  findModel,
   isTerminal,
   type RuntimeEvent,
   term,
 } from "@darthsaul/outerworld-ai-core";
 import { EmptyState, OutlineButton } from "@darthsaul/outerworld-ai-ui";
-import { type FormEvent, useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { type FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { ErrorNote } from "../components/ErrorNote.js";
 import { formatUsd } from "../components/format.js";
+import { Markdown } from "../components/Markdown.js";
+import { ModelPicker } from "../components/ModelPicker.js";
 import { useDaemon } from "../daemon-context.js";
 import {
   type DispatchRecord,
@@ -126,10 +130,12 @@ function Message({
         <span className="font-display text-cyan text-d7 uppercase">
           {term("report.from")} {nameOf(message.from)} · {term(`dispatchStatus.${message.status}`)}
         </span>
-        <p className="m-0 whitespace-pre-wrap text-b19 text-fg-hi">{message.text}</p>
+        <Markdown text={message.text} className="text-b19 text-fg-hi" />
       </li>
     );
   }
+  // The Commander's own messages sit on the right; everything the crew does stays on the left.
+  const mine = message.role === "user" && !fromOverseer;
   const who =
     message.role === "user"
       ? fromOverseer
@@ -139,7 +145,11 @@ function Message({
         ? agentName
         : undefined;
   return (
-    <li data-message={message.role} className="flex flex-col gap-1">
+    <li
+      data-message={message.role}
+      data-side={mine ? "right" : "left"}
+      className={`flex flex-col gap-1 ${mine ? "max-w-[85%] items-end self-end" : "self-stretch"}`}
+    >
       {who ? (
         <span
           className={`font-display text-d8 uppercase ${message.role === "user" ? "text-green" : "text-amber"}`}
@@ -148,7 +158,13 @@ function Message({
         </span>
       ) : null}
       {message.text ? (
-        <p className="m-0 whitespace-pre-wrap text-b19 text-fg-hi">{message.text}</p>
+        mine ? (
+          <p className="m-0 whitespace-pre-wrap border-2 border-line-faint bg-well-2 px-2 py-1.5 text-b19 text-fg-hi">
+            {message.text}
+          </p>
+        ) : (
+          <Markdown text={message.text} className="text-b19 text-fg-hi" />
+        )
       ) : null}
       {message.role === "assistant" && message.toolCalls?.length ? (
         <p className="m-0 text-b15 text-fg-mute">
@@ -172,12 +188,15 @@ export function ChatWindow({
   onBack,
   embedded = false,
   fill = false,
+  headerAction,
 }: {
   readonly sessionId: string;
   readonly onClose?: () => void;
   readonly onBack?: () => void;
   readonly embedded?: boolean;
   readonly fill?: boolean;
+  /** A control at the end of the title strip (the Overseer's "Give a new order"). */
+  readonly headerAction?: ReactNode;
 }) {
   const detail = useSession(sessionId);
   const station = useStationView();
@@ -187,6 +206,7 @@ export function ChatWindow({
   const update = useUpdateSession(sessionId);
   const steer = useSteer();
   const streams = useStreamingText(sessionId);
+  const client = useQueryClient();
   const [text, setText] = useState("");
   const section = useRef<HTMLElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
@@ -197,16 +217,21 @@ export function ChatWindow({
   // pull focus off the message box.
   const canGoBack = onBack !== undefined;
 
-  // The back button takes focus once the chat has loaded, so the keyboard lands in the chat.
+  // The back button takes focus once, when the chat has loaded, so the keyboard lands in the
+  // chat; never again on a later render, which would pull focus out of the message box.
+  const focusedBack = useRef(false);
   useEffect(() => {
-    if (canGoBack && loaded) section.current?.querySelector<HTMLElement>("[data-back]")?.focus();
+    if (!canGoBack || !loaded || focusedBack.current) return;
+    focusedBack.current = true;
+    section.current?.querySelector<HTMLElement>("[data-back]")?.focus();
   }, [canGoBack, loaded]);
 
-  // In a fixed-height panel, keep the newest line in view as messages and the reply arrive.
+  // The transcript scrolls inside the window: keep the newest line in view as messages and the
+  // reply arrive.
   useEffect(() => {
     const el = scroller.current;
-    if (fill && el && lines + streamed >= 0) el.scrollTop = el.scrollHeight;
-  }, [fill, lines, streamed]);
+    if (el && lines + streamed >= 0) el.scrollTop = el.scrollHeight;
+  }, [lines, streamed]);
 
   if (detail.isPending || detail.error) {
     const note = detail.error ? (
@@ -230,6 +255,7 @@ export function ChatWindow({
   const { session, messages, runs } = detail.data;
   const nameOf = (id: string) => station.data?.agents.find((a) => a.id === id)?.config.name ?? id;
   const agentName = nameOf(session.agentId);
+  const agentModel = station.data?.agents.find((a) => a.id === session.agentId)?.config.model ?? "";
   const latest = runs[0];
   const active = latest !== undefined && !isTerminal(latest.state);
   const live = latest ? streams[latest.id] : undefined;
@@ -253,7 +279,12 @@ export function ChatWindow({
       ref={section}
       aria-labelledby={titleId}
       data-session={sessionId}
-      className={`flex min-w-0 flex-1 flex-col gap-2.5 ${fill ? "min-h-0" : `border-2 border-line bg-panel ${embedded ? "" : "shadow-panel"}`}`}
+      className={`flex min-w-0 flex-1 flex-col ${
+        fill
+          ? // A compact panel: no gaps (the strips' borders separate them), so the transcript fits.
+            "min-h-0"
+          : `gap-2.5 border-2 border-line bg-panel ${embedded ? "max-h-[50dvh]" : "max-h-[78dvh] shadow-panel desktop:max-h-none desktop:min-h-0"}`
+      }`}
     >
       <header
         className={`flex flex-wrap items-center gap-2 border-line border-b-2 px-2.5 ${fill ? "border-line-faint py-1.5" : "justify-between bg-panel-head py-2"}`}
@@ -269,6 +300,7 @@ export function ChatWindow({
         >
           {agentName} · {session.title}
         </h2>
+        {headerAction}
         {onClose && !embedded ? (
           <div className="flex gap-2">
             <OutlineButton
@@ -286,7 +318,8 @@ export function ChatWindow({
       </header>
       <div
         ref={scroller}
-        className={`flex flex-col gap-2.5 px-2.5 ${fill ? "min-h-0 flex-1 overflow-y-auto" : ""}`}
+        data-transcript
+        className={`flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto overscroll-y-contain px-2.5 ${fill ? "min-h-12 py-2" : ""}`}
       >
         {messages.length === 0 && !live ? (
           <EmptyState title={term("comms.empty.title")} body={term("comms.empty.body")} />
@@ -307,8 +340,8 @@ export function ChatWindow({
               />
             ))}
             {live ? (
-              <li data-message="streaming" className="whitespace-pre-wrap text-b19 text-fg-hi">
-                {live}
+              <li data-message="streaming" data-side="left" className="text-b19 text-fg-hi">
+                <Markdown text={live} />
                 <span
                   aria-hidden="true"
                   className="st-blink ml-0.5 inline-block h-3.75 w-2.25 bg-cyan align-[-2px]"
@@ -327,6 +360,15 @@ export function ChatWindow({
             <span role="status" aria-label="Run" data-run-state={latest.state}>
               {term(`runState.${latest.state}`)}
             </span>
+            <span data-run-model={latest.model}>
+              · {findModel(latest.model)?.label ?? latest.model}
+              {latest.provider && latest.provider !== "auto"
+                ? ` ${term("model.via")} ${term(`model.provider.${latest.provider}`)}`
+                : ""}
+              {latest.reasoning && latest.reasoning !== "default"
+                ? ` · ${term("model.reasoning")} ${term(`model.reasoning.${latest.reasoning}`)}`
+                : ""}
+            </span>
             {latest.error ? <span>· {latest.error}</span> : null}
             <span data-session-spend>
               · {term("spend.session")} {formatUsd(detail.data.spend.costUsd)}
@@ -344,48 +386,73 @@ export function ChatWindow({
           </p>
         ) : null}
       </div>
-      <form
-        onSubmit={submit}
-        className="flex items-end gap-1.5 border-line-faint border-t-2 bg-input-row p-2.5"
-        aria-label={`Message ${agentName}`}
+      {/* The composer (a chat app's layout): the message box with Send inside it, then this
+          conversation's model, reasoning, and key in a row beneath. */}
+      <div
+        className={`flex shrink-0 flex-col border-line-faint border-t-2 ${fill ? "gap-1 px-2.5 py-2" : "gap-1.5 p-2.5"}`}
       >
-        <span aria-hidden="true" className="self-center font-display text-d9 text-green">
-          &gt;
-        </span>
-        <label className="sr-only" htmlFor={`${titleId}-input`}>
-          {term("comms.placeholder")}
-        </label>
-        <textarea
-          id={`${titleId}-input`}
-          rows={fill ? 1 : 3}
-          className={`min-w-0 flex-1 border-none bg-transparent font-body text-b19 text-fg-hi outline-none ${fill ? "max-h-[3lh] resize-none overflow-y-auto" : "resize-y"}`}
-          placeholder={term("comms.placeholder")}
-          value={text}
-          onChange={(e) => {
-            setText(e.target.value);
-            // In a panel, the box grows with its text to three lines, then scrolls.
-            if (fill) {
-              e.target.style.height = "auto";
-              e.target.style.height = `${e.target.scrollHeight}px`;
-            }
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) submit(e);
-          }}
-        />
-        <button
-          type="submit"
-          className="cursor-pointer border-none bg-green px-2 py-1.25 font-display text-d7 text-ink uppercase disabled:cursor-not-allowed disabled:opacity-50"
-          disabled={send.isPending || steer.isPending || !text.trim()}
+        <form
+          onSubmit={submit}
+          className={`flex border-2 border-line-soft bg-input-row px-2.5 focus-within:border-cyan ${
+            // In a compact panel the box is one line with Send beside it, to leave the transcript room.
+            fill ? "items-end gap-1.5 py-1.5" : "flex-col gap-1.5 py-2"
+          }`}
+          aria-label={`Message ${agentName}`}
         >
-          {active ? term("comms.direct") : term("comms.send")}
-        </button>
-      </form>
-      {active ? (
-        <p className={fill ? "sr-only" : "m-0 px-2.5 pb-2.5 text-b15 text-fg-mute"}>
-          {term("comms.direct.hint")}
-        </p>
-      ) : null}
+          <label className="sr-only" htmlFor={`${titleId}-input`}>
+            {term("comms.placeholder")}
+          </label>
+          <textarea
+            id={`${titleId}-input`}
+            rows={fill ? 1 : 3}
+            className={`min-w-0 border-none bg-transparent p-0 font-body text-b19 text-fg-hi outline-none ${fill ? "max-h-[3lh] flex-1 resize-none overflow-y-auto" : "resize-y"}`}
+            placeholder={term("comms.placeholder")}
+            value={text}
+            onChange={(e) => {
+              setText(e.target.value);
+              // In a panel, the box grows with its text to three lines, then scrolls.
+              if (fill) {
+                e.target.style.height = "auto";
+                e.target.style.height = `${e.target.scrollHeight}px`;
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) submit(e);
+            }}
+          />
+          <div className={`flex items-center justify-between gap-2 ${fill ? "shrink-0" : ""}`}>
+            <span
+              className={`min-w-0 truncate text-b15 text-fg-mute ${active && !fill ? "" : fill ? "sr-only" : "invisible"}`}
+            >
+              {active ? term("comms.direct.hint") : ""}
+            </span>
+            <button
+              type="submit"
+              className="shrink-0 cursor-pointer border-none bg-green px-2.5 py-1.25 font-display text-d7 text-ink uppercase disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={send.isPending || steer.isPending || !text.trim()}
+            >
+              {active ? term("comms.direct") : term("comms.send")}
+            </button>
+          </div>
+        </form>
+        {embedded ? null : (
+          <ModelPicker
+            compact={fill}
+            value={session.modelSettings}
+            agentModel={agentModel}
+            onChange={(modelSettings) =>
+              update.mutate(
+                { modelSettings },
+                {
+                  onSuccess: () =>
+                    void client.invalidateQueries({ queryKey: ["session", sessionId] }),
+                },
+              )
+            }
+          />
+        )}
+        {active && !embedded ? <p className="sr-only">{term("model.applies")}</p> : null}
+      </div>
       <ErrorNote error={send.error ?? steer.error ?? cancel.error ?? update.error} />
     </section>
   );

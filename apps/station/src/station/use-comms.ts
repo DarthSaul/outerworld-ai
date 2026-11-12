@@ -3,18 +3,18 @@ import {
   chatterLines,
   type Dashboard,
   isLive,
+  type ModelSettings,
   term,
   termWith,
 } from "@darthsaul/outerworld-ai-core";
 import type { CommsMessage } from "@darthsaul/outerworld-ai-ui";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useDaemon } from "../daemon-context.js";
 import {
   type MemoryItem,
   useConsents,
   useDecideConsent,
   useDecideMemory,
-  useSessions,
   useSpend,
   useStationView,
 } from "../queries.js";
@@ -35,59 +35,43 @@ type Approval =
       readonly at: string;
     };
 
-interface Reply {
-  readonly runId: string;
-  readonly text: string;
-  readonly done: boolean;
-}
-
 export interface Comms {
   readonly message?: CommsMessage;
   readonly approve: () => void;
   readonly deny: () => void;
   readonly next: () => void;
-  readonly order: (text: string) => void;
+  /**
+   * Gives the Overseer an order: always a new session (with `settings` as its model choice, if
+   * any), then the message. `onStarted` gets the session id once the run is under way.
+   */
+  readonly order: (
+    text: string,
+    settings: ModelSettings | null,
+    onStarted: (sessionId: string) => void,
+  ) => void;
   readonly busy: boolean;
   readonly error: Error | null;
 }
 
-const ENDED = new Set(["run.completed", "run.failed", "run.cancelled", "run.interrupted"]);
-
 /**
- * The Overseer comms panel (ADR-0013 #12–14): a streamed reply to the Commander's order comes
- * first, then approvals waiting on the Commander (consents and memory proposals, oldest first),
- * then ambient chatter made only from what the runtime proves.
+ * The Overseer comms panel (ADR-0013 #12–14) while no order is open: approvals waiting on the
+ * Commander (consents and memory proposals, oldest first), then ambient chatter made only from
+ * what the runtime proves. An order opens a new session, which the panel then shows as a chat.
  */
 export function useComms(
   dashboard: Dashboard | undefined,
   proposals: readonly MemoryItem[],
 ): Comms {
-  const { api, subscribe } = useDaemon();
+  const { api } = useDaemon();
   const station = useStationView();
   const consents = useConsents();
   const spend = useSpend();
   const overseer = dashboard?.overseer;
-  const sessions = useSessions(overseer?.id);
   const decideConsent = useDecideConsent();
   const decideMemory = useDecideMemory();
   const [chatIdx, setChatIdx] = useState(0);
-  const [reply, setReply] = useState<Reply | undefined>();
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-
-  // Stream the reply to the order: deltas append, the run's end lets it move on.
-  const replyRun = reply?.runId;
-  useEffect(() => {
-    if (!replyRun) return;
-    return subscribe((e) => {
-      if (e.runId !== replyRun) return;
-      if (e.type === "run.delta") {
-        setReply((r) => (r && r.runId === replyRun ? { ...r, text: r.text + e.payload.text } : r));
-      } else if (ENDED.has(e.type)) {
-        setReply((r) => (r && r.runId === replyRun ? { ...r, done: true } : r));
-      }
-    });
-  }, [replyRun, subscribe]);
 
   const nameOf = (id: string) => dashboard?.crew.find((c) => c.id === id)?.name ?? id;
   const speakerFor = (agentId: string) => {
@@ -141,15 +125,7 @@ export function useComms(
   const overseerName = overseer?.name ?? term("overseer.role");
 
   let message: CommsMessage | undefined;
-  if (reply) {
-    message = {
-      key: `reply:${reply.runId}`,
-      speaker: overseerName,
-      text: reply.text,
-      kind: "reply",
-      ...(reply.done ? {} : { streaming: true }),
-    };
-  } else if (approval) {
+  if (approval) {
     message = {
       key: `${approval.kind}:${approval.id}`,
       speaker: speakerFor(approval.agentId),
@@ -177,28 +153,25 @@ export function useComms(
     }
   };
 
-  const order = (text: string) => {
+  const order: Comms["order"] = (text, settings, onStarted) => {
     if (!overseer || sending) return;
     setSending(true);
     setError(null);
     void (async () => {
       try {
-        const open = sessions.data?.find((s) => !s.archivedAt);
-        const sessionId =
-          open?.id ??
-          (
-            await api.send<{ id: string }>(
-              "POST",
-              `/agents/${encodeURIComponent(overseer.id)}/sessions`,
-              {},
-            )
-          ).id;
-        const { runId } = await api.send<{ runId: string }>(
+        // Every order is its own conversation (a new session), never appended to an old one.
+        const { id: sessionId } = await api.send<{ id: string }>(
           "POST",
-          `/sessions/${encodeURIComponent(sessionId)}/messages`,
-          { text },
+          `/agents/${encodeURIComponent(overseer.id)}/sessions`,
+          {},
         );
-        setReply({ runId, text: "", done: false });
+        if (settings) {
+          await api.send("PATCH", `/sessions/${encodeURIComponent(sessionId)}`, {
+            modelSettings: settings,
+          });
+        }
+        await api.send("POST", `/sessions/${encodeURIComponent(sessionId)}/messages`, { text });
+        onStarted(sessionId);
       } catch (e) {
         setError(e instanceof Error ? e : new Error(String(e)));
       } finally {
@@ -211,10 +184,7 @@ export function useComms(
     ...(message ? { message } : {}),
     approve: () => decide(true),
     deny: () => decide(false),
-    next: () => {
-      if (reply) setReply(undefined);
-      else setChatIdx((i) => i + 1);
-    },
+    next: () => setChatIdx((i) => i + 1),
     order,
     busy: sending || decideConsent.isPending || decideMemory.isPending,
     error: error ?? decideConsent.error ?? decideMemory.error,

@@ -19,9 +19,9 @@ export function linkFor(n: Notification): string | undefined {
       return n.agentId ? `/crew/${encodeURIComponent(n.agentId)}` : undefined;
     case "budget_warning":
     case "budget_blocked":
-      return "/settings";
+      return "/settings/budgets";
     case "connector":
-      return "/settings#connectors";
+      return "/settings/connectors";
     case "kill_switch":
     case "kill_switch_cleared":
       return undefined;

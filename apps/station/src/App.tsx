@@ -13,9 +13,7 @@ import { Navigate, NavLink, Route, Routes, useNavigate } from "react-router";
 import { CommsPage } from "./comms/CommsPage.js";
 import { ErrorNote } from "./components/ErrorNote.js";
 import { useDaemon } from "./daemon-context.js";
-import { AgentPage } from "./pages/AgentPage.js";
 import { CrewPage } from "./pages/CrewPage.js";
-import { CrewSelectPage } from "./pages/CrewSelectPage.js";
 import { MemoryPage } from "./pages/MemoryPage.js";
 import { NotificationsPage } from "./pages/NotificationsPage.js";
 import { OnboardingPage } from "./pages/OnboardingPage.js";
@@ -41,10 +39,8 @@ export const SCREENS: ReadonlyArray<{ path: string; label: GlossaryKey }> = [
   { path: "/", label: "tab.station" },
   { path: "/comms", label: "comms" },
   { path: "/crew", label: "agents" },
-  { path: "/crew-select", label: "tab.crewSelect" },
   { path: "/memory", label: "memory" },
   { path: "/notifications", label: "notifications" },
-  { path: "/settings", label: "settings" },
 ];
 
 /** The unread count beside Notifications; read aloud as "N unread". */
@@ -83,7 +79,7 @@ function Tabs() {
           <NavLink
             to={s.path}
             end={s.path === "/" || s.path === "/crew"}
-            className={({ isActive }) => tabClass(isActive)}
+            className={({ isActive }) => tabClass(isActive, "map")}
           >
             {term(s.label)}
             {s.path === "/notifications" ? <UnreadBadge /> : null}
@@ -116,7 +112,12 @@ function Chrome({ children }: { readonly children: ReactNode }) {
   const engaged = kill.data?.engaged ?? false;
   const config = station.data?.station;
   return (
-    <div className="flex min-h-dvh flex-col" {...(engaged ? { "data-paused": "" } : {})}>
+    // Desktop: the shell is exactly the viewport, so the header and footer stay in view and each
+    // screen fits between them, scrolling only inside its own windows. Phones scroll the page.
+    <div
+      className="flex min-h-dvh flex-col desktop:h-dvh desktop:overflow-hidden"
+      {...(engaged ? { "data-paused": "" } : {})}
+    >
       <StationHeader
         stationName={config?.name ?? ""}
         rooms={config?.rooms.length ?? 0}
@@ -136,7 +137,9 @@ function Chrome({ children }: { readonly children: ReactNode }) {
           </>
         }
       />
-      <main className="flex min-w-0 flex-1 flex-col">{children}</main>
+      <main className="mx-auto flex w-full min-w-0 max-w-app flex-1 flex-col desktop:min-h-0 desktop:overflow-hidden">
+        {children}
+      </main>
       <ErrorNote error={setKill.error} />
       <StationVitals
         {...(spend.data ? { tokens: spend.data.tokens, spendUsd: spend.data.stationUsd } : {})}
@@ -144,6 +147,11 @@ function Chrome({ children }: { readonly children: ReactNode }) {
           ? { capUsd: config.budgets.stationDailyUsd }
           : {})}
         {...(health.data ? { startedAt: health.data.startedAt } : {})}
+        start={
+          <NavLink to="/settings" className={({ isActive }) => tabClass(isActive, "map")}>
+            {term("settings")}
+          </NavLink>
+        }
         controls={
           <StopButton
             stopped={engaged}
@@ -168,7 +176,7 @@ function Chrome({ children }: { readonly children: ReactNode }) {
 
 /** Every screen but the Station and Crew Select sits in a padded page area. */
 function Page({ children }: { readonly children: ReactNode }) {
-  return <div className="flex flex-1 flex-col p-3.5">{children}</div>;
+  return <div className="flex flex-1 flex-col p-3.5 desktop:min-h-0">{children}</div>;
 }
 
 /** An empty station (no station.json yet) shows onboarding instead of the screens. */
@@ -197,7 +205,8 @@ export function App() {
             <Chrome>
               <Routes>
                 <Route path="/" element={<StationPage />} />
-                <Route path="/crew-select" element={<CrewSelectPage />} />
+                {/* Appearance now lives on each crew member's page (ADR-0017). */}
+                <Route path="/crew-select" element={<Navigate to="/crew" replace />} />
                 <Route
                   path="/comms"
                   element={
@@ -223,7 +232,7 @@ export function App() {
                   }
                 />
                 <Route
-                  path="/settings"
+                  path="/settings/*"
                   element={
                     <Page>
                       <SettingsPage />
@@ -240,13 +249,13 @@ export function App() {
                 />
                 <Route
                   path="/connectors"
-                  element={<Navigate to="/settings#connectors" replace />}
+                  element={<Navigate to="/settings/connectors" replace />}
                 />
                 <Route
                   path="/crew/:id"
                   element={
                     <Page>
-                      <AgentPage />
+                      <CrewPage />
                     </Page>
                   }
                 />

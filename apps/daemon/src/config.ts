@@ -10,8 +10,11 @@ export interface DaemonConfig {
   readonly spaDir?: string;
   /** Development only: the Vite dev server's origin, allowed to call the API through its proxy. */
   readonly devOrigin?: string;
-  /** `openrouter` (real, needs a key) or `fake` (scripted, no network; tasks/todo.md D8). */
-  readonly modelMode: "openrouter" | "fake";
+  /**
+   * `live` (real providers, needs an Anthropic or OpenRouter key; ADR-0015) or `fake` (scripted,
+   * no network; tasks/todo.md D8).
+   */
+  readonly modelMode: "live" | "fake";
   /**
    * `keychain` (the OS keychain, the default) or `memory` (kept in memory only, never reading or
    * writing the keychain): for throwaway stations such as `browser:verify`'s.
@@ -25,7 +28,8 @@ const LOOPBACK_ORIGIN = /^http:\/\/(localhost|127\.0\.0\.1):\d{1,5}$/;
  * Daemon configuration from the environment:
  * `OUTERWORLD_HOME` (default `~/.outerworld`), `OUTERWORLD_PORT` (default 4317, 0 for any free
  * port), `OUTERWORLD_DEV_ORIGIN` (loopback http only; set by `pnpm dev`, which also drops the
- * built SPA), `OUTERWORLD_MODEL` (`openrouter`, the default, or `fake`), `OUTERWORLD_SECRETS`
+ * built SPA), `OUTERWORLD_MODEL` (`live`, the default, or `fake`; `openrouter` is an older name
+ * for `live`), `OUTERWORLD_SECRETS`
  * (`keychain`, the default, or `memory`).
  */
 export function resolveConfig(
@@ -53,10 +57,11 @@ export function resolveConfig(
     throw new Error(`OUTERWORLD_DEV_ORIGIN must be a loopback http origin, got "${devOrigin}"`);
   }
 
-  const modelMode = env.OUTERWORLD_MODEL ?? "openrouter";
-  if (modelMode !== "openrouter" && modelMode !== "fake") {
-    throw new Error(`OUTERWORLD_MODEL must be "openrouter" or "fake", got "${modelMode}"`);
+  const rawMode = env.OUTERWORLD_MODEL ?? "live";
+  if (rawMode !== "live" && rawMode !== "openrouter" && rawMode !== "fake") {
+    throw new Error(`OUTERWORLD_MODEL must be "live" or "fake", got "${rawMode}"`);
   }
+  const modelMode = rawMode === "fake" ? "fake" : "live";
 
   const secrets = env.OUTERWORLD_SECRETS ?? "keychain";
   if (secrets !== "keychain" && secrets !== "memory") {

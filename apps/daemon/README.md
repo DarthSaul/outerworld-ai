@@ -15,7 +15,7 @@ OUTERWORLD_HOME=~/.outerworld node apps/daemon/dist/main.js
 |----------|---------|---------|
 | `OUTERWORLD_HOME` | `~/.outerworld` | Station data directory (brief §9); relative paths resolve against the working directory. Created with mode 0700. |
 | `OUTERWORLD_PORT` | `4317` | Port on `127.0.0.1` (never another interface). `0` picks a free port. |
-| `OUTERWORLD_MODEL` | `openrouter` | `openrouter` uses your key (keychain, or `OPENROUTER_API_KEY` as a dev fallback); `fake` streams a scripted reply with no key and no network. `pnpm dev` on the fixture copy and `browser:verify` use `fake`. |
+| `OUTERWORLD_MODEL` | `live` | `live` calls real models with your keys: Claude straight to Anthropic when an Anthropic key is set, everything else through OpenRouter (keychain, or `ANTHROPIC_API_KEY` / `OPENROUTER_API_KEY` as dev fallbacks; ADR-0015). `openrouter` is an older name for `live`. `fake` streams a scripted reply with no key and no network. `pnpm dev` on the fixture copy and `browser:verify` use `fake`. |
 | `OUTERWORLD_SECRETS` | `keychain` | `memory` keeps secrets in memory only and never reads or writes the OS keychain: for throwaway stations (`browser:verify` uses it). |
 | `OUTERWORLD_DEV_ORIGIN` | unset | Development only: the Vite dev server's loopback origin, allowed through its proxy. When set, the daemon does not serve the built SPA. |
 
@@ -42,7 +42,7 @@ allowed `Origin` and a `Sec-Fetch-Site` other than `cross-site`. Every `/api/*` 
 | `GET /api/agents/:id/sessions` | The agent's sessions, most recently active first, each with `messageCount`, `lastMessageAt?`, `lastMessage? {role, text}` (clipped), and `active`; `?archived=1` includes archived ones. |
 | `POST /api/agents/:id/sessions` | `{ title? }` → 201 session. Without a title, the first message names it (one short model call, ADR-0014). |
 | `GET /api/sessions/:id` | `{ session, messages, runs }`: messages oldest first, runs newest first. |
-| `PATCH /api/sessions/:id` | `{ title? , archived?: true }`. |
+| `PATCH /api/sessions/:id` | `{ title?, archived?: true, modelSettings? }`; `modelSettings` is `{ model?, provider?, reasoning? }` for this conversation, `null` to go back to the crew member's (ADR-0016). |
 | `POST /api/sessions/:id/messages` | `{ text }` → 202 `{ runId }`; the reply streams as events (deltas are ephemeral, D18). 409 while a run is active or the session is archived. |
 | `POST /api/runs/:id/cancel` | 202; a queued or running run becomes cancelled. |
 | `POST /api/runs/:id/steer` | `{ text }` → 202: a direction for a running run, added before its next model call. 409 if the run is not running. |
@@ -70,14 +70,15 @@ allowed `Origin` and a `Sec-Fetch-Site` other than `cross-site`. Every `/api/*` 
 | `POST /api/onboarding` | `{ overseerName, tone: "calm" \| "warm" \| "brisk", stationName? }` → 201 `AgentView` of the new Overseer, on a station with no `station.json` only (409 after). Writes the Command room and the default budgets (D22). |
 | `POST /api/templates/project-manager` | Optional `{ name }` → 201 `AgentView`: the Project Manager (brief §17), adding the Operations room, a hallway to Command, and the Notion connector when missing. Unknown template: 404. |
 | `PUT /api/budgets` | `{ perRunUsd?, perAgentDailyUsd?, stationDailyUsd? }`: USD caps in `station.json`; `null` removes one, a missing field keeps it. Current caps are in `GET /api/station`. |
-| `GET /api/settings` | `{ modelMode, timezone, openrouter: { configured, source } }` (`timezone`: the machine's zone, used by schedules without one), never the key. |
+| `GET /api/settings` | `{ modelMode, timezone, openrouter: { configured, source }, anthropic: { configured, source } }` (`timezone`: the machine's zone, used by schedules without one), never a key. |
 | `PUT /api/settings/openrouter` | `{ key }`: checked with OpenRouter's key endpoint (no model call), stored in the OS keychain → 204; a rejected key is 400. |
-| `DELETE /api/settings/openrouter` | Removes the stored key → 204. |
+| `PUT /api/settings/anthropic` | `{ key }`: checked with Anthropic's model list (no tokens spent), stored in the OS keychain → 204; a rejected key is 400 (ADR-0015). |
+| `DELETE /api/settings/openrouter`, `DELETE /api/settings/anthropic` | Removes that stored key → 204. |
 
 On startup the daemon marks every run the last process left unfinished as `interrupted`
 (brief §8) before it serves anything, then starts the scheduler (which catches up or records an
 occurrence missed while it was down, D21). Every event payload is redacted: known key values and
-anything shaped like an OpenRouter key never reach the log or the SPA.
+anything shaped like an OpenRouter or Anthropic key never reach the log or the SPA.
 
 Bodies with content must be `application/json` (else 415) and at most 1 MiB (else 413). Invalid input is 400
 with `issues`; an unknown id is 404; a change that would break the station is 409 with `issues`.

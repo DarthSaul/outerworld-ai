@@ -10,7 +10,12 @@ import {
   openDatabase,
   type TransportFactory,
 } from "@darthsaul/outerworld-ai-runtime";
-import { InMemoryTransport, type Transport, UnauthorizedError } from "@modelcontextprotocol/client";
+import {
+  InMemoryTransport,
+  IssuerMismatchError,
+  type Transport,
+  UnauthorizedError,
+} from "@modelcontextprotocol/client";
 import { McpServer } from "@modelcontextprotocol/server";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
@@ -42,7 +47,9 @@ const fakeNotion: TransportFactory = async () => {
 };
 
 /** First connect asks for sign-in (like the real server), later connects work. */
-const signInFirst = (): TransportFactory => {
+const signInFirst = (
+  onFinish: (code: string, iss?: string) => Promise<void> = async () => {},
+): TransportFactory => {
   let attempts = 0;
   return async (connector, provider) => {
     attempts++;
@@ -56,7 +63,7 @@ const signInFirst = (): TransportFactory => {
       },
       async send() {},
       async close() {},
-      async finishAuth() {},
+      finishAuth: onFinish,
     } as unknown as Transport;
   };
 };
@@ -187,6 +194,50 @@ describe("OAuth sign-in", () => {
     expect(((await call("GET", "/api/connectors")).json[0] as { status: string }).status).toBe(
       "connected",
     );
+  });
+
+  it("passes the callback's issuer on for the RFC 9207 check", async () => {
+    const seen: Array<string | undefined> = [];
+    const { call } = setup(
+      signInFirst(async (_code, iss) => {
+        seen.push(iss);
+      }),
+    );
+    const started = (await call("POST", "/api/connectors/notion/connect")).json as unknown as {
+      authorizationUrl: string;
+    };
+    const state = new URL(started.authorizationUrl).searchParams.get("state") ?? "";
+    const back = await call(
+      "GET",
+      `/oauth/callback/notion?code=abc&state=${state}&iss=${encodeURIComponent("https://mcp.notion.com")}`,
+      undefined,
+      { authorization: "", "sec-fetch-site": "cross-site" },
+    );
+    expect(back.status).toBe(200);
+    expect(seen).toEqual(["https://mcp.notion.com"]);
+  });
+
+  it("refuses an issuer mismatch without showing the issuer it received", async () => {
+    const { call } = setup(
+      signInFirst(async () => {
+        throw new IssuerMismatchError(
+          "authorization_response",
+          "https://mcp.notion.com",
+          "https://evil.example",
+        );
+      }),
+    );
+    const started = (await call("POST", "/api/connectors/notion/connect")).json as unknown as {
+      authorizationUrl: string;
+    };
+    const state = new URL(started.authorizationUrl).searchParams.get("state") ?? "";
+    const back = await call(
+      "GET",
+      `/oauth/callback/notion?code=abc&state=${state}&iss=${encodeURIComponent("https://evil.example")}`,
+    );
+    expect(back.status).toBe(400);
+    expect(back.text).toContain("could not be verified");
+    expect(back.text).not.toContain("evil.example");
   });
 
   it("refuses a callback with the wrong state, a missing code, or an error from the service", async () => {

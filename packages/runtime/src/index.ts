@@ -47,7 +47,10 @@ export {
   NotificationService,
 } from "./notifications/notification-service.js";
 export {
+  type LiveModelKeys,
+  liveModels,
   type ModelFactory,
+  type ModelOptions,
   NoApiKeyError,
   openRouterModels,
   scriptedModels,
@@ -57,6 +60,7 @@ export {
   type RetryPolicy,
   RunService,
   type RunServiceOptions,
+  type SendOptions,
   type ToolImpl,
 } from "./run/run-service.js";
 export { cronIssue } from "./schedule/cron.js";
@@ -74,10 +78,16 @@ export {
   systemClock,
 } from "./schedule/scheduler.js";
 export {
+  ANTHROPIC_KEY_URL,
+  ANTHROPIC_PROVIDER,
   ApiKeyService,
   type ApiKeyStatus,
   InvalidKeyError,
+  KeyCheckUnavailableError,
+  KeychainWriteError,
+  type KeyProvider,
   OPENROUTER_KEY_URL,
+  OPENROUTER_PROVIDER,
 } from "./secrets/api-key.js";
 export { createRedactor, type Redactor } from "./secrets/redact.js";
 export {

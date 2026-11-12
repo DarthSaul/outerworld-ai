@@ -4,7 +4,6 @@ import {
   type DashboardSelection,
   MAP_STYLES,
   OutlineButton,
-  OverseerCommsBody,
   PanelTabs,
   ResizeHandle,
   Scanner,
@@ -12,6 +11,7 @@ import {
 } from "@darthsaul/outerworld-ai-ui";
 import { type CSSProperties, useRef, useState } from "react";
 import { CrewComms } from "../comms/CrewComms.js";
+import { OverseerPanel } from "../comms/OverseerPanel.js";
 import { ErrorNote } from "../components/ErrorNote.js";
 import {
   useActivity,
@@ -29,7 +29,7 @@ import {
   useSplit,
 } from "../station/split.js";
 import { useComms } from "../station/use-comms.js";
-import { useDashboard, useMapStyle } from "../station/use-dashboard.js";
+import { useDashboard, useMapStyle, usePreference } from "../station/use-dashboard.js";
 
 const STYLE_LABEL = {
   schematic: "mapStyle.schematic",
@@ -67,6 +67,12 @@ export function StationPage() {
   const [note, setNote] = useState<string>();
   const [commsTab, setCommsTab] = useState("overseer");
   const [side, setSide] = useSplit();
+  // Folded or open, per viewer (ADR-0013 #19, like the map style).
+  const [scanner, setScanner] = usePreference<"open" | "closed">(
+    "outerworld.scanner",
+    ["open", "closed"],
+    "open",
+  );
   const grid = useRef<HTMLDivElement>(null);
 
   if (!dashboard) return <ErrorNote error={error} />;
@@ -140,10 +146,10 @@ export function StationPage() {
     <div
       ref={grid}
       style={{ "--st-station-cols": splitTemplate(side) } as CSSProperties}
-      className="grid flex-1 grid-cols-1 items-stretch gap-3.5 p-3.5 desktop:grid-cols-(--st-station-cols) desktop:gap-0"
+      className="grid flex-1 grid-cols-1 items-stretch gap-3.5 p-3.5 desktop:min-h-0 desktop:grid-cols-(--st-station-cols) desktop:grid-rows-[minmax(0,1fr)] desktop:gap-0"
     >
       <h1 className="sr-only">{term("tab.station")}</h1>
-      <div className="flex min-w-0 flex-col gap-3.5">
+      <div className="flex min-w-0 flex-col gap-3.5 desktop:min-h-0">
         <section
           aria-labelledby="map-title"
           className="flex min-w-0 flex-1 flex-col border-2 border-line bg-panel shadow-panel"
@@ -181,10 +187,18 @@ export function StationPage() {
         onReset={() => setSide(DEFAULT_SIDE)}
         className="hidden desktop:block"
       />
-      {/* Tablet and desktop: comms over the scanner, half the map's height each; neither panel
+      {/* Tablet and desktop: comms over the scanner, 1.5fr / 2fr of the map's height; neither panel
           sets the row's height (contain-size), and each scrolls inside when it needs to. */}
-      <div className="flex min-w-0 flex-col gap-3.5 desktop:grid desktop:contain-size desktop:grid-rows-[minmax(0,1fr)_minmax(0,1fr)]">
-        <div className="flex min-h-0 flex-col gap-3.5">
+      <div
+        className={`flex min-w-0 flex-col gap-3.5 desktop:grid desktop:contain-size ${
+          // A folded scanner keeps only its title strip; comms takes the rest of the column.
+          scanner === "closed"
+            ? "desktop:grid-rows-[minmax(0,1fr)_auto]"
+            : "desktop:grid-rows-[minmax(0,1.5fr)_minmax(0,2fr)]"
+        }`}
+      >
+        {/* min-w-0: as a grid item this row would otherwise grow to its longest unbroken text. */}
+        <div className="flex min-h-0 min-w-0 flex-col gap-3.5">
           <PanelTabs
             label={term("comms.tabs")}
             active={commsTab}
@@ -196,17 +210,12 @@ export function StationPage() {
                 id: "overseer",
                 label: term("comms.title"),
                 content: (
-                  <OverseerCommsBody
-                    {...(comms.message ? { message: comms.message } : {})}
-                    {...(dashboard.overseer ? { overseerLook: dashboard.overseer.look } : {})}
-                    onApprove={comms.approve}
-                    onDeny={comms.deny}
-                    onNext={comms.next}
-                    onOrder={(text) => {
-                      comms.order(text);
+                  <OverseerPanel
+                    dashboard={dashboard}
+                    comms={comms}
+                    onOrdered={() => {
                       if (dashboard.bridgeId) setPicked({ type: "room", id: dashboard.bridgeId });
                     }}
-                    busy={comms.busy}
                     paused={commsTab !== "overseer"}
                   />
                 ),
@@ -221,7 +230,9 @@ export function StationPage() {
             dashboard={dashboard}
             selection={selection}
             onSelect={setPicked}
-            className="min-h-0 flex-1"
+            collapsed={scanner === "closed"}
+            onToggleCollapsed={() => setScanner(scanner === "closed" ? "open" : "closed")}
+            className={`min-w-0 ${scanner === "closed" ? "" : "min-h-0 flex-1"}`}
             onStopRun={stopRuns}
             onDemolish={(id) =>
               deleteLane.mutate(id, {

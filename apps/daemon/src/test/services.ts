@@ -1,4 +1,5 @@
 import {
+  ANTHROPIC_PROVIDER,
   ApiKeyService,
   ConnectorManager,
   ConsentStore,
@@ -82,6 +83,11 @@ export function testServices(
     dispatches,
     runs,
     apiKeys: new ApiKeyService({ store: new MemorySecretStore(), env: {} }),
+    anthropicKeys: new ApiKeyService({
+      store: new MemorySecretStore(),
+      env: {},
+      provider: ANTHROPIC_PROVIDER,
+    }),
     modelMode: "fake",
   };
 }

@@ -8,7 +8,7 @@
 // - `--fresh` (pnpm dev:fresh): an empty station at .outerworld/fresh-home/, wiped each time, so
 //   onboarding runs from the start (D23).
 // Usage: pnpm dev   (OUTERWORLD_HOME=~/.outerworld pnpm dev for a real station;
-//        OUTERWORLD_MODEL=openrouter pnpm dev to chat for real on the fixture copy;
+//        OUTERWORLD_MODEL=live pnpm dev to chat for real on the fixture copy;
 //        pnpm dev:fresh to try onboarding)
 import { spawn, spawnSync } from "node:child_process";
 import { cpSync, existsSync, rmSync } from "node:fs";
@@ -42,9 +42,8 @@ const build = spawnSync(
 if (build.status !== 0) process.exit(build.status ?? 1);
 
 // The fixture copy uses the scripted fake model (no key, no network) unless told otherwise; a real
-// station directory defaults to OpenRouter.
-const modelMode =
-  process.env.OUTERWORLD_MODEL ?? (process.env.OUTERWORLD_HOME ? "openrouter" : "fake");
+// station directory defaults to live models (Anthropic or OpenRouter, ADR-0015).
+const modelMode = process.env.OUTERWORLD_MODEL ?? (process.env.OUTERWORLD_HOME ? "live" : "fake");
 const env = {
   ...process.env,
   OUTERWORLD_MODEL: modelMode,

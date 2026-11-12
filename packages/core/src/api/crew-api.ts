@@ -45,6 +45,7 @@ export const CreateScheduleInput = z.strictObject({
   prompt: SchedulePrompt,
   catchUp: z.boolean().optional(),
   enabled: z.boolean().optional(),
+  modelSettings: Schedule.shape.modelSettings,
 });
 
 /** `PATCH /api/agents/:id/schedules/:scheduleId`; `timezone: null` goes back to the machine's zone. */
@@ -54,6 +55,8 @@ export const UpdateScheduleInput = z.strictObject({
   prompt: SchedulePrompt.optional(),
   catchUp: z.boolean().optional(),
   enabled: z.boolean().optional(),
+  /** `null` goes back to the crew member's model. */
+  modelSettings: Schedule.shape.modelSettings.unwrap().nullable().optional(),
 });
 
 export const DocumentInput = z.strictObject({

@@ -29,6 +29,8 @@ imported by core, ui, or the SPA.
 | Export | Description |
 |--------|-------------|
 | `SessionStore.sessionSummaries(agentId, { includeArchived? })` → `SessionSummary[]` | An agent's sessions, most recently active first, each with `messageCount`, `lastMessageAt`, `lastMessage` (the newest user or assistant line with text, clipped to 160 characters), and `active` (a run is queued, running, or waiting for consent). |
+| `liveModels({ openrouter, anthropic? })`, `openRouterModels(keys)`, `scriptedModels()` | Model factories: real providers routed by core's `routeModel` (ADR-0015), OpenRouter only, or the scripted fake. Keys are read per run. |
+| `ApiKeyService({ store, env, provider? })`, `OPENROUTER_PROVIDER`, `ANTHROPIC_PROVIDER` | One provider's key: keychain first, env fallback, checked with the provider before storing; reports only whether it is set. |
 | `RunService({ …, titles? })` | With `titles: true`, the first message of a session still titled "New session" names it: one short call to the crew member's model beside the run, budget-checked and recorded as that run's spend, falling back to the message itself. Emits `session.renamed`; a name the Commander set first is kept. |
 
 ### Scheduler (Phase 8, brief §13)

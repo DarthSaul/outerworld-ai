@@ -138,7 +138,12 @@ function ConnectorCard({
           >
             {term("connector.tools")}
           </h4>
-          <ul className="m-0 flex list-none flex-col gap-1 p-0 text-b17 text-fg">
+          {/* A long tool list scrolls in its own box instead of stretching the card. */}
+          <ul
+            aria-labelledby={`${titleId}-tools`}
+            data-tools
+            className="m-0 flex max-h-48 list-none flex-col gap-1 overflow-y-auto overscroll-y-contain border border-line-faint bg-well p-2 text-b17 text-fg"
+          >
             {connector.tools.map((t) => (
               <li key={t.name} data-tool={t.name} data-class={t.class}>
                 {t.name} · {term(`grant.${t.class}`)}
@@ -153,7 +158,7 @@ function ConnectorCard({
 
 /**
  * Connectors (brief §12): installed once for the station; crew members are granted them. A
- * section of Settings (ADR-0014), reachable at `/settings#connectors`.
+ * section of Settings (ADR-0014), at `/settings/connectors`.
  */
 export function ConnectorsSection() {
   const connectors = useConnectors();

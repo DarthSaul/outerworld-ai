@@ -2,6 +2,7 @@ import { cpSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  ANTHROPIC_PROVIDER,
   ApiKeyService,
   EventStore,
   MemorySecretStore,
@@ -20,10 +21,14 @@ const setup = (keyCheckStatus = 200, options: { titles?: boolean } = {}) => {
   const home = join(mkdtempSync(join(tmpdir(), "ow-comms-")), "home");
   cpSync(fixture, home, { recursive: true });
   const events = new EventStore(openDatabase(":memory:"));
-  const apiKeys = new ApiKeyService({
+  const keyCheck = (async () =>
+    new Response("{}", { status: keyCheckStatus })) as unknown as typeof fetch;
+  const apiKeys = new ApiKeyService({ store: new MemorySecretStore(), env: {}, fetch: keyCheck });
+  const anthropicKeys = new ApiKeyService({
     store: new MemorySecretStore(),
     env: {},
-    fetch: (async () => new Response("{}", { status: keyCheckStatus })) as unknown as typeof fetch,
+    fetch: keyCheck,
+    provider: ANTHROPIC_PROVIDER,
   });
   const services = testServices(home, events, undefined, options);
   const { runs } = services;
@@ -34,6 +39,7 @@ const setup = (keyCheckStatus = 200, options: { titles?: boolean } = {}) => {
     events,
     ...services,
     apiKeys,
+    anthropicKeys,
     version: "test",
   });
   const call = async (method: string, path: string, body?: unknown) => {
@@ -116,6 +122,27 @@ describe("sessions and runs", () => {
     const s = await call("POST", "/agents/vesper/sessions", {});
     const renamed = await call("PATCH", `/sessions/${s.json.id}`, { title: "Weekly" });
     expect(renamed.json.title).toBe("Weekly");
+  });
+
+  it("sets and clears a session's model settings, refusing unknown values (ADR-0016)", async () => {
+    const { call } = setup();
+    const s = await call("POST", "/agents/vesper/sessions", {});
+    const settings = {
+      model: "anthropic/claude-opus-5.5",
+      provider: "anthropic",
+      reasoning: "high",
+    };
+    const set = await call("PATCH", `/sessions/${s.json.id}`, { modelSettings: settings });
+    expect(set.json.modelSettings).toEqual(settings);
+    expect((await call("GET", `/sessions/${s.json.id}`)).json.session.modelSettings).toEqual(
+      settings,
+    );
+    const bad = await call("PATCH", `/sessions/${s.json.id}`, {
+      modelSettings: { reasoning: "ultra" },
+    });
+    expect(bad.status).toBe(400);
+    const cleared = await call("PATCH", `/sessions/${s.json.id}`, { modelSettings: null });
+    expect(cleared.json).not.toHaveProperty("modelSettings");
   });
 
   it("answers 404 for an unknown agent or session, 409 for an archived one", async () => {
@@ -269,6 +296,7 @@ describe("settings", () => {
       modelMode: "fake",
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       openrouter: { configured: false, source: null },
+      anthropic: { configured: false, source: null },
     });
     const put = await call("PUT", "/settings/openrouter", { key: KEY });
     expect(put.status).toBe(204);
@@ -289,5 +317,34 @@ describe("settings", () => {
     await call("PUT", "/settings/openrouter", { key: KEY });
     expect((await call("DELETE", "/settings/openrouter")).status).toBe(204);
     expect((await call("GET", "/settings")).json.openrouter.configured).toBe(false);
+  });
+
+  it("answers 502 with the provider's reason when the key check cannot be completed", async () => {
+    const { call } = setup(529);
+    const res = await call("PUT", "/settings/anthropic", {
+      key: "sk-ant-api03-abcdefabcdefabcdef",
+    });
+    expect(res.status).toBe(502);
+    expect(res.json.error).toMatch(/Anthropic's key check failed with HTTP 529/);
+    expect(res.text).not.toContain("sk-ant-api03-abcdefabcdefabcdef");
+  });
+
+  it("answers 400, not 500, for a pasted key with characters no key has", async () => {
+    const { call } = setup();
+    const res = await call("PUT", "/settings/anthropic", { key: "sk-ant-api03-ключ" });
+    expect(res.status).toBe(400);
+    expect(res.json.error).toMatch(/copy it again/);
+  });
+
+  it("stores an Anthropic key apart from the OpenRouter key (ADR-0015)", async () => {
+    const { call } = setup();
+    const ANT = "sk-ant-api03-abcdefabcdefabcdefabcdefabcdef";
+    expect((await call("PUT", "/settings/anthropic", { key: ANT })).status).toBe(204);
+    const after = await call("GET", "/settings");
+    expect(after.json.anthropic).toEqual({ configured: true, source: "keychain" });
+    expect(after.json.openrouter.configured).toBe(false);
+    expect(after.text).not.toContain(ANT);
+    expect((await call("DELETE", "/settings/anthropic")).status).toBe(204);
+    expect((await call("GET", "/settings")).json.anthropic.configured).toBe(false);
   });
 });

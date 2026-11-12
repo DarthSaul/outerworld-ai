@@ -152,7 +152,7 @@ describe("ConnectorManager", () => {
   it("asks for sign-in when the server says so, and finishes it from the callback", async () => {
     const working = inMemory();
     let attempts = 0;
-    let finished: string | undefined;
+    let finished: { code: string; iss: string | undefined } | undefined;
     const transports: TransportFactory = async (connector, provider) => {
       attempts++;
       if (attempts === 1) {
@@ -165,8 +165,8 @@ describe("ConnectorManager", () => {
           },
           async send() {},
           async close() {},
-          async finishAuth(code: string) {
-            finished = code;
+          async finishAuth(code: string, iss?: string) {
+            finished = { code, iss };
           },
         } as unknown as Transport;
       }
@@ -182,11 +182,17 @@ describe("ConnectorManager", () => {
 
     await expect(t.manager.finishAuth("notion", "code-1", "wrong-state")).rejects.toThrow(/state/);
     expect(
-      await t.manager.finishAuth("notion", "code-1", url.searchParams.get("state") ?? ""),
+      await t.manager.finishAuth(
+        "notion",
+        "code-1",
+        url.searchParams.get("state") ?? "",
+        "https://auth.example.test",
+      ),
     ).toEqual({
       status: "connected",
     });
-    expect(finished).toBe("code-1");
+    // The callback's `iss` reaches the SDK for its RFC 9207 check (Notion sends one).
+    expect(finished).toEqual({ code: "code-1", iss: "https://auth.example.test" });
     expect(t.statuses()).toEqual(["needs_auth", "connected"]);
     // A state is good for one sign-in only.
     await expect(
