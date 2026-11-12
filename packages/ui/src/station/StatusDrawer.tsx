@@ -167,7 +167,7 @@ export function StatusDrawer({
             {term("drawer.close")}
           </button>
         </div>
-        <div className="grid grid-cols-2 gap-2">
+        <div aria-live="polite" aria-atomic="true" className="grid grid-cols-2 gap-2">
           <StatBox label={term("stat.live")} value={live} tone="green" />
           <StatBox label={term("stat.alerts")} value={alerts} tone="red" alert={alerts > 0} />
         </div>

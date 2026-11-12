@@ -207,6 +207,7 @@ export function StationPage() {
                       if (dashboard.bridgeId) setPicked({ type: "room", id: dashboard.bridgeId });
                     }}
                     busy={comms.busy}
+                    paused={commsTab !== "overseer"}
                   />
                 ),
               },

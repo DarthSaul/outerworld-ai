@@ -50,6 +50,8 @@ export interface OverseerCommsProps {
   readonly onOrder?: (text: string) => void;
   /** An approval or order is being sent. */
   readonly busy?: boolean;
+  /** Not on screen (another tab is shown): hold the message rather than move on unseen. */
+  readonly paused?: boolean;
   readonly className?: string;
 }
 
@@ -78,6 +80,7 @@ export function OverseerCommsBody({
   onNext,
   onOrder,
   busy = false,
+  paused = false,
 }: Omit<OverseerCommsProps, "className">) {
   const typed = useTypewriter(message?.key ?? "", message?.text ?? "");
   const finished = message !== undefined && typed.length >= message.text.length;
@@ -86,13 +89,20 @@ export function OverseerCommsBody({
 
   // Chatter and replies move on by themselves once typed, after the design's hold.
   useEffect(() => {
-    if (!finished || !message || message.kind === "approval" || message.streaming || !onNext) {
+    if (
+      paused ||
+      !finished ||
+      !message ||
+      message.kind === "approval" ||
+      message.streaming ||
+      !onNext
+    ) {
       return;
     }
     const hold = message.kind === "reply" ? STATION_MS["reply-hold"] : STATION_MS["chatter-hold"];
     const timer = setTimeout(onNext, hold);
     return () => clearTimeout(timer);
-  }, [finished, message, onNext]);
+  }, [paused, finished, message, onNext]);
 
   /** The order line grows with its text up to three lines (its max height), then scrolls. */
   const growToText = (el: HTMLTextAreaElement) => {

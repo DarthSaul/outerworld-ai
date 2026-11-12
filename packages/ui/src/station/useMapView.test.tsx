@@ -34,6 +34,13 @@ describe("map view math", () => {
     expect((narrow.vw / 2 - z.x) / z.scale).toBeCloseTo(before);
     expect(zoomView({ x: 0, y: 0, scale: 1.9 }, 4, wide).scale).toBe(MAX_MAP_SCALE);
   });
+
+  it("re-applies the limits at the same zoom when the viewport grows past the scale", () => {
+    // Zoomed out to fit a narrow viewport, then the viewport widens: 0.5 is below the new fit.
+    const grown = zoomView(fitView(narrow), 1, wide);
+    expect(grown.scale).toBe(1);
+    expect(clampView(grown, wide)).toEqual(grown);
+  });
 });
 
 /** happy-dom lays nothing out: give the viewport and the plane the sizes a browser would. */

@@ -119,7 +119,8 @@ export function useMapView(
     if (!el || typeof ResizeObserver === "undefined") return;
     const observer = new ResizeObserver(() => {
       if (fitted.current) setView(fitView(bounds()));
-      else setView((v) => clampView(v, bounds()));
+      // Re-applies the zoom limits too: a grown viewport raises the fitted (minimum) scale.
+      else setView((v) => zoomView(v, 1, bounds()));
     });
     observer.observe(el);
     return () => observer.disconnect();

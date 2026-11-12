@@ -61,6 +61,18 @@ describe("OverseerComms", () => {
     expect(onNext).toHaveBeenCalledTimes(1);
   });
 
+  it("holds a finished reply while paused (its tab hidden), and moves on once shown", () => {
+    const onNext = vi.fn();
+    const reply: CommsMessage = { key: "r2", speaker: "Vesper", text: "Done", kind: "reply" };
+    const { rerender } = render(<OverseerComms message={reply} onNext={onNext} paused />);
+    act(() => vi.advanceTimersByTime(STATION_MS["type-tick"] * 10));
+    act(() => vi.advanceTimersByTime(STATION_MS["reply-hold"] * 3));
+    expect(onNext).not.toHaveBeenCalled();
+    rerender(<OverseerComms message={reply} onNext={onNext} />);
+    act(() => vi.advanceTimersByTime(STATION_MS["reply-hold"]));
+    expect(onNext).toHaveBeenCalledTimes(1);
+  });
+
   it("offers (A) approve and (B) deny for an approval, Next otherwise", () => {
     const onApprove = vi.fn();
     const onDeny = vi.fn();
