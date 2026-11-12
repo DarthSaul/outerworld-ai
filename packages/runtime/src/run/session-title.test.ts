@@ -2,7 +2,7 @@ import { TITLE_INSTRUCTIONS } from "@darthsaul/outerworld-ai-core";
 import { MockLanguageModelV4 } from "ai/test";
 import { describe, expect, it, vi } from "vitest";
 import { createRedactor } from "../secrets/redact.js";
-import { apiError, reply, type Step, setup } from "../test/loop.js";
+import { apiError, hanging, reply, type Step, setup } from "../test/loop.js";
 
 /** A model that answers title requests from `titles` and everything else from `runs`. */
 const titled = (titles: Step[], runs: Step[]) => {
@@ -83,5 +83,54 @@ describe("RunService: session titles (ADR-0014)", () => {
     await t.service.settled((await t.service.send(session.id, "hello")).runId);
     expect(t.model.doStreamCalls).toHaveLength(1);
     expect(titleOf(t, session.id)).toBe("New session");
+  });
+
+  it("aborts a title call under way when the kill switch is engaged", async () => {
+    let titling = false;
+    const model = new MockLanguageModelV4({
+      doStream: async ({ prompt, abortSignal }) => {
+        if (prompt.find((m) => m.role === "system")?.content !== TITLE_INSTRUCTIONS) {
+          return reply("ok") as never;
+        }
+        titling = true;
+        return hanging(abortSignal ?? new AbortController().signal) as never;
+      },
+    });
+    const t = setup(model, { titles: true });
+    const session = t.service.createSession("vesper");
+    await t.service.send(session.id, "Plan the launch");
+    await vi.waitFor(() => expect(titling).toBe(true));
+    t.service.setKillSwitch(true);
+    await vi.waitFor(() => expect(titleOf(t, session.id)).toBe("Plan the launch"));
+  });
+
+  it("runs at most two title calls at once", async () => {
+    let open = 0;
+    let most = 0;
+    const releases: Array<() => void> = [];
+    const model = new MockLanguageModelV4({
+      doStream: async ({ prompt }) => {
+        if (prompt.find((m) => m.role === "system")?.content !== TITLE_INSTRUCTIONS) {
+          return reply("ok") as never;
+        }
+        open++;
+        most = Math.max(most, open);
+        await new Promise<void>((resolve) => releases.push(resolve));
+        open--;
+        return reply("A title") as never;
+      },
+    });
+    const t = setup(model, { titles: true });
+    const ids = ["a", "b", "c"].map(() => t.service.createSession("vesper").id);
+    for (const id of ids) await t.service.send(id, "Hello");
+    await vi.waitFor(() => expect(releases).toHaveLength(2));
+    // The third waits for a slot rather than starting a third stream.
+    await new Promise((r) => setTimeout(r, 20));
+    expect(releases).toHaveLength(2);
+    for (const release of releases.splice(0)) release();
+    await vi.waitFor(() => expect(releases).toHaveLength(1));
+    for (const release of releases.splice(0)) release();
+    for (const id of ids) await vi.waitFor(() => expect(titleOf(t, id)).toBe("A title"));
+    expect(most).toBe(2);
   });
 });

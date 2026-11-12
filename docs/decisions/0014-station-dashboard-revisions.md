@@ -99,7 +99,9 @@ the runtime (one extra model call per new session), so they are recorded here.
 - **Spend and limits.** The call is budget-checked like any model call, and its spend is
   recorded against the run that triggered it. With the kill switch on, a cap reached, or a call
   that fails or returns nothing, the first message itself becomes the title, clipped. No
-  model call is made in those cases.
+  model call is made in those cases. At most two title calls run at once (apart from the run
+  slots, so they never delay a run), and engaging the kill switch aborts any under way; an
+  aborted call also falls back to the message (amended 2026-11-11).
 - **When it runs.** Only on the first message of a session still titled "New session". A session
   named at creation, or renamed by the Commander before the title arrives, keeps that name.
   `RunServiceOptions.titles` turns this on; the daemon enables it, and tests opt in.

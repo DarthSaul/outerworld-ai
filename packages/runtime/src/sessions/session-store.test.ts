@@ -61,6 +61,17 @@ describe("SessionStore: sessions", () => {
     expect(archived.at(-1)?.lastMessageAt).toBeUndefined();
   });
 
+  it("previews past a message that is only whitespace", () => {
+    const s = store();
+    const session = s.createSession("vesper", "Blank");
+    s.appendMessage(session.id, undefined, { role: "user", text: "Plan the week" });
+    s.appendMessage(session.id, undefined, { role: "assistant", text: "  \n\t " });
+    expect(s.sessionSummaries("vesper")[0]?.lastMessage).toEqual({
+      role: "user",
+      text: "Plan the week",
+    });
+  });
+
   it("returns undefined for an unknown session and refuses to rename one", () => {
     const s = store();
     expect(s.getSession("nope")).toBeUndefined();

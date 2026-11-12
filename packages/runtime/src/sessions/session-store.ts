@@ -148,7 +148,8 @@ export class SessionStore {
            (select m.message from messages m
               where m.session_id = s.id
                 and json_extract(m.message, '$.role') in ('user', 'assistant')
-                and coalesce(json_extract(m.message, '$.text'), '') <> ''
+                and trim(coalesce(json_extract(m.message, '$.text'), ''),
+                         ' ' || char(9, 10, 13)) <> ''
               order by m.position desc limit 1) as last_message,
            exists (select 1 from runs r where r.session_id = s.id and r.state in (${unfinished}))
              as active
