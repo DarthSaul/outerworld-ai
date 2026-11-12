@@ -193,11 +193,14 @@ export function ChatWindow({
   const loaded = !detail.isPending;
   const lines = detail.data?.messages.length ?? 0;
   const streamed = Object.values(streams).join("").length;
+  // Whether there is a way back, not the callback: a parent's new arrow each render must not
+  // pull focus off the message box.
+  const canGoBack = onBack !== undefined;
 
   // The back button takes focus once the chat has loaded, so the keyboard lands in the chat.
   useEffect(() => {
-    if (onBack && loaded) section.current?.querySelector<HTMLElement>("[data-back]")?.focus();
-  }, [onBack, loaded]);
+    if (canGoBack && loaded) section.current?.querySelector<HTMLElement>("[data-back]")?.focus();
+  }, [canGoBack, loaded]);
 
   // In a fixed-height panel, keep the newest line in view as messages and the reply arrive.
   useEffect(() => {
@@ -205,8 +208,25 @@ export function ChatWindow({
     if (fill && el && lines + streamed >= 0) el.scrollTop = el.scrollHeight;
   }, [fill, lines, streamed]);
 
-  if (detail.isPending) return <p className="m-0 text-b17 text-fg-mute">Loading…</p>;
-  if (detail.error) return <ErrorNote error={detail.error} />;
+  if (detail.isPending || detail.error) {
+    const note = detail.error ? (
+      <ErrorNote error={detail.error} />
+    ) : (
+      <p className="m-0 text-b17 text-fg-mute">Loading…</p>
+    );
+    if (!onBack) return note;
+    // In a panel, Back stays available while the chat loads or after it fails to.
+    return (
+      <section ref={section} className="flex min-h-0 min-w-0 flex-1 flex-col gap-2.5">
+        <div className="flex items-center gap-2 border-line-faint border-b-2 px-2.5 py-1.5">
+          <OutlineButton tone="line" data-back onClick={onBack}>
+            {term("comms.back")}
+          </OutlineButton>
+        </div>
+        <div className="px-2.5">{note}</div>
+      </section>
+    );
+  }
   const { session, messages, runs } = detail.data;
   const nameOf = (id: string) => station.data?.agents.find((a) => a.id === id)?.config.name ?? id;
   const agentName = nameOf(session.agentId);

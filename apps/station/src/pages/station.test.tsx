@@ -333,6 +333,52 @@ describe("Crew comms", () => {
     expect(again).toHaveAttribute("data-session", seeded.session.id);
   });
 
+  it("leaves focus in the message box when the panel refreshes", async () => {
+    const fake = fakeApi();
+    const seeded = fake.seedSession("vesper", "Launch plan");
+    const user = userEvent.setup();
+    const { emit } = renderApp("/", fake);
+    await map();
+    await user.click(crewTab());
+    const panel = screen.getByRole("tabpanel", { name: term("comms.crew.title") });
+    await user.click(await within(panel).findByRole("button", { name: "Launch plan" }));
+    const chat = await within(panel).findByRole("region", { name: /Vesper · Launch plan/ });
+    const back = within(chat).getByRole("button", { name: term("comms.back") });
+    await waitFor(() => expect(back).toHaveFocus());
+    const box = within(chat).getByRole("textbox");
+    await user.click(box);
+    // A run event refetches the session list, which rerenders the crew comms panel.
+    emit({
+      type: "run.completed",
+      agentId: "vesper",
+      sessionId: seeded.session.id,
+      runId: "r-refresh",
+      payload: {},
+    });
+    await waitFor(() =>
+      expect(fake.calls.filter((c) => c.path === "/agents/vesper/sessions").length).toBeGreaterThan(
+        1,
+      ),
+    );
+    expect(box).toHaveFocus();
+  });
+
+  it("keeps Back when a session fails to load", async () => {
+    const fake = fakeApi();
+    const seeded = fake.seedSession("vesper", "Gone");
+    const user = userEvent.setup();
+    renderApp("/", fake);
+    await map();
+    await user.click(crewTab());
+    const panel = screen.getByRole("tabpanel", { name: term("comms.crew.title") });
+    const open = await within(panel).findByRole("button", { name: "Gone" });
+    fake.sessions.delete(seeded.session.id);
+    await user.click(open);
+    expect(await within(panel).findByText(/no session/)).toBeInTheDocument();
+    await user.click(within(panel).getByRole("button", { name: term("comms.back") }));
+    expect(await within(panel).findByRole("button", { name: /^Crew · / })).toBeInTheDocument();
+  });
+
   it("starts a new session and opens it", async () => {
     const user = userEvent.setup();
     const { calls } = renderApp("/");
