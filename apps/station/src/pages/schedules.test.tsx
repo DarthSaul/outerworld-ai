@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { axe } from "vitest-axe";
 import { formatWhen } from "../components/format.js";
 import { fakeApi, renderApp } from "../test/fake-daemon.js";
+import { choose } from "../test/menus.js";
 
 const withBriefing = (enabled = true) => {
   const fake = fakeApi();
@@ -124,6 +125,54 @@ describe("Schedules on a crew member's page", () => {
         timezone: null,
       },
     });
+  });
+
+  it("gives a new job its own model, key, and reasoning level (ADR-0016)", async () => {
+    const user = userEvent.setup();
+    const { calls } = renderApp("/crew/vesper");
+    await screen.findByText(term("schedule.none"));
+    await user.click(screen.getByRole("button", { name: term("schedule.add") }));
+    const form = screen.getByRole("form", { name: term("schedule.add") });
+    await user.type(within(form).getByLabelText(term("schedule.cron")), "0 9 * * *");
+    await user.type(within(form).getByLabelText(term("schedule.prompt")), "Deep review.");
+    const picker = within(form).getByRole("group", { name: term("schedule.model") });
+    await choose(user, picker, term("model.model"), /^Claude Opus 5\.5,/);
+    await choose(user, picker, term("model.reasoning"), /^High,/);
+    await user.click(within(form).getByRole("button", { name: term("schedule.save") }));
+    expect(calls).toContainEqual({
+      method: "POST",
+      path: "/agents/vesper/schedules",
+      body: {
+        cron: "0 9 * * *",
+        prompt: "Deep review.",
+        catchUp: false,
+        modelSettings: { model: "anthropic/claude-opus-5.5", reasoning: "high" },
+      },
+    });
+  });
+
+  it("shows a job's own model, and clears it back to the crew member's", async () => {
+    const user = userEvent.setup();
+    const fake = withBriefing();
+    const quill = fake.state.agents.get("quill");
+    if (quill) {
+      quill.config = {
+        ...quill.config,
+        schedules: quill.config.schedules.map((s) => ({
+          ...s,
+          modelSettings: { model: "anthropic/claude-opus-5.5", provider: "openrouter" as const },
+        })),
+      };
+    }
+    const { calls } = renderApp("/crew/quill", fake);
+    const c = await card();
+    expect(within(c).getByText(/Claude Opus 5\.5 via OpenRouter/)).toBeInTheDocument();
+    await user.click(within(c).getByRole("button", { name: term("schedule.edit") }));
+    const form = within(c).getByRole("form", { name: term("schedule.edit") });
+    await choose(user, form, term("model.model"), /Crew member's default/);
+    await choose(user, form, term("model.provider"), /^Auto,/);
+    await user.click(within(form).getByRole("button", { name: term("schedule.save") }));
+    expect(calls.find((x) => x.method === "PATCH")?.body).toMatchObject({ modelSettings: null });
   });
 
   it("says what a cron means and when it runs next, as it is typed", async () => {

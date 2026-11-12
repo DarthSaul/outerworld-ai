@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { axe } from "vitest-axe";
 import { fakeApi, renderApp } from "../test/fake-daemon.js";
+import { choose } from "../test/menus.js";
 
 const at = "2026-10-01T09:00:00.000Z";
 
@@ -233,50 +234,124 @@ describe("Overseer comms", () => {
     expect(calls).toContainEqual({ method: "POST", path: "/memories/m1/reject" });
   });
 
-  it("sends an order to the Overseer's open session and streams the reply", async () => {
+  it("starts a new session for each order, never the open one, and streams it in the panel", async () => {
     const user = userEvent.setup();
     const fake = fakeApi();
-    const s = fake.seedSession("vesper", "Chat");
+    const old = fake.seedSession("vesper", "Chat");
     const { calls, emit } = renderApp("/", fake);
     await map();
-    await user.type(within(comms()).getByRole("textbox"), "Research note apps{Enter}");
-    await waitFor(() =>
-      expect(calls).toContainEqual({
-        method: "POST",
-        path: `/sessions/${s.session.id}/messages`,
-        body: { text: "Research note apps" },
-      }),
+    await user.type(
+      within(comms()).getByRole("textbox", { name: term("comms.order") }),
+      "Tell me the score{Enter}",
     );
-    const runId = s.runs[0]?.id ?? "";
+    await waitFor(() =>
+      expect(calls).toContainEqual({ method: "POST", path: "/agents/vesper/sessions", body: {} }),
+    );
+    const sent = await waitFor(() => {
+      const c = calls.find((x) => x.method === "POST" && x.path.endsWith("/messages"));
+      if (!c) throw new Error("no message yet");
+      return c;
+    });
+    expect(sent.path).not.toBe(`/sessions/${old.session.id}/messages`);
+    expect(sent.body).toEqual({ text: "Tell me the score" });
+    const sessionId = sent.path.split("/")[2] ?? "";
+    // The panel becomes that conversation, and the reply streams into it.
+    const chat = await within(comms()).findByRole("region", { name: /^Vesper · / });
+    expect(within(chat).getByText("Tell me the score")).toBeInTheDocument();
+    const runId = fake.sessions.get(sessionId)?.runs[0]?.id ?? "";
     emit({
       type: "run.delta",
       agentId: "vesper",
-      sessionId: s.session.id,
+      sessionId,
       runId,
       ephemeral: true,
-      payload: { text: "On it, " },
+      payload: { text: "On it, Commander." },
     });
-    emit({
-      type: "run.delta",
-      agentId: "vesper",
-      sessionId: s.session.id,
-      runId,
-      ephemeral: true,
-      payload: { text: "Commander." },
-    });
-    expect(
-      await within(comms()).findByText("On it, Commander.", { selector: ".sr-only" }),
-    ).toBeInTheDocument();
-    expect(within(comms()).getByText("Vesper")).toBeInTheDocument();
+    expect(await within(chat).findByText("On it, Commander.")).toBeInTheDocument();
   });
 
-  it("opens a session for the order when the Overseer has none", async () => {
+  it("keeps the conversation until Give a new order, and the next order is a new session", async () => {
     const user = userEvent.setup();
     const { calls } = renderApp("/");
     await map();
-    await user.type(within(comms()).getByRole("textbox"), "Hello{Enter}");
-    await waitFor(() =>
-      expect(calls).toContainEqual({ method: "POST", path: "/agents/vesper/sessions", body: {} }),
+    await user.type(
+      within(comms()).getByRole("textbox", { name: term("comms.order") }),
+      "First{Enter}",
+    );
+    const chat = await within(comms()).findByRole("region", { name: /^Vesper · / });
+    // No auto-advance back to chatter: the conversation stays put.
+    expect(within(comms()).queryByRole("textbox", { name: term("comms.order") })).toBeNull();
+    await user.click(within(chat).getByRole("button", { name: term("comms.newOrder") }));
+    const box = await within(comms()).findByRole("textbox", { name: term("comms.order") });
+    await user.type(box, "Second{Enter}");
+    await within(comms()).findByRole("region", { name: /^Vesper · / });
+    const created = calls.filter(
+      (c) => c.method === "POST" && c.path === "/agents/vesper/sessions",
+    );
+    expect(created).toHaveLength(2);
+    const messages = calls.filter((c) => c.method === "POST" && c.path.endsWith("/messages"));
+    expect(new Set(messages.map((m) => m.path)).size).toBe(2);
+  });
+
+  it("gives the next order the model and reasoning chosen under the order box", async () => {
+    const user = userEvent.setup();
+    const { calls } = renderApp("/");
+    await map();
+    const picker = within(comms()).getByRole("group", { name: term("model.settings") });
+    await choose(user, picker, term("model.model"), /^Claude Opus 5\.5,/);
+    await choose(user, picker, term("model.reasoning"), /^High,/);
+    await user.type(
+      within(comms()).getByRole("textbox", { name: term("comms.order") }),
+      "Plan it{Enter}",
+    );
+    const patch = await waitFor(() => {
+      const c = calls.find((x) => x.method === "PATCH" && x.path.startsWith("/sessions/"));
+      if (!c) throw new Error("no settings yet");
+      return c;
+    });
+    expect(patch.body).toEqual({
+      modelSettings: { model: "anthropic/claude-opus-5.5", reasoning: "high" },
+    });
+    const order = calls.indexOf(patch);
+    const message = calls.findIndex((c) => c.method === "POST" && c.path.endsWith("/messages"));
+    expect(order).toBeLessThan(message);
+  });
+
+  it("remembers the open order across a reload, and drops one whose session is gone", async () => {
+    const fake = fakeApi();
+    const s = fake.seedSession("vesper", "Score");
+    localStorage.setItem("outerworld.overseerOrder", s.session.id);
+    const first = renderApp("/", fake);
+    await map();
+    expect(await within(comms()).findByRole("region", { name: "Vesper · Score" })).toBeVisible();
+    first.unmount();
+    localStorage.setItem("outerworld.overseerOrder", "gone");
+    renderApp("/", fakeApi());
+    await map();
+    expect(
+      await within(comms()).findByRole("textbox", { name: term("comms.order") }),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("Scanner folding", () => {
+  it("folds the scanner to its strip, giving comms the column, and remembers it", async () => {
+    const user = userEvent.setup();
+    const first = renderApp("/");
+    await map();
+    const scanner = screen.getByRole("region", { name: term("scanner.title") });
+    const column = scanner.parentElement as HTMLElement;
+    expect(column.className).toMatch(/grid-rows-\[minmax\(0,1\.5fr\)_minmax\(0,2fr\)\]/);
+    await user.click(within(scanner).getByRole("button", { name: term("scanner.collapse") }));
+    expect(column.className).toMatch(/grid-rows-\[minmax\(0,1fr\)_auto\]/);
+    expect(within(scanner).queryByRole("group", { name: term("scanner.view") })).toBeNull();
+    first.unmount();
+    renderApp("/");
+    await map();
+    const again = screen.getByRole("region", { name: term("scanner.title") });
+    expect(within(again).getByRole("button", { name: term("scanner.expand") })).toHaveAttribute(
+      "aria-expanded",
+      "false",
     );
   });
 });
@@ -377,6 +452,34 @@ describe("Crew comms", () => {
     expect(await within(panel).findByText(/no session/)).toBeInTheDocument();
     await user.click(within(panel).getByRole("button", { name: term("comms.back") }));
     expect(await within(panel).findByRole("button", { name: /^Crew · / })).toBeInTheDocument();
+  });
+
+  it("keeps focus in the message box while the station updates around it", async () => {
+    const fake = fakeApi();
+    fake.seedSession("vesper", "Launch plan");
+    const user = userEvent.setup();
+    const { emit, client } = renderApp("/", fake);
+    await map();
+    await user.click(crewTab());
+    const panel = screen.getByRole("tabpanel", { name: term("comms.crew.title") });
+    await user.click(await within(panel).findByRole("button", { name: "Launch plan" }));
+    const chat = await within(panel).findByRole("region", { name: /Vesper · Launch plan/ });
+    await waitFor(() =>
+      expect(within(chat).getByRole("button", { name: term("comms.back") })).toHaveFocus(),
+    );
+    const box = within(chat).getByRole("textbox");
+    await user.click(box);
+    await user.type(box, "Hel");
+    // Live events refetch the station and dashboard: the chat re-renders, focus must stay put.
+    const quill = fake.state.agents.get("quill");
+    if (quill) quill.config = { ...quill.config, name: "Quill II" };
+    emit({ type: "agent.updated", agentId: "quill", payload: {} } as never);
+    await client.invalidateQueries();
+    await waitFor(() => expect(screen.getAllByText(/Quill II/).length).toBeGreaterThan(0));
+    expect(box).toHaveFocus();
+    await user.keyboard("lo");
+    expect(box).toHaveFocus();
+    expect(box).toHaveValue("Hello");
   });
 
   it("starts a new session and opens it", async () => {

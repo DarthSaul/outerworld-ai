@@ -107,9 +107,10 @@ export function fakeApi() {
     }
   >();
   const settings = {
-    modelMode: "fake" as "fake" | "openrouter",
+    modelMode: "fake" as "fake" | "live",
     timezone: "Europe/Stockholm",
     openrouter: { configured: false, source: null as "keychain" | "env" | null },
+    anthropic: { configured: false, source: null as "keychain" | "env" | null },
   };
   const consents: ConsentRecord[] = [];
   const dispatches: DispatchRecord[] = [];
@@ -139,10 +140,12 @@ export function fakeApi() {
   let ids = 0;
   const nextId = (prefix: string) => `${prefix}${++ids}`;
   const calls: Call[] = [];
+  /** Each connector's tools, as a connected server would list them (empty: none connected). */
+  const toolCatalog: Record<string, { name: string; class: "read" | "write" }[]> = {};
   const view = (id: string): AgentView => {
     const a = state.agents.get(id);
     if (!a) throw new ApiError(404, `no agent "${id}"`);
-    return { id, ...a, tools: resolveGrants(a.config, state.station, {}) };
+    return { id, ...a, tools: resolveGrants(a.config, state.station, toolCatalog) };
   };
   const route = (method: string, path: string, body?: unknown): unknown => {
     calls.push({ method, path, ...(body !== undefined ? { body } : {}) });
@@ -231,12 +234,15 @@ export function fakeApi() {
         agents: spend.agents,
         tokens: spend.tokens,
       };
-    if (path === "/settings/openrouter") {
+    if (path === "/settings/openrouter" || path === "/settings/anthropic") {
+      const provider = path === "/settings/openrouter" ? "openrouter" : "anthropic";
+      const [prefix, label] =
+        provider === "openrouter" ? ["sk-or-", "OpenRouter"] : ["sk-ant-", "Anthropic"];
       if (method === "PUT") {
-        if (!String(b.key).startsWith("sk-or-"))
-          throw new ApiError(400, "OpenRouter did not accept this key");
-        settings.openrouter = { configured: true, source: "keychain" };
-      } else settings.openrouter = { configured: false, source: null };
+        if (!String(b.key).startsWith(prefix))
+          throw new ApiError(400, `${label} did not accept this key`);
+        settings[provider] = { configured: true, source: "keychain" };
+      } else settings[provider] = { configured: false, source: null };
       return undefined;
     }
     if (parts[0] === "agents" && parts[2] === "schedules") {
@@ -254,6 +260,7 @@ export function fakeApi() {
             prompt: sc.prompt,
             enabled: sc.enabled,
             catchUp: sc.catchUp,
+            ...(sc.modelSettings ? { modelSettings: sc.modelSettings } : {}),
             ...(sc.enabled ? { nextRunAt: "2026-10-01T06:00:00.000Z" } : {}),
             history: scheduleHistory.get(`${parts[1]}/${sc.id}`) ?? [],
           }),
@@ -288,7 +295,11 @@ export function fakeApi() {
       }
       a.config = {
         ...a.config,
-        schedules: list.map((x) => (x.id === sid ? { ...x, ...(b as object) } : x)),
+        schedules: list.map((x) => {
+          if (x.id !== sid) return x;
+          const { modelSettings, ...rest } = { ...x, ...(b as object) } as typeof x;
+          return modelSettings ? { ...rest, modelSettings } : rest;
+        }),
       };
       return a.config.schedules.find((x) => x.id === sid);
     }
@@ -363,10 +374,16 @@ export function fakeApi() {
         return detail;
       }
       if (method === "PATCH") {
+        const { modelSettings: _old, ...bare } = entry.session;
+        const nextSettings =
+          b.modelSettings === null
+            ? undefined
+            : ((b.modelSettings as SessionRecord["modelSettings"]) ?? entry.session.modelSettings);
         entry.session = {
-          ...entry.session,
+          ...bare,
           ...(b.title ? { title: String(b.title) } : {}),
           ...(b.archived ? { archivedAt: "2026-09-29T12:00:00.000Z" } : {}),
+          ...(nextSettings ? { modelSettings: nextSettings } : {}),
         };
         return entry.session;
       }
@@ -567,6 +584,7 @@ export function fakeApi() {
     spend,
     health,
     dispatches,
+    toolCatalog,
     seedSession,
   };
 }

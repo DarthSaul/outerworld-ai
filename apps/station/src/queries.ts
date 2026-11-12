@@ -10,8 +10,11 @@ import type {
   CrewActivityEntry,
   HealthView,
   Lane,
+  ModelSettings,
   Notification,
   OnboardInput,
+  ProviderChoice,
+  ReasoningLevel,
   Room,
   RunState,
   SettingsView,
@@ -112,6 +115,8 @@ export interface SessionRecord {
   readonly title: string;
   readonly createdAt: string;
   readonly archivedAt?: string;
+  /** This conversation's model choice over the crew member's default (ADR-0016). */
+  readonly modelSettings?: ModelSettings;
 }
 /** A session in a list: `GET /agents/:id/sessions`, most recently active first. */
 export interface SessionSummary extends SessionRecord {
@@ -128,6 +133,8 @@ export interface RunRecord {
   readonly trigger?: "user" | "dispatch" | "schedule" | "review";
   readonly depth?: number;
   readonly model: string;
+  readonly provider?: ProviderChoice;
+  readonly reasoning?: ReasoningLevel;
   readonly createdAt: string;
   readonly error?: string;
   readonly steps: number;
@@ -212,8 +219,11 @@ export function useCreateSession() {
 export function useUpdateSession(id: string) {
   const { api } = useDaemon();
   return useMutation({
-    mutationFn: (input: { title?: string; archived?: true }) =>
-      api.send<SessionRecord>("PATCH", `/sessions/${encodeURIComponent(id)}`, input),
+    mutationFn: (input: {
+      title?: string;
+      archived?: true;
+      modelSettings?: ModelSettings | null;
+    }) => api.send<SessionRecord>("PATCH", `/sessions/${encodeURIComponent(id)}`, input),
   });
 }
 
@@ -239,16 +249,19 @@ export function useSettings() {
   return useQuery({ queryKey: ["settings"], queryFn: () => api.get<SettingsView>("/settings") });
 }
 
-export function useSetApiKey() {
+/** A model provider whose key the Commander can set (ADR-0015). */
+export type KeyProviderName = "openrouter" | "anthropic";
+
+export function useSetApiKey(provider: KeyProviderName = "openrouter") {
   const { api } = useDaemon();
   return useMutation({
-    mutationFn: (key: string) => api.send("PUT", "/settings/openrouter", { key }),
+    mutationFn: (key: string) => api.send("PUT", `/settings/${provider}`, { key }),
   });
 }
 
-export function useClearApiKey() {
+export function useClearApiKey(provider: KeyProviderName = "openrouter") {
   const { api } = useDaemon();
-  return useMutation({ mutationFn: () => api.send("DELETE", "/settings/openrouter") });
+  return useMutation({ mutationFn: () => api.send("DELETE", `/settings/${provider}`) });
 }
 
 export function useConsents() {
@@ -438,6 +451,7 @@ export interface ScheduleItem {
   readonly prompt: string;
   readonly enabled: boolean;
   readonly catchUp: boolean;
+  readonly modelSettings?: ModelSettings;
   readonly sessionId?: string;
   readonly nextRunAt?: string;
   readonly error?: string;

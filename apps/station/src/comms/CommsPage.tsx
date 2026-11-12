@@ -14,6 +14,7 @@ import { type ReactNode, useId } from "react";
 import { Link, useSearchParams } from "react-router";
 import { ErrorNote } from "../components/ErrorNote.js";
 import { formatAgo, formatUsd } from "../components/format.js";
+import { plainText } from "../components/Markdown.js";
 import {
   type SessionSummary,
   useCreateSession,
@@ -112,12 +113,10 @@ function Profile({
   agent,
   crew,
   roomName,
-  sessions,
 }: {
   readonly agent: AgentItem;
   readonly crew: DashboardCrew | undefined;
   readonly roomName: string;
-  readonly sessions: number | undefined;
 }) {
   const spend = useSpend();
   const color = crew ? roomColorVar(crew.colorIndex) : stVar("line");
@@ -126,25 +125,23 @@ function Profile({
     <section
       aria-label={termWith("comms.profile", { name: config.name })}
       data-profile={agent.id}
-      className="flex flex-col gap-2.5 border-2 border-line-soft bg-well p-2.5"
+      className="flex shrink-0 flex-col gap-2 border-2 border-line-soft bg-well p-2"
     >
-      <div className="flex items-center gap-2.5">
-        <div className="shrink-0 border-2 bg-portrait-a p-1" style={{ borderColor: color }}>
-          <Sprite look={lookFor(agent.id, config.look)} scale={2} />
-        </div>
-        <div className="flex min-w-0 flex-col gap-1">
-          <h2 className="m-0 truncate font-display font-normal text-d10 text-title uppercase">
+      <div className="flex items-center gap-2">
+        <Sprite look={lookFor(agent.id, config.look)} />
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <h2 className="m-0 truncate font-display font-normal text-d9 text-title uppercase">
             {config.name}
           </h2>
-          <span className="truncate text-b17 uppercase" style={{ color }}>
+          <span className="truncate text-b15 uppercase" style={{ color }}>
             {roomName}
           </span>
-          <Link to={`/crew/${agent.id}`} className="text-b15 text-cyan">
-            {term("comms.profile.open")} →
-          </Link>
         </div>
+        <Link to={`/crew/${agent.id}`} className="shrink-0 self-start text-b15 text-cyan">
+          {term("comms.profile.open")} →
+        </Link>
       </div>
-      <dl className="m-0 grid grid-cols-2 gap-x-3 gap-y-2">
+      <dl className="m-0 grid grid-cols-2 gap-x-3 gap-y-1.5">
         <Fact label={term("comms.profile.role")}>
           {config.role === "overseer" ? term("overseer.role") : term("agent")}
         </Fact>
@@ -167,11 +164,6 @@ function Profile({
         </Fact>
       </dl>
       {crew?.detail ? <p className="m-0 text-b15 text-red-text">{crew.detail}</p> : null}
-      {sessions !== undefined ? (
-        <p className="m-0 text-b15 text-fg-mute">
-          {term("comms.profile.sessions")}: {sessions}
-        </p>
-      ) : null}
     </section>
   );
 }
@@ -207,7 +199,7 @@ export function SessionButton({
       aria-describedby={metaId}
       aria-current={open ? "true" : undefined}
       data-session={session.id}
-      className="flex w-full cursor-pointer flex-col gap-1 border-2 border-line-faint bg-transparent px-2 py-1.5 text-left hover:border-cyan aria-[current=true]:border-cyan aria-[current=true]:bg-active-bg"
+      className="flex w-full min-w-0 cursor-pointer flex-col gap-1 border-2 border-line-faint bg-transparent px-2 py-1.5 text-left hover:border-cyan aria-[current=true]:border-cyan aria-[current=true]:bg-active-bg"
       onClick={onOpen}
     >
       <span className="flex w-full items-baseline gap-2">
@@ -223,13 +215,15 @@ export function SessionButton({
         </time>
       </span>
       <span id={metaId} className="flex w-full flex-col gap-0.5">
-        <span className={`${compact ? "line-clamp-1" : "line-clamp-2"} text-b15 text-fg-soft`}>
+        <span
+          className={`${compact ? "line-clamp-1" : "line-clamp-2"} text-b15 text-fg-soft [overflow-wrap:anywhere]`}
+        >
           {session.lastMessage ? (
             <>
               <span className="text-fg-mute">
                 {session.lastMessage.role === "user" ? term("comms.session.you") : agentName}:
               </span>{" "}
-              {session.lastMessage.text}
+              {plainText(session.lastMessage.text)}
             </>
           ) : (
             term("comms.session.empty")
@@ -293,68 +287,91 @@ export function CommsPage() {
       >
         {term("comms")}
       </h1>
-      <div className="flex flex-1 flex-col gap-3.5 p-3 desktop:flex-row">
-        <nav aria-label={term("agents")} className="flex shrink-0 flex-col gap-2 desktop:w-56">
-          <h2 className="m-0 font-display font-normal text-d7 text-fg-mute uppercase">
-            {term("agents")}
-          </h2>
-          <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
-            {agents.map((a) => (
-              <li key={a.id}>
-                <CrewButton
-                  agent={a}
-                  crew={crewOf(a.id)}
-                  roomName={roomName(a.config.roomId)}
-                  active={a.id === agentId}
-                  onPick={() => update({ agent: a.id })}
-                />
-              </li>
-            ))}
-          </ul>
-        </nav>
-        {selected ? (
-          <div className="flex shrink-0 flex-col gap-3 desktop:w-72">
-            <Profile
-              agent={selected}
-              crew={crewOf(selected.id)}
-              roomName={roomName(selected.config.roomId)}
-              sessions={sessions.data?.length}
-            />
-            <section aria-label={term("comms.sessions")} className="flex flex-col gap-2">
-              <div className="flex items-center justify-between gap-2">
-                <PanelLabel>{term("comms.sessions")}</PanelLabel>
-                <OutlineButton
-                  tone="green"
-                  disabled={create.isPending}
-                  onClick={() =>
-                    create.mutate(selected.id, { onSuccess: (s) => openSession(s.id) })
-                  }
+      <div className="flex min-h-0 flex-1 flex-col gap-3.5 p-3 desktop:flex-row">
+        {/* One column: the crew (scrolls), who is chosen, then their sessions (scrolls). */}
+        <div className="flex shrink-0 flex-col gap-3 desktop:min-h-0 desktop:w-80">
+          <nav aria-label={term("agents")} className="flex min-h-0 shrink-0 flex-col gap-2">
+            <h2 className="m-0 font-display font-normal text-d7 text-fg-mute uppercase">
+              {term("agents")}
+            </h2>
+            <ul
+              data-crew-list
+              className="m-0 flex max-h-[26dvh] list-none flex-col gap-1.5 overflow-y-auto overscroll-y-contain p-0 pr-1"
+            >
+              {agents.map((a) => (
+                <li key={a.id}>
+                  <CrewButton
+                    agent={a}
+                    crew={crewOf(a.id)}
+                    roomName={roomName(a.config.roomId)}
+                    active={a.id === agentId}
+                    onPick={() => update({ agent: a.id })}
+                  />
+                </li>
+              ))}
+            </ul>
+          </nav>
+          {selected ? (
+            <>
+              <Profile
+                agent={selected}
+                crew={crewOf(selected.id)}
+                roomName={roomName(selected.config.roomId)}
+              />
+              <section
+                aria-label={term("comms.sessions")}
+                className="flex min-h-0 flex-1 flex-col gap-2"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <PanelLabel>
+                    {term("comms.sessions")}
+                    {sessions.data ? ` · ${sessions.data.length}` : ""}
+                  </PanelLabel>
+                  <OutlineButton
+                    tone="green"
+                    disabled={create.isPending}
+                    onClick={() =>
+                      create.mutate(selected.id, { onSuccess: (s) => openSession(s.id) })
+                    }
+                  >
+                    {term("comms.new")}
+                  </OutlineButton>
+                </div>
+                <ErrorNote error={create.error ?? sessions.error} />
+                {sessions.data?.length === 0 ? (
+                  <p className="m-0 text-b17 text-fg-mute">{term("comms.none.body")}</p>
+                ) : null}
+                <ul
+                  data-session-list
+                  className="m-0 flex max-h-[40dvh] min-h-0 list-none flex-col gap-1.5 overflow-y-auto overscroll-y-contain p-0 pr-1 desktop:max-h-none desktop:flex-1"
                 >
-                  {term("comms.new")}
-                </OutlineButton>
-              </div>
-              <ErrorNote error={create.error ?? sessions.error} />
-              {sessions.data?.length === 0 ? (
-                <p className="m-0 text-b17 text-fg-mute">{term("comms.none.body")}</p>
-              ) : null}
-              <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
-                {sessions.data?.map((s) => (
-                  <li key={s.id}>
-                    <SessionButton
-                      session={s}
-                      agentName={selected.config.name}
-                      open={open.includes(s.id)}
-                      onOpen={() => openSession(s.id)}
-                    />
-                  </li>
-                ))}
-              </ul>
-            </section>
-          </div>
-        ) : null}
-        <div
-          className={`flex min-w-0 flex-1 flex-col gap-3.5 desktop:flex-row ${open.length ? "" : "desktop:items-start"}`}
+                  {sessions.data?.map((s) => (
+                    <li key={s.id}>
+                      <SessionButton
+                        session={s}
+                        agentName={selected.config.name}
+                        open={open.includes(s.id)}
+                        onOpen={() => openSession(s.id)}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            </>
+          ) : null}
+        </div>
+        {/* The conversation side: a header level with the crew list's, then the open windows
+            (or what to do next), the full width of the column. */}
+        <section
+          aria-labelledby="comms-session-title"
+          className="flex min-w-0 flex-1 flex-col gap-2 desktop:min-h-0"
         >
+          <h2
+            id="comms-session-title"
+            className="m-0 font-display font-normal text-d7 text-fg-mute uppercase"
+          >
+            {term("comms.session.heading")}
+          </h2>
           {open.length === 0 ? (
             selected ? (
               <EmptyState
@@ -365,15 +382,17 @@ export function CommsPage() {
               <EmptyState title={term("comms.pick.title")} body={term("comms.pick.body")} />
             )
           ) : (
-            open.map((id) => (
-              <ChatWindow
-                key={id}
-                sessionId={id}
-                onClose={() => update({ open: open.filter((o) => o !== id) })}
-              />
-            ))
+            <div className="flex min-w-0 flex-col gap-3.5 desktop:min-h-0 desktop:flex-1 desktop:flex-row desktop:items-stretch">
+              {open.map((id) => (
+                <ChatWindow
+                  key={id}
+                  sessionId={id}
+                  onClose={() => update({ open: open.filter((o) => o !== id) })}
+                />
+              ))}
+            </div>
           )}
-        </div>
+        </section>
       </div>
     </section>
   );
