@@ -1,4 +1,5 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { ART_CHARACTERS, CHARACTER_COUNT } from "@darthsaul/outerworld-ai-core";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { axe } from "vitest-axe";
@@ -33,85 +34,112 @@ const agents: CrewSelectAgent[] = [
 ];
 
 function Harness({
-  onAssign = vi.fn(),
+  who = "quill",
+  onSave = vi.fn(),
 }: {
-  readonly onAssign?: (id: string, look: number) => void;
+  readonly who?: string;
+  readonly onSave?: (id: string, look: number) => void;
 }) {
-  const [configuring, setConfiguring] = useState("quill");
-  const [cursor, setCursor] = useState(21);
+  const agent = agents.find((a) => a.id === who) ?? (agents[1] as CrewSelectAgent);
+  const [cursor, setCursor] = useState(agent.look);
   return (
-    <>
-      <input aria-label="elsewhere" />
-      <CrewSelect
-        agents={agents}
-        configuring={configuring}
-        cursor={cursor}
-        onConfigure={(id) => {
-          setConfiguring(id);
-          setCursor(agents.find((a) => a.id === id)?.look ?? 0);
-        }}
-        onCursor={setCursor}
-        onAssign={() => onAssign(configuring, cursor)}
-        onRandom={() => setCursor(0)}
-      />
-    </>
+    <CrewSelect
+      agent={agent}
+      others={agents}
+      cursor={cursor}
+      onCursor={setCursor}
+      onSave={() => onSave(agent.id, cursor)}
+    />
   );
 }
 
-const cursorName = () =>
-  screen
-    .getAllByRole("button", { pressed: true })
-    .find((b) => b.closest("li") && b.textContent?.includes("P1"))
-    ?.getAttribute("aria-label");
+const grid = (name = "Quill") => screen.getByRole("list", { name: `Choose how ${name} appears` });
+// A direct lookup: computing every tile's accessible name on each call is slow under load.
+const cursorName = (name?: string) =>
+  grid(name).querySelector('button[aria-pressed="true"]')?.getAttribute("aria-label");
+const save = () => screen.getByRole("button", { name: "Save" });
 
 describe("CrewSelect", () => {
-  it("shows the configured agent's look on the stage as equipped", () => {
+  it("shows the crew member's look on the stage as equipped, with Save in the title strip", () => {
     render(<Harness />);
-    expect(screen.getByRole("region", { name: "Appearance" })).toHaveTextContent("Operations");
+    const panel = screen.getByRole("region", { name: "Appearance" });
+    const title = within(panel).getByRole("heading", { name: "Appearance" });
+    expect(title.parentElement?.parentElement).toBe(save().parentElement);
+    expect(panel).not.toHaveTextContent("Operations");
     expect(screen.getByRole("img", { name: "QUILL" })).toBeInTheDocument();
     expect(screen.getByText("Equipped on Quill")).toBeInTheDocument();
     expect(cursorName()).toBe("QUILL, Scribe");
+    expect(screen.queryByRole("button", { name: "Random" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Assign" })).toBeNull();
   });
 
-  it("moves the cursor with the arrow keys (wrapping by row) and assigns on Enter", () => {
-    const onAssign = vi.fn();
-    render(<Harness onAssign={onAssign} />);
-    fireEvent.keyDown(window, { key: "ArrowRight" });
-    expect(cursorName()).toBe("ATLAS, Heavy Lifter");
-    fireEvent.keyDown(window, { key: "ArrowDown" });
-    expect(cursorName()).toBe("DR. ISO, Scientist");
-    fireEvent.keyDown(window, { key: "ArrowUp" });
-    fireEvent.keyDown(window, { key: "ArrowLeft" });
-    expect(cursorName()).toBe("QUILL, Scribe");
-    fireEvent.keyDown(window, { key: "Enter" });
-    expect(onAssign).toHaveBeenCalledWith("quill", 21);
+  it("enables Save only when another character is picked, and saves it", () => {
+    const onSave = vi.fn();
+    render(<Harness onSave={onSave} />);
+    expect(save()).toBeDisabled();
+    fireEvent.click(within(grid()).getByRole("button", { name: "NOVA, Pilot" }));
+    expect(save()).toBeEnabled();
+    fireEvent.click(save());
+    expect(onSave).toHaveBeenCalledWith("quill", 0);
+    fireEvent.click(within(grid()).getByRole("button", { name: "QUILL, Scribe" }));
+    expect(save()).toBeDisabled();
   });
 
-  it("ignores keys while typing in a field", () => {
+  it("lays every character, drawn and painted, in two rows that scroll sideways", () => {
     render(<Harness />);
-    fireEvent.keyDown(screen.getByRole("textbox", { name: "elsewhere" }), { key: "ArrowRight" });
+    expect(within(grid()).getAllByRole("listitem")).toHaveLength(CHARACTER_COUNT);
+    expect(grid().className).toMatch(/overflow-x-auto/);
+    expect(grid().style.gridTemplateColumns).toBe(
+      `repeat(${Math.ceil(CHARACTER_COUNT / 2)}, max-content)`,
+    );
+    const painted = ART_CHARACTERS[0];
+    const tile = within(grid()).getByRole("button", {
+      name: `${painted?.name}, ${painted?.role}`,
+    });
+    expect(tile.querySelector("img")?.getAttribute("src")).toMatch(/^data:image\/png;base64,/);
+  });
+
+  it("moves with the arrow keys (wrapping across, rows up and down) and saves on Enter", () => {
+    const onSave = vi.fn();
+    render(<Harness onSave={onSave} />);
+    fireEvent.keyDown(grid(), { key: "Enter" });
+    expect(onSave).not.toHaveBeenCalled();
+    fireEvent.keyDown(grid(), { key: "ArrowRight" });
+    expect(cursorName()).toBe("ATLAS, Heavy Lifter");
+    expect(within(grid()).getByRole("button", { name: "ATLAS, Heavy Lifter" })).toHaveFocus();
+    fireEvent.keyDown(grid(), { key: "Home" });
+    expect(cursorName()).toBe("NOVA, Pilot");
+    fireEvent.keyDown(grid(), { key: "ArrowDown" });
+    expect(cursorName()).not.toBe("NOVA, Pilot");
+    fireEvent.keyDown(grid(), { key: "ArrowUp" });
+    expect(cursorName()).toBe("NOVA, Pilot");
+    fireEvent.keyDown(grid(), { key: "ArrowUp" });
+    expect(cursorName()).toBe("NOVA, Pilot");
+    fireEvent.keyDown(grid(), { key: "ArrowLeft" });
+    const last = ART_CHARACTERS[ART_CHARACTERS.length - 1];
+    expect(cursorName()).toBe(`${last?.name}, ${last?.role}`);
+    fireEvent.keyDown(grid(), { key: "ArrowRight" });
+    expect(cursorName()).toBe("NOVA, Pilot");
+    fireEvent.keyDown(grid(), { key: "Enter" });
+    expect(onSave).toHaveBeenCalledWith("quill", 0);
+  });
+
+  it("leaves the arrow keys alone outside the grid", () => {
+    render(<Harness />);
+    fireEvent.keyDown(window, { key: "ArrowRight" });
     expect(cursorName()).toBe("QUILL, Scribe");
   });
 
   it("says who else wears a look, and badges those tiles", () => {
-    render(<Harness />);
-    fireEvent.click(screen.getByRole("button", { name: "Wren" }));
+    render(<Harness who="wren" />);
     expect(screen.getByText("Equipped on Wren")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Quill" }));
-    fireEvent.click(screen.getByRole("button", { name: "KESTREL, Commander" }));
-    expect(screen.getByText("Also worn by Vesper, Wren")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "KESTREL, Commander" })).toHaveTextContent("VE WR");
-    fireEvent.click(screen.getByRole("button", { name: "NOVA, Pilot" }));
+    expect(
+      within(grid("Wren")).getByRole("button", { name: "KESTREL, Commander" }),
+    ).toHaveTextContent("VE");
+    fireEvent.click(within(grid("Wren")).getByRole("button", { name: "QUILL, Scribe" }));
+    expect(screen.getByText("Also worn by Quill")).toBeInTheDocument();
+    fireEvent.click(within(grid("Wren")).getByRole("button", { name: "NOVA, Pilot" }));
     expect(screen.getByText("Available")).toBeInTheDocument();
-  });
-
-  it("assigns with (A) and picks at random with (B)", () => {
-    const onAssign = vi.fn();
-    render(<Harness onAssign={onAssign} />);
-    fireEvent.click(screen.getByRole("button", { name: "Random" }));
-    expect(cursorName()).toBe("NOVA, Pilot");
-    fireEvent.click(screen.getByRole("button", { name: "Assign" }));
-    expect(onAssign).toHaveBeenCalledWith("quill", 0);
   });
 
   it("has no axe violations", async () => {

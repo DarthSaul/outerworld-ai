@@ -152,26 +152,29 @@ export interface StationHeaderProps {
  */
 export function StationHeader(p: StationHeaderProps) {
   return (
-    <header className="flex flex-wrap items-center justify-between gap-x-5 gap-y-3 border-line border-b-3 bg-bar px-4 py-3 shadow-bar-down">
-      <div className="flex flex-wrap items-center gap-3">
-        <div
-          aria-hidden="true"
-          className="size-8.5 bg-cyan [clip-path:polygon(50%_0,100%_100%,50%_78%,0_100%)]"
-        />
-        <div className="flex flex-col gap-1.5">
-          <div className="font-display text-d14 text-title uppercase tracking-st-2">
-            {p.stationName}
+    <header className="border-line border-b-3 bg-bar px-4 py-3 shadow-bar-down">
+      {/* The bar spans the page; its contents keep to the app's width (--st-app-max-width). */}
+      <div className="mx-auto flex w-full max-w-app flex-wrap items-center justify-between gap-x-5 gap-y-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <div
+            aria-hidden="true"
+            className="size-8.5 bg-cyan [clip-path:polygon(50%_0,100%_100%,50%_78%,0_100%)]"
+          />
+          <div className="flex flex-col gap-1.5">
+            <div className="font-display text-d14 text-title uppercase tracking-st-2">
+              {p.stationName}
+            </div>
+            <div className="text-b17 text-subtitle uppercase tracking-st-1">
+              {termWith("dashboard.subtitle", { rooms: String(p.rooms), crew: String(p.crew) })}
+            </div>
           </div>
-          <div className="text-b17 text-subtitle uppercase tracking-st-1">
-            {termWith("dashboard.subtitle", { rooms: String(p.rooms), crew: String(p.crew) })}
-          </div>
+          <nav aria-label="Primary" className="ml-2">
+            {p.tabs}
+          </nav>
         </div>
-        <nav aria-label="Primary" className="ml-2">
-          {p.tabs}
-        </nav>
-      </div>
-      <div className="flex min-w-0 flex-auto flex-wrap items-stretch justify-end gap-2 self-stretch">
-        {p.controls}
+        <div className="flex min-w-0 flex-auto flex-wrap items-stretch justify-end gap-2 self-stretch">
+          {p.controls}
+        </div>
       </div>
     </header>
   );
@@ -228,38 +231,40 @@ export function StationVitals({
       ? termWith("vitals.fuelNoCap", { spent: usd(spent) })
       : termWith("vitals.fuel", { spent: usd(spent), cap: usd(capUsd) });
   return (
-    <footer className="flex flex-wrap items-center justify-between gap-x-5 gap-y-3 border-line border-t-3 bg-bar px-4 py-3 shadow-bar-up">
-      <div className="flex flex-col gap-1.5">
-        <h2 className="m-0 font-display font-normal text-d10 text-title uppercase tracking-st-2">
-          {term("vitals.title")}
-        </h2>
-        <div className="text-b17 text-subtitle uppercase tracking-st-1">
-          {term("vitals.subtitle")}
+    <footer className="border-line border-t-3 bg-bar px-4 py-3 shadow-bar-up">
+      <div className="mx-auto flex w-full max-w-app flex-wrap items-center justify-between gap-x-5 gap-y-3">
+        <div className="flex flex-col gap-1.5">
+          <h2 className="m-0 font-display font-normal text-d10 text-title uppercase tracking-st-2">
+            {term("vitals.title")}
+          </h2>
+          <div className="text-b17 text-subtitle uppercase tracking-st-1">
+            {term("vitals.subtitle")}
+          </div>
         </div>
-      </div>
-      <div className="flex flex-wrap items-stretch justify-end gap-2">
-        <StatBox
-          label={term("vitals.tokens")}
-          value={tokens === undefined ? "—" : formatTokens(tokens)}
-          tone="cyan"
-        />
-        <StatBox label={fuelLabel} className="min-w-42.5 gap-1.5">
-          {capUsd === undefined ? null : (
-            <SegmentBar
-              color={stVar("amber")}
-              percent={(spent / capUsd) * 100}
-              size="lg"
-              label={fuelLabel}
-            />
+        <div className="flex flex-wrap items-stretch justify-end gap-2">
+          <StatBox
+            label={term("vitals.tokens")}
+            value={tokens === undefined ? "—" : formatTokens(tokens)}
+            tone="cyan"
+          />
+          <StatBox label={fuelLabel} className="min-w-42.5 gap-1.5">
+            {capUsd === undefined ? null : (
+              <SegmentBar
+                color={stVar("amber")}
+                percent={(spent / capUsd) * 100}
+                size="lg"
+                label={fuelLabel}
+              />
+            )}
+          </StatBox>
+          <StatBox label={term("vitals.uptime")} value={startedAt ? formatUptime(uptime) : "—"} />
+          {controls === undefined ? null : (
+            <>
+              <span aria-hidden="true" className="w-0.5 self-stretch bg-line" />
+              {controls}
+            </>
           )}
-        </StatBox>
-        <StatBox label={term("vitals.uptime")} value={startedAt ? formatUptime(uptime) : "—"} />
-        {controls === undefined ? null : (
-          <>
-            <span aria-hidden="true" className="w-0.5 self-stretch bg-line" />
-            {controls}
-          </>
-        )}
+        </div>
       </div>
     </footer>
   );

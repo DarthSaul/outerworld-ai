@@ -3,7 +3,7 @@ import { userEvent } from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { axe } from "vitest-axe";
 import { demoDashboard } from "../test/dashboard.js";
-import { DashboardMap, grantName, MAP_STYLES } from "./DashboardMap.js";
+import { DashboardMap, grantName, MAP_STYLES, walkPhase } from "./DashboardMap.js";
 
 describe("DashboardMap", () => {
   it("draws the Bridge with the Overseer and each room with its sector, crew and placed objects", () => {
@@ -28,6 +28,34 @@ describe("DashboardMap", () => {
       expect(avatar?.querySelector("svg rect")).not.toBeNull();
       expect(avatar).not.toHaveTextContent(member.name.slice(0, 2).toUpperCase());
     }
+  });
+
+  it("draws a room's crew as a character over its name, unframed, each strolling its own slot", () => {
+    const dashboard = demoDashboard();
+    const { container } = render(<DashboardMap dashboard={dashboard} />);
+    const roomCrew = dashboard.rooms.filter((r) => !r.bridge).flatMap((r) => r.crew);
+    expect(roomCrew.length).toBeGreaterThan(0);
+    const phases = new Set<string>();
+    for (const member of roomCrew) {
+      const chip = container.querySelector(`[data-crew="${member.id}"]`);
+      const [figure, name] = Array.from(chip?.children ?? []);
+      expect(figure).toHaveAttribute("data-look", String(member.look));
+      expect(figure?.className).not.toMatch(/\bborder\b/);
+      expect(name).toHaveTextContent(member.name);
+      const walker = chip?.closest(".st-walker") as HTMLElement | null;
+      expect(walker?.parentElement).toHaveClass("st-walk-slot");
+      phases.add(walker?.style.getPropertyValue("--st-walk-phase") ?? "");
+    }
+    expect(phases.size).toBe(roomCrew.length);
+  });
+
+  it("gives every crew member a steady stroll phase between 0 and 1", () => {
+    for (const id of ["quill", "wren", "vesper"]) {
+      expect(walkPhase(id)).toBe(walkPhase(id));
+      expect(walkPhase(id)).toBeGreaterThanOrEqual(0);
+      expect(walkPhase(id)).toBeLessThan(1);
+    }
+    expect(walkPhase("quill")).not.toBe(walkPhase("wren"));
   });
 
   it("labels every hallway and selects a room, a crew member, or a hallway", async () => {

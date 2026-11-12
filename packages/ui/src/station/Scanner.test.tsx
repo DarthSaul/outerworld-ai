@@ -1,6 +1,7 @@
 import type { DashboardRun } from "@darthsaul/outerworld-ai-core";
 import { render, screen, within } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
+import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { axe } from "vitest-axe";
 import { demoDashboard } from "../test/dashboard.js";
@@ -68,16 +69,22 @@ describe("Scanner", () => {
     expect(onSelect).toHaveBeenCalledWith({ type: "agent", id: "wren" });
   });
 
-  it("picks a room from a second list under crew, with sector and crew count", async () => {
+  it("toggles Crew (first, the default) and Rooms, showing only that list's picker", async () => {
     const onSelect = vi.fn();
     const { container } = render(
       <Scanner dashboard={busy()} selection={{ type: "agent", id: "quill" }} onSelect={onSelect} />,
     );
+    const view = screen.getByRole("group", { name: "Scan" });
+    const [crewTab, roomsTab] = within(view).getAllByRole("button");
+    expect(crewTab).toHaveTextContent("Crew");
+    expect(roomsTab).toHaveTextContent("Rooms");
+    expect(crewTab).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: /^Crew · 3/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Rooms · 3/ })).toBeNull();
+    await userEvent.click(roomsTab as HTMLElement);
+    expect(roomsTab).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByRole("button", { name: /^Crew · 3/ })).toBeNull();
     const rooms = screen.getByRole("button", { name: "Rooms · 3 Pick a room" });
-    const crew = screen.getByRole("button", { name: /^Crew · 3/ });
-    // The same control as the crew picker, on the same grid, below it.
-    expect(rooms.className).toBe(crew.className);
-    expect(crew.compareDocumentPosition(rooms) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     await userEvent.click(rooms);
     expect(screen.getAllByRole("option").map((o) => o.getAttribute("aria-label"))).toEqual([
       "Command · HQ · 1 crew",
@@ -89,17 +96,53 @@ describe("Scanner", () => {
     expect(onSelect).toHaveBeenCalledWith({ type: "room", id: "research" });
   });
 
-  it("shows the scanned room in the rooms picker", () => {
-    render(
+  it("shows the scanned room in the rooms picker, and follows a new selection to its list", async () => {
+    const { rerender } = render(
       <Scanner
         dashboard={busy()}
         selection={{ type: "room", id: "operations" }}
         onSelect={vi.fn()}
       />,
     );
+    await userEvent.click(screen.getByRole("button", { name: "Rooms" }));
     expect(
       screen.getByRole("button", { name: "Rooms · 3 Operations · A-1 · 1 crew" }),
     ).toBeInTheDocument();
+    // A crew member picked on the map turns the toggle to Crew, and a room back to Rooms.
+    rerender(
+      <Scanner dashboard={busy()} selection={{ type: "agent", id: "quill" }} onSelect={vi.fn()} />,
+    );
+    expect(screen.getByRole("button", { name: "Crew · 3 Quill · Active" })).toBeInTheDocument();
+    rerender(
+      <Scanner
+        dashboard={busy()}
+        selection={{ type: "room", id: "research" }}
+        onSelect={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("button", { name: /^Rooms · 3 Research/ })).toBeInTheDocument();
+    // Toggled to Crew by hand, then another room picked on the map: back to Rooms.
+    await userEvent.click(screen.getByRole("button", { name: "Crew" }));
+    rerender(
+      <Scanner dashboard={busy()} selection={{ type: "room", id: "command" }} onSelect={vi.fn()} />,
+    );
+    expect(screen.getByRole("button", { name: /^Rooms · 3 Command/ })).toBeInTheDocument();
+  });
+
+  it("draws crew as their characters, not lettered badges", () => {
+    const dashboard = busy();
+    const { container } = render(
+      <Scanner
+        dashboard={dashboard}
+        selection={{ type: "agent", id: "quill" }}
+        onSelect={vi.fn()}
+      />,
+    );
+    const quill = dashboard.crew.find((c) => c.id === "quill");
+    const figure = container.querySelector("[data-scanner-body] [data-look]");
+    expect(figure).toHaveAttribute("data-look", String(quill?.look));
+    expect(figure?.querySelector("svg rect")).not.toBeNull();
+    expect(figure).not.toHaveTextContent("QU");
   });
 
   it("shows the scanned crew member in the picker", () => {
@@ -204,7 +247,54 @@ describe("Scanner", () => {
         onSelect={vi.fn()}
       />,
     );
-    expect(screen.getByRole("region", { name: "Scanner" })).toHaveTextContent("Hallway");
+    const panel = screen.getByRole("region", { name: "Scanner" });
+    expect(panel.querySelector("[data-scanner-body]")).toBeEmptyDOMElement();
+  });
+
+  it("folds to its title strip with a caret, hiding the toggle, picker, and body", async () => {
+    function Harness() {
+      const [collapsed, setCollapsed] = useState(false);
+      return (
+        <Scanner
+          dashboard={busy()}
+          selection={{ type: "room", id: "operations" }}
+          onSelect={vi.fn()}
+          collapsed={collapsed}
+          onToggleCollapsed={() => setCollapsed((c) => !c)}
+        />
+      );
+    }
+    render(<Harness />);
+    const panel = screen.getByRole("region", { name: "Scanner" });
+    const caret = within(panel).getByRole("button", { name: "Hide the scanner" });
+    expect(caret).toHaveAttribute("aria-expanded", "true");
+    // The caret sits beside the title, not in the title's name.
+    expect(within(panel).getByRole("heading", { name: "Scanner" }).nextElementSibling).toBe(caret);
+    await userEvent.click(caret);
+    expect(caret).toHaveAttribute("aria-expanded", "false");
+    expect(caret).toHaveAccessibleName("Show the scanner");
+    expect(within(panel).queryByRole("group", { name: "Scan" })).toBeNull();
+    expect(within(panel).queryByRole("button", { name: /^Crew · 3/ })).toBeNull();
+    expect(panel.querySelector("[data-scanner-body]")).not.toBeVisible();
+    await userEvent.click(caret);
+    expect(within(panel).getByRole("group", { name: "Scan" })).toBeInTheDocument();
+    expect(panel.querySelector("[data-scanner-body]")).toBeVisible();
+  });
+
+  it("puts the Crew / Rooms toggle in the title strip, beside SCANNER", () => {
+    render(
+      <Scanner
+        dashboard={busy()}
+        selection={{ type: "room", id: "operations" }}
+        onSelect={vi.fn()}
+      />,
+    );
+    const panel = screen.getByRole("region", { name: "Scanner" });
+    const title = within(panel).getByRole("heading", { name: "Scanner" });
+    const toggle = within(panel).getByRole("group", { name: "Scan" });
+    // Same title strip: the title (with its caret) on the left, the toggle on the right.
+    expect(title.parentElement?.parentElement).toBe(toggle.parentElement);
+    expect(title.parentElement?.textContent).not.toMatch(/Room$/);
   });
 
   it("has no axe violations in each view", async () => {

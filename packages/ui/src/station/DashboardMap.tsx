@@ -13,6 +13,7 @@ import { type CSSProperties, useRef } from "react";
 import { PACKET_SPEED, roomColorVar, stVar } from "../tokens/tokens.js";
 import { Avatar, overseerAvatarProps } from "./Avatar.js";
 import { Diamond } from "./buttons.js";
+import { Sprite } from "./Sprite.js";
 import { CREW_STATUS_TONE, lampBlink, toneVar } from "./tone.js";
 import { useAnimationClock } from "./useClock.js";
 import { useMapView, ZOOM_STEP } from "./useMapView.js";
@@ -49,6 +50,13 @@ export function grantName(grant: DashboardGrant): string {
   return "term" in grant.real ? term(grant.real.term) : grant.real.name;
 }
 
+/** Where in the stroll cycle a crew member starts (0–1), steady per id so it never jumps. */
+export function walkPhase(id: string): number {
+  let h = 0;
+  for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return (h % 997) / 997;
+}
+
 function CrewChip({
   member,
   color,
@@ -69,19 +77,23 @@ function CrewChip({
       }}
       aria-pressed={selected}
       aria-label={`${member.name}, ${term(`crewStatus.${member.status}`)}`}
-      className={`pointer-events-auto relative z-10 flex cursor-pointer items-center gap-1.25 border bg-chip-bg py-0.5 pr-1.25 pl-0.5 ${selected ? "border-fg-hi" : "border-line-faint"}`}
+      data-crew={member.id}
+      className="pointer-events-auto relative z-10 flex cursor-pointer flex-col items-center gap-0.5 bg-transparent p-0"
     >
-      <Avatar
-        name={member.name}
-        color={color}
-        look={member.look}
-        size={30}
-        lamp={{
-          color: toneVar(CREW_STATUS_TONE[member.status]),
-          className: lampBlink(member.status),
-        }}
-      />
-      <span className="text-b15 text-fg-chip uppercase">{member.name}</span>
+      {/* The character stands on its own, its status lamp at its shoulder; the name below. */}
+      <span aria-hidden="true" data-look={member.look} className="relative inline-flex">
+        <Sprite look={member.look} />
+        <span
+          className={`-right-1 absolute top-0 size-1.5 ${lampBlink(member.status)}`}
+          style={{ background: toneVar(CREW_STATUS_TONE[member.status]) }}
+        />
+      </span>
+      <span
+        className={`max-w-24 truncate border-b-2 bg-chip-bg px-1 text-b15 uppercase ${selected ? "text-fg-hi" : "text-fg-chip"}`}
+        style={{ borderColor: selected ? stVar("text-hi") : color }}
+      >
+        {member.name}
+      </span>
     </button>
   );
 }
@@ -205,15 +217,21 @@ function Room({
               </span>
             ) : null}
           </div>
-          <div className="pointer-events-none relative flex flex-wrap gap-1.5">
+          <div className="pointer-events-none relative flex flex-wrap gap-x-1.5 gap-y-1">
             {room.crew.map((c) => (
-              <CrewChip
-                key={c.id}
-                member={c}
-                color={color}
-                selected={selection?.type === "agent" && selection.id === c.id}
-                {...(drawing ? {} : { onSelect: () => onSelectAgent?.(c.id) })}
-              />
+              <div key={c.id} className="st-walk-slot min-w-16 flex-1">
+                <div
+                  className="st-walker"
+                  style={{ "--st-walk-phase": walkPhase(c.id) } as CSSProperties}
+                >
+                  <CrewChip
+                    member={c}
+                    color={color}
+                    selected={selection?.type === "agent" && selection.id === c.id}
+                    {...(drawing ? {} : { onSelect: () => onSelectAgent?.(c.id) })}
+                  />
+                </div>
+              </div>
             ))}
           </div>
           <ul className="pointer-events-none relative mt-auto flex flex-wrap gap-1.25">
@@ -318,7 +336,7 @@ export function DashboardMap(props: DashboardMapProps) {
       data-map-style={mapStyle}
       data-map-viewport=""
       title={term("map.pan.hint")}
-      className={`relative aspect-[43/29] w-full min-w-0 flex-1 desktop:aspect-auto desktop:min-h-145 touch-none select-none overflow-hidden ${dragging ? "cursor-grabbing" : "cursor-grab"}`}
+      className={`relative aspect-[43/29] w-full min-w-0 flex-1 desktop:aspect-auto desktop:min-h-0 touch-none select-none overflow-hidden ${dragging ? "cursor-grabbing" : "cursor-grab"}`}
       style={{ background: "var(--st-map-viewport-bg)" }}
       {...handlers}
     >

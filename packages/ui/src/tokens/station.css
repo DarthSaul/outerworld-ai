@@ -84,33 +84,43 @@
   --st-font-display: "Press Start 2P", monospace; /* labels, titles, buttons */
   --st-font-body: "VT323", monospace; /* body copy and values */
   --st-line-height: 1.15;
-  /* Display sizes (Press Start 2P) and body sizes (VT323), in the design's px. */
-  --st-d6: 6px;
-  --st-d7: 7px;
-  --st-d8: 8px;
-  --st-d9: 9px;
-  --st-d10: 10px;
-  --st-d11: 11px;
-  --st-d12: 12px;
-  --st-d14: 14px;
-  --st-d18: 18px;
-  --st-d30: 30px;
-  --st-b14: 14px;
-  --st-b15: 15px;
-  --st-b16: 16px;
-  --st-b17: 17px;
-  --st-b18: 18px;
-  --st-b19: 19px;
-  --st-b20: 20px;
-  --st-b21: 21px;
-  --st-b22: 22px;
-  --st-tracking-1: 1px;
-  --st-tracking-2: 2px;
-  --st-tracking-4: 4px;
+  /*
+   * The design pixel (Settings › Appearance › Display). The design is drawn at a 19px root (the
+   * body size), so one design px is 1rem / 19: at the Standard size every token below renders at
+   * exactly its design px, and every other size scales type, spacing (Tailwind's rem scale) and
+   * layout together. Borders, shadows and sprites stay in real px so pixel art stays crisp.
+   */
+  --st-u: calc(1rem / 19);
+  /* Display sizes (Press Start 2P) and body sizes (VT323), in design px. */
+  --st-d6: calc(6 * var(--st-u));
+  --st-d7: calc(7 * var(--st-u));
+  --st-d8: calc(8 * var(--st-u));
+  --st-d9: calc(9 * var(--st-u));
+  --st-d10: calc(10 * var(--st-u));
+  --st-d11: calc(11 * var(--st-u));
+  --st-d12: calc(12 * var(--st-u));
+  --st-d14: calc(14 * var(--st-u));
+  --st-d18: calc(18 * var(--st-u));
+  --st-d30: calc(30 * var(--st-u));
+  --st-b14: calc(14 * var(--st-u));
+  --st-b15: calc(15 * var(--st-u));
+  --st-b16: calc(16 * var(--st-u));
+  --st-b17: calc(17 * var(--st-u));
+  --st-b18: calc(18 * var(--st-u));
+  --st-b19: calc(19 * var(--st-u));
+  --st-b20: calc(20 * var(--st-u));
+  --st-b21: calc(21 * var(--st-u));
+  --st-b22: calc(22 * var(--st-u));
+  --st-tracking-1: calc(1 * var(--st-u));
+  --st-tracking-2: calc(2 * var(--st-u));
+  --st-tracking-4: calc(4 * var(--st-u));
   --st-display-line-height: 1.4;
 
+  /* The app's content never grows wider than this; header and footer bars still span the page. */
+  --st-app-max-width: 1440px;
+
   /* Geometry. No border radius anywhere except the A/B glyphs, the pause pill, and the pedestal. */
-  --st-gap: 14px;
+  --st-gap: calc(14 * var(--st-u));
   /* The one layout breakpoint: three columns from here up. theme.css repeats it as a literal. */
   --st-breakpoint-desktop: 720px;
   --st-radius-pill: 5px;
@@ -143,11 +153,12 @@
   --st-dur-chatter-hold: 4200ms; /* chatter stays this long after it finishes typing */
   --st-dur-reply-hold: 3600ms; /* an Overseer reply stays this long */
   --st-dur-drawer: 180ms; /* the status drawer slides in, in steps */
-  --st-drawer-width: 380px;
+  --st-dur-walk: 16000ms; /* one stroll on the map: rest, walk over, rest, walk back */
+  --st-drawer-width: calc(380 * var(--st-u));
 
   /* The station map's plane is never smaller than this; a smaller viewport pans over it. */
-  --st-map-min-w: 860px;
-  --st-map-min-h: 580px;
+  --st-map-min-w: calc(860 * var(--st-u));
+  --st-map-min-h: calc(580 * var(--st-u));
   --st-packet-speed: 9; /* map percent per second */
   --st-blink-low: 0.15;
 }
@@ -217,14 +228,35 @@
  * ink text on a link, say) win over them.
  */
 @layer base {
+  /*
+   * Root size: the design's 19px at Standard, as a share of the browser's own default so a larger
+   * browser font still counts. Auto follows the viewport between Compact and Large.
+   */
+  html {
+    font-size: clamp(100%, 81.25% + 0.45vw, 137.5%);
+  }
+  html[data-display="compact"] {
+    font-size: 100%;
+  }
+  html[data-display="standard"] {
+    font-size: 118.75%;
+  }
+  html[data-display="large"] {
+    font-size: 137.5%;
+  }
+  html[data-display="x-large"] {
+    font-size: 156.25%;
+  }
   html,
   body {
     margin: 0;
     background: var(--st-bg);
     color: var(--st-text);
     font-family: var(--st-font-body);
-    font-size: var(--st-b19);
     line-height: var(--st-line-height);
+  }
+  body {
+    font-size: var(--st-b19);
   }
   *,
   *::before,
@@ -323,9 +355,9 @@
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
-  margin-top: 2px;
+  width: calc(18 * var(--st-u));
+  height: calc(18 * var(--st-u));
+  margin-top: calc(2 * var(--st-u));
   border: 2px solid var(--st-line-soft);
   background: var(--st-well);
 }
@@ -536,17 +568,51 @@ label:hover .st-check:not(:disabled) + .st-check-box {
     0 0 0 5px var(--st-ring-color);
 }
 
+/*
+ * Crew on the map stroll now and then: each crew member has a slot in their room's crew row and
+ * walks across it and back, resting in between, in pixel steps. --st-walk-phase (0–1, per crew
+ * member) offsets the cycle so a room's crew never move in step. Off under reduced motion and
+ * while the station is stopped.
+ */
+.st-walk-slot {
+  container-type: inline-size;
+}
+.st-walker {
+  width: max-content;
+  --st-walk-span: max(0rem, 100cqw - 100%);
+  animation: st-walk var(--st-dur-walk) linear infinite;
+  animation-delay: calc(var(--st-walk-phase, 0) * var(--st-dur-walk) * -1);
+}
+@keyframes st-walk {
+  0%,
+  24% {
+    translate: 0 0;
+    animation-timing-function: steps(12);
+  }
+  44%,
+  68% {
+    translate: var(--st-walk-span) 0;
+    animation-timing-function: steps(12);
+  }
+  88%,
+  100% {
+    translate: 0 0;
+  }
+}
+
 [data-paused] .st-blink,
 [data-paused] .st-blink-border,
 [data-paused] .st-segments-march,
-[data-paused] .st-map-room[data-alert] {
+[data-paused] .st-map-room[data-alert],
+[data-paused] .st-walker {
   animation: none;
 }
 @media (prefers-reduced-motion: reduce) {
   .st-blink,
   .st-blink-border,
   .st-segments-march,
-  .st-map-room[data-alert] {
+  .st-map-room[data-alert],
+  .st-walker {
     animation: none;
   }
 }

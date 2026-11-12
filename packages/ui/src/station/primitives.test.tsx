@@ -1,4 +1,9 @@
-import { CHARACTERS, characterGrid } from "@darthsaul/outerworld-ai-core";
+import {
+  ART_BOX,
+  ART_CHARACTERS,
+  characterGrid,
+  DRAWN_CHARACTERS,
+} from "@darthsaul/outerworld-ai-core";
 import { render, screen } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -124,9 +129,20 @@ describe("Sprite", () => {
       (n, r) => n + Number(r.getAttribute("width")),
       0,
     );
-    const character = CHARACTERS[5];
+    const character = DRAWN_CHARACTERS[5];
     if (!character) throw new Error("no character");
     expect(covered).toBe(characterGrid(character).flat().filter(Boolean).length);
+  });
+
+  it("draws a painted character as its pixelated art in a 32×32 box per scale step (ADR-0017)", () => {
+    const look = DRAWN_CHARACTERS.length;
+    const painted = ART_CHARACTERS[0];
+    render(<Sprite look={look} scale={2} label={painted?.name ?? ""} />);
+    const img = screen.getByRole("img", { name: painted?.name ?? "" });
+    expect(img.tagName).toBe("IMG");
+    expect(img).toHaveAttribute("src", painted?.art.src ?? "");
+    expect(img).toHaveAttribute("width", String(ART_BOX * 2));
+    expect(img).toHaveClass("st-pixelated");
   });
 
   it("is decorative without a label and falls back for an unknown look", () => {
