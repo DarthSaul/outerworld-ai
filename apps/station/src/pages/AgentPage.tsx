@@ -4,23 +4,35 @@ import {
   type AgentDocumentName,
   type AgentView,
   type ApprovalMode,
+  CHARACTERS,
   type EffectiveTool,
   lookFor,
   type StationConfig,
   term,
+  termWith,
 } from "@darthsaul/outerworld-ai-core";
-import { Checkbox, Sprite } from "@darthsaul/outerworld-ai-ui";
-import { type FormEvent, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router";
+import {
+  Checkbox,
+  CrewSelect,
+  type CrewSelectAgent,
+  roomColorVar,
+  Sprite,
+  stVar,
+} from "@darthsaul/outerworld-ai-ui";
+import { type FormEvent, useId, useState } from "react";
+import { useNavigate } from "react-router";
 import { ErrorNote } from "../components/ErrorNote.js";
+import { ScrollArea } from "../components/ScrollArea.js";
 import {
   useAgent,
   useDeleteAgent,
   useModels,
   useSaveDocument,
+  useSetLook,
   useStationView,
   useUpdateAgent,
 } from "../queries.js";
+import { useDashboard } from "../station/use-dashboard.js";
 import { SchedulesSection } from "./Schedules.js";
 
 /** The design's quiet outline button, as a class so submit buttons can use it too. */
@@ -38,6 +50,58 @@ const sourceLabel = (t: EffectiveTool) =>
     : t.source.kind === "prop"
       ? `${term("grant")}: ${term(`prop.${t.source.prop}`)}`
       : `${term("connector")}: ${t.source.connectorId}`;
+
+/** A granted connector's tools, together: a grant is all of a connector's tools (ADR-0012). */
+const connectorGroups = (tools: readonly EffectiveTool[]) => {
+  const groups = new Map<string, EffectiveTool[]>();
+  for (const t of tools) {
+    if (t.source.kind !== "connector") continue;
+    groups.set(t.source.connectorId, [...(groups.get(t.source.connectorId) ?? []), t]);
+  }
+  return [...groups].map(([id, list]) => ({ id, tools: list }));
+};
+
+/**
+ * One line for a granted connector: full access, how many tools and of which class, and its
+ * tools on request in a box that scrolls (a connector can offer dozens).
+ */
+function ConnectorTools({
+  name,
+  tools,
+}: {
+  readonly name: string;
+  readonly tools: readonly EffectiveTool[];
+}) {
+  const writes = tools.filter((t) => t.class === "write").length;
+  return (
+    <li data-connector-tools={name} className="flex flex-col gap-1">
+      <span>
+        {term("connector")}: {name}{" "}
+        <span className="border border-cyan px-1 font-display text-cyan text-d6 uppercase">
+          {term("tools.connector.full")}
+        </span>{" "}
+        ·{" "}
+        {termWith("tools.connector.count", {
+          count: String(tools.length),
+          read: String(tools.length - writes),
+          write: String(writes),
+        })}
+      </span>
+      <details>
+        <summary className="cursor-pointer font-display text-cyan text-d7 uppercase">
+          {term("tools.connector.show")}
+        </summary>
+        <ul className="m-0 mt-1 flex max-h-40 list-none flex-col gap-0.5 overflow-y-auto overscroll-y-contain border border-line-faint bg-well p-2 text-b16 text-fg-soft">
+          {tools.map((t) => (
+            <li key={t.name} data-tool={t.name} data-class={t.class}>
+              {t.name} · {term(`grant.${t.class}`)}
+            </li>
+          ))}
+        </ul>
+      </details>
+    </li>
+  );
+}
 
 /** Granted connectors that contribute no tools yet (not connected), by display name. */
 const pendingConnectors = (a: AgentView, station: StationConfig) =>
@@ -237,9 +301,75 @@ function ConfigForm({
   );
 }
 
-/** One crew member as documents and config, with the tools the runtime would actually grant. */
-export function AgentPage() {
-  const { id = "" } = useParams();
+/**
+ * Appearance (ADR-0017): the character this crew member appears as, picked from a row of every
+ * character. Assigning writes `look` to agent.json; it comes back as `agent.updated`.
+ */
+function AppearanceRow({ agentId }: { readonly agentId: string }) {
+  const { dashboard } = useDashboard();
+  const setLook = useSetLook();
+  const [cursor, setCursor] = useState<number>();
+  const [assigned, setAssigned] = useState<string>();
+  if (!dashboard) return null;
+  const toAgent = (c: (typeof dashboard.crew)[number]): CrewSelectAgent => {
+    const room = dashboard.rooms.find((r) => r.id === c.roomId);
+    return {
+      id: c.id,
+      name: c.name,
+      role: term(c.overseer ? "overseer.role" : "agent"),
+      roomName: room?.name ?? c.roomId,
+      color: c.overseer
+        ? stVar("white")
+        : room?.bridge
+          ? stVar("cyan")
+          : roomColorVar(c.colorIndex),
+      look: c.look,
+    };
+  };
+  const everyone = dashboard.crew.map(toAgent);
+  const agent = everyone.find((a) => a.id === agentId);
+  if (!agent) return null;
+  const at = cursor ?? agent.look;
+  return (
+    <div className="flex flex-col gap-1.5">
+      <CrewSelect
+        agent={agent}
+        others={everyone}
+        cursor={at}
+        onCursor={setCursor}
+        onSave={() =>
+          setLook.mutate(
+            { agentId, look: at },
+            {
+              onSuccess: () =>
+                setAssigned(
+                  termWith("crewSelect.assigned", {
+                    agent: agent.name,
+                    character: CHARACTERS[at]?.name ?? "",
+                  }),
+                ),
+            },
+          )
+        }
+        busy={setLook.isPending}
+      />
+      {assigned ? (
+        <p role="status" className="m-0 text-b17 text-green">
+          {assigned}
+        </p>
+      ) : null}
+      <ErrorNote error={setLook.error} />
+    </div>
+  );
+}
+
+/**
+ * One crew member as documents and config, with the tools the runtime would actually grant: the
+ * crew screen's main panel when a crew member is chosen (`/crew/:id`). The header stays put; the rest
+ * scrolls.
+ */
+export function AgentDetail({ id }: { readonly id: string }) {
+  const titleId = useId();
   const agent = useAgent(id);
   const station = useStationView();
   const remove = useDeleteAgent();
@@ -252,27 +382,30 @@ export function AgentPage() {
   const a = agent.data;
 
   return (
-    <section aria-labelledby="screen-title" className="flex flex-col gap-3.5">
-      <header className="flex flex-wrap items-center justify-between gap-3">
+    <section
+      aria-labelledby={titleId}
+      data-agent-detail={a.id}
+      className="flex flex-col gap-3.5 desktop:min-h-0 desktop:flex-1"
+    >
+      <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Link
-            to="/crew-select"
-            aria-label={term("tab.crewSelect")}
-            title={term("tab.crewSelect")}
-            className="flex border-2 border-cyan bg-tile p-1 hover:bg-tile-hover"
-          >
-            <Sprite look={lookFor(a.id, a.config.look)} scale={4} />
-          </Link>
+          <span className="flex border-2 border-cyan bg-tile p-1">
+            <Sprite look={lookFor(a.id, a.config.look)} scale={2} />
+          </span>
           <div className="flex flex-col gap-1.5">
-            <Link to="/crew" className="font-display text-d7 uppercase">
-              ◀ {term("agents")}
-            </Link>
-            <h1
-              id="screen-title"
+            <h2
+              id={titleId}
               className="m-0 font-display font-normal text-d14 text-title uppercase tracking-st-2"
             >
               {a.config.name}
-            </h1>
+            </h2>
+            <span className="text-b17 text-fg-soft uppercase" data-room-line>
+              {termWith("crewPage.roomLine", {
+                room:
+                  station.data.station.rooms.find((r) => r.id === a.config.roomId)?.name ??
+                  a.config.roomId,
+              })}
+            </span>
           </div>
         </div>
         <button
@@ -289,34 +422,46 @@ export function AgentPage() {
         </button>
       </header>
       <ErrorNote error={remove.error} />
-      <ConfigForm key={a.id} agent={a} station={station.data.station} />
-      <section aria-labelledby="tools-title" className={panel}>
-        <h2 id="tools-title" className={`m-0 font-normal ${label}`}>
-          {term("tools.effective")}
-        </h2>
-        {pendingConnectors(a, station.data.station).map((name) => (
-          <p key={name} className="m-0 text-b17 text-amber" data-connector-pending>
-            {name} {term("tools.connector.pending")}
-          </p>
-        ))}
-        {a.tools.length === 0 ? (
-          <p className="m-0 text-b17 text-fg-mute">{term("tools.none")}</p>
-        ) : (
-          <ul className="m-0 flex list-none flex-col gap-1 p-0 text-b17 text-fg">
-            {a.tools.map((t) => (
-              <li key={t.name} data-tool={t.name} data-class={t.class}>
-                {t.name} · {term(`grant.${t.class}`)} · {sourceLabel(t)}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-      <SchedulesSection agentId={a.id} />
-      <section aria-label="Documents" className={panel}>
-        {AGENT_DOCUMENTS.map((name) => (
-          <DocumentEditor key={name} agentId={a.id} name={name} saved={a.documents[name]} />
-        ))}
-      </section>
+      <ScrollArea>
+        <AppearanceRow key={a.id} agentId={a.id} />
+        <ConfigForm key={a.id} agent={a} station={station.data.station} />
+        <section aria-labelledby="tools-title" className={panel}>
+          <h2 id="tools-title" className={`m-0 font-normal ${label}`}>
+            {term("tools.effective")}
+          </h2>
+          {pendingConnectors(a, station.data.station).map((name) => (
+            <p key={name} className="m-0 text-b17 text-amber" data-connector-pending>
+              {name} {term("tools.connector.pending")}
+            </p>
+          ))}
+          {a.tools.length === 0 ? (
+            <p className="m-0 text-b17 text-fg-mute">{term("tools.none")}</p>
+          ) : (
+            <ul className="m-0 flex list-none flex-col gap-1 p-0 text-b17 text-fg">
+              {a.tools
+                .filter((t) => t.source.kind !== "connector")
+                .map((t) => (
+                  <li key={t.name} data-tool={t.name} data-class={t.class}>
+                    {t.name} · {term(`grant.${t.class}`)} · {sourceLabel(t)}
+                  </li>
+                ))}
+              {connectorGroups(a.tools).map((g) => (
+                <ConnectorTools
+                  key={g.id}
+                  name={station.data.station?.connectors.find((c) => c.id === g.id)?.name ?? g.id}
+                  tools={g.tools}
+                />
+              ))}
+            </ul>
+          )}
+        </section>
+        <SchedulesSection agentId={a.id} />
+        <section aria-label="Documents" className={panel}>
+          {AGENT_DOCUMENTS.map((name) => (
+            <DocumentEditor key={name} agentId={a.id} name={name} saved={a.documents[name]} />
+          ))}
+        </section>
+      </ScrollArea>
     </section>
   );
 }

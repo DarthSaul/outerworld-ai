@@ -9,22 +9,95 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+const nav = () => screen.findByRole("navigation", { name: term("crewPage.nav") });
+const main = (container: HTMLElement) => container.querySelector("[data-crew-main]") as HTMLElement;
+
 describe("Crew screen", () => {
-  it("lists every room with its crew, the Overseer marked and Full power flagged", async () => {
-    renderApp("/crew");
+  it("is one panel: a sidenav of crew (Crew first, the default) beside the main panel", async () => {
+    const { container } = renderApp("/crew");
+    const side = await nav();
+    const panel = screen.getByRole("region", { name: term("crewPage.rooms") });
+    expect(screen.getByRole("heading", { level: 1, name: term("crewPage.rooms") })).toBeVisible();
+    expect(panel.contains(side)).toBe(true);
+    expect(panel.contains(main(container))).toBe(true);
+    const view = within(side).getByRole("group", { name: term("crewPage.view") });
+    const [crew, rooms] = within(view).getAllByRole("button") as HTMLElement[];
+    expect(crew).toHaveTextContent(term("agents"));
+    expect(rooms).toHaveTextContent(term("rooms"));
+    expect(crew).toHaveAttribute("aria-pressed", "true");
+    // Nothing chosen yet: the main panel says what to do.
+    expect(within(main(container)).getByText(term("crewPage.pickAgent.title"))).toBeVisible();
+  });
+
+  it("lists each crew member with their room, then model, tags, and spend on a line beneath", async () => {
+    const fake = fakeApi();
+    fake.spend.agents = { quill: 0.0042 };
+    const { container } = renderApp("/crew", fake);
+    const side = await nav();
+    const list = side.querySelector('[data-listing="agents"]') as HTMLElement;
+    const items = within(list).getAllByRole("listitem");
+    expect(items.map((c) => c.getAttribute("data-agent"))).toEqual(["vesper", "quill"]);
+    const quill = items[1] as HTMLElement;
+    const link = within(quill).getByRole("link");
+    expect(link).toHaveAttribute("href", "/crew/quill");
+    const [top, meta] = Array.from(link.children) as HTMLElement[];
+    expect(top).toHaveTextContent("Quill");
+    expect(top).toHaveTextContent("Operations");
+    expect(meta).toHaveTextContent("anthropic/claude-sonnet-5.5");
+    expect(meta?.querySelector('[data-flag="full-power"]')).toHaveTextContent(
+      term("approvalMode.full"),
+    );
+    expect(meta?.querySelector("[data-agent-spend]")).toHaveTextContent("$0.0042");
+    expect(within(items[0] as HTMLElement).getByText(term("overseer.role"))).toBeInTheDocument();
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it("opens a crew member's setup in the main panel, marking them in the list", async () => {
+    const user = userEvent.setup();
+    const { container } = renderApp("/crew");
+    const side = await nav();
+    await user.click(within(side).getByRole("link", { name: /Quill/ }));
+    expect(await screen.findByRole("heading", { level: 2, name: "Quill" })).toBeInTheDocument();
+    expect(main(container).querySelector('[data-agent-detail="quill"]')).not.toBeNull();
+    expect(within(side).getByRole("link", { name: /Quill/ })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(
+      within(main(container)).getByRole("region", { name: term("tools.effective") }),
+    ).toBeTruthy();
+  });
+
+  it("switches to rooms, and opens a room's props and crew in the main panel", async () => {
+    const user = userEvent.setup();
+    const { container } = renderApp("/crew");
+    const side = await nav();
+    await user.click(within(side).getByRole("button", { name: term("rooms") }));
+    const list = await waitFor(() => {
+      const el = side.querySelector('[data-listing="rooms"]');
+      if (!el) throw new Error("no rooms yet");
+      return el as HTMLElement;
+    });
+    expect(
+      within(list)
+        .getAllByRole("listitem")
+        .map((i) => i.dataset.roomItem),
+    ).toEqual(["command", "operations"]);
+    expect(within(main(container)).getByText(term("crewPage.pickRoom.title"))).toBeVisible();
+    await user.click(within(list).getByRole("link", { name: /Command/ }));
     const command = await screen.findByRole("region", { name: "Command" });
     expect(within(command).getByRole("link", { name: "Vesper" })).toBeInTheDocument();
     expect(within(command).getByText(term("overseer.role"))).toBeInTheDocument();
-    const ops = screen.getByRole("region", { name: "Operations" });
-    const quill = ops.querySelector('[data-agent="quill"]');
-    expect(quill?.querySelector('[data-flag="full-power"]')).toHaveTextContent(
+    await user.click(within(list).getByRole("link", { name: /Operations/ }));
+    const ops = await screen.findByRole("region", { name: "Operations" });
+    expect(ops.querySelector('[data-agent="quill"] [data-flag="full-power"]')).toHaveTextContent(
       term("approvalMode.full"),
     );
   });
 
-  it("shows each room's props as toggles and places a prop with one click", async () => {
+  it("shows a room's props as toggles and places a prop with one click", async () => {
     const user = userEvent.setup();
-    const { calls } = renderApp("/crew");
+    const { calls } = renderApp("/crew?listing=rooms&room=operations");
     const ops = await screen.findByRole("region", { name: "Operations" });
     const web = within(ops).getByRole("checkbox", { name: term("prop.web") });
     expect(web).not.toBeChecked();
@@ -38,15 +111,27 @@ describe("Crew screen", () => {
   });
 
   it("will not delete a room that still has crew", async () => {
-    renderApp("/crew");
+    renderApp("/crew?listing=rooms&room=operations");
     const ops = await screen.findByRole("region", { name: "Operations" });
     expect(within(ops).getByRole("button", { name: /Delete/ })).toBeDisabled();
   });
 
-  it("adds a crew member and opens its editor", async () => {
+  it("adds a crew member from the top of the crew list, then opens their setup", async () => {
     const user = userEvent.setup();
-    const { calls } = renderApp("/crew");
-    const form = await screen.findByRole("form", { name: term("agent.verb") });
+    const { calls, container } = renderApp("/crew");
+    const side = await nav();
+    const add = within(side).getByRole("link", { name: `+ ${term("agent.verb")}` });
+    const list = side.querySelector('[data-listing="agents"]');
+    expect(
+      add.compareDocumentPosition(list as Node) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    await user.click(add);
+    const form = await within(main(container)).findByRole("form", { name: term("agent.verb") });
+    const panel = within(main(container)).getByRole("region", { name: term("agent.verb") });
+    expect(within(panel).getByText(term("agent.add.hint"))).toBeInTheDocument();
+    expect(
+      within(panel).getByRole("button", { name: term("template.projectManager") }),
+    ).toBeInTheDocument();
     await user.type(within(form).getByLabelText("Name"), "Scout");
     await user.selectOptions(within(form).getByLabelText(term("room")), "operations");
     await user.click(within(form).getByRole("button", { name: term("agent.verb") }));
@@ -55,53 +140,35 @@ describe("Crew screen", () => {
       path: "/agents",
       body: { name: "Scout", roomId: "operations" },
     });
-    expect(await screen.findByRole("heading", { level: 1, name: "Scout" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 2, name: "Scout" })).toBeInTheDocument();
   });
 
-  it("titles each add panel and says what it is for", async () => {
-    renderApp("/crew");
-    const crew = await screen.findByRole("region", { name: term("agent.verb") });
-    expect(within(crew).getByText(term("agent.add.hint"))).toBeInTheDocument();
-    expect(
-      within(crew).getByRole("button", { name: term("template.projectManager") }),
-    ).toBeInTheDocument();
-    const room = screen.getByRole("region", { name: term("room.verb") });
-    expect(within(room).getByText(term("room.add.hint"))).toBeInTheDocument();
-    expect(within(room).getByLabelText(term("room.name"))).toBeInTheDocument();
-  });
-
-  it("puts the add panels first, then the rooms below a divider", async () => {
-    renderApp("/crew");
-    const add = await screen.findByRole("region", { name: term("crewPage.add") });
-    const rooms = screen.getByRole("region", { name: term("crewPage.rooms") });
-    expect(screen.getByRole("heading", { level: 1, name: term("agents") })).toBeInTheDocument();
-    expect(within(add).getByRole("heading", { level: 3, name: term("agent.verb") })).toBeVisible();
-    expect(within(add).getByRole("heading", { level: 3, name: term("room.verb") })).toBeVisible();
-    expect(within(rooms).getByRole("heading", { name: "Command" })).toBeInTheDocument();
-    expect(add.compareDocumentPosition(rooms) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(add.nextElementSibling).toBe(screen.getByRole("separator"));
-  });
-
-  it("adds a room", async () => {
+  it("adds a room from the top of the rooms list, then opens it", async () => {
     const user = userEvent.setup();
-    const { calls } = renderApp("/crew");
-    const form = await screen.findByRole("form", { name: term("room.verb") });
-    await user.type(within(form).getByRole("textbox"), "Research");
+    const { calls, container } = renderApp("/crew?listing=rooms");
+    const side = await nav();
+    await user.click(within(side).getByRole("link", { name: `+ ${term("room.verb")}` }));
+    const panel = await within(main(container)).findByRole("region", { name: term("room.verb") });
+    expect(within(panel).getByText(term("room.add.hint"))).toBeInTheDocument();
+    const form = within(panel).getByRole("form", { name: term("room.verb") });
+    await user.type(within(form).getByLabelText(term("room.name")), "Hangar");
     await user.click(within(form).getByRole("button"));
-    expect(calls.at(-1)).toEqual({ method: "POST", path: "/rooms", body: { name: "Research" } });
+    expect(calls).toContainEqual({ method: "POST", path: "/rooms", body: { name: "Hangar" } });
+    expect(await screen.findByRole("region", { name: "Hangar" })).toBeInTheDocument();
   });
 
   it("updates live when another tab changes the station (event, then refetch)", async () => {
     const { state, emit } = renderApp("/crew");
-    await screen.findByRole("region", { name: "Command" });
+    const side = await nav();
+    await within(side).findByRole("link", { name: /Vesper/ });
     const vesper = state.agents.get("vesper");
     if (vesper) vesper.config = { ...vesper.config, name: "Vesper Prime" };
     emit({ type: "agent.updated", agentId: "vesper", payload: { change: "updated" } });
-    expect(await screen.findByRole("link", { name: "Vesper Prime" })).toBeInTheDocument();
+    expect(await within(side).findByRole("link", { name: /Vesper Prime/ })).toBeInTheDocument();
   });
 
-  it("has no axe violations", async () => {
-    const { container } = renderApp("/crew");
+  it("has no axe violations with a room open", async () => {
+    const { container } = renderApp("/crew?listing=rooms&room=command");
     await screen.findByRole("region", { name: "Command" });
     expect(await axe(container)).toHaveNoViolations();
   });
@@ -140,6 +207,37 @@ describe("Agent editor", () => {
     expect(within(tools).getByText(/^Notion/)).toHaveTextContent(
       `Notion ${term("tools.connector.pending")}`,
     );
+  });
+
+  it("sums up a granted connector in one line, full access, with its tools behind a toggle", async () => {
+    const user = userEvent.setup();
+    const fake = fakeApi();
+    const quill = fake.state.agents.get("quill");
+    if (quill) quill.config = { ...quill.config, connectorGrants: ["notion"] };
+    fake.toolCatalog.notion = Array.from({ length: 30 }, (_, i) => ({
+      name: `notion-tool-${i}`,
+      class: i < 10 ? ("write" as const) : ("read" as const),
+    }));
+    renderApp("/crew/quill", fake);
+    const tools = await screen.findByRole("region", { name: term("tools.effective") });
+    const line = await waitFor(() => {
+      const el = tools.querySelector('[data-connector-tools="Notion"]');
+      if (!el) throw new Error("no connector line yet");
+      return el as HTMLElement;
+    });
+    expect(line).toHaveTextContent(
+      `${term("connector")}: Notion ${term("tools.connector.full")} · 30 tools · 20 read, 10 write`,
+    );
+    // The thirty tools are not spelled out in the panel until asked for, then in a bounded box.
+    const toggle = within(line).getByText(term("tools.connector.show"));
+    const details = toggle.closest("details") as HTMLDetailsElement;
+    expect(details.open).toBe(false);
+    await user.click(toggle);
+    expect(details.open).toBe(true);
+    const list = within(details).getByRole("list");
+    expect(within(list).getAllByRole("listitem")).toHaveLength(30);
+    expect(list.className).toMatch(/max-h-/);
+    expect(list.className).toMatch(/overflow-y-auto/);
   });
 
   it("says plainly when a crew member has no tools", async () => {
@@ -226,9 +324,8 @@ describe("Agent editor", () => {
     const { calls } = renderApp("/crew/quill");
     await user.click(await screen.findByRole("button", { name: "Delete" }));
     expect(calls.some((c) => c.method === "DELETE" && c.path === "/agents/quill")).toBe(true);
-    expect(
-      await screen.findByRole("heading", { level: 1, name: term("agents") }),
-    ).toBeInTheDocument();
+    // Back to the crew screen with nobody chosen.
+    expect(await screen.findByText(term("crewPage.pickAgent.title"))).toBeInTheDocument();
   });
 
   it("deletes nothing when the confirmation is cancelled", async () => {
