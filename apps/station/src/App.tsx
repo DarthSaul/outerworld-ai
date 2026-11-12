@@ -41,7 +41,6 @@ export const SCREENS: ReadonlyArray<{ path: string; label: GlossaryKey }> = [
   { path: "/crew", label: "agents" },
   { path: "/memory", label: "memory" },
   { path: "/notifications", label: "notifications" },
-  { path: "/settings", label: "settings" },
 ];
 
 /** The unread count beside Notifications; read aloud as "N unread". */
@@ -148,6 +147,11 @@ function Chrome({ children }: { readonly children: ReactNode }) {
           ? { capUsd: config.budgets.stationDailyUsd }
           : {})}
         {...(health.data ? { startedAt: health.data.startedAt } : {})}
+        start={
+          <NavLink to="/settings" className={({ isActive }) => tabClass(isActive, "map")}>
+            {term("settings")}
+          </NavLink>
+        }
         controls={
           <StopButton
             stopped={engaged}

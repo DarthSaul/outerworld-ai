@@ -47,6 +47,20 @@ const renderAt = (path: string, conn = fakeConnection()) => {
 };
 
 describe("App shell", () => {
+  it("links Settings from the footer, where the vitals title was, and not from the header", async () => {
+    renderApp("/");
+    const footer = await screen.findByRole("contentinfo");
+    const settings = within(footer).getByRole("link", { name: term("settings") });
+    expect(settings).toHaveAttribute("href", "/settings");
+    expect(footer).not.toHaveTextContent(/budget · tokens · uptime/i);
+    // The vitals keep their name for screen readers only.
+    expect(within(footer).getByRole("heading", { name: term("vitals.title") })).toHaveClass(
+      "sr-only",
+    );
+    const nav = screen.getByRole("navigation", { name: "Primary" });
+    expect(within(nav).queryByRole("link", { name: term("settings") })).toBeNull();
+  });
+
   it("fits the viewport on desktop: header and footer stay, screens scroll inside", async () => {
     const { container } = renderApp("/crew/vesper");
     await screen.findByRole("heading", { level: 2, name: "Vesper" });

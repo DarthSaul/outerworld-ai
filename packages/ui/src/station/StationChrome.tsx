@@ -212,6 +212,8 @@ export interface StationVitalsProps {
   readonly startedAt?: string;
   /** Right end, after the vitals: the kill switch (ADR-0014). */
   readonly controls?: ReactNode;
+  /** Left end: the app's own links (Settings). */
+  readonly start?: ReactNode;
 }
 
 const usd = (n: number) => `$${n.toFixed(2)}`;
@@ -223,6 +225,7 @@ export function StationVitals({
   capUsd,
   startedAt,
   controls,
+  start,
 }: StationVitalsProps) {
   const uptime = useUptime(startedAt);
   const spent = spendUsd ?? 0;
@@ -233,14 +236,9 @@ export function StationVitals({
   return (
     <footer className="border-line border-t-3 bg-bar px-3.5 py-1.5 shadow-bar-up">
       <div className="mx-auto flex w-full max-w-app flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <div className="flex flex-col gap-0.5">
-          <h2 className="m-0 font-display font-normal text-d8 text-title uppercase tracking-st-2">
-            {term("vitals.title")}
-          </h2>
-          <div className="text-b15 text-subtitle uppercase tracking-st-1">
-            {term("vitals.subtitle")}
-          </div>
-        </div>
+        {/* The vitals keep their name for screen readers; the left end holds the app's links. */}
+        <h2 className="sr-only">{term("vitals.title")}</h2>
+        <div className="flex items-center gap-1.5">{start}</div>
         <div className="flex flex-wrap items-stretch justify-end gap-1.5">
           <StatBox
             size="compact"
