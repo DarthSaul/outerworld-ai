@@ -529,19 +529,18 @@ export function Scanner(props: ScannerProps) {
             title={term(collapsed ? "scanner.expand" : "scanner.collapse")}
             onClick={onToggleCollapsed}
             data-caret
-            className="inline-flex size-6 cursor-pointer items-center justify-center border-2 border-transparent bg-transparent p-0 text-cyan hover:border-line-soft hover:text-fg-hi focus-visible:border-cyan"
+            className="inline-flex size-5 cursor-pointer items-center justify-center border-2 border-transparent bg-transparent p-0 text-cyan hover:border-line-soft hover:text-fg-hi focus-visible:border-cyan"
           >
             {/* A pixel triangle: down while open, turned to point right while folded. */}
             <svg
               aria-hidden="true"
-              viewBox="0 0 7 4"
+              viewBox="0 0 5 3"
               shapeRendering="crispEdges"
-              className={`h-2 w-3.5 fill-current ${collapsed ? "-rotate-90" : ""}`}
+              className={`h-1.5 w-2.5 fill-current ${collapsed ? "-rotate-90" : ""}`}
             >
-              <rect x="0" y="0" width="7" height="1" />
-              <rect x="1" y="1" width="5" height="1" />
-              <rect x="2" y="2" width="3" height="1" />
-              <rect x="3" y="3" width="1" height="1" />
+              <rect x="0" y="0" width="5" height="1" />
+              <rect x="1" y="1" width="3" height="1" />
+              <rect x="2" y="2" width="1" height="1" />
             </svg>
           </button>
         ) : undefined
