@@ -109,7 +109,7 @@ export function oauthCallback(connectors: ConnectorManager): Hono {
     if (!code || !state)
       return c.html(page("Sign-in failed", "The response had no code or state."), 400);
     try {
-      const result = await connectors.finishAuth(id, code, state);
+      const result = await connectors.finishAuth(id, code, state, c.req.query("iss"));
       if (result.status !== "connected") {
         return c.html(
           page(

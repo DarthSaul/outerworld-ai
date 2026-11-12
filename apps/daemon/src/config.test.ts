@@ -9,7 +9,7 @@ describe("resolveConfig", () => {
       home: "/Users/c/.outerworld",
       port: 4317,
       host: "127.0.0.1",
-      modelMode: "openrouter",
+      modelMode: "live",
       spaDir: "/repo/apps/station/dist",
     });
   });
@@ -46,8 +46,9 @@ describe("resolveConfig", () => {
     }
   });
 
-  it("only accepts openrouter or fake as the model mode", () => {
+  it("only accepts live or fake as the model mode, reading the older openrouter as live", () => {
     expect(() => resolveConfig({ OUTERWORLD_MODEL: "gpt" }, base)).toThrow(/OUTERWORLD_MODEL/);
+    expect(resolveConfig({ OUTERWORLD_MODEL: "openrouter" }, base).modelMode).toBe("live");
   });
 
   it("keeps secrets in memory only when asked, and accepts nothing else", () => {
