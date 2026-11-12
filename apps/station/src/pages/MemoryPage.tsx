@@ -3,6 +3,7 @@ import { EmptyState, OutlineButton, Panel, tabClass } from "@darthsaul/outerworl
 import { useState } from "react";
 import { useSearchParams } from "react-router";
 import { ErrorNote } from "../components/ErrorNote.js";
+import { ScrollArea } from "../components/ScrollArea.js";
 import {
   type MemoryItem,
   useDecideMemory,
@@ -121,69 +122,74 @@ export function MemoryPage() {
   const beliefs = memories.data?.beliefs ?? [];
 
   return (
-    <section aria-labelledby="screen-title" className="flex flex-col gap-3.5">
+    <section
+      aria-labelledby="screen-title"
+      className="flex flex-col gap-3.5 desktop:min-h-0 desktop:flex-1"
+    >
       <h1
         id="screen-title"
         className="m-0 font-display font-normal text-d14 text-title uppercase tracking-st-2"
       >
         {term("memory")}
       </h1>
-      <nav aria-label={term("agents")}>
-        <ul className="m-0 flex list-none flex-wrap gap-1.5 p-0">
-          {station.data?.agents.map((a) => (
-            <li key={a.id}>
-              <button
-                type="button"
-                aria-pressed={a.id === agentId}
-                className={tabClass(a.id === agentId)}
-                onClick={() => setParams({ agent: a.id })}
-              >
-                {a.config.name}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </nav>
-      <ErrorNote error={station.error ?? memories.error} />
-      {agentId === undefined ? (
-        <p className="m-0 text-b19 text-fg-soft">{term("memory.pick")}</p>
-      ) : memories.isSuccess ? (
-        <>
-          <Panel title={term("memory.proposals")}>
-            <div className="flex flex-col gap-2 p-3">
-              {proposals.length === 0 ? (
-                <EmptyState
-                  title={term("memory.none.proposals.title")}
-                  body={term("memory.none.proposals.body")}
-                />
-              ) : (
-                <ul className="m-0 flex list-none flex-col gap-2 p-0">
-                  {proposals.map((m) => (
-                    <Proposal key={m.id} memory={m} />
-                  ))}
-                </ul>
-              )}
-            </div>
-          </Panel>
-          <Panel title={term("memory.beliefs")}>
-            <div className="flex flex-col gap-2 p-3">
-              <p className="m-0 text-b17 text-fg-soft">{term("memory.hint")}</p>
-              {beliefs.length === 0 ? (
-                <EmptyState
-                  title={term("memory.none.beliefs.title")}
-                  body={term("memory.none.beliefs.body")}
-                />
-              ) : (
-                <ul className="m-0 flex list-none flex-col gap-2 p-0">
-                  {beliefs.map((m) => (
-                    <Belief key={m.id} memory={m} />
-                  ))}
-                </ul>
-              )}
-            </div>
-          </Panel>
-        </>
-      ) : null}
+      <ScrollArea>
+        <nav aria-label={term("agents")}>
+          <ul className="m-0 flex list-none flex-wrap gap-1.5 p-0">
+            {station.data?.agents.map((a) => (
+              <li key={a.id}>
+                <button
+                  type="button"
+                  aria-pressed={a.id === agentId}
+                  className={tabClass(a.id === agentId)}
+                  onClick={() => setParams({ agent: a.id })}
+                >
+                  {a.config.name}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </nav>
+        <ErrorNote error={station.error ?? memories.error} />
+        {agentId === undefined ? (
+          <p className="m-0 text-b19 text-fg-soft">{term("memory.pick")}</p>
+        ) : memories.isSuccess ? (
+          <>
+            <Panel title={term("memory.proposals")}>
+              <div className="flex flex-col gap-2 p-3">
+                {proposals.length === 0 ? (
+                  <EmptyState
+                    title={term("memory.none.proposals.title")}
+                    body={term("memory.none.proposals.body")}
+                  />
+                ) : (
+                  <ul className="m-0 flex list-none flex-col gap-2 p-0">
+                    {proposals.map((m) => (
+                      <Proposal key={m.id} memory={m} />
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </Panel>
+            <Panel title={term("memory.beliefs")}>
+              <div className="flex flex-col gap-2 p-3">
+                <p className="m-0 text-b17 text-fg-soft">{term("memory.hint")}</p>
+                {beliefs.length === 0 ? (
+                  <EmptyState
+                    title={term("memory.none.beliefs.title")}
+                    body={term("memory.none.beliefs.body")}
+                  />
+                ) : (
+                  <ul className="m-0 flex list-none flex-col gap-2 p-0">
+                    {beliefs.map((m) => (
+                      <Belief key={m.id} memory={m} />
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </Panel>
+          </>
+        ) : null}
+      </ScrollArea>
     </section>
   );
 }

@@ -1,6 +1,6 @@
 import { type RuntimeEvent, term } from "@darthsaul/outerworld-ai-core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { describe, expect, it } from "vitest";
@@ -47,14 +47,30 @@ const renderAt = (path: string, conn = fakeConnection()) => {
 };
 
 describe("App shell", () => {
+  it("fits the viewport on desktop: header and footer stay, screens scroll inside", async () => {
+    const { container } = renderApp("/crew/vesper");
+    await screen.findByRole("heading", { level: 2, name: "Vesper" });
+    const main = container.querySelector("main") as HTMLElement;
+    const shell = main.parentElement as HTMLElement;
+    expect(shell.className).toMatch(/desktop:h-dvh/);
+    expect(shell.className).toMatch(/desktop:overflow-hidden/);
+    expect(main.className).toMatch(/desktop:overflow-hidden/);
+    // The page itself holds still; its body is an interior window that scrolls.
+    const area = main.querySelector("[data-scroll-area]") as HTMLElement;
+    expect(area.className).toMatch(/desktop:overflow-y-auto/);
+    expect(within(area).getByRole("region", { name: term("crewSelect.appearance") })).toBeTruthy();
+    expect(area.contains(screen.getByRole("heading", { level: 2, name: "Vesper" }))).toBe(false);
+  });
+
   it("links every v1 screen by its glossary name and marks the current one", () => {
     renderAt("/");
     const nav = screen.getByRole("navigation", { name: "Primary" });
     const links = within(nav).getAllByRole("link");
     expect(links.map((l) => l.textContent)).toEqual(SCREENS.map((s) => term(s.label)));
     const labels = SCREENS.map((s) => s.label);
-    expect(labels.indexOf("tab.crewSelect")).toBe(labels.indexOf("agents") + 1);
-    expect(labels.indexOf("memory")).toBe(labels.indexOf("tab.crewSelect") + 1);
+    // Appearance moved onto each crew member's page (ADR-0017): no tab of its own.
+    expect(labels).not.toContain("tab.crewSelect");
+    expect(labels.indexOf("memory")).toBe(labels.indexOf("agents") + 1);
     expect(within(nav).getByRole("link", { name: term("tab.station") })).toHaveAttribute(
       "aria-current",
       "page",
