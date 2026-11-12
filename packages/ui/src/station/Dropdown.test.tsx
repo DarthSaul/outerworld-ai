@@ -167,6 +167,11 @@ describe("Dropdown", () => {
       ]),
     );
     expect(screen.getByRole("option", { name: /^Quill/ })).toHaveFocus();
+    // Arrows move from the focused option, not from a stale index.
+    await user.keyboard("{ArrowDown}");
+    expect(screen.getByRole("option", { name: /^Quartz/ })).toHaveFocus();
+    await user.keyboard("{ArrowUp}");
+    expect(screen.getByRole("option", { name: /^Quill/ })).toHaveFocus();
     await user.keyboard("{Enter}");
     expect(onChange).toHaveBeenCalledWith("quill");
   });

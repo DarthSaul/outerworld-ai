@@ -111,10 +111,16 @@ export function Dropdown({
   /** `focused` is the option the key came from, which is what Enter and Space choose. */
   const onOptionKey = (e: KeyboardEvent<HTMLDivElement>, focused: number) => {
     const last = options.length - 1;
-    if (e.key === "ArrowDown") setActive((a) => Math.min(last, a + 1));
-    else if (e.key === "ArrowUp") setActive((a) => Math.max(0, a - 1));
-    else if (e.key === "Home") setActive(0);
-    else if (e.key === "End") setActive(last);
+    // From the focused option, not `active`: the list may have changed under it. Focus moves
+    // directly, since `active` may already hold the destination and not re-run the effect.
+    const move = (to: number) => {
+      setActive(to);
+      items.current[to]?.focus();
+    };
+    if (e.key === "ArrowDown") move(Math.min(last, focused + 1));
+    else if (e.key === "ArrowUp") move(Math.max(0, focused - 1));
+    else if (e.key === "Home") move(0);
+    else if (e.key === "End") move(last);
     else if (e.key === "Enter" || e.key === " ") choose(focused);
     else if (e.key === "Escape") close(true);
     else if (e.key === "Tab") {
@@ -125,7 +131,7 @@ export function Dropdown({
       const letter = e.key.toLowerCase();
       const order = [...options.slice(focused + 1), ...options.slice(0, focused + 1)];
       const next = order.find((o) => o.text.toLowerCase().startsWith(letter));
-      if (next) setActive(options.indexOf(next));
+      if (next) move(options.indexOf(next));
     } else return;
     e.preventDefault();
   };
