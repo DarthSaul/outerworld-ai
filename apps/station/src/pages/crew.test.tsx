@@ -20,7 +20,11 @@ describe("Crew screen", () => {
     expect(screen.getByRole("heading", { level: 1, name: term("crewPage.rooms") })).toBeVisible();
     expect(panel.contains(side)).toBe(true);
     expect(panel.contains(main(container))).toBe(true);
-    const view = within(side).getByRole("group", { name: term("crewPage.view") });
+    // The Crew / Rooms toggle sits in the title strip with the screen title, not in the sidenav.
+    const view = within(panel).getByRole("group", { name: term("crewPage.view") });
+    expect(side.contains(view)).toBe(false);
+    const title = screen.getByRole("heading", { level: 1, name: term("crewPage.rooms") });
+    expect(title.parentElement).toBe(view.parentElement);
     const [crew, rooms] = within(view).getAllByRole("button") as HTMLElement[];
     expect(crew).toHaveTextContent(term("agents"));
     expect(rooms).toHaveTextContent(term("rooms"));
@@ -29,7 +33,7 @@ describe("Crew screen", () => {
     expect(within(main(container)).getByText(term("crewPage.pickAgent.title"))).toBeVisible();
   });
 
-  it("lists each crew member with their room, then model, tags, and spend on a line beneath", async () => {
+  it("lists each crew member: name and tags, then room; model on the left and spend on the right", async () => {
     const fake = fakeApi();
     fake.spend.agents = { quill: 0.0042 };
     const { container } = renderApp("/crew", fake);
@@ -43,11 +47,15 @@ describe("Crew screen", () => {
     const [top, meta] = Array.from(link.children) as HTMLElement[];
     expect(top).toHaveTextContent("Quill");
     expect(top).toHaveTextContent("Operations");
-    expect(meta).toHaveTextContent("anthropic/claude-sonnet-5.5");
-    expect(meta?.querySelector('[data-flag="full-power"]')).toHaveTextContent(
-      term("approvalMode.full"),
-    );
-    expect(meta?.querySelector("[data-agent-spend]")).toHaveTextContent("$0.0042");
+    // The tag shares the name's row.
+    const flag = top?.querySelector('[data-flag="full-power"]') as HTMLElement;
+    expect(flag).toHaveTextContent(term("approvalMode.full"));
+    expect(flag.parentElement).toHaveTextContent(/^Quill/);
+    // Model first (left), spend last (right), spread apart.
+    expect(meta?.firstElementChild).toHaveTextContent("anthropic/claude-sonnet-5.5");
+    expect(meta?.lastElementChild).toHaveAttribute("data-agent-spend");
+    expect(meta?.lastElementChild).toHaveTextContent("$0.0042");
+    expect(meta?.className).toMatch(/justify-between/);
     expect(within(items[0] as HTMLElement).getByText(term("overseer.role"))).toBeInTheDocument();
     expect(await axe(container)).toHaveNoViolations();
   });
@@ -72,7 +80,7 @@ describe("Crew screen", () => {
     const user = userEvent.setup();
     const { container } = renderApp("/crew");
     const side = await nav();
-    await user.click(within(side).getByRole("button", { name: term("rooms") }));
+    await user.click(screen.getByRole("button", { name: term("rooms") }));
     const list = await waitFor(() => {
       const el = side.querySelector('[data-listing="rooms"]');
       if (!el) throw new Error("no rooms yet");

@@ -71,7 +71,20 @@ function CrewItem({
         <span className="flex min-w-0 items-center gap-2">
           <Sprite look={lookFor(row.id, row.look)} />
           <span className="flex min-w-0 flex-1 flex-col">
-            <span className="truncate text-b19 text-fg-chip uppercase">{row.name}</span>
+            {/* The name with its tags on one row. */}
+            <span className="flex min-w-0 items-center gap-1.5">
+              <span className="min-w-0 truncate text-b19 text-fg-chip uppercase">{row.name}</span>
+              {row.role === "overseer" ? (
+                <span className={`${chip} shrink-0 border-white text-white`}>
+                  {term("overseer.role")}
+                </span>
+              ) : null}
+              {row.approvalMode === "full" ? (
+                <span data-flag="full-power" className={`${chip} shrink-0 border-amber text-amber`}>
+                  {term("approvalMode.full")}
+                </span>
+              ) : null}
+            </span>
             <span className="flex min-w-0 items-center gap-1.5 text-b15 uppercase">
               <span aria-hidden="true" className="size-2 shrink-0" style={{ background: color }} />
               <span className="truncate" style={{ color }}>
@@ -80,20 +93,13 @@ function CrewItem({
             </span>
           </span>
         </span>
-        <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-b15 text-fg-soft">
+        {/* The model on the left, today's spend on the right. */}
+        <span className="flex min-w-0 items-center justify-between gap-2 text-b15 text-fg-soft">
           <span className="min-w-0 truncate" title={model}>
             {model}
           </span>
-          {row.role === "overseer" ? (
-            <span className={`${chip} border-white text-white`}>{term("overseer.role")}</span>
-          ) : null}
-          {row.approvalMode === "full" ? (
-            <span data-flag="full-power" className={`${chip} border-amber text-amber`}>
-              {term("approvalMode.full")}
-            </span>
-          ) : null}
           {spendUsd ? (
-            <span className="text-fg-mute" data-agent-spend>
+            <span className="shrink-0 text-fg-mute" data-agent-spend>
               {term("spend.today")} {formatUsd(spendUsd)}
             </span>
           ) : null}
@@ -483,36 +489,42 @@ export function CrewPage() {
       aria-labelledby="screen-title"
       className="flex min-h-0 flex-1 flex-col border-2 border-line bg-panel shadow-panel"
     >
-      <h1
-        id="screen-title"
-        className="m-0 border-line border-b-2 bg-panel-head px-2.5 py-2 font-display font-normal text-d9 text-panel-title uppercase tracking-st-1"
-      >
-        {term("crewPage.rooms")}
-      </h1>
+      {/* The title strip: the screen title on the left, the Crew / Rooms toggle on the right. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-line border-b-2 bg-panel-head px-2.5 py-1.5">
+        <h1
+          id="screen-title"
+          className="m-0 font-display font-normal text-d9 text-panel-title uppercase tracking-st-1"
+        >
+          {term("crewPage.rooms")}
+        </h1>
+        <fieldset className="m-0 flex gap-1.5 border-0 p-0">
+          <legend className="sr-only">{term("crewPage.view")}</legend>
+          {LISTINGS.map((v) => (
+            <button
+              key={v}
+              type="button"
+              aria-pressed={listing === v}
+              className={tabClass(listing === v, "map")}
+              onClick={() => void navigate(listLink(v))}
+            >
+              {term(v)}
+            </button>
+          ))}
+        </fieldset>
+      </div>
       <div className="flex flex-1 flex-col gap-3.5 p-3 desktop:min-h-0 desktop:flex-row">
         <nav
           aria-label={term("crewPage.nav")}
           className="flex shrink-0 flex-col gap-2 desktop:min-h-0 desktop:w-80"
         >
           <h2 className="sr-only">{term("crewPage.nav")}</h2>
-          <fieldset className="m-0 flex gap-1.5 border-0 p-0">
-            <legend className="sr-only">{term("crewPage.view")}</legend>
-            {LISTINGS.map((v) => (
-              <button
-                key={v}
-                type="button"
-                aria-pressed={listing === v}
-                className={tabClass(listing === v)}
-                onClick={() => void navigate(listLink(v))}
-              >
-                {term(v)}
-              </button>
-            ))}
-          </fieldset>
+          {/* mr-1 matches the list's pr-1 (room for its scrollbar), so both are the same width. */}
           <Link
             to={addLink}
             aria-current={addCurrent ? "page" : undefined}
-            className={`${tabClass(addCurrent)} text-center`}
+            className={`mr-1 block border-2 border-cyan px-2.25 py-2.5 text-center font-display text-d7 uppercase no-underline ${
+              addCurrent ? "bg-cyan text-ink" : "bg-transparent text-cyan hover:bg-btn-hover"
+            }`}
           >
             + {term(listing === "agents" ? "agent.verb" : "room.verb")}
           </Link>
