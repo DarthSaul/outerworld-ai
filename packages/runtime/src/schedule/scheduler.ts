@@ -1,4 +1,4 @@
-import type { AgentSchedule as Schedule } from "@darthsaul/outerworld-ai-core";
+import type { ModelSettings, AgentSchedule as Schedule } from "@darthsaul/outerworld-ai-core";
 import { Cron } from "croner";
 import { ConflictError, NotFoundError } from "../crew/crew-service.js";
 import type { RunService } from "../run/run-service.js";
@@ -47,6 +47,8 @@ export interface ScheduleView {
   readonly prompt: string;
   readonly enabled: boolean;
   readonly catchUp: boolean;
+  /** The job's own model choice (ADR-0016); absent means the crew member's. */
+  readonly modelSettings?: ModelSettings;
   readonly sessionId?: string;
   readonly nextRunAt?: string;
   /** Why it cannot run (a cron croner refuses). */
@@ -149,6 +151,7 @@ export class Scheduler {
         prompt: s.prompt,
         enabled: s.enabled,
         catchUp: s.catchUp,
+        ...(s.modelSettings ? { modelSettings: s.modelSettings } : {}),
         ...(sessionId ? { sessionId } : {}),
         ...(next ? { nextRunAt: next.toISOString() } : {}),
         ...(error ? { error } : {}),
@@ -270,6 +273,7 @@ export class Scheduler {
     try {
       const { runId } = await this.#o.runs.send(sessionId, schedule.prompt, {
         trigger: "schedule",
+        modelSettings: schedule.modelSettings,
       });
       const fire: ScheduleFire = {
         scheduledFor: scheduledFor.toISOString(),

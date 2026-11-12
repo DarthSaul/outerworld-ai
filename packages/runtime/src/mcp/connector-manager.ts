@@ -6,6 +6,7 @@ import {
 } from "@darthsaul/outerworld-ai-core";
 import {
   Client,
+  IssuerMismatchError,
   StreamableHTTPClientTransport,
   type Transport,
   UnauthorizedError,
@@ -227,21 +228,36 @@ export class ConnectorManager {
     }
   }
 
-  /** The OAuth callback: checks `state`, exchanges the code, and connects. */
+  /**
+   * The OAuth callback: checks `state`, exchanges the code, and connects. `iss` is the callback's
+   * issuer, which the SDK checks against the authorization server's (RFC 9207); a server that
+   * advertises it (Notion does) is refused without it.
+   */
   async finishAuth(
     id: string,
     code: string,
     state: string,
+    iss?: string,
   ): Promise<{ status: ConnectorStatus; detail?: string }> {
     const entry = this.#entry(id);
     if (!entry.provider.consumeState(state)) {
       throw new Error("the sign-in link has expired or its state does not match; start again");
     }
     const pending = entry.pending as
-      | (Transport & { finishAuth?: (code: string) => Promise<void> })
+      | (Transport & { finishAuth?: (code: string, iss?: string) => Promise<void> })
       | undefined;
     if (!pending?.finishAuth) throw new Error("no sign-in is in progress for this connector");
-    await pending.finishAuth(code);
+    try {
+      await pending.finishAuth(code, iss);
+    } catch (error) {
+      // The issuer received is attacker-controllable: never repeat it (the SDK's guidance).
+      if (error instanceof IssuerMismatchError) {
+        throw new Error(
+          "the sign-in response could not be verified as coming from the connector's server; start again",
+        );
+      }
+      throw error;
+    }
     entry.pending = undefined;
     const result = await this.connect(id);
     return { status: result.status, ...(result.detail ? { detail: result.detail } : {}) };

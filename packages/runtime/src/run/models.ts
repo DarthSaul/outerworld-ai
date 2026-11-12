@@ -1,32 +1,75 @@
-import { TITLE_INSTRUCTIONS } from "@darthsaul/outerworld-ai-core";
+import { createAnthropic } from "@ai-sdk/anthropic";
+import { type ProviderChoice, routeModel, TITLE_INSTRUCTIONS } from "@darthsaul/outerworld-ai-core";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import type { LanguageModel } from "ai";
 import { MockLanguageModelV4, simulateReadableStream } from "ai/test";
 import type { ApiKeyService } from "../secrets/api-key.js";
 
-export type ModelFactory = (modelId: string) => LanguageModel | Promise<LanguageModel>;
+/** Options for building a model: which key to use (ADR-0016); `auto` when absent. */
+export interface ModelOptions {
+  readonly provider?: ProviderChoice;
+}
+
+export type ModelFactory = (
+  modelId: string,
+  options?: ModelOptions,
+) => LanguageModel | Promise<LanguageModel>;
 
 export class NoApiKeyError extends Error {
-  constructor() {
-    super("No OpenRouter key: add one in Settings");
+  constructor(
+    message = "No model key: add an Anthropic or OpenRouter key in Settings › Providers",
+  ) {
+    super(message);
   }
 }
 
+const NO_ROUTE = {
+  no_key: () => "No model key: add an Anthropic or OpenRouter key in Settings › Providers",
+  needs_openrouter: (id: string) =>
+    `"${id}" needs an OpenRouter key here: add one in Settings › Providers, or pick another key or model`,
+  needs_anthropic: (id: string) =>
+    `"${id}" is set to use the Anthropic key, but none is configured: add one in Settings › Providers`,
+  not_on_anthropic: (id: string) =>
+    `"${id}" is not an Anthropic model: choose OpenRouter or Auto for its key`,
+} as const;
+
+/** The provider keys live models read from; Anthropic is optional (ADR-0015). */
+export interface LiveModelKeys {
+  readonly openrouter: ApiKeyService;
+  readonly anthropic?: ApiKeyService;
+}
+
 /**
- * Real models through OpenRouter (ADR-0011). The key is read from the keychain (or the env
- * fallback) at the start of every run, so a key added in Settings works without a restart.
+ * Real models (ADR-0011, ADR-0015): Claude straight to Anthropic when there is an Anthropic key,
+ * everything else through OpenRouter (core's `routeModel`). Keys are read from the keychain (or
+ * the env fallback) at the start of every run, so a key added in Settings works without a restart.
  */
-export function openRouterModels(keys: ApiKeyService): ModelFactory {
-  return async (modelId) => {
-    const apiKey = await keys.key();
-    if (!apiKey) throw new NoApiKeyError();
+export function liveModels(keys: LiveModelKeys): ModelFactory {
+  return async (modelId, options = {}) => {
+    const [openrouterKey, anthropicKey] = await Promise.all([
+      keys.openrouter.key(),
+      keys.anthropic?.key(),
+    ]);
+    const route = routeModel(
+      modelId,
+      { openrouter: openrouterKey !== undefined, anthropic: anthropicKey !== undefined },
+      options.provider ?? "auto",
+    );
+    if (!route.ok) throw new NoApiKeyError(NO_ROUTE[route.reason](modelId));
+    if (route.provider === "anthropic" && anthropicKey !== undefined) {
+      return createAnthropic({ apiKey: anthropicKey })(route.modelId);
+    }
     return createOpenRouter({
-      apiKey,
+      apiKey: openrouterKey ?? "",
       compatibility: "strict",
       headers: { "X-Title": "Outerworld AI" },
-    }).chat(modelId);
+    }).chat(route.modelId);
   };
 }
+
+/** OpenRouter only: {@link liveModels} without an Anthropic key. */
+export const openRouterModels = (keys: ApiKeyService): ModelFactory =>
+  liveModels({ openrouter: keys });
 
 const lastUserText = (prompt: ReadonlyArray<{ role: string; content: unknown }>): string => {
   const last = [...prompt].reverse().find((m) => m.role === "user");

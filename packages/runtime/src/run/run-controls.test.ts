@@ -181,6 +181,29 @@ describe("spend and budgets", () => {
     });
   });
 
+  it("estimates the cost of an Anthropic call at list price (ADR-0015)", async () => {
+    const anthropicReply = streamOf([
+      { type: "text-start", id: "t" },
+      { type: "text-delta", id: "t", delta: "ok" },
+      { type: "text-end", id: "t" },
+      {
+        type: "finish",
+        finishReason: { unified: "stop", raw: "end_turn" },
+        usage: {
+          inputTokens: { total: 1_100_000, noCache: 1_000_000, cacheRead: 100_000, cacheWrite: 0 },
+          outputTokens: { total: 100_000, text: 100_000, reasoning: 0 },
+        },
+        providerMetadata: { anthropic: {} },
+      } as Chunk,
+    ]);
+    const t = setup(scripted([anthropicReply]));
+    const session = t.service.createSession("vesper");
+    const { runId } = await t.service.send(session.id, "Hi");
+    await t.service.settled(runId);
+    // Sonnet 5.5: 1M × $2 + 0.1M × $0.10 cache reads + 0.1M × $10 output.
+    expect(t.spend.forRun(runId).costUsd).toBeCloseTo(2 + 0.01 + 1);
+  });
+
   it("stops a run before a model call once its per-run cap is reached", async () => {
     const t = setup(
       scripted([

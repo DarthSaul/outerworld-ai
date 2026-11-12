@@ -341,6 +341,20 @@ describe("CrewService: schedules", () => {
     expect(zoned.timezone).toBe("Europe/Stockholm");
   });
 
+  it("gives a schedule its own model settings, keeps them on other edits, and clears them with null", async () => {
+    const { crew } = setup();
+    const set = await crew.updateSchedule("quill", "daily-briefing", {
+      modelSettings: { model: "anthropic/claude-opus-5.5", reasoning: "high" },
+    });
+    expect(set.modelSettings).toEqual({ model: "anthropic/claude-opus-5.5", reasoning: "high" });
+    const kept = await crew.updateSchedule("quill", "daily-briefing", { enabled: false });
+    expect(kept.modelSettings).toEqual(set.modelSettings);
+    const stored = (await crew.agent("quill"))?.config.schedules[0];
+    expect(stored?.modelSettings).toEqual(set.modelSettings);
+    const cleared = await crew.updateSchedule("quill", "daily-briefing", { modelSettings: null });
+    expect(cleared).not.toHaveProperty("modelSettings");
+  });
+
   it("refuses a cron croner cannot run, naming the field", async () => {
     const { crew } = setup();
     const error = await crew
