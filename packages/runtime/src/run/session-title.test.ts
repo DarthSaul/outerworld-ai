@@ -1,3 +1,5 @@
+import { readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { TITLE_INSTRUCTIONS } from "@darthsaul/outerworld-ai-core";
 import { MockLanguageModelV4 } from "ai/test";
 import { describe, expect, it, vi } from "vitest";
@@ -132,5 +134,48 @@ describe("RunService: session titles (ADR-0014)", () => {
     for (const release of releases.splice(0)) release();
     for (const id of ids) await vi.waitFor(() => expect(titleOf(t, id)).toBe("A title"));
     expect(most).toBe(2);
+  });
+
+  it("checks the budget again once a queued title call gets a slot", async () => {
+    const releases: Array<() => void> = [];
+    let titleCalls = 0;
+    const model = new MockLanguageModelV4({
+      doStream: async ({ prompt }) => {
+        if (prompt.find((m) => m.role === "system")?.content !== TITLE_INSTRUCTIONS) {
+          return reply("ok") as never;
+        }
+        titleCalls++;
+        await new Promise<void>((resolve) => releases.push(resolve));
+        return reply("A title") as never;
+      },
+    });
+    const t = setup(model, { titles: true });
+    const path = join(t.home, "station.json");
+    writeFileSync(
+      path,
+      JSON.stringify({
+        ...JSON.parse(readFileSync(path, "utf8")),
+        budgets: { stationDailyUsd: 1 },
+      }),
+    );
+    const ids = ["a", "b", "c"].map(() => t.service.createSession("vesper").id);
+    const runs: string[] = [];
+    for (const id of ids) runs.push((await t.service.send(id, "Hello")).runId);
+    await vi.waitFor(() => expect(releases).toHaveLength(2));
+    // The station's cap is reached while the third call waits for a slot.
+    t.spend.record({
+      agentId: "vesper",
+      sessionId: ids[0] ?? "",
+      runId: runs[0] ?? "",
+      model: "m",
+      inputTokens: 0,
+      outputTokens: 0,
+      costUsd: 2,
+      at: new Date().toISOString(),
+    });
+    for (const release of releases.splice(0)) release();
+    const [, , third] = ids;
+    await vi.waitFor(() => expect(titleOf(t, third ?? "")).toBe("Hello"));
+    expect(titleCalls).toBe(2);
   });
 });

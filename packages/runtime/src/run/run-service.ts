@@ -443,6 +443,10 @@ export class RunService {
       try {
         await this.#titleSlots.acquire(controller.signal);
         holding = true;
+        // Spend may have moved while this call waited for a slot: check again before calling.
+        if (this.#o.killSwitch.engaged() || this.#budgetCheck(station.budgets, ids)) {
+          throw new Cancelled("budget");
+        }
         const model = await this.#o.models(modelId);
         const prompt = titlePrompt(text);
         const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(TITLE_TIMEOUT_MS)]);
