@@ -179,6 +179,13 @@ async function stationInteractions(page, width) {
   const commsBefore = await page
     .getByRole("region", { name: "Overseer comms" })
     .evaluate((el) => el.getBoundingClientRect().height);
+  // Shift+Enter starts a new line in the order rather than sending it.
+  await order.fill("First line");
+  await order.press("Shift+Enter");
+  await order.pressSequentially("Second");
+  if (!(await order.inputValue()).includes("\n")) {
+    failures.push(`home-${width}: Shift+Enter did not start a new line in the order`);
+  }
   await order.fill("Draft the plan. ".repeat(40));
   await order.dispatchEvent("input");
   const field = await order.evaluate((el) => {
