@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { axe } from "vitest-axe";
 import { fakeApi, renderApp } from "../test/fake-daemon.js";
 
-const fresh = (mode: "fake" | "openrouter" = "fake") => {
+const fresh = (mode: "fake" | "live" = "fake") => {
   const fake = fakeApi();
   fake.state.fresh = true;
   fake.state.agents.clear();
@@ -62,10 +62,29 @@ describe("Onboarding", () => {
     expect(calls).toContainEqual({ method: "POST", path: "/templates/project-manager", body: {} });
   });
 
-  it("asks for the OpenRouter key when runs use OpenRouter, or lets it wait", async () => {
+  it("asks for an Anthropic key by default when runs are live", async () => {
     const user = userEvent.setup();
-    const { calls } = renderApp("/", fresh("openrouter"));
-    const key = await screen.findByLabelText(term("settings.key.new"));
+    const { calls } = renderApp("/", fresh("live"));
+    await user.type(await screen.findByLabelText(term("settings.key.new")), "sk-ant-test-1234");
+    await user.click(screen.getByRole("button", { name: term("settings.key.save") }));
+    expect(calls).toContainEqual({
+      method: "PUT",
+      path: "/settings/anthropic",
+      body: { key: "sk-ant-test-1234" },
+    });
+    expect(
+      await screen.findByRole("form", { name: term("onboarding.overseer.title") }),
+    ).toBeInTheDocument();
+  });
+
+  it("takes an OpenRouter key instead when that provider is chosen", async () => {
+    const user = userEvent.setup();
+    const { calls } = renderApp("/", fresh("live"));
+    await user.selectOptions(
+      await screen.findByLabelText(term("onboarding.key.provider")),
+      "openrouter",
+    );
+    const key = screen.getByLabelText(term("settings.key.new"));
     await user.type(key, "sk-or-test-1234");
     await user.click(screen.getByRole("button", { name: term("settings.key.save") }));
     expect(calls).toContainEqual({
@@ -80,7 +99,7 @@ describe("Onboarding", () => {
 
   it("lets the key wait until later", async () => {
     const user = userEvent.setup();
-    renderApp("/", fresh("openrouter"));
+    renderApp("/", fresh("live"));
     await user.click(await screen.findByRole("button", { name: term("onboarding.key.later") }));
     expect(
       screen.getByRole("form", { name: term("onboarding.overseer.title") }),
@@ -89,13 +108,13 @@ describe("Onboarding", () => {
 });
 
 describe("Crew templates", () => {
-  it("adds a Project Manager from the Crew screen and opens it", async () => {
+  it("adds a Project Manager from the Crew screen's Add crew member view and opens it", async () => {
     const user = userEvent.setup();
-    const { calls } = renderApp("/crew");
+    const { calls } = renderApp("/crew?add=agent");
     await user.click(await screen.findByRole("button", { name: term("template.projectManager") }));
     expect(calls).toContainEqual({ method: "POST", path: "/templates/project-manager", body: {} });
     expect(
-      await screen.findByRole("heading", { level: 1, name: "Project Manager" }),
+      await screen.findByRole("heading", { level: 2, name: "Project Manager" }),
     ).toBeInTheDocument();
   });
 });

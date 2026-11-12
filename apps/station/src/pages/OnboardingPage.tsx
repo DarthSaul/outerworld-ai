@@ -5,6 +5,7 @@ import { type FormEvent, useState } from "react";
 import { useNavigate } from "react-router";
 import { ErrorNote } from "../components/ErrorNote.js";
 import {
+  type KeyProviderName,
   useAddProjectManager,
   useCreateSession,
   useOnboard,
@@ -18,14 +19,18 @@ const input = "min-w-0 border-2 border-line-soft bg-well px-2 py-1 font-body tex
 const label = "flex flex-col gap-1 font-display text-d7 text-fg-mute uppercase";
 const panel = "flex flex-col gap-3 border-2 border-line bg-panel p-4 shadow-panel";
 
-/** Step 1: the key. The fake model needs none; a key already configured needs no form. */
+/**
+ * Step 1: a model key, Anthropic or OpenRouter (ADR-0015). The fake model needs none; a key
+ * already configured needs no form.
+ */
 function KeyStep({ onDone }: { readonly onDone: () => void }) {
   const settings = useSettings();
-  const setKey = useSetApiKey();
+  const [provider, setProvider] = useState<KeyProviderName>("anthropic");
+  const setKey = useSetApiKey(provider);
   const [key, setKeyText] = useState("");
   if (!settings.data) return <ErrorNote error={settings.error} />;
-  const { modelMode, openrouter } = settings.data;
-  const ready = modelMode === "fake" || openrouter.configured;
+  const { modelMode, openrouter, anthropic } = settings.data;
+  const ready = modelMode === "fake" || openrouter.configured || anthropic.configured;
   const submit = (e: FormEvent) => {
     e.preventDefault();
     setKey.mutate(key.trim(), { onSuccess: onDone });
@@ -48,6 +53,17 @@ function KeyStep({ onDone }: { readonly onDone: () => void }) {
         <>
           <p className="m-0 text-b19 text-fg-soft">{term("onboarding.key.body")}</p>
           <form onSubmit={submit} className="flex flex-wrap items-end gap-2">
+            <label className={label}>
+              {term("onboarding.key.provider")}
+              <select
+                className={input}
+                value={provider}
+                onChange={(e) => setProvider(e.target.value as KeyProviderName)}
+              >
+                <option value="anthropic">{term("settings.key.anthropic")}</option>
+                <option value="openrouter">{term("settings.key.openrouter")}</option>
+              </select>
+            </label>
             <label className={label}>
               {term("settings.key.new")}
               <input

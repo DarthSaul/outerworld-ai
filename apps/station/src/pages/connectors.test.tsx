@@ -34,7 +34,7 @@ describe("Connectors, a section of Settings", () => {
 
   it("offers to add Notion when the station has no connectors", async () => {
     const user = userEvent.setup();
-    const { calls } = renderApp("/settings");
+    const { calls } = renderApp("/settings/connectors");
     await user.click(await screen.findByRole("button", { name: term("connector.addNotion") }));
     expect(calls).toContainEqual({
       method: "POST",
@@ -44,7 +44,7 @@ describe("Connectors, a section of Settings", () => {
   });
 
   it("shows a connected Notion's status, tools with their class, and who is granted it", async () => {
-    renderApp("/settings", withNotion());
+    renderApp("/settings/connectors", withNotion());
     const card = await screen.findByRole("region", { name: "Notion" });
     expect(within(card).getByRole("status", { name: "Notion status" })).toHaveTextContent(
       term("connectorStatus.connected"),
@@ -53,6 +53,10 @@ describe("Connectors, a section of Settings", () => {
       .getAllByRole("listitem")
       .map((li) => `${li.dataset.tool}:${li.dataset.class}`);
     expect(tools).toEqual(["notion-search:read", "notion-update-page:write"]);
+    // However many tools a server offers, the list scrolls in a box of bounded height.
+    const list = within(card).getByRole("list", { name: term("connector.tools") });
+    expect(list.className).toMatch(/max-h-/);
+    expect(list.className).toMatch(/overflow-y-auto/);
     expect(within(card).getByText(`${term("connector.grantedTo")}: Quill`)).toBeInTheDocument();
     expect(
       within(card).queryByRole("button", { name: term("connector.remove") }),
@@ -64,7 +68,7 @@ describe("Connectors, a section of Settings", () => {
     const fake = withNotion("disconnected");
     fake.connectAnswer.status = "needs_auth";
     fake.connectAnswer.authorizationUrl = "https://auth.example.test/authorize?state=s1";
-    renderApp("/settings", fake);
+    renderApp("/settings/connectors", fake);
     const card = await screen.findByRole("region", { name: "Notion" });
     await user.click(within(card).getByRole("button", { name: term("connector.connect") }));
     const link = await within(card).findByRole("link", {
@@ -78,7 +82,7 @@ describe("Connectors, a section of Settings", () => {
 
   it("disconnects, or disconnects and forgets the sign-in", async () => {
     const user = userEvent.setup();
-    const { calls } = renderApp("/settings", withNotion());
+    const { calls } = renderApp("/settings/connectors", withNotion());
     const card = await screen.findByRole("region", { name: "Notion" });
     await user.click(within(card).getByRole("button", { name: term("connector.forget") }));
     expect(calls).toContainEqual({
@@ -90,7 +94,7 @@ describe("Connectors, a section of Settings", () => {
 
   it("saves a new server URL", async () => {
     const user = userEvent.setup();
-    const { calls } = renderApp("/settings", withNotion("disconnected"));
+    const { calls } = renderApp("/settings/connectors", withNotion("disconnected"));
     const card = await screen.findByRole("region", { name: "Notion" });
     const field = within(card).getByLabelText(term("connector.url"));
     await user.clear(field);
@@ -107,7 +111,7 @@ describe("Connectors, a section of Settings", () => {
     const fake = withNotion("disconnected");
     const first = fake.connectors[0];
     if (first) fake.connectors[0] = { ...first, status: "error", detail: "connect ECONNREFUSED" };
-    renderApp("/settings", fake);
+    renderApp("/settings/connectors", fake);
     const card = await screen.findByRole("region", { name: "Notion" });
     expect(within(card).getByRole("status", { name: "Notion status" })).toHaveTextContent(
       `${term("connectorStatus.error")}: connect ECONNREFUSED`,
@@ -127,7 +131,7 @@ describe("Connectors, a section of Settings", () => {
   });
 
   it("has no axe violations", async () => {
-    const { container } = renderApp("/settings", withNotion());
+    const { container } = renderApp("/settings/connectors", withNotion());
     await screen.findByRole("region", { name: "Notion" });
     expect(await axe(container)).toHaveNoViolations();
   });
