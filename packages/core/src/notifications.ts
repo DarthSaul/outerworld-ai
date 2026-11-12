@@ -19,7 +19,8 @@ export type NotificationKind =
   | "budget_warning"
   | "budget_blocked"
   | "connector"
-  | "kill_switch";
+  | "kill_switch"
+  | "kill_switch_cleared";
 
 export type NotificationLevel = "action" | "alert" | "info";
 
@@ -108,7 +109,7 @@ export function notificationFor(event: RuntimeEvent): Notification | undefined {
         ...(event.payload.detail ? { detail: event.payload.detail } : {}),
       });
     case "station.kill_switch":
-      return event.payload.engaged ? n("kill_switch", "alert") : undefined;
+      return event.payload.engaged ? n("kill_switch", "alert") : n("kill_switch_cleared", "info");
     default:
       return undefined;
   }

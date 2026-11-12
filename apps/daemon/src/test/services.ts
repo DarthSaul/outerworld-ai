@@ -29,11 +29,15 @@ export type TestServices = Omit<CommsDeps, "events"> & {
   notifications: NotificationService;
 };
 
-/** Runtime services for app tests: scripted model, in-memory keychain, no network. */
+/**
+ * Runtime services for app tests: scripted model, in-memory keychain, no network. Session titles
+ * (ADR-0014) are off unless asked for, so a test sees only its own runs' model calls.
+ */
 export function testServices(
   home: string,
   events: EventStore,
   secrets = new MemorySecretStore(),
+  options: { titles?: boolean } = {},
 ): TestServices {
   const db = openDatabase(":memory:");
   const sessions = new SessionStore(db);
@@ -60,6 +64,7 @@ export function testServices(
     killSwitch: new KillSwitch(db),
     beliefs: (agentId) => memory.beliefsFor(agentId).map((m) => m.text),
     models: scriptedModels({ chunkDelayInMs: 0 }),
+    titles: options.titles ?? false,
   });
   new DispatchService({ home, runs, sessions, events, dispatches });
   // Not started: tests read views and run now; timing is covered in the runtime's tests.

@@ -110,6 +110,7 @@ export async function startDaemon(
     },
     models: config.modelMode === "fake" ? scriptedModels() : openRouterModels(apiKeys),
     redact,
+    titles: true,
   });
   new DispatchService({ home: config.home, runs, sessions, events, dispatches });
   const scheduler = new Scheduler({

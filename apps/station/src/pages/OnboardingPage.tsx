@@ -1,4 +1,5 @@
 import { OVERSEER_TONES, type OverseerTone, term } from "@darthsaul/outerworld-ai-core";
+import { Checkbox } from "@darthsaul/outerworld-ai-ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 import { useNavigate } from "react-router";
@@ -150,10 +151,11 @@ function OverseerStep() {
           </label>
         ))}
       </fieldset>
-      <label className="flex items-center gap-2 text-b19 text-fg-hi">
-        <input type="checkbox" checked={withPm} onChange={(e) => setWithPm(e.target.checked)} />
-        {term("onboarding.pm")}
-      </label>
+      <Checkbox
+        label={term("onboarding.pm")}
+        checked={withPm}
+        onChange={(e) => setWithPm(e.target.checked)}
+      />
       <button type="submit" className={`${button} self-start`} disabled={busy || !name.trim()}>
         {term("onboarding.start")}
       </button>

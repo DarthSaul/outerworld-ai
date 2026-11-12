@@ -27,6 +27,10 @@ either granted Notion or not.
 - **Hosted Notion MCP over Streamable HTTP with OAuth**, installed once station-wide. The daemon
   runs the OAuth flow with a loopback callback; the registered client and tokens live in the OS
   keychain; a 401 triggers a refresh, then a reconnect prompt on the Connectors screen.
+  *Amended 2026-11-11:* the keychain entries are keyed by connector id **and** a hash of the server
+  URL, so a sign-in is only ever sent to the server that issued it. Before, a station whose
+  connector shared the id but pointed elsewhere (the demo placeholder) found the real sign-in and
+  tried it against its own URL on every daemon start.
 - **Per-agent access is binary.** `agent.json` `connectorGrants: ["notion"]` grants every tool the
   connector exposes; without it, none are sent to the model or executable.
 - **Read/write classification stays, for consent.** Our explicit map of Notion tool names is

@@ -10,7 +10,7 @@ import {
 export interface SpriteProps {
   /** Index into core's CHARACTERS. */
   readonly look: number;
-  /** Integer scale: 1 (20×26), 3 (the comms portrait), 4 (80×104), 8 (160×208). */
+  /** Integer scale: 1 (20×26), 2 (the comms portrait), 4 (80×104), 8 (160×208). */
   readonly scale?: 1 | 2 | 3 | 4 | 8;
   /** Accessible name; without one the sprite is decorative. */
   readonly label?: string;

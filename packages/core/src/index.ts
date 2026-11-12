@@ -222,6 +222,15 @@ export {
   type RunEvent,
   type RunState,
 } from "./run/run-state.js";
+export {
+  cleanTitle,
+  DEFAULT_SESSION_TITLE,
+  fallbackTitle,
+  MAX_TITLE_CHARS,
+  TITLE_INSTRUCTIONS,
+  type TitlePrompt,
+  titlePrompt,
+} from "./run/session-title.js";
 // Runtime event log (brief §10)
 export {
   EVENT_TYPES,

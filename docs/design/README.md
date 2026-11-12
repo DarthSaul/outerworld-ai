@@ -2,6 +2,14 @@
 
 > **Current design: [`station-dashboard/`](station-dashboard/README.md)** (ADR-0013). Its README is
 > the spec, `reference/Station Dashboard.dc.html` the prototype, `src/tokens.css` the token source.
+> [ADR-0014](../decisions/0014-station-dashboard-revisions.md) amends it:
+> - the status drawer replaces the header's counts and radio;
+> - the kill switch moves to the footer;
+> - Connectors becomes a Settings section;
+> - the map pans, zooms, and recenters;
+> - the map takes 2fr beside comms and the scanner, and the crew roster merges into the scanner;
+> - forms use the pixel checkbox.
+>
 > Everything below this note describes the superseded Reach spec and rig, kept for history.
 
 This folder was the design source of truth for the ui package. When a token, size, motion value,

@@ -1,7 +1,7 @@
 import { term } from "@darthsaul/outerworld-ai-core";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { axe } from "vitest-axe";
 import { fakeApi, renderApp } from "../test/fake-daemon.js";
 
@@ -9,7 +9,7 @@ const at = "2026-10-01T09:00:00.000Z";
 
 const map = () => screen.findByRole("region", { name: term("map.title") });
 const scanner = () => screen.getByRole("region", { name: term("scanner.title") });
-const comms = () => screen.getByRole("region", { name: term("comms.title") });
+const comms = () => screen.getByRole("tabpanel", { name: term("comms.title") });
 
 const withLane = () => {
   const fake = fakeApi();
@@ -30,7 +30,10 @@ describe("Station map", () => {
     if (!ops) throw new Error("no operations room");
     expect(within(ops).getByRole("button", { name: "Quill, Idle" })).toBeInTheDocument();
     expect(within(ops).getByTitle("Archive cabinet")).toHaveTextContent("Files");
-    expect(screen.getByRole("region", { name: term("roster.title") })).toHaveTextContent("1 + OV");
+    expect(within(scanner()).getByRole("button", { name: /^Crew · 2/ })).toHaveAttribute(
+      "aria-haspopup",
+      "listbox",
+    );
     expect(await axe(container)).toHaveNoViolations();
   });
 
@@ -68,15 +71,15 @@ describe("Station map", () => {
     expect(await within(m).findByRole("button", { name: "Quill, Blocked" })).toBeInTheDocument();
   });
 
-  it("scans the Bridge by default, then whatever is picked on the map or the roster", async () => {
+  it("scans the Bridge by default, then whatever is picked on the map or the crew picker", async () => {
     const user = userEvent.setup();
     renderApp("/", withLane());
     const m = await map();
     expect(scanner()).toHaveTextContent("Most urgent missions");
     await user.click(within(m).getByRole("button", { name: "Hallway L-01: Operations ⇄ Command" }));
     expect(scanner()).toHaveTextContent("Briefings");
-    const roster = screen.getByRole("region", { name: term("roster.title") });
-    await user.click(within(roster).getByRole("button", { name: /Quill/ }));
+    await user.click(within(scanner()).getByRole("button", { name: /^Crew · 2/ }));
+    await user.click(within(scanner()).getByRole("option", { name: /^Quill/ }));
     expect(scanner()).toHaveTextContent("Crew member · Operations");
     await user.click(within(scanner()).getByRole("button", { name: "◀ Operations" }));
     expect(scanner()).toHaveTextContent(term("scanner.grants"));
@@ -275,5 +278,144 @@ describe("Overseer comms", () => {
     await waitFor(() =>
       expect(calls).toContainEqual({ method: "POST", path: "/agents/vesper/sessions", body: {} }),
     );
+  });
+});
+
+describe("Crew comms", () => {
+  const crewTab = () => screen.getByRole("tab", { name: term("comms.crew.title") });
+
+  it("is a second comms tab: a crew dropdown, then the chosen crew member's sessions", async () => {
+    const fake = fakeApi();
+    fake.seedSession("quill", "Hub audit");
+    const user = userEvent.setup();
+    const { container } = renderApp("/", fake);
+    await map();
+    expect(screen.getByRole("tab", { name: term("comms.title") })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await user.click(crewTab());
+    expect(crewTab()).toHaveAttribute("aria-selected", "true");
+    const panel = screen.getByRole("tabpanel", { name: term("comms.crew.title") });
+    // The scanner's dropdown: grouped by room, each crew member drawn as their character.
+    const picker = within(panel).getByRole("button", { name: /^Crew · 2/ });
+    await user.click(picker);
+    const options = within(panel).getAllByRole("option");
+    expect(options.map((o) => o.getAttribute("aria-label"))).toEqual([
+      "Vesper (Overseer) · Idle, Command",
+      "Quill · Idle, Operations",
+    ]);
+    for (const o of options) expect(o.querySelector("[data-look] svg")).not.toBeNull();
+    await user.click(within(panel).getByRole("option", { name: /^Quill/ }));
+    expect(picker).toHaveAccessibleName("Crew · 2 Quill · Idle");
+    const sessions = await within(panel).findByRole("region", { name: "Sessions · Quill" });
+    expect(await within(sessions).findByText("Hub audit")).toBeInTheDocument();
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it("opens a session across the whole panel with a back button, and goes back to the list", async () => {
+    const fake = fakeApi();
+    const seeded = fake.seedSession("vesper", "Launch plan");
+    const user = userEvent.setup();
+    renderApp("/", fake);
+    await map();
+    await user.click(crewTab());
+    const panel = screen.getByRole("tabpanel", { name: term("comms.crew.title") });
+    await user.click(await within(panel).findByRole("button", { name: "Launch plan" }));
+    const chat = await within(panel).findByRole("region", { name: /Vesper · Launch plan/ });
+    const back = within(chat).getByRole("button", { name: term("comms.back") });
+    await waitFor(() => expect(back).toHaveFocus());
+    expect(within(panel).queryByRole("button", { name: /^Crew · / })).toBeNull();
+    expect(within(chat).getByRole("textbox")).toBeInTheDocument();
+    await user.click(back);
+    const again = await within(panel).findByRole("button", { name: "Launch plan" });
+    await waitFor(() => expect(again).toHaveFocus());
+    expect(again).toHaveAttribute("data-session", seeded.session.id);
+  });
+
+  it("leaves focus in the message box when the panel refreshes", async () => {
+    const fake = fakeApi();
+    const seeded = fake.seedSession("vesper", "Launch plan");
+    const user = userEvent.setup();
+    const { emit } = renderApp("/", fake);
+    await map();
+    await user.click(crewTab());
+    const panel = screen.getByRole("tabpanel", { name: term("comms.crew.title") });
+    await user.click(await within(panel).findByRole("button", { name: "Launch plan" }));
+    const chat = await within(panel).findByRole("region", { name: /Vesper · Launch plan/ });
+    const back = within(chat).getByRole("button", { name: term("comms.back") });
+    await waitFor(() => expect(back).toHaveFocus());
+    const box = within(chat).getByRole("textbox");
+    await user.click(box);
+    // A run event refetches the session list, which rerenders the crew comms panel.
+    emit({
+      type: "run.completed",
+      agentId: "vesper",
+      sessionId: seeded.session.id,
+      runId: "r-refresh",
+      payload: {},
+    });
+    await waitFor(() =>
+      expect(fake.calls.filter((c) => c.path === "/agents/vesper/sessions").length).toBeGreaterThan(
+        1,
+      ),
+    );
+    expect(box).toHaveFocus();
+  });
+
+  it("keeps Back when a session fails to load", async () => {
+    const fake = fakeApi();
+    const seeded = fake.seedSession("vesper", "Gone");
+    const user = userEvent.setup();
+    renderApp("/", fake);
+    await map();
+    await user.click(crewTab());
+    const panel = screen.getByRole("tabpanel", { name: term("comms.crew.title") });
+    const open = await within(panel).findByRole("button", { name: "Gone" });
+    fake.sessions.delete(seeded.session.id);
+    await user.click(open);
+    expect(await within(panel).findByText(/no session/)).toBeInTheDocument();
+    await user.click(within(panel).getByRole("button", { name: term("comms.back") }));
+    expect(await within(panel).findByRole("button", { name: /^Crew · / })).toBeInTheDocument();
+  });
+
+  it("starts a new session and opens it", async () => {
+    const user = userEvent.setup();
+    const { calls } = renderApp("/");
+    await map();
+    await user.click(crewTab());
+    const panel = screen.getByRole("tabpanel", { name: term("comms.crew.title") });
+    await user.click(await within(panel).findByRole("button", { name: term("comms.new") }));
+    expect(
+      await within(panel).findByRole("region", { name: /Vesper · New session/ }),
+    ).toBeVisible();
+    expect(calls).toContainEqual({ method: "POST", path: "/agents/vesper/sessions", body: {} });
+  });
+});
+
+describe("Station split", () => {
+  it("resizes the map against the comms column from the handle, kept per viewer", async () => {
+    localStorage.removeItem("outerworld.split");
+    const user = userEvent.setup();
+    const { container } = renderApp("/");
+    await map();
+    const handle = screen.getByRole("separator", { name: term("station.resize") });
+    const grid = () => container.querySelector<HTMLElement>("[style*='--st-station-cols']");
+    expect(handle).toHaveAttribute("aria-valuenow", "33");
+    expect(handle).toHaveAttribute("aria-valuemin", "25");
+    expect(handle).toHaveAttribute("aria-valuemax", "50");
+    // happy-dom lays nothing out, so give the row a width for the pixel-to-fr conversion.
+    vi.spyOn(grid() as HTMLElement, "clientWidth", "get").mockReturnValue(1200);
+    handle.focus();
+    await user.keyboard("{ArrowLeft}");
+    expect(Number(handle.getAttribute("aria-valuenow"))).toBeGreaterThan(33);
+    expect(grid()?.style.getPropertyValue("--st-station-cols")).toBe(
+      "minmax(0,1.940fr) auto minmax(0,1.060fr)",
+    );
+    expect(localStorage.getItem("outerworld.split")).toBe("1.06");
+    await user.keyboard("{Enter}");
+    expect(handle).toHaveAttribute("aria-valuenow", "33");
+    expect(await axe(container)).toHaveNoViolations();
+    localStorage.removeItem("outerworld.split");
   });
 });

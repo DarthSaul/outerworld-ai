@@ -145,7 +145,7 @@ The product law is that the interface never asserts state the runtime cannot pro
   - core's `dashboardModel` projects the station config, crew activity (`GET /api/activity`,
     folded from the event log by `foldCrewActivity`), recent runs (`GET /api/runs`), running
     dispatches and pending proposals into rooms, hallways, the roster and missions.
-  - ui's `DashboardMap`, `CrewRoster`, `OverseerComms` and `Scanner` render it. The header radio
+  - ui's `DashboardMap`, `OverseerComms` and `Scanner` (with its crew picker) render it. The header radio
     is the notification feed. The footer shows `GET /api/spend` (tokens and fuel) and
     `GET /api/health` (uptime).
 - **Notifications** are core's `notificationFor` over the event log, with one persisted read

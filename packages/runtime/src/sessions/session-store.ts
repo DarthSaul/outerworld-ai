@@ -15,6 +15,19 @@ export interface SessionRecord {
   readonly archivedAt?: string;
 }
 
+/** A session in a list (COMMS): how much was said, when, and the last thing said. */
+export interface SessionSummary extends SessionRecord {
+  readonly messageCount: number;
+  readonly lastMessageAt?: string;
+  /** The newest message with text from the Commander or the crew member, clipped. */
+  readonly lastMessage?: { readonly role: "user" | "assistant"; readonly text: string };
+  /** A run in it is queued, running, or waiting for consent. */
+  readonly active: boolean;
+}
+
+/** A summary's preview is clipped to this many characters. */
+const PREVIEW_CHARS = 160;
+
 export type RunTrigger = "user" | "dispatch" | "schedule" | "review";
 
 export interface RunRecord {
@@ -118,6 +131,48 @@ export class SessionStore {
         )
         .all(agentId) as Row[]
     ).map(toSession);
+  }
+
+  /**
+   * The agent's sessions with what a list needs, most recently active first (the newest message,
+   * or creation for a session with none).
+   */
+  sessionSummaries(agentId: string, options: { includeArchived?: boolean } = {}): SessionSummary[] {
+    const archived = options.includeArchived ? "" : "and s.archived_at is null";
+    const unfinished = UNFINISHED.map((u) => `'${u}'`).join(", ");
+    const rows = this.#db
+      .prepare(
+        `select s.*,
+           (select count(*) from messages m where m.session_id = s.id) as message_count,
+           (select max(m.created_at) from messages m where m.session_id = s.id) as last_message_at,
+           (select m.message from messages m
+              where m.session_id = s.id
+                and json_extract(m.message, '$.role') in ('user', 'assistant')
+                and trim(coalesce(json_extract(m.message, '$.text'), ''),
+                         ' ' || char(9, 10, 13)) <> ''
+              order by m.position desc limit 1) as last_message,
+           exists (select 1 from runs r where r.session_id = s.id and r.state in (${unfinished}))
+             as active
+         from sessions s
+         where s.agent_id = ? ${archived}
+         order by coalesce(last_message_at, s.created_at) desc, s.rowid desc`,
+      )
+      .all(agentId) as Row[];
+    return rows.map((r) => {
+      const last =
+        r.last_message === null ? undefined : ChatMessage.parse(JSON.parse(String(r.last_message)));
+      const preview =
+        last && (last.role === "user" || last.role === "assistant")
+          ? { role: last.role, text: last.text.replace(/\s+/g, " ").trim().slice(0, PREVIEW_CHARS) }
+          : undefined;
+      return {
+        ...toSession(r),
+        messageCount: Number(r.message_count),
+        ...(r.last_message_at !== null ? { lastMessageAt: String(r.last_message_at) } : {}),
+        ...(preview ? { lastMessage: preview } : {}),
+        active: Number(r.active) === 1,
+      };
+    });
   }
 
   renameSession(id: string, title: string): SessionRecord {

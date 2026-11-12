@@ -150,7 +150,7 @@ describe("notificationFor", () => {
     ).toMatchObject({ kind: "dispatch_failed", level: "alert" });
   });
 
-  it("ignores the chatter: deltas, tool calls, healthy connectors, the kill switch cleared", () => {
+  it("ignores the chatter: deltas, tool calls, healthy connectors", () => {
     expect(
       notificationFor(e({ type: "run.delta", ...run, payload: { text: "hi" } })),
     ).toBeUndefined();
@@ -159,9 +159,12 @@ describe("notificationFor", () => {
         e({ type: "connector.status", payload: { connectorId: "notion", status: "connected" } }),
       ),
     ).toBeUndefined();
+  });
+
+  it("says when the kill switch is cleared, as info", () => {
     expect(
       notificationFor(e({ type: "station.kill_switch", payload: { engaged: false } })),
-    ).toBeUndefined();
+    ).toMatchObject({ kind: "kill_switch_cleared", level: "info" });
   });
 
   it("names every event type it can project, so storage can filter by type", () => {

@@ -88,7 +88,7 @@ export function commsRoutes(deps: CommsDeps): Hono {
 
   app.get("/agents/:id/sessions", (c) =>
     c.json(
-      sessions.listSessions(c.req.param("id"), {
+      sessions.sessionSummaries(c.req.param("id"), {
         includeArchived: c.req.query("archived") === "1",
       }),
     ),

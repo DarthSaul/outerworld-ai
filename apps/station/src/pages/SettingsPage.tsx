@@ -1,6 +1,7 @@
 import { term } from "@darthsaul/outerworld-ai-core";
 import { useQueryClient } from "@tanstack/react-query";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
+import { useLocation } from "react-router";
 import { ErrorNote } from "../components/ErrorNote.js";
 import { formatUsd } from "../components/format.js";
 import {
@@ -11,6 +12,7 @@ import {
   useStationView,
   useUpdateBudgets,
 } from "../queries.js";
+import { ConnectorsSection } from "./ConnectorsSection.js";
 
 const button =
   "cursor-pointer border-2 border-line bg-transparent px-2.5 py-1.5 font-display text-d7 text-panel-title uppercase no-underline hover:border-cyan disabled:cursor-not-allowed disabled:opacity-50";
@@ -98,9 +100,29 @@ function BudgetsSection() {
   );
 }
 
-/** Settings: which models runs use, the OpenRouter key (set once, never shown), and budgets. */
+/** Scrolls to the section the URL's hash names (`/settings#connectors`) once it is on screen. */
+function useHashTarget(ready: boolean) {
+  const { hash } = useLocation();
+  useEffect(() => {
+    if (!ready || !hash) return;
+    let id: string;
+    try {
+      id = decodeURIComponent(hash.slice(1));
+    } catch {
+      // A malformed fragment names no section.
+      return;
+    }
+    document.getElementById(id)?.scrollIntoView?.();
+  }, [ready, hash]);
+}
+
+/**
+ * Settings: which models runs use, the OpenRouter key (set once, never shown), budgets, and the
+ * station's connectors (ADR-0014).
+ */
 export function SettingsPage() {
   const settings = useSettings();
+  useHashTarget(settings.isSuccess);
   const setKey = useSetApiKey();
   const clearKey = useClearApiKey();
   const client = useQueryClient();
@@ -196,6 +218,7 @@ export function SettingsPage() {
         <ErrorNote error={setKey.error ?? clearKey.error} />
       </section>
       <BudgetsSection />
+      <ConnectorsSection />
     </section>
   );
 }

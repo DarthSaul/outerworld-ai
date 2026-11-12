@@ -23,7 +23,7 @@ const arg = (name, fallback) => {
 };
 const routes = arg(
   "routes",
-  "/dev,/,/crew-select,/crew,/crew/vesper,/crew/quill,/comms,/memory,/memory?agent=wren,/settings,/notifications,/connectors",
+  "/dev,/,/crew-select,/crew,/crew/vesper,/crew/quill,/comms,/comms?agent=vesper,/memory,/memory?agent=wren,/settings,/notifications",
 ).split(",");
 const port = Number(arg("port", "3300"));
 const outDir = join(process.cwd(), ".outerworld", "screenshots");
@@ -74,6 +74,174 @@ async function waitForServer() {
 
 const failures = [];
 const report = [];
+
+/** axe on the page as it is now; critical and serious violations fail the run. */
+async function axeBlocking(page, name) {
+  const results = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+    .analyze();
+  for (const v of results.violations.filter(
+    (v) => v.impact === "critical" || v.impact === "serious",
+  )) {
+    failures.push(
+      `${name}: axe ${v.impact} ${v.id}: ${v.help} (e.g. ${v.nodes[0]?.target?.join(" ") ?? "?"})`,
+    );
+  }
+}
+
+/**
+ * The Station's interactions in a real browser (ADR-0014): dragging pans the map and Recenter
+ * fits it again; the status drawer opens as a dialog, passes axe, and closes on Escape.
+ */
+async function stationInteractions(page, width) {
+  const transform = () => page.locator("[data-map-plane]").evaluate((el) => el.style.transform);
+  const fitted = await transform();
+  const box = await page.locator("[data-map-viewport]").boundingBox();
+  if (box) {
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 4;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x + 60, y + 30, { steps: 6 });
+    await page.mouse.up();
+    if ((await transform()) === fitted)
+      failures.push(`home-${width}: dragging did not pan the map`);
+    await page.getByRole("button", { name: /Recenter/ }).click();
+    if ((await transform()) !== fitted)
+      failures.push(`home-${width}: Recenter did not fit the map again`);
+  } else {
+    failures.push(`home-${width}: no map viewport`);
+  }
+  // The splitter between the map and the side column: dragging it left widens the side column;
+  // a double-click puts it back.
+  if (width >= 720) {
+    const splitter = page.getByRole("separator", { name: /Resize the map/ });
+    const mapWidth = () =>
+      page
+        .getByRole("region", { name: /^Station map/ })
+        .evaluate((el) => el.getBoundingClientRect().width);
+    const before = await mapWidth();
+    const box = await splitter.boundingBox();
+    if (box) {
+      const y = box.y + box.height / 2;
+      await page.mouse.move(box.x + box.width / 2, y);
+      await page.mouse.down();
+      await page.mouse.move(box.x + box.width / 2 - 120, y, { steps: 6 });
+      await page.mouse.up();
+      const after = await mapWidth();
+      if (!(after < before - 60)) {
+        failures.push(`home-${width}: dragging the splitter did not resize the map`);
+      }
+      await page.screenshot({ path: join(outDir, `home-split-${width}.png`) });
+      await splitter.dblclick();
+      if (Math.abs((await mapWidth()) - before) > 2) {
+        failures.push(`home-${width}: double-clicking the splitter did not reset it`);
+      }
+    } else {
+      failures.push(`home-${width}: no splitter`);
+    }
+  }
+
+  // The scanner's crew picker: opens, passes axe, picks from the keyboard, closes.
+  const picker = page.getByRole("button", { name: /^Crew · \d+/ });
+  await picker.click();
+  await page.getByRole("listbox").waitFor();
+  await page.screenshot({ path: join(outDir, `home-crew-picker-${width}.png`) });
+  await axeBlocking(page, `home-crew-picker-${width}`);
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter");
+  if (await page.getByRole("listbox").isVisible()) {
+    failures.push(`home-${width}: choosing crew did not close the picker`);
+  }
+  if ((await picker.textContent())?.includes("Pick a crew member")) {
+    failures.push(`home-${width}: the crew picker did not show the chosen crew member`);
+  }
+  // A crew member's scan is short: the scanner still fills its column, down to the map's edge.
+  if (width >= 720) {
+    const bottom = (name) =>
+      page
+        .getByRole("region", { name })
+        .evaluate((el) => Math.round(el.getBoundingClientRect().bottom));
+    const [scan, map] = [await bottom("Scanner"), await bottom(/^Station map/)];
+    if (scan !== map) {
+      failures.push(`home-${width}: the scanner ends at ${scan}px, the map at ${map}px`);
+    }
+    // Comms over the scanner is 1fr / 1fr.
+    const height = (name) =>
+      page.getByRole("region", { name }).evaluate((el) => el.getBoundingClientRect().height);
+    const ratio = (await height("Scanner")) / (await height("Overseer comms"));
+    if (ratio < 0.95 || ratio > 1.05) {
+      failures.push(`home-${width}: scanner / comms height is ${ratio.toFixed(2)}, not 1`);
+    }
+  }
+  // The order line wraps, grows to three lines, then scrolls without growing the panel.
+  const order = page.getByRole("textbox", { name: /order/ });
+  const commsBefore = await page
+    .getByRole("region", { name: "Overseer comms" })
+    .evaluate((el) => el.getBoundingClientRect().height);
+  // Shift+Enter starts a new line in the order rather than sending it.
+  await order.fill("First line");
+  await order.press("Shift+Enter");
+  await order.pressSequentially("Second");
+  if (!(await order.inputValue()).includes("\n")) {
+    failures.push(`home-${width}: Shift+Enter did not start a new line in the order`);
+  }
+  await order.fill("Draft the plan. ".repeat(40));
+  await order.dispatchEvent("input");
+  const field = await order.evaluate((el) => {
+    const line = Number.parseFloat(getComputedStyle(el).lineHeight);
+    return { lines: el.clientHeight / line, scrolls: el.scrollHeight > el.clientHeight };
+  });
+  if (Math.round(field.lines) !== 3 || !field.scrolls) {
+    failures.push(`home-${width}: the order line shows ${field.lines.toFixed(1)} lines`);
+  }
+  const commsAfter = await page
+    .getByRole("region", { name: "Overseer comms" })
+    .evaluate((el) => el.getBoundingClientRect().height);
+  if (width >= 720 && Math.round(commsAfter) !== Math.round(commsBefore)) {
+    failures.push(`home-${width}: a long order grew the comms panel`);
+  }
+  await page.screenshot({ path: join(outDir, `home-order-${width}.png`) });
+  await order.fill("");
+  await page.screenshot({ path: join(outDir, `home-crew-picked-${width}.png`) });
+
+  // Crew comms: the second comms tab, a session opened across the panel, and back.
+  await page.getByRole("tab", { name: "Crew comms" }).click();
+  const crewComms = page.getByRole("tabpanel", { name: "Crew comms" });
+  const crewPicker = crewComms.getByRole("button", { name: /^Crew · \d+/ });
+  await crewPicker.waitFor();
+  await page.screenshot({ path: join(outDir, `home-crew-comms-${width}.png`) });
+  await crewPicker.click();
+  await crewComms.getByRole("listbox").waitFor();
+  await page.screenshot({ path: join(outDir, `home-crew-comms-picker-${width}.png`) });
+  await axeBlocking(page, `home-crew-comms-picker-${width}`);
+  await page.keyboard.press("Escape");
+  await axeBlocking(page, `home-crew-comms-${width}`);
+  const firstSession = crewComms.locator("[data-session]").first();
+  if (await firstSession.count()) {
+    await firstSession.click();
+    const back = crewComms.getByRole("button", { name: /Back/ });
+    await back.waitFor();
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: join(outDir, `home-crew-chat-${width}.png`) });
+    await axeBlocking(page, `home-crew-chat-${width}`);
+    await back.click();
+    await crewPicker.waitFor();
+  } else {
+    failures.push(`home-${width}: crew comms listed no sessions to open`);
+  }
+  await page.getByRole("tab", { name: "Overseer comms" }).click();
+
+  await page.locator('[aria-controls="station-status"]').click();
+  await page.getByRole("dialog").waitFor();
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: join(outDir, `home-drawer-${width}.png`) });
+  await axeBlocking(page, `home-drawer-${width}`);
+  await page.keyboard.press("Escape");
+  if (await page.getByRole("dialog").isVisible()) {
+    failures.push(`home-${width}: Escape did not close the status drawer`);
+  }
+}
 
 try {
   await waitForServer();
@@ -158,6 +326,9 @@ try {
             console.warn(
               `${name}: axe ${minor.map((v) => `${v.impact}:${v.id}`).join(", ")} (not blocking)`,
             );
+        }
+        if (route === "/" && reducedMotion === "no-preference") {
+          await stationInteractions(page, width);
         }
         const line = {
           route,

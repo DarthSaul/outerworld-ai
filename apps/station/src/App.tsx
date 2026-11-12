@@ -3,16 +3,17 @@ import {
   CrtToggle,
   StationHeader,
   StationVitals,
+  StatusDrawer,
+  StatusDrawerToggle,
   StopButton,
   tabClass,
 } from "@darthsaul/outerworld-ai-ui";
-import { lazy, type ReactNode, Suspense } from "react";
-import { NavLink, Route, Routes, useNavigate } from "react-router";
+import { lazy, type ReactNode, Suspense, useState } from "react";
+import { Navigate, NavLink, Route, Routes, useNavigate } from "react-router";
 import { CommsPage } from "./comms/CommsPage.js";
 import { ErrorNote } from "./components/ErrorNote.js";
 import { useDaemon } from "./daemon-context.js";
 import { AgentPage } from "./pages/AgentPage.js";
-import { ConnectorsPage } from "./pages/ConnectorsPage.js";
 import { CrewPage } from "./pages/CrewPage.js";
 import { CrewSelectPage } from "./pages/CrewSelectPage.js";
 import { MemoryPage } from "./pages/MemoryPage.js";
@@ -33,17 +34,16 @@ import { useCrt, useDashboard, useRadio } from "./station/use-dashboard.js";
 const Gallery = lazy(() => import("./dev/GalleryPage.js"));
 
 /**
- * The page tabs: the design's two (Station, Crew Select), then the other v1 screens in the same
- * row (D26).
+ * The page tabs: the Station, then the other v1 screens in the same row (D26). Appearance (the
+ * design's Crew Select) sits after Crew; Connectors is a section of Settings (ADR-0014).
  */
 export const SCREENS: ReadonlyArray<{ path: string; label: GlossaryKey }> = [
   { path: "/", label: "tab.station" },
-  { path: "/crew-select", label: "tab.crewSelect" },
   { path: "/comms", label: "comms" },
   { path: "/crew", label: "agents" },
+  { path: "/crew-select", label: "tab.crewSelect" },
   { path: "/memory", label: "memory" },
   { path: "/notifications", label: "notifications" },
-  { path: "/connectors", label: "connectors" },
   { path: "/settings", label: "settings" },
 ];
 
@@ -94,7 +94,12 @@ function Tabs() {
   );
 }
 
-/** Header, page, footer, and the CRT overlay; `data-paused` stops blinking while stopped. */
+const DRAWER_ID = "station-status";
+
+/**
+ * Header, page, footer, the status drawer, and the CRT overlay; `data-paused` stops blinking
+ * while stopped. The kill switch sits at the footer's right end (ADR-0014).
+ */
 function Chrome({ children }: { readonly children: ReactNode }) {
   const station = useStationView();
   const { dashboard } = useDashboard();
@@ -105,6 +110,9 @@ function Chrome({ children }: { readonly children: ReactNode }) {
   const health = useHealth();
   const [crt, setCrt] = useCrt();
   const navigate = useNavigate();
+  const [drawer, setDrawer] = useState(false);
+  const live = dashboard?.liveCount ?? 0;
+  const alerts = dashboard?.alerts ?? 0;
   const engaged = kill.data?.engaged ?? false;
   const config = station.data?.station;
   return (
@@ -114,30 +122,44 @@ function Chrome({ children }: { readonly children: ReactNode }) {
         rooms={config?.rooms.length ?? 0}
         crew={station.data?.agents.length ?? 0}
         tabs={<Tabs />}
-        live={dashboard?.liveCount ?? 0}
-        alerts={dashboard?.alerts ?? 0}
-        radio={radio}
-        onOpenRadio={(to) => navigate(to)}
         controls={
           <>
-            <StopButton
-              stopped={engaged}
-              busy={kill.isPending || setKill.isPending}
-              onToggle={() => setKill.mutate(!engaged)}
+            <StatusDrawerToggle
+              open={drawer}
+              onToggle={() => setDrawer(!drawer)}
+              controls={DRAWER_ID}
+              live={live}
+              alerts={alerts}
             />
             <CrtToggle on={crt === "on"} onToggle={() => setCrt(crt === "on" ? "off" : "on")} />
             <StatusBadge />
           </>
         }
       />
+      <main className="flex min-w-0 flex-1 flex-col">{children}</main>
       <ErrorNote error={setKill.error} />
-      <main className="min-w-0 flex-1">{children}</main>
       <StationVitals
         {...(spend.data ? { tokens: spend.data.tokens, spendUsd: spend.data.stationUsd } : {})}
         {...(config?.budgets.stationDailyUsd !== undefined
           ? { capUsd: config.budgets.stationDailyUsd }
           : {})}
         {...(health.data ? { startedAt: health.data.startedAt } : {})}
+        controls={
+          <StopButton
+            stopped={engaged}
+            busy={kill.isPending || setKill.isPending}
+            onToggle={() => setKill.mutate(!engaged)}
+          />
+        }
+      />
+      <StatusDrawer
+        id={DRAWER_ID}
+        open={drawer}
+        onClose={() => setDrawer(false)}
+        live={live}
+        alerts={alerts}
+        radio={radio}
+        onOpenRadio={(to) => navigate(to)}
       />
       {crt === "on" ? <div aria-hidden="true" className="st-crt" /> : null}
     </div>
@@ -146,7 +168,7 @@ function Chrome({ children }: { readonly children: ReactNode }) {
 
 /** Every screen but the Station and Crew Select sits in a padded page area. */
 function Page({ children }: { readonly children: ReactNode }) {
-  return <div className="p-3.5">{children}</div>;
+  return <div className="flex flex-1 flex-col p-3.5">{children}</div>;
 }
 
 /** An empty station (no station.json yet) shows onboarding instead of the screens. */
@@ -218,11 +240,7 @@ export function App() {
                 />
                 <Route
                   path="/connectors"
-                  element={
-                    <Page>
-                      <ConnectorsPage />
-                    </Page>
-                  }
+                  element={<Navigate to="/settings#connectors" replace />}
                 />
                 <Route
                   path="/crew/:id"

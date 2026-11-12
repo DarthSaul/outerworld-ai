@@ -24,8 +24,14 @@ from the zod source (regenerate with `pnpm build && node scripts/write-schemas.m
 |--------|-------------|
 | `RuntimeEvent`, `parseRuntimeEvent(input)` | The v1 event union: envelope `{ seq, type, at, agentId?, sessionId?, runId?, payload }`, with the ids each family requires (run, dispatch, and consent events carry agent, session, and run). Payloads keep unknown fields. |
 | `foldCrewActivity(state, event)`, `activityOf(state, agentId)`, `CREW_ACTIVITY_EVENT_TYPES` | What each crew member is doing, folded from run events: `idle`, `running`, `awaiting_consent`, `done`, `failed`, `blocked` (budget or kill switch); several runs at once aggregate, waiting for consent first. |
-| `notificationFor(event)`, `NOTIFICATION_EVENT_TYPES`, `Notification` | The Notifications projection: `action` (consent, memory proposals), `alert` (failed, interrupted, max steps, budget stop, missed schedule, connector sign-in or error, kill switch), `info` (a scheduled run's result, a finished dispatch, a budget warning). Ids and details only; the words are glossary keys `notification.<kind>`. |
+| `notificationFor(event)`, `NOTIFICATION_EVENT_TYPES`, `Notification` | The Notifications projection: `action` (consent, memory proposals), `alert` (failed, interrupted, max steps, budget stop, missed schedule, connector sign-in or error, kill switch), `info` (a scheduled run's result, a finished dispatch, a budget warning, the kill switch cleared). Ids and details only; the words are glossary keys `notification.<kind>`. |
 | `EVENT_TYPES`, `EventType`, `EventOf<T>`, `NewRuntimeEvent` | Every type; one event by type; an event before the store assigns `seq` and `at`. |
+
+### Session titles (ADR-0014)
+| Export | Description |
+|--------|-------------|
+| `DEFAULT_SESSION_TITLE`, `titlePrompt(firstMessage)`, `TITLE_INSTRUCTIONS` | A new session's title, and the short request that asks a model to name it from the first message (cut to 2,000 characters, passed as data). |
+| `cleanTitle(reply)`, `fallbackTitle(message)`, `MAX_TITLE_CHARS` | A model reply as one plain line of at most 60 characters (undefined when nothing usable is left), and the message itself as the title when the model gives none. |
 
 ### Server-sent events
 | Export | Description |

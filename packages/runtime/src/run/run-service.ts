@@ -6,6 +6,9 @@ import {
   type ChatMessage,
   type ConnectorToolCatalog,
   checkBudget,
+  cleanTitle,
+  DEFAULT_SESSION_TITLE,
+  fallbackTitle,
   historyBudget,
   isTerminal,
   needsConsent,
@@ -14,6 +17,7 @@ import {
   SUPPORTED_MODELS,
   type ToolCallRecord,
   type ToolClass,
+  titlePrompt,
   utcDay,
 } from "@darthsaul/outerworld-ai-core";
 import { APICallError, jsonSchema, type LanguageModel, streamText, type ToolSet, tool } from "ai";
@@ -91,7 +95,18 @@ export interface RunServiceOptions {
   readonly sleep?: (ms: number) => Promise<void>;
   /** Applied to a failure message before it is stored (the event store redacts its own copy). */
   readonly redact?: (text: string) => string;
+  /**
+   * Name a fresh session from the Commander's first message with one short call to the crew
+   * member's model (ADR-0014). Off by default so scripted test models see only run calls.
+   */
+  readonly titles?: boolean;
 }
+
+/** A title call's output cap, and how long it may take before the message names the session. */
+const TITLE_MAX_TOKENS = 32;
+const TITLE_TIMEOUT_MS = 30_000;
+/** Title calls in flight at once, apart from the run slots so they never hold up a run. */
+const TITLE_CONCURRENCY = 2;
 
 const DEFAULT_RETRY: RetryPolicy = { attempts: 3, baseMs: 2000, maxMs: 60_000 };
 const DEFAULT_CONTEXT = 128_000;
@@ -182,6 +197,9 @@ const describeError = (error: unknown): string => {
 export class RunService {
   readonly #o: RunServiceOptions;
   readonly #slots: Slots;
+  readonly #titleSlots = new Slots(TITLE_CONCURRENCY);
+  /** Title calls waiting or in flight; the kill switch aborts them. */
+  readonly #titleCalls = new Set<AbortController>();
   readonly #active = new Map<string, AbortController>();
   readonly #done = new Map<string, Promise<RunRecord>>();
   readonly #sleep: (ms: number) => Promise<void>;
@@ -249,7 +267,7 @@ export class RunService {
     return runs;
   }
 
-  createSession(agentId: string, title = "New session"): SessionRecord {
+  createSession(agentId: string, title = DEFAULT_SESSION_TITLE): SessionRecord {
     const s = this.#o.sessions.createSession(agentId, title);
     this.#o.events.append({
       type: "session.created",
@@ -325,6 +343,15 @@ export class RunService {
     });
     if (text !== undefined)
       this.#o.sessions.appendMessage(sessionId, run.id, { role: "user", text });
+    if (
+      text !== undefined &&
+      this.#o.titles &&
+      session.title === DEFAULT_SESSION_TITLE &&
+      this.#o.sessions.messages(sessionId).length === 1
+    ) {
+      // Runs beside the agent's run; a failure only means the message names the session.
+      void this.#nameSession(session, text, run.id, model).catch(() => undefined);
+    }
     this.#o.events.append({
       type: "run.queued",
       agentId: session.agentId,
@@ -378,7 +405,10 @@ export class RunService {
   setKillSwitch(engaged: boolean): void {
     this.#o.killSwitch.set(engaged);
     this.#o.events.append({ type: "station.kill_switch", payload: { engaged } });
-    if (engaged) for (const c of this.#active.values()) c.abort(new Cancelled("kill_switch"));
+    if (engaged) {
+      for (const c of this.#active.values()) c.abort(new Cancelled("kill_switch"));
+      for (const c of this.#titleCalls) c.abort(new Cancelled("kill_switch"));
+    }
   }
 
   /** Resolves with the run once it reaches a terminal state (tests, dispatch in Phase 5). */
@@ -388,6 +418,86 @@ export class RunService {
     const run = this.#o.sessions.getRun(runId);
     if (!run) throw new NotFoundError(`no run "${runId}"`);
     return run;
+  }
+
+  /**
+   * Names a session from its first message (ADR-0014): one short call to the crew member's own
+   * model, budget-checked and recorded as spend of the run it started. At most two run at once,
+   * and engaging the kill switch aborts them. With the kill switch on,
+   * a cap reached, or a model that fails, the message itself becomes the title. A session the
+   * Commander renamed meanwhile keeps their name.
+   */
+  async #nameSession(
+    session: SessionRecord,
+    text: string,
+    runId: string,
+    modelId: string,
+  ): Promise<void> {
+    const ids = { agentId: session.agentId, sessionId: session.id, runId };
+    let title: string | undefined;
+    const station = (await loadStationDir(this.#o.home)).station;
+    if (station && !this.#o.killSwitch.engaged() && !this.#budgetCheck(station.budgets, ids)) {
+      const controller = new AbortController();
+      this.#titleCalls.add(controller);
+      let holding = false;
+      try {
+        await this.#titleSlots.acquire(controller.signal);
+        holding = true;
+        // Spend may have moved while this call waited for a slot: check again before calling.
+        if (this.#o.killSwitch.engaged() || this.#budgetCheck(station.budgets, ids)) {
+          throw new Cancelled("budget");
+        }
+        const model = await this.#o.models(modelId);
+        const prompt = titlePrompt(text);
+        const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(TITLE_TIMEOUT_MS)]);
+        let reply = "";
+        const result = streamText({
+          model,
+          instructions: prompt.instructions,
+          messages: [{ role: "user", content: prompt.text }],
+          maxOutputTokens: TITLE_MAX_TOKENS,
+          maxRetries: 0,
+          abortSignal: signal,
+        });
+        for await (const part of result.stream) {
+          if (part.type === "text-delta") reply += part.text;
+          else if (part.type === "finish-step") this.#recordSpend(ids, modelId, part);
+          else if (part.type === "error") throw part.error;
+        }
+        // An aborted stream ends without an error; its partial text is no title.
+        signal.throwIfAborted();
+        title = cleanTitle(reply);
+      } catch {
+        title = undefined;
+      } finally {
+        if (holding) this.#titleSlots.release();
+        this.#titleCalls.delete(controller);
+      }
+    }
+    if (this.#o.sessions.getSession(session.id)?.title !== DEFAULT_SESSION_TITLE) return;
+    const named = title ?? fallbackTitle(text);
+    this.renameSession(session.id, this.#o.redact ? this.#o.redact(named) : named);
+  }
+
+  /** Spend per model call: tokens, and OpenRouter's cost in USD when it reports one. */
+  #recordSpend(
+    ids: { agentId: string; sessionId: string; runId: string },
+    modelId: string,
+    part: {
+      usage: { inputTokens?: number | undefined; outputTokens?: number | undefined };
+      providerMetadata?: Record<string, unknown> | undefined;
+    },
+  ): void {
+    const cost = (part.providerMetadata?.openrouter as { usage?: { cost?: unknown } } | undefined)
+      ?.usage?.cost;
+    this.#o.spend.record({
+      ...ids,
+      model: modelId,
+      inputTokens: part.usage.inputTokens ?? 0,
+      outputTokens: part.usage.outputTokens ?? 0,
+      costUsd: typeof cost === "number" ? cost : null,
+      at: this.#now().toISOString(),
+    });
   }
 
   #session(id: string): SessionRecord {
@@ -584,18 +694,7 @@ export class RunService {
           } else if (part.type === "tool-call") {
             toolCalls.push({ id: part.toolCallId, name: part.toolName, input: part.input });
           } else if (part.type === "finish-step") {
-            // Spend per model call: tokens, and OpenRouter's cost in USD when it reports one.
-            const cost = (
-              part.providerMetadata?.openrouter as { usage?: { cost?: unknown } } | undefined
-            )?.usage?.cost;
-            this.#o.spend.record({
-              ...ids,
-              model: modelId,
-              inputTokens: part.usage.inputTokens ?? 0,
-              outputTokens: part.usage.outputTokens ?? 0,
-              costUsd: typeof cost === "number" ? cost : null,
-              at: this.#now().toISOString(),
-            });
+            this.#recordSpend(ids, modelId, part);
           } else if (part.type === "error") {
             throw part.error;
           }

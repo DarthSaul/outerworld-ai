@@ -9,12 +9,13 @@ import {
   term,
   termWith,
 } from "@darthsaul/outerworld-ai-core";
-import type { CSSProperties } from "react";
+import { type CSSProperties, useRef } from "react";
 import { PACKET_SPEED, roomColorVar, stVar } from "../tokens/tokens.js";
 import { Avatar, overseerAvatarProps } from "./Avatar.js";
 import { Diamond } from "./buttons.js";
 import { CREW_STATUS_TONE, lampBlink, toneVar } from "./tone.js";
 import { useAnimationClock } from "./useClock.js";
+import { useMapView, ZOOM_STEP } from "./useMapView.js";
 
 export type MapStyle = "schematic" | "floorplan" | "polygon";
 export const MAP_STYLES: readonly MapStyle[] = ["schematic", "floorplan", "polygon"];
@@ -73,6 +74,8 @@ function CrewChip({
       <Avatar
         name={member.name}
         color={color}
+        look={member.look}
+        size={30}
         lamp={{
           color: toneVar(CREW_STATUS_TONE[member.status]),
           className: lampBlink(member.status),
@@ -155,7 +158,12 @@ function Room({
                 }}
                 className="pointer-events-auto z-10 cursor-pointer bg-transparent"
               >
-                <Avatar name={overseer.name} size={38} {...overseerAvatarProps()} />
+                <Avatar
+                  name={overseer.name}
+                  look={overseer.look}
+                  size={38}
+                  {...overseerAvatarProps()}
+                />
               </button>
               <span className="bg-chip-bg px-1 py-0.75 font-display text-d8 text-title uppercase">
                 {overseer.name}
@@ -287,22 +295,38 @@ function packetsFor(lane: DashboardLane, t: number): { id: string; left: string;
   });
 }
 
+const viewButton =
+  "cursor-pointer border-2 border-line-soft bg-chip-bg px-2 py-1 font-display text-d7 text-fg-chip uppercase hover:border-cyan hover:text-cyan disabled:cursor-not-allowed disabled:opacity-50";
+
 /**
  * The station map (ADR-0013): rooms placed around the Bridge, hallways between them, packets
- * where a dispatch is running, all from `Dashboard`. Three styles; scrolls rather than crushing
- * the rooms on a narrow screen.
+ * where a dispatch is running, all from `Dashboard`. Three styles. The plane is never smaller
+ * than --st-map-min-*: drag to pan it, zoom, or recenter to fit every room in view (ADR-0014).
  */
 export function DashboardMap(props: DashboardMapProps) {
   const { dashboard, selection, mapStyle = "schematic", drawFrom, paused = false } = props;
   const t = useAnimationClock(!paused && dashboard.lanes.some((l) => l.traffic > 0));
   const roomName = (id: string) => dashboard.rooms.find((r) => r.id === id)?.name ?? id;
   const drawing = drawFrom !== undefined;
+  const viewport = useRef<HTMLDivElement>(null);
+  const plane = useRef<HTMLDivElement>(null);
+  const { view, dragging, recenter, zoom, handlers } = useMapView(viewport, plane);
+  // Narrow screens: the viewport takes the plane's 860 × 580 shape, so the fitted map fills it.
   return (
-    <div className="flex w-full flex-1 overflow-x-auto">
+    <div
+      ref={viewport}
+      data-map-style={mapStyle}
+      data-map-viewport=""
+      title={term("map.pan.hint")}
+      className={`relative aspect-[43/29] w-full min-w-0 flex-1 desktop:aspect-auto desktop:min-h-145 touch-none select-none overflow-hidden ${dragging ? "cursor-grabbing" : "cursor-grab"}`}
+      style={{ background: "var(--st-map-viewport-bg)" }}
+      {...handlers}
+    >
       <div
-        data-map-style={mapStyle}
-        className="relative min-h-145 w-full min-w-215 flex-1 overflow-hidden"
-        style={{ background: "var(--st-map-viewport-bg)" }}
+        ref={plane}
+        className="st-map-plane"
+        data-map-plane=""
+        style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})` }}
       >
         <div
           className="absolute inset-0"
@@ -337,25 +361,59 @@ export function DashboardMap(props: DashboardMapProps) {
             <Room key={room.id} room={room} props={props} linking={drawFrom === room.id} />
           ))}
         </div>
-        {drawing ? (
-          <div
-            role="status"
-            className="-translate-x-1/2 absolute top-2.5 left-1/2 z-20 whitespace-nowrap bg-amber px-2.5 py-1.5 font-display text-d8 text-ink uppercase"
-          >
-            {drawFrom
-              ? termWith("map.drawSecond", { room: roomName(drawFrom) })
-              : term("map.drawFirst")}
-          </div>
-        ) : null}
-        {paused ? (
-          <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3.5 bg-scrim">
-            <div className="st-map-scrim-title font-display text-d30 text-fg-hi uppercase tracking-st-4">
-              {term("station.stopped.title")}
-            </div>
-            <div className="text-b20 text-fg-soft">{term("station.stopped.body")}</div>
-          </div>
-        ) : null}
       </div>
+      {/* Presses here never start a drag. */}
+      <div
+        role="toolbar"
+        aria-label={term("map.view")}
+        className="absolute right-2.5 bottom-2.5 z-20 flex gap-1.5"
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          className={viewButton}
+          aria-label={term("map.zoomOut")}
+          title={term("map.zoomOut")}
+          onClick={() => zoom(1 / ZOOM_STEP)}
+        >
+          −
+        </button>
+        <button
+          type="button"
+          className={viewButton}
+          aria-label={term("map.zoomIn")}
+          title={term("map.zoomIn")}
+          onClick={() => zoom(ZOOM_STEP)}
+        >
+          +
+        </button>
+        <button
+          type="button"
+          className={viewButton}
+          title={term("map.recenter.hint")}
+          onClick={recenter}
+        >
+          ⌖ {term("map.recenter")}
+        </button>
+      </div>
+      {drawing ? (
+        <div
+          role="status"
+          className="-translate-x-1/2 absolute top-2.5 left-1/2 z-20 whitespace-nowrap bg-amber px-2.5 py-1.5 font-display text-d8 text-ink uppercase"
+        >
+          {drawFrom
+            ? termWith("map.drawSecond", { room: roomName(drawFrom) })
+            : term("map.drawFirst")}
+        </div>
+      ) : null}
+      {paused ? (
+        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3.5 bg-scrim">
+          <div className="st-map-scrim-title font-display text-d30 text-fg-hi uppercase tracking-st-4">
+            {term("station.stopped.title")}
+          </div>
+          <div className="text-b20 text-fg-soft">{term("station.stopped.body")}</div>
+        </div>
+      ) : null}
     </div>
   );
 }

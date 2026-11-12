@@ -67,6 +67,12 @@ const httpTransport: TransportFactory = (connector, provider) => {
   });
 };
 
+/** What a sign-in is tied to: the server URL, or the whole transport for a non-HTTP one. */
+const serverOf = (connector: Connector) =>
+  connector.transport.type === "http"
+    ? connector.transport.url
+    : JSON.stringify(connector.transport);
+
 const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
 /**
@@ -137,6 +143,7 @@ export class ConnectorManager {
         retries: 0,
         provider: new KeychainOAuthProvider({
           connectorId: connector.id,
+          server: serverOf(connector),
           secrets: this.#secrets,
           redirectUrl: this.#redirectUrl(connector.id),
           onAuthorizationUrl: (url) => {

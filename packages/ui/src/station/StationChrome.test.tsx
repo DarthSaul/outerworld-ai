@@ -24,33 +24,35 @@ const radio = [
 ];
 
 describe("StationHeader", () => {
-  it("names the station and its size, counts live tasks and alerts, and carries the radio", () => {
+  it("names the station and its size, and carries the tabs and controls on one bar", () => {
     render(
       <StationHeader
         stationName="Demo Station"
         rooms={3}
         crew={3}
         tabs={<a href="/">Station</a>}
-        live={2}
-        alerts={1}
-        radio={radio}
-        controls={<StopButton stopped={false} onToggle={() => {}} />}
+        controls={<CrtToggle on={false} onToggle={() => {}} />}
       />,
     );
     expect(screen.getByRole("banner")).toHaveTextContent("Demo Station");
     expect(screen.getByText("Overseer console · 3 rooms · 3 crew")).toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "Primary" })).toBeInTheDocument();
-    expect(screen.getByText("Alerts").parentElement).toHaveClass("st-blink-border");
-    expect(screen.getByText("Tasks live").parentElement).not.toHaveClass("st-blink-border");
+    expect(screen.getByRole("button", { name: "Scanlines overlay" })).toBeInTheDocument();
+    expect(screen.queryByText("Tasks live")).toBeNull();
+    expect(screen.queryByRole("region", { name: "Radio chatter" })).toBeNull();
+  });
+});
+
+describe("RadioChatter", () => {
+  it("lists the newest line first", () => {
+    render(<RadioChatter entries={radio} />);
     const lines = screen.getByRole("region", { name: "Radio chatter" }).querySelectorAll("li");
     expect([...lines].map((l) => l.textContent?.slice(8))).toEqual([
       "QuillA run finished",
       "WrenWaiting",
     ]);
   });
-});
 
-describe("RadioChatter", () => {
   it("opens where a line points, and leaves a line with nowhere to go as text", () => {
     const onOpen = vi.fn();
     render(
@@ -116,6 +118,13 @@ describe("StationVitals", () => {
     expect(screen.getByText("03d 04:12:12")).toBeInTheDocument();
   });
 
+  it("ends with its controls: the kill switch sits at the footer's right end", () => {
+    render(<StationVitals controls={<StopButton stopped={false} onToggle={() => {}} />} />);
+    const footer = screen.getByRole("contentinfo");
+    expect(footer.querySelectorAll("button")).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "Stop" })).toBeInTheDocument();
+  });
+
   it("without a cap shows spend alone; without data shows dashes", () => {
     render(<StationVitals spendUsd={3} />);
     expect(screen.getByText("Fuel · $3.00 today, no cap")).toBeInTheDocument();
@@ -137,12 +146,15 @@ describe("StationVitals", () => {
           rooms={3}
           crew={3}
           tabs={null}
-          live={0}
-          alerts={0}
-          radio={radio}
           controls={<CrtToggle on={false} onToggle={() => {}} />}
         />
-        <StationVitals tokens={0} spendUsd={0} capUsd={50} startedAt="2026-10-01T00:00:00Z" />
+        <StationVitals
+          tokens={0}
+          spendUsd={0}
+          capUsd={50}
+          startedAt="2026-10-01T00:00:00Z"
+          controls={<StopButton stopped={false} onToggle={() => {}} />}
+        />
       </>,
     );
     expect(await axe(container)).toHaveNoViolations();

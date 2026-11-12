@@ -333,6 +333,27 @@ Source: `docs/design/station-dashboard/`. Dark only; sprites replace the rig; ev
 
 **CHECKPOINT 11**
 
+## Phase 12 — Dashboard revisions (ADR-0014)
+- [x] 12.1 Kill switch cleared posts an info notification.
+- [x] 12.2 Sessions named from the first message (crew member's model, budget-checked, fallback
+  to the message); session lists carry count, last message, time, and activity.
+- [x] 12.3 Shell: status drawer (tasks live, alerts, radio), kill switch in the footer,
+  Connectors as a Settings section, pages fill the height.
+- [x] 12.4 Station map: drag to pan, zoom, recenter to fit every room.
+- [x] 12.5 COMMS: crew list with room and status, crew member profile, richer session list.
+- [x] 12.6 Crew: pixel `Checkbox` everywhere, aligned field rows, titled add panels, glossary
+  labels.
+- [x] 12.7 `browser:verify`: map drag and recenter, the drawer (axe, Escape), COMMS with a crew
+  member selected.
+- [x] 12.8 Station: map 2fr / comms and scanner 1fr on tablet and desktop, stacked on phones;
+  the crew roster merged into the scanner as a crew picker; comms portrait without its frame;
+  Appearance tab after Crew; Crew page "Add" panels first, then the "Manifest" of rooms.
+- [x] 12.10 Scanner rooms picker; crew characters on the map; comms card tabs with Crew comms
+  (crew, sessions, a chat across the card with Back).
+- [x] 12.9 Connector sign-ins tied to the server that issued them (ADR-0012 amendment).
+
+**CHECKPOINT 12**
+
 ## Follow-ups (not scheduled)
 - ~~Intermittent React #418 hydration mismatch in `browser:verify`~~ gone with `apps/web` (Next.js
   SSR) in Phase 1; the SPA renders only on the client, so there is no hydration step to mismatch.

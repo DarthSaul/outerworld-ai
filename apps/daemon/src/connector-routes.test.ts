@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
   ApiKeyService,
   ConnectorManager,
+  connectorSecretKey,
   EventStore,
   MemorySecretStore,
   openDatabase,
@@ -155,12 +156,13 @@ describe("connector routes", () => {
 
   it("disconnects and, when asked, forgets the stored sign-in", async () => {
     const { call, secrets } = setup();
-    await secrets.set("mcp.notion.tokens", "{}");
+    const key = connectorSecretKey("notion", "https://mcp.notion.example/mcp", "tokens");
+    await secrets.set(key, "{}");
     await call("POST", "/api/connectors/notion/connect");
     expect((await call("POST", "/api/connectors/notion/disconnect", { forget: true })).status).toBe(
       204,
     );
-    expect(await secrets.get("mcp.notion.tokens")).toBeUndefined();
+    expect(await secrets.get(key)).toBeUndefined();
     expect(((await call("GET", "/api/connectors")).json[0] as { status: string }).status).toBe(
       "disconnected",
     );

@@ -11,7 +11,6 @@ import {
   Avatar,
   ChoiceButton,
   CREW_STATUS_TONE,
-  CrewRoster,
   DashboardMap,
   EmptyState,
   lampBlink,
@@ -26,6 +25,7 @@ import {
   Sprite,
   StatBox,
   StationVitals,
+  StatusDrawerToggle,
   StopButton,
   stVar,
   tabClass,
@@ -106,6 +106,30 @@ export function Gallery({ input }: { readonly input: DashboardInput }) {
               <StopButton stopped={false} onToggle={() => {}} />
               <StopButton stopped onToggle={() => {}} />
             </div>
+            <div className="flex h-9 gap-2">
+              <StatusDrawerToggle
+                open={false}
+                onToggle={() => {}}
+                controls="gallery-status"
+                live={0}
+                alerts={0}
+              />
+              <StatusDrawerToggle
+                open={false}
+                onToggle={() => {}}
+                controls="gallery-status"
+                live={2}
+                alerts={3}
+              />
+              <StatusDrawerToggle
+                open
+                onToggle={() => {}}
+                controls="gallery-status"
+                live={1}
+                alerts={0}
+              />
+              <span id="gallery-status" hidden />
+            </div>
           </Cell>
           <Cell label="Stats and bars">
             <div className="flex flex-wrap gap-2">
@@ -177,8 +201,7 @@ export function Gallery({ input }: { readonly input: DashboardInput }) {
         </div>
       </Panel>
 
-      <div className="grid grid-cols-1 gap-3.5 desktop:grid-cols-3">
-        <CrewRoster dashboard={live} selection={{ type: "agent", id: "wren" }} />
+      <div className="grid grid-cols-1 gap-3.5 desktop:grid-cols-2">
         <OverseerComms
           message={{
             key: "gallery",

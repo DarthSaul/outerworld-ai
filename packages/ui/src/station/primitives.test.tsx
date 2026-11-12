@@ -6,11 +6,33 @@ import { axe } from "vitest-axe";
 import { stVar } from "../tokens/tokens.js";
 import { Avatar, overseerAvatarProps } from "./Avatar.js";
 import { ChoiceButton, Diamond, OutlineButton, tabClass } from "./buttons.js";
+import { Checkbox } from "./form.js";
 import { Panel, PanelLabel } from "./Panel.js";
 import { SegmentBar } from "./SegmentBar.js";
 import { Sprite } from "./Sprite.js";
 import { StatBox } from "./StatBox.js";
 import { CREW_STATUS_TONE, lampBlink, RUN_STATUS_TONE, toneVar } from "./tone.js";
+
+describe("Checkbox", () => {
+  it("is a real checkbox with its label and hint, drawn as a pixel box", async () => {
+    const onChange = vi.fn();
+    const { container } = render(
+      <Checkbox label="Web" hint="Search and fetch pages" checked={false} onChange={onChange} />,
+    );
+    const box = screen.getByRole("checkbox", { name: /Web/ });
+    expect(box).toHaveClass("st-check");
+    expect(container.querySelector(".st-check-box")).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByText("Search and fetch pages")).toBeInTheDocument();
+    await userEvent.click(screen.getByText("Web"));
+    expect(onChange).toHaveBeenCalled();
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it("can be disabled", () => {
+    render(<Checkbox label="Files" checked disabled onChange={() => {}} />);
+    expect(screen.getByRole("checkbox", { name: "Files" })).toBeDisabled();
+  });
+});
 
 describe("Panel", () => {
   it("is a region named by its title strip, with meta on the right", () => {

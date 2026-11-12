@@ -1,4 +1,5 @@
 import { term } from "@darthsaul/outerworld-ai-core";
+import { Checkbox } from "@darthsaul/outerworld-ai-ui";
 import { type FormEvent, useId, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { ErrorNote } from "../components/ErrorNote.js";
@@ -152,14 +153,11 @@ function ScheduleForm({
           onChange={(e) => set({ prompt: e.target.value })}
         />
       </label>
-      <label className="flex items-center gap-2 text-b19 text-fg">
-        <input
-          type="checkbox"
-          checked={draft.catchUp}
-          onChange={(e) => set({ catchUp: e.target.checked })}
-        />
-        {term("schedule.catchUp")}
-      </label>
+      <Checkbox
+        label={term("schedule.catchUp")}
+        checked={draft.catchUp}
+        onChange={(e) => set({ catchUp: e.target.checked })}
+      />
       <div className="flex flex-wrap gap-2">
         <button type="submit" className={button} disabled={pending}>
           {term("schedule.save")}
@@ -213,17 +211,12 @@ function ScheduleCard({
         <h3 id={titleId} className="m-0 font-display font-normal text-d8 text-fg-hi uppercase">
           {schedule.id}
         </h3>
-        <label className="flex items-center gap-2 text-b19 text-fg">
-          <input
-            type="checkbox"
-            checked={schedule.enabled}
-            disabled={update.isPending}
-            onChange={(e) =>
-              update.mutate({ id: schedule.id, input: { enabled: e.target.checked } })
-            }
-          />
-          {term("schedule.enabled")}
-        </label>
+        <Checkbox
+          label={term("schedule.enabled")}
+          checked={schedule.enabled}
+          disabled={update.isPending}
+          onChange={(e) => update.mutate({ id: schedule.id, input: { enabled: e.target.checked } })}
+        />
       </header>
       {editing ? (
         <ScheduleForm

@@ -21,7 +21,7 @@ const clock = (iso: string) => {
   return Number.isNaN(d.getTime()) ? "--:--:--" : d.toLocaleTimeString("en-GB");
 };
 
-function Line({ entry }: { readonly entry: RadioEntry }) {
+function Line({ entry, wrap }: { readonly entry: RadioEntry; readonly wrap: boolean }) {
   return (
     <>
       <time dateTime={entry.at} className="shrink-0 text-fg-dim">
@@ -30,33 +30,38 @@ function Line({ entry }: { readonly entry: RadioEntry }) {
       <span className="shrink-0 uppercase" style={{ color: entry.color }}>
         {entry.who}
       </span>
-      <span className="truncate text-fg-log">{entry.text}</span>
+      <span className={wrap ? "min-w-0 text-fg-log" : "truncate text-fg-log"}>{entry.text}</span>
     </>
   );
 }
 
 /**
- * The header's chatter feed: newest on top, one line each, in a short scroll area. A line with a
- * place to look is a button (`onOpen`), which also lets the keyboard reach the scroll area.
+ * The chatter feed: newest on top, one line each, in a scroll area. A line with a place to look
+ * is a button (`onOpen`), which also lets the keyboard reach the scroll area. `fill` makes it
+ * take the height it is given (the status drawer) instead of a two-line strip.
  */
 export function RadioChatter({
   entries,
   onOpen,
+  fill = false,
 }: {
   readonly entries: readonly RadioEntry[];
   readonly onOpen?: (to: string) => void;
+  readonly fill?: boolean;
 }) {
-  const row = "flex w-full min-w-0 gap-2.5 whitespace-nowrap text-left text-b17";
+  const row = `flex w-full min-w-0 gap-2.5 text-left text-b17 ${fill ? "" : "whitespace-nowrap"}`;
   return (
     <section
       aria-label={term("radio.title")}
-      className="flex min-w-0 max-w-130 flex-[1_1_300px] flex-col gap-1 border-2 border-line-soft bg-well px-2.5 py-1.5"
+      className={`flex min-w-0 flex-col gap-1 border-2 border-line-soft bg-well px-2.5 py-1.5 ${fill ? "min-h-0 flex-1" : "max-w-130 flex-[1_1_300px]"}`}
     >
       <div className="flex justify-between gap-2 font-display text-d7 text-fg-mute uppercase">
         <span>{term("radio.title")}</span>
         <span>{term("radio.channel")}</span>
       </div>
-      <ol className="m-0 flex h-10 list-none flex-col gap-px overflow-auto p-0">
+      <ol
+        className={`m-0 flex list-none flex-col gap-px overflow-auto p-0 ${fill ? "min-h-0 flex-1" : "h-10"}`}
+      >
         {entries.length === 0 ? (
           <li className="text-b17 text-fg-dim">{term("radio.empty")}</li>
         ) : (
@@ -68,11 +73,11 @@ export function RadioChatter({
                   className={`${row} cursor-pointer bg-transparent p-0 hover:bg-hover`}
                   onClick={() => e.to && onOpen(e.to)}
                 >
-                  <Line entry={e} />
+                  <Line entry={e} wrap={fill} />
                 </button>
               ) : (
                 <div className={row}>
-                  <Line entry={e} />
+                  <Line entry={e} wrap={fill} />
                 </div>
               )}
             </li>
@@ -137,16 +142,14 @@ export interface StationHeaderProps {
   readonly crew: number;
   /** The page tabs (router links styled with `tabClass`). */
   readonly tabs: ReactNode;
-  readonly live: number;
-  readonly alerts: number;
-  readonly radio: readonly RadioEntry[];
-  /** Open where a radio line points. */
-  readonly onOpenRadio?: (to: string) => void;
-  /** Right end: the stop button, CRT switch, connection status. */
+  /** Right end: the status drawer's toggle, the CRT switch, connection status. */
   readonly controls: ReactNode;
 }
 
-/** The design's header bar: arrowhead, station name, tabs; counts, radio, and controls. */
+/**
+ * The header bar: arrowhead, station name, tabs, and a few controls. Live tasks, alerts, and the
+ * radio live in the status drawer (ADR-0014), which keeps this bar to one row.
+ */
 export function StationHeader(p: StationHeaderProps) {
   return (
     <header className="flex flex-wrap items-center justify-between gap-x-5 gap-y-3 border-line border-b-3 bg-bar px-4 py-3 shadow-bar-down">
@@ -167,10 +170,7 @@ export function StationHeader(p: StationHeaderProps) {
           {p.tabs}
         </nav>
       </div>
-      <div className="flex min-w-0 flex-auto flex-wrap items-stretch justify-end gap-2">
-        <StatBox label={term("stat.live")} value={p.live} tone="green" />
-        <StatBox label={term("stat.alerts")} value={p.alerts} tone="red" alert={p.alerts > 0} />
-        <RadioChatter entries={p.radio} {...(p.onOpenRadio ? { onOpen: p.onOpenRadio } : {})} />
+      <div className="flex min-w-0 flex-auto flex-wrap items-stretch justify-end gap-2 self-stretch">
         {p.controls}
       </div>
     </header>
@@ -207,12 +207,20 @@ export interface StationVitalsProps {
   /** The station's daily cap; without one, fuel shows spend alone. */
   readonly capUsd?: number;
   readonly startedAt?: string;
+  /** Right end, after the vitals: the kill switch (ADR-0014). */
+  readonly controls?: ReactNode;
 }
 
 const usd = (n: number) => `$${n.toFixed(2)}`;
 
 /** The footer: station vitals. Tokens and fuel are today's (UTC); uptime is this daemon's. */
-export function StationVitals({ tokens, spendUsd, capUsd, startedAt }: StationVitalsProps) {
+export function StationVitals({
+  tokens,
+  spendUsd,
+  capUsd,
+  startedAt,
+  controls,
+}: StationVitalsProps) {
   const uptime = useUptime(startedAt);
   const spent = spendUsd ?? 0;
   const fuelLabel =
@@ -246,6 +254,12 @@ export function StationVitals({ tokens, spendUsd, capUsd, startedAt }: StationVi
           )}
         </StatBox>
         <StatBox label={term("vitals.uptime")} value={startedAt ? formatUptime(uptime) : "—"} />
+        {controls === undefined ? null : (
+          <>
+            <span aria-hidden="true" className="w-0.5 self-stretch bg-line" />
+            {controls}
+          </>
+        )}
       </div>
     </footer>
   );

@@ -4,7 +4,6 @@ import { userEvent } from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { axe } from "vitest-axe";
 import { demoDashboard } from "../test/dashboard.js";
-import { CrewRoster } from "./CrewRoster.js";
 import { Scanner } from "./Scanner.js";
 
 const run = (
@@ -35,22 +34,81 @@ const busy = () =>
     ],
   });
 
-describe("CrewRoster", () => {
-  it("lists crew but the Overseer, with room and status, and selects one", async () => {
-    const onSelectAgent = vi.fn();
-    render(<CrewRoster dashboard={busy()} onSelectAgent={onSelectAgent} />);
-    expect(screen.getByRole("region", { name: "Crew roster" })).toHaveTextContent("2 + OV");
-    const rows = screen.getAllByRole("button");
-    expect(rows.map((r) => r.textContent)).toEqual([
-      "QUQuill OperationsActive",
-      "WRWren ResearchBlocked",
-    ]);
-    await userEvent.click(rows[1] as HTMLElement);
-    expect(onSelectAgent).toHaveBeenCalledWith("wren");
-  });
-});
-
 describe("Scanner", () => {
+  it("picks crew from a list grouped by room, with the crew count and each status", async () => {
+    const onSelect = vi.fn();
+    const { container } = render(
+      <Scanner
+        dashboard={busy()}
+        selection={{ type: "room", id: "operations" }}
+        onSelect={onSelect}
+      />,
+    );
+    const picker = screen.getByRole("button", { name: "Crew · 3 Pick a crew member" });
+    await userEvent.click(picker);
+    expect(screen.getAllByRole("option").map((o) => o.getAttribute("aria-label"))).toEqual([
+      "Vesper (Overseer) · Idle, Command",
+      "Quill · Active, Operations",
+      "Wren · Blocked, Research",
+    ]);
+    // Each crew member is drawn as their own character (no frame), the name underlined in their
+    // color: the room's, white for the Overseer.
+    for (const option of screen.getAllByRole("option")) {
+      expect(option.querySelector("[data-look] svg rect")).not.toBeNull();
+      expect(option.querySelector("[data-look]")?.className).not.toMatch(/border/);
+    }
+    const underline = (name: RegExp) =>
+      (screen.getByRole("option", { name }).querySelector("[data-crew-color]") as HTMLElement).style
+        .textDecorationColor;
+    expect(underline(/^Vesper/)).toBe("var(--st-white)");
+    expect(underline(/^Quill/)).toMatch(/^var\(--st-/);
+    expect(underline(/^Quill/)).not.toBe(underline(/^Wren/));
+    expect(await axe(container)).toHaveNoViolations();
+    await userEvent.click(screen.getByRole("option", { name: /^Wren/ }));
+    expect(onSelect).toHaveBeenCalledWith({ type: "agent", id: "wren" });
+  });
+
+  it("picks a room from a second list under crew, with sector and crew count", async () => {
+    const onSelect = vi.fn();
+    const { container } = render(
+      <Scanner dashboard={busy()} selection={{ type: "agent", id: "quill" }} onSelect={onSelect} />,
+    );
+    const rooms = screen.getByRole("button", { name: "Rooms · 3 Pick a room" });
+    const crew = screen.getByRole("button", { name: /^Crew · 3/ });
+    // The same control as the crew picker, on the same grid, below it.
+    expect(rooms.className).toBe(crew.className);
+    expect(crew.compareDocumentPosition(rooms) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await userEvent.click(rooms);
+    expect(screen.getAllByRole("option").map((o) => o.getAttribute("aria-label"))).toEqual([
+      "Command · HQ · 1 crew",
+      "Operations · A-1 · 1 crew",
+      "Research · B-1 · 1 crew",
+    ]);
+    expect(await axe(container)).toHaveNoViolations();
+    await userEvent.click(screen.getByRole("option", { name: /^Research/ }));
+    expect(onSelect).toHaveBeenCalledWith({ type: "room", id: "research" });
+  });
+
+  it("shows the scanned room in the rooms picker", () => {
+    render(
+      <Scanner
+        dashboard={busy()}
+        selection={{ type: "room", id: "operations" }}
+        onSelect={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByRole("button", { name: "Rooms · 3 Operations · A-1 · 1 crew" }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows the scanned crew member in the picker", () => {
+    render(
+      <Scanner dashboard={busy()} selection={{ type: "agent", id: "quill" }} onSelect={vi.fn()} />,
+    );
+    expect(screen.getByRole("button", { name: "Crew · 3 Quill · Active" })).toBeInTheDocument();
+  });
+
   it("scans a room: crew, placed objects, hallways, and its missions", async () => {
     const onSelect = vi.fn();
     render(

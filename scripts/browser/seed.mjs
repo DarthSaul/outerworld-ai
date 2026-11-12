@@ -41,6 +41,8 @@ export async function seed({ port, home }) {
     'use remember {"text":"The Commander wants sources as a short list.","scope":"agent"}',
   );
   await say("vesper", "Morning check", "Good morning. Anything I should know?");
+  // No title: the first message names it (ADR-0014; the fake model titles with its first words).
+  await say("vesper", undefined, "Draft the launch plan for Friday's release");
   const fire = await call("POST", "/agents/quill/schedules/daily-briefing/run");
   await until(fire.sessionId, ["completed"]);
   await say("quill", "Hub notes", 'use write_file {"path":"notes.md","content":"Next steps"}', [

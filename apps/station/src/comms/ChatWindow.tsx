@@ -5,7 +5,7 @@ import {
   term,
 } from "@darthsaul/outerworld-ai-core";
 import { EmptyState, OutlineButton } from "@darthsaul/outerworld-ai-ui";
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import { ErrorNote } from "../components/ErrorNote.js";
 import { formatUsd } from "../components/format.js";
 import { useDaemon } from "../daemon-context.js";
@@ -162,16 +162,22 @@ function Message({
 /**
  * One session: transcript, live reply, run state, cancel, and the message box. While a run is
  * working, the box sends a direction to it instead (steer). `embedded` is a worker's session
- * shown inside a dispatch card: no close or archive.
+ * shown inside a dispatch card: no close or archive. `fill` fits it to a panel of fixed height
+ * (the Station's crew comms): no frame, the transcript scrolls and follows new lines. `onBack`
+ * puts a back button before the title, focused when the chat opens.
  */
 export function ChatWindow({
   sessionId,
   onClose,
+  onBack,
   embedded = false,
+  fill = false,
 }: {
   readonly sessionId: string;
   readonly onClose?: () => void;
+  readonly onBack?: () => void;
   readonly embedded?: boolean;
+  readonly fill?: boolean;
 }) {
   const detail = useSession(sessionId);
   const station = useStationView();
@@ -182,9 +188,45 @@ export function ChatWindow({
   const steer = useSteer();
   const streams = useStreamingText(sessionId);
   const [text, setText] = useState("");
+  const section = useRef<HTMLElement>(null);
+  const scroller = useRef<HTMLDivElement>(null);
+  const loaded = !detail.isPending;
+  const lines = detail.data?.messages.length ?? 0;
+  const streamed = Object.values(streams).join("").length;
+  // Whether there is a way back, not the callback: a parent's new arrow each render must not
+  // pull focus off the message box.
+  const canGoBack = onBack !== undefined;
 
-  if (detail.isPending) return <p className="m-0 text-b17 text-fg-mute">Loading…</p>;
-  if (detail.error) return <ErrorNote error={detail.error} />;
+  // The back button takes focus once the chat has loaded, so the keyboard lands in the chat.
+  useEffect(() => {
+    if (canGoBack && loaded) section.current?.querySelector<HTMLElement>("[data-back]")?.focus();
+  }, [canGoBack, loaded]);
+
+  // In a fixed-height panel, keep the newest line in view as messages and the reply arrive.
+  useEffect(() => {
+    const el = scroller.current;
+    if (fill && el && lines + streamed >= 0) el.scrollTop = el.scrollHeight;
+  }, [fill, lines, streamed]);
+
+  if (detail.isPending || detail.error) {
+    const note = detail.error ? (
+      <ErrorNote error={detail.error} />
+    ) : (
+      <p className="m-0 text-b17 text-fg-mute">Loading…</p>
+    );
+    if (!onBack) return note;
+    // In a panel, Back stays available while the chat loads or after it fails to.
+    return (
+      <section ref={section} className="flex min-h-0 min-w-0 flex-1 flex-col gap-2.5">
+        <div className="flex items-center gap-2 border-line-faint border-b-2 px-2.5 py-1.5">
+          <OutlineButton tone="line" data-back onClick={onBack}>
+            {term("comms.back")}
+          </OutlineButton>
+        </div>
+        <div className="px-2.5">{note}</div>
+      </section>
+    );
+  }
   const { session, messages, runs } = detail.data;
   const nameOf = (id: string) => station.data?.agents.find((a) => a.id === id)?.config.name ?? id;
   const agentName = nameOf(session.agentId);
@@ -192,25 +234,38 @@ export function ChatWindow({
   const active = latest !== undefined && !isTerminal(latest.state);
   const live = latest ? streams[latest.id] : undefined;
 
+  const titleId = `chat-${sessionId}`;
+  /** Empties the box, and in a panel shrinks it back to one line. */
+  const clear = () => {
+    setText("");
+    const box = document.getElementById(`${titleId}-input`);
+    if (box) box.style.height = "";
+  };
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (!text.trim()) return;
-    if (active && latest)
-      steer.mutate({ runId: latest.id, text }, { onSuccess: () => setText("") });
-    else send.mutate(text, { onSuccess: () => setText("") });
+    if (active && latest) steer.mutate({ runId: latest.id, text }, { onSuccess: clear });
+    else send.mutate(text, { onSuccess: clear });
   };
-  const titleId = `chat-${sessionId}`;
 
   return (
     <section
+      ref={section}
       aria-labelledby={titleId}
       data-session={sessionId}
-      className={`flex min-w-0 flex-1 flex-col gap-2.5 border-2 border-line bg-panel ${embedded ? "" : "shadow-panel"}`}
+      className={`flex min-w-0 flex-1 flex-col gap-2.5 ${fill ? "min-h-0" : `border-2 border-line bg-panel ${embedded ? "" : "shadow-panel"}`}`}
     >
-      <header className="flex flex-wrap items-center justify-between gap-2 border-line border-b-2 bg-panel-head px-2.5 py-2">
+      <header
+        className={`flex flex-wrap items-center gap-2 border-line border-b-2 px-2.5 ${fill ? "border-line-faint py-1.5" : "justify-between bg-panel-head py-2"}`}
+      >
+        {onBack ? (
+          <OutlineButton tone="line" data-back onClick={onBack}>
+            {term("comms.back")}
+          </OutlineButton>
+        ) : null}
         <h2
           id={titleId}
-          className="m-0 font-display font-normal text-d9 text-panel-title uppercase tracking-st-1"
+          className={`m-0 font-display font-normal text-d9 text-panel-title uppercase tracking-st-1 ${fill ? "min-w-0 flex-1 truncate" : ""}`}
         >
           {agentName} · {session.title}
         </h2>
@@ -229,7 +284,10 @@ export function ChatWindow({
           </div>
         ) : null}
       </header>
-      <div className="flex flex-col gap-2.5 px-2.5">
+      <div
+        ref={scroller}
+        className={`flex flex-col gap-2.5 px-2.5 ${fill ? "min-h-0 flex-1 overflow-y-auto" : ""}`}
+      >
         {messages.length === 0 && !live ? (
           <EmptyState title={term("comms.empty.title")} body={term("comms.empty.body")} />
         ) : (
@@ -299,11 +357,18 @@ export function ChatWindow({
         </label>
         <textarea
           id={`${titleId}-input`}
-          rows={3}
-          className="min-w-0 flex-1 resize-y border-none bg-transparent font-body text-b19 text-fg-hi outline-none"
+          rows={fill ? 1 : 3}
+          className={`min-w-0 flex-1 border-none bg-transparent font-body text-b19 text-fg-hi outline-none ${fill ? "max-h-[3lh] resize-none overflow-y-auto" : "resize-y"}`}
           placeholder={term("comms.placeholder")}
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => {
+            setText(e.target.value);
+            // In a panel, the box grows with its text to three lines, then scrolls.
+            if (fill) {
+              e.target.style.height = "auto";
+              e.target.style.height = `${e.target.scrollHeight}px`;
+            }
+          }}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) submit(e);
           }}
@@ -317,7 +382,9 @@ export function ChatWindow({
         </button>
       </form>
       {active ? (
-        <p className="m-0 px-2.5 pb-2.5 text-b15 text-fg-mute">{term("comms.direct.hint")}</p>
+        <p className={fill ? "sr-only" : "m-0 px-2.5 pb-2.5 text-b15 text-fg-mute"}>
+          {term("comms.direct.hint")}
+        </p>
       ) : null}
       <ErrorNote error={send.error ?? steer.error ?? cancel.error ?? update.error} />
     </section>

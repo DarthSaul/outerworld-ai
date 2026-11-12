@@ -29,6 +29,49 @@ describe("SessionStore: sessions", () => {
     expect(s.getSession(b.id)?.archivedAt).toBe("2026-09-29T12:00:04.000Z");
   });
 
+  it("summarizes sessions for a list, most recently active first", () => {
+    const s = store();
+    const quiet = s.createSession("vesper", "Quiet");
+    const busy = s.createSession("vesper", "Busy");
+    const older = s.createSession("vesper", "Older");
+    s.appendMessage(older.id, undefined, { role: "user", text: "Hello   there\nfriend" });
+    const run = s.createRun({ sessionId: busy.id, agentId: "vesper", trigger: "user", model: "m" });
+    s.appendMessage(busy.id, run.id, { role: "user", text: "Plan the week" });
+    s.appendMessage(busy.id, run.id, { role: "assistant", text: "Done: three items." });
+    s.appendMessage(busy.id, run.id, { role: "tool", toolCallId: "c1", name: "t", output: 1 });
+    s.appendMessage(busy.id, run.id, { role: "assistant", text: "", toolCalls: [] });
+    s.archiveSession(quiet.id);
+
+    const list = s.sessionSummaries("vesper");
+    expect(list.map((x) => x.title)).toEqual(["Busy", "Older"]);
+    expect(list[0]).toMatchObject({
+      messageCount: 4,
+      lastMessageAt: "2026-09-29T12:00:09.000Z",
+      lastMessage: { role: "assistant", text: "Done: three items." },
+      active: true,
+    });
+    expect(list[1]).toMatchObject({
+      messageCount: 1,
+      lastMessage: { role: "user", text: "Hello there friend" },
+      active: false,
+    });
+    const archived = s.sessionSummaries("vesper", { includeArchived: true });
+    expect(archived.at(-1)).toMatchObject({ title: "Quiet", messageCount: 0 });
+    expect(archived.at(-1)?.lastMessage).toBeUndefined();
+    expect(archived.at(-1)?.lastMessageAt).toBeUndefined();
+  });
+
+  it("previews past a message that is only whitespace", () => {
+    const s = store();
+    const session = s.createSession("vesper", "Blank");
+    s.appendMessage(session.id, undefined, { role: "user", text: "Plan the week" });
+    s.appendMessage(session.id, undefined, { role: "assistant", text: "  \n\t " });
+    expect(s.sessionSummaries("vesper")[0]?.lastMessage).toEqual({
+      role: "user",
+      text: "Plan the week",
+    });
+  });
+
   it("returns undefined for an unknown session and refuses to rename one", () => {
     const s = store();
     expect(s.getSession("nope")).toBeUndefined();

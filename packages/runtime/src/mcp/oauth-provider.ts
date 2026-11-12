@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import type {
   OAuthClientMetadata,
   OAuthClientProvider,
@@ -8,13 +8,33 @@ import type {
 import type { SecretStore } from "../secrets/store.js";
 
 /**
+ * The keychain account for a connector's sign-in: the connector id plus a hash of the server URL
+ * the sign-in was made for. A sign-in is only ever read back for that same server, so a station
+ * whose connector shares an id but points elsewhere (a demo placeholder, a changed URL) never
+ * sends another server's tokens, and two stations never overwrite each other's sign-in.
+ */
+export function connectorSecretKey(
+  connectorId: string,
+  server: string,
+  kind: "client" | "tokens",
+): string {
+  const hash = createHash("sha256").update(server).digest("hex").slice(0, 16);
+  return `mcp.${connectorId}.${hash}.${kind}`;
+}
+
+/** Where sign-ins were kept before they were tied to a server; never read, only forgotten. */
+const legacyKey = (connectorId: string, kind: "client" | "tokens") => `mcp.${connectorId}.${kind}`;
+
+/**
  * OAuth for one connector (ADR-0012), with the MCP SDK doing discovery, dynamic client
  * registration, PKCE, and refresh. The registered client and the tokens live in the OS keychain;
  * the PKCE verifier and the `state` live only in memory for the one sign-in in progress. The
  * redirect is the daemon's loopback callback, so a new daemon port means registering again.
+ * Both are kept per server (`connectorSecretKey`).
  */
 export class KeychainOAuthProvider implements OAuthClientProvider {
   readonly #connectorId: string;
+  readonly #server: string;
   readonly #secrets: SecretStore;
   readonly #redirectUrl: string;
   readonly #onAuthorizationUrl: (url: string) => void;
@@ -23,18 +43,21 @@ export class KeychainOAuthProvider implements OAuthClientProvider {
 
   constructor(options: {
     connectorId: string;
+    /** The server URL the sign-in is for. */
+    server: string;
     secrets: SecretStore;
     redirectUrl: string;
     onAuthorizationUrl: (url: string) => void;
   }) {
     this.#connectorId = options.connectorId;
+    this.#server = options.server;
     this.#secrets = options.secrets;
     this.#redirectUrl = options.redirectUrl;
     this.#onAuthorizationUrl = options.onAuthorizationUrl;
   }
 
   #key(kind: "client" | "tokens") {
-    return `mcp.${this.#connectorId}.${kind}`;
+    return connectorSecretKey(this.#connectorId, this.#server, kind);
   }
 
   async #read<T>(kind: "client" | "tokens"): Promise<T | undefined> {
@@ -114,8 +137,13 @@ export class KeychainOAuthProvider implements OAuthClientProvider {
     return (await this.#secrets.get(this.#key("tokens"))) !== undefined;
   }
 
-  /** Disconnect and forget: removes the tokens and the client registration. */
+  /**
+   * Disconnect and forget: removes the tokens and the client registration, and any sign-in this
+   * connector id had from before sign-ins were tied to a server.
+   */
   async forget(): Promise<void> {
     await this.invalidateCredentials("all");
+    await this.#secrets.delete(legacyKey(this.#connectorId, "client"));
+    await this.#secrets.delete(legacyKey(this.#connectorId, "tokens"));
   }
 }

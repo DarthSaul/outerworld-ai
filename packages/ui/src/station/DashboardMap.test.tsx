@@ -17,6 +17,19 @@ describe("DashboardMap", () => {
     expect(within(ops).getByTitle("Archive cabinet")).toHaveTextContent("Files");
   });
 
+  it("shows each crew member as their own character, not initials", () => {
+    const dashboard = demoDashboard();
+    render(<DashboardMap dashboard={dashboard} />);
+    for (const member of dashboard.crew) {
+      const name = member.overseer ? `${member.name}, Overseer` : new RegExp(`^${member.name},`);
+      const chip = screen.getByRole("button", { name });
+      const avatar = chip.querySelector("[data-look]");
+      expect(avatar).toHaveAttribute("data-look", String(member.look));
+      expect(avatar?.querySelector("svg rect")).not.toBeNull();
+      expect(avatar).not.toHaveTextContent(member.name.slice(0, 2).toUpperCase());
+    }
+  });
+
   it("labels every hallway and selects a room, a crew member, or a hallway", async () => {
     const onSelectRoom = vi.fn();
     const onSelectAgent = vi.fn();

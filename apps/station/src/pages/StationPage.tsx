@@ -1,15 +1,17 @@
 import { type Dashboard, term, termWith } from "@darthsaul/outerworld-ai-core";
 import {
-  CrewRoster,
   DashboardMap,
   type DashboardSelection,
   MAP_STYLES,
   OutlineButton,
-  OverseerComms,
+  OverseerCommsBody,
+  PanelTabs,
+  ResizeHandle,
   Scanner,
   tabClass,
 } from "@darthsaul/outerworld-ai-ui";
-import { useState } from "react";
+import { type CSSProperties, useRef, useState } from "react";
+import { CrewComms } from "../comms/CrewComms.js";
 import { ErrorNote } from "../components/ErrorNote.js";
 import {
   useActivity,
@@ -18,6 +20,14 @@ import {
   useDeleteLane,
   useKillSwitch,
 } from "../queries.js";
+import {
+  DEFAULT_SIDE,
+  percentOf,
+  resizeSide,
+  SIDE_LIMITS,
+  splitTemplate,
+  useSplit,
+} from "../station/split.js";
 import { useComms } from "../station/use-comms.js";
 import { useDashboard, useMapStyle } from "../station/use-dashboard.js";
 
@@ -40,7 +50,7 @@ function current(d: Dashboard, s: DashboardSelection | undefined): DashboardSele
 }
 
 /**
- * The Station (ADR-0013): crew roster, the station map, Overseer comms and the scanner, every
+ * The Station (ADR-0013): the station map, Overseer comms and the scanner (which picks crew), every
  * piece a projection of runtime state. Drawing a hallway opens one in station.json.
  */
 export function StationPage() {
@@ -55,6 +65,9 @@ export function StationPage() {
   const [picked, setPicked] = useState<DashboardSelection>();
   const [draw, setDraw] = useState<{ from: string | null }>();
   const [note, setNote] = useState<string>();
+  const [commsTab, setCommsTab] = useState("overseer");
+  const [side, setSide] = useSplit();
+  const grid = useRef<HTMLDivElement>(null);
 
   if (!dashboard) return <ErrorNote error={error} />;
   const selection = current(dashboard, picked);
@@ -120,17 +133,16 @@ export function StationPage() {
     </div>
   );
 
+  // Tablet and desktop: the map and the side column (comms over the scanner) split a 3fr row,
+  // 2fr / 1fr by default; the handle between them resizes the split, kept per viewer. Phones
+  // stack the map, comms, then the scanner.
   return (
-    <div className="grid grid-cols-1 items-stretch gap-3.5 p-3.5 desktop:grid-cols-[minmax(0,1fr)_minmax(0,3fr)_minmax(0,2fr)]">
+    <div
+      ref={grid}
+      style={{ "--st-station-cols": splitTemplate(side) } as CSSProperties}
+      className="grid flex-1 grid-cols-1 items-stretch gap-3.5 p-3.5 desktop:grid-cols-(--st-station-cols) desktop:gap-0"
+    >
       <h1 className="sr-only">{term("tab.station")}</h1>
-      <div className="flex min-w-0 flex-col">
-        <CrewRoster
-          dashboard={dashboard}
-          {...(selection ? { selection } : {})}
-          onSelectAgent={(id) => setPicked({ type: "agent", id })}
-          className="flex-1"
-        />
-      </div>
       <div className="flex min-w-0 flex-col gap-3.5">
         <section
           aria-labelledby="map-title"
@@ -160,25 +172,56 @@ export function StationPage() {
           />
         </section>
       </div>
-      <div className="flex min-w-0 flex-col gap-3.5">
-        <OverseerComms
-          {...(comms.message ? { message: comms.message } : {})}
-          {...(dashboard.overseer ? { overseerLook: dashboard.overseer.look } : {})}
-          onApprove={comms.approve}
-          onDeny={comms.deny}
-          onNext={comms.next}
-          onOrder={(text) => {
-            comms.order(text);
-            if (dashboard.bridgeId) setPicked({ type: "room", id: dashboard.bridgeId });
-          }}
-          busy={comms.busy}
-        />
-        <ErrorNote error={comms.error} />
+      <ResizeHandle
+        label={term("station.resize")}
+        valueNow={percentOf(side)}
+        valueMin={percentOf(SIDE_LIMITS.min)}
+        valueMax={percentOf(SIDE_LIMITS.max)}
+        onResize={(dx) => setSide(resizeSide(side, dx, grid.current?.clientWidth ?? 0))}
+        onReset={() => setSide(DEFAULT_SIDE)}
+        className="hidden desktop:block"
+      />
+      {/* Tablet and desktop: comms over the scanner, half the map's height each; neither panel
+          sets the row's height (contain-size), and each scrolls inside when it needs to. */}
+      <div className="flex min-w-0 flex-col gap-3.5 desktop:grid desktop:contain-size desktop:grid-rows-[minmax(0,1fr)_minmax(0,1fr)]">
+        <div className="flex min-h-0 flex-col gap-3.5">
+          <PanelTabs
+            label={term("comms.tabs")}
+            active={commsTab}
+            onChange={setCommsTab}
+            meta={<span aria-hidden="true" className="st-blink size-2 bg-red" />}
+            className="min-h-0 flex-1"
+            tabs={[
+              {
+                id: "overseer",
+                label: term("comms.title"),
+                content: (
+                  <OverseerCommsBody
+                    {...(comms.message ? { message: comms.message } : {})}
+                    {...(dashboard.overseer ? { overseerLook: dashboard.overseer.look } : {})}
+                    onApprove={comms.approve}
+                    onDeny={comms.deny}
+                    onNext={comms.next}
+                    onOrder={(text) => {
+                      comms.order(text);
+                      if (dashboard.bridgeId) setPicked({ type: "room", id: dashboard.bridgeId });
+                    }}
+                    busy={comms.busy}
+                    paused={commsTab !== "overseer"}
+                  />
+                ),
+              },
+              { id: "crew", label: term("comms.crew.title"), content: <CrewComms /> },
+            ]}
+          />
+          <ErrorNote error={comms.error} />
+        </div>
         {selection ? (
           <Scanner
             dashboard={dashboard}
             selection={selection}
             onSelect={setPicked}
+            className="min-h-0 flex-1"
             onStopRun={stopRuns}
             onDemolish={(id) =>
               deleteLane.mutate(id, {
