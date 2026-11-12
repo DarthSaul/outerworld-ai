@@ -16,7 +16,8 @@ no telemetry, no analytics, and no error reporting.
 | Files your agents write | `$OUTERWORLD_HOME/workspaces/<agent-id>/` | Never | The only place Files-prop tools can read or write. |
 | Daemon logs | `$OUTERWORLD_HOME/logs/` | Never | Secrets are redacted before anything is written. |
 | Daemon access token | `$OUTERWORLD_HOME/daemon.token`, file mode 0600 | Never | Generated on first start; lets the SPA talk to the daemon. Given to the page the daemon (or the dev server) serves. |
-| OpenRouter API key | OS keychain | Never | `OPENROUTER_API_KEY` in the environment is a development fallback. Never written to the station directory. |
+| OpenRouter API key | OS keychain (account `openrouter-api-key`) | Only to OpenRouter | `OPENROUTER_API_KEY` in the environment is a development fallback. Never written to the station directory. |
+| Anthropic API key | OS keychain (account `anthropic-api-key`) | Only to Anthropic | `ANTHROPIC_API_KEY` in the environment is a development fallback. Never written to the station directory (ADR-0015). |
 | Connector OAuth tokens and client registration (Notion) | OS keychain (service `outerworld-ai`, accounts `mcp.<id>.<server hash>.tokens` / `.client`, the hash being the first 16 hex characters of SHA-256 of the server URL) | Only to the server they were issued by | Refreshed by the daemon; "Disconnect and forget sign-in" deletes them (and any older `mcp.<id>.tokens` / `mcp.<id>.client` entry). The PKCE verifier and sign-in `state` exist only in memory. Keychain entries belong to your OS user, not to one station directory: stations whose connector has the same id **and the same server URL** share a sign-in; a connector pointing at any other URL never sees it, and no connection is attempted at startup without a sign-in for its own server. `OUTERWORLD_SECRETS=memory` keeps a daemon off the keychain entirely (`browser:verify` uses it). |
 | The demo station | `fixtures/demo-station/` | Yes | A fictional station. Every test, screenshot, and example uses it. |
 | Local scratch (`.outerworld/` in this checkout) | Your machine | Never (gitignored) | `pnpm dev`'s working copy of the fixture, `pnpm dev:fresh`'s empty station, and `browser:verify`'s seeded copy and screenshots (of the fixture, with history the fake model made), which CI uploads as a build artifact. |
@@ -35,10 +36,13 @@ key is configured and where it came from (keychain or environment).
 Exactly three kinds of request, all made by the daemon, all caused by your configuration or by an
 agent you created:
 
-1. **Model calls to OpenRouter** (`openrouter.ai`): the assembled prompt (the agent's documents,
-   its role briefing, approved memories, recent session history, and the new input), tool
-   definitions, and tool results. OpenRouter forwards them to the model provider you picked. One
-   extra call checks your key when you save it. A new session's first message (up to 2,000
+1. **Model calls to Anthropic** (`api.anthropic.com`) **or OpenRouter** (`openrouter.ai`): the
+   assembled prompt (the agent's documents, its role briefing, approved memories, recent session
+   history, and the new input), tool definitions, and tool results. With an Anthropic key, Claude
+   models go straight to Anthropic; every other model, and Claude when there is only an OpenRouter
+   key, goes to OpenRouter, which forwards to the model provider you picked (ADR-0015). One extra
+   call checks a key when you save it (OpenRouter's key endpoint; Anthropic's model list, which
+   spends no tokens). A new session's first message (up to 2,000
    characters) is also sent once, to the same crew member's model, to name the session
    (ADR-0014).
 2. **Connector calls to Notion** (`mcp.notion.com`) for agents granted Notion: searches, fetches,
