@@ -24,7 +24,7 @@ function MastIcon() {
     <svg
       aria-hidden="true"
       viewBox="0 0 9 9"
-      className="size-4.5"
+      className="size-4"
       shapeRendering="crispEdges"
       fill="currentColor"
     >
@@ -63,7 +63,7 @@ export function StatusDrawerToggle({
       aria-label={termWith("drawer.open", { live: String(live), alerts: String(alerts) })}
       title={term("drawer.title")}
       onClick={onToggle}
-      className={`relative flex cursor-pointer items-center gap-1.5 border-2 px-2 font-display text-d7 uppercase ${open ? "border-cyan bg-active-bg text-cyan" : "border-line-soft bg-well text-fg-mute hover:text-fg-hi"}`}
+      className={`relative flex cursor-pointer items-center gap-1.5 border-2 px-1.75 font-display text-d6 uppercase ${open ? "border-cyan bg-active-bg text-cyan" : "border-line-soft bg-well text-fg-mute hover:text-fg-hi"}`}
     >
       <MastIcon />
       {live > 0 ? <span aria-hidden="true" className="size-2 bg-green" data-live-dot="" /> : null}

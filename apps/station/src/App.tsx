@@ -80,7 +80,7 @@ function Tabs() {
           <NavLink
             to={s.path}
             end={s.path === "/" || s.path === "/crew"}
-            className={({ isActive }) => tabClass(isActive)}
+            className={({ isActive }) => tabClass(isActive, "map")}
           >
             {term(s.label)}
             {s.path === "/notifications" ? <UnreadBadge /> : null}

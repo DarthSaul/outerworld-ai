@@ -10,6 +10,8 @@ export interface StatBoxProps {
   /** Blink the border red (ALERTS while above zero). */
   readonly alert?: boolean;
   readonly children?: ReactNode;
+  /** `compact`: a tighter well with smaller words, for the footer. */
+  readonly size?: "regular" | "compact";
   readonly className?: string;
 }
 
@@ -20,8 +22,10 @@ export function StatBox({
   tone = "hi",
   alert,
   children,
+  size = "regular",
   className = "",
 }: StatBoxProps) {
+  const compact = size === "compact";
   const style = {
     "--st-blink-a": stVar("line-soft"),
     "--st-blink-b": stVar("red"),
@@ -29,11 +33,15 @@ export function StatBox({
   } as CSSProperties;
   return (
     <div
-      className={`flex flex-col gap-1 border-2 border-line-soft bg-well px-2.5 py-1.5 ${alert ? "st-blink-border" : ""} ${className}`}
+      className={`flex flex-col border-2 border-line-soft bg-well ${compact ? "justify-center gap-0.5 px-2 py-1" : "gap-1 px-2.5 py-1.5"} ${alert ? "st-blink-border" : ""} ${className}`}
       style={style}
     >
-      <span className="font-display text-d7 text-fg-mute uppercase">{label}</span>
-      {value === undefined ? null : <span className="text-b22">{value}</span>}
+      <span className={`font-display text-fg-mute uppercase ${compact ? "text-d6" : "text-d7"}`}>
+        {label}
+      </span>
+      {value === undefined ? null : (
+        <span className={compact ? "text-b18 leading-none" : "text-b22"}>{value}</span>
+      )}
       {children}
     </div>
   );
