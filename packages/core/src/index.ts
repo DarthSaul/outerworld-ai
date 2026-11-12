@@ -52,14 +52,20 @@ export {
 } from "./api/crew-api.js";
 // Pixel characters an agent can appear as (ADR-0013)
 export {
+  ART_BOX,
+  ART_CHARACTERS,
+  type ArtCharacter,
   type Cell,
   CHARACTER_COUNT,
   CHARACTERS,
+  type Character,
   type CharacterGrid,
   type CharacterSpec,
   characterGrid,
+  DRAWN_CHARACTERS,
   gridRuns,
   type HairStyle,
+  isArtCharacter,
   lookFor,
   OUTLINE,
   type PixelRun,
@@ -77,10 +83,24 @@ export {
   Schedule as AgentSchedule,
 } from "./config/agent-config.js";
 export {
+  anthropicModelId,
   DEFAULT_MODEL,
+  estimateCostUsd,
+  findModel,
   isSupportedModel,
+  type ModelPricing,
+  type ModelProvider,
+  type ModelRoute,
+  ModelSettings,
+  ProviderChoice,
+  type ProviderKeys,
+  ReasoningLevel,
+  type ResolvedModelSettings,
+  resolveModelSettings,
+  routeModel,
   SUPPORTED_MODELS,
   type SupportedModel,
+  type TokenUsage,
 } from "./config/models.js";
 export {
   Budgets,

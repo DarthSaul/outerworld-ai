@@ -30,6 +30,10 @@ from the zod source (regenerate with `pnpm build && node scripts/write-schemas.m
 ### Session titles (ADR-0014)
 | Export | Description |
 |--------|-------------|
+| `SUPPORTED_MODELS`, `DEFAULT_MODEL`, `isSupportedModel(id)`, `findModel(id)` | The tested model list (OpenRouter ids, with `anthropicId` and list `pricing` for Claude). |
+| `routeModel(id, { anthropic, openrouter })`, `anthropicModelId(id)` | Which provider a model call goes to with the keys present (ADR-0015): Claude to Anthropic when its key is set, otherwise OpenRouter; or why it cannot run (`no_key`, `needs_openrouter`). |
+| `ModelSettings`, `resolveModelSettings(agentModel, ...layers)`, `ProviderChoice`, `ReasoningLevel` | A conversation's or scheduled job's model, key, and reasoning level, and how they layer over the crew member's model (ADR-0016). `routeModel` takes the key choice as a third argument. |
+| `estimateCostUsd(id, { input, cacheRead, cacheWrite, output })` | USD for one call at list price, or undefined without a known price. |
 | `DEFAULT_SESSION_TITLE`, `titlePrompt(firstMessage)`, `TITLE_INSTRUCTIONS` | A new session's title, and the short request that asks a model to name it from the first message (cut to 2,000 characters, passed as data). |
 | `cleanTitle(reply)`, `fallbackTitle(message)`, `MAX_TITLE_CHARS` | A model reply as one plain line of at most 60 characters (undefined when nothing usable is left), and the message itself as the title when the model gives none. |
 

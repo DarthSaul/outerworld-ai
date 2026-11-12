@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { CHARACTER_COUNT } from "../characters.js";
 import { type AgentConfig, parseAgentConfig } from "./agent-config.js";
 
 const valid = (): Record<string, unknown> => ({
@@ -24,10 +25,10 @@ const valid = (): Record<string, unknown> => ({
 const paths = (input: unknown) => parseAgentConfig(input).issues.map((i) => `${i.level} ${i.path}`);
 
 describe("parseAgentConfig", () => {
-  it("accepts a look that indexes one of the 24 characters, and nothing else", () => {
+  it("accepts a look that indexes one of the characters, drawn or painted, and nothing else", () => {
     expect(parseAgentConfig({ ...valid(), look: 0 }).ok).toBe(true);
-    expect(parseAgentConfig({ ...valid(), look: 23 }).ok).toBe(true);
-    expect(paths({ ...valid(), look: 24 })).toEqual(["error look"]);
+    expect(parseAgentConfig({ ...valid(), look: CHARACTER_COUNT - 1 }).ok).toBe(true);
+    expect(paths({ ...valid(), look: CHARACTER_COUNT })).toEqual(["error look"]);
     expect(paths({ ...valid(), look: -1 })).toEqual(["error look"]);
     expect(paths({ ...valid(), look: 1.5 })).toEqual(["error look"]);
   });
