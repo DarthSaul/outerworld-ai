@@ -295,7 +295,8 @@ describe("Overseer comms", () => {
 
   it("gives the next order the model and reasoning chosen under the order box", async () => {
     const user = userEvent.setup();
-    const { calls } = renderApp("/");
+    const fake = fakeApi();
+    const { calls } = renderApp("/", fake);
     await map();
     const picker = within(comms()).getByRole("group", { name: term("model.settings") });
     await choose(user, picker, term("model.model"), /^Claude Opus 5\.5,/);
@@ -312,9 +313,17 @@ describe("Overseer comms", () => {
     expect(patch.body).toEqual({
       modelSettings: { model: "anthropic/claude-opus-5.5", reasoning: "high" },
     });
-    const order = calls.indexOf(patch);
-    const message = calls.findIndex((c) => c.method === "POST" && c.path.endsWith("/messages"));
-    expect(order).toBeLessThan(message);
+    // The order's own message, to the session those settings were saved on, after them.
+    const message = calls.findIndex(
+      (c) => c.method === "POST" && c.path === `${patch.path}/messages`,
+    );
+    expect(message).toBeGreaterThan(-1);
+    expect(calls.indexOf(patch)).toBeLessThan(message);
+    const sessionId = patch.path.split("/")[2] ?? "";
+    expect(fake.sessions.get(sessionId)?.runs[0]).toMatchObject({
+      model: "anthropic/claude-opus-5.5",
+      reasoning: "high",
+    });
   });
 
   it("remembers the open order across a reload, and drops one whose session is gone", async () => {

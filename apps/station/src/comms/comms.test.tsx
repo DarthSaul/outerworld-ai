@@ -217,6 +217,24 @@ describe("COMMS", () => {
     expect(item).toHaveAttribute("aria-current", "true");
   });
 
+  it("previews your own last message as you typed it, a reply as plain text", async () => {
+    const fake = fakeApi();
+    fake
+      .seedSession("vesper", "Mine")
+      .messages.push({ role: "user", text: "Use *stars* and # signs" });
+    fake
+      .seedSession("vesper", "Theirs")
+      .messages.push({ role: "assistant", text: "**Done**, see `x`" });
+    renderApp("/comms?agent=vesper", fake);
+    const list = await screen.findByRole("region", { name: term("comms.sessions") });
+    expect(await within(list).findByRole("button", { name: "Mine" })).toHaveAccessibleDescription(
+      /You: Use \*stars\* and # signs/,
+    );
+    expect(within(list).getByRole("button", { name: "Theirs" })).toHaveAccessibleDescription(
+      /Vesper: Done, see x/,
+    );
+  });
+
   it("keeps several chat windows open at once", async () => {
     const { user } = await startChat();
     await user.click(screen.getByRole("button", { name: "Quill" }));
@@ -329,6 +347,17 @@ describe("COMMS: model settings per conversation (ADR-0016)", () => {
     expect(calls.filter((c) => c.method === "PATCH").at(-1)?.body).toEqual({
       modelSettings: { model: "anthropic/claude-opus-5.5", reasoning: "xhigh" },
     });
+  });
+
+  it("builds a quick second change on the first, before the session has refetched", async () => {
+    const { chat, user, calls } = await startChat();
+    const picker = within(chat).getByRole("group", { name: term("model.settings") });
+    await choose(user, picker, term("model.model"), /^Claude Opus 5\.5,/);
+    await choose(user, picker, term("model.reasoning"), /^High,/);
+    expect(calls.filter((c) => c.method === "PATCH").map((c) => c.body)).toEqual([
+      { modelSettings: { model: "anthropic/claude-opus-5.5" } },
+      { modelSettings: { model: "anthropic/claude-opus-5.5", reasoning: "high" } },
+    ]);
   });
 
   it("goes back to the crew member's settings when every field is on its default", async () => {

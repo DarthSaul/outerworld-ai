@@ -2,6 +2,7 @@ import {
   type ChatMessage,
   findModel,
   isTerminal,
+  type ModelSettings,
   type RuntimeEvent,
   term,
 } from "@darthsaul/outerworld-ai-core";
@@ -175,6 +176,9 @@ function Message({
   );
 }
 
+/** How close to the end, in pixels, still counts as reading the newest line. */
+const NEAR_BOTTOM = 48;
+
 /**
  * One session: transcript, live reply, run state, cancel, and the message box. While a run is
  * working, the box sends a direction to it instead (steer). `embedded` is a worker's session
@@ -208,8 +212,14 @@ export function ChatWindow({
   const streams = useStreamingText(sessionId);
   const client = useQueryClient();
   const [text, setText] = useState("");
+  // The model settings last chosen here, until the session refetched after the last write shows
+  // them: a second quick change builds on the first, not on the stale session. `undefined`: none.
+  const [pending, setPending] = useState<ModelSettings | null>();
+  const writes = useRef(0);
   const section = useRef<HTMLElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
+  // Whether the reader is at the newest line; scrolled up to read, new text leaves them there.
+  const atBottom = useRef(true);
   const loaded = !detail.isPending;
   const lines = detail.data?.messages.length ?? 0;
   const streamed = Object.values(streams).join("").length;
@@ -230,7 +240,7 @@ export function ChatWindow({
   // reply arrive.
   useEffect(() => {
     const el = scroller.current;
-    if (el && lines + streamed >= 0) el.scrollTop = el.scrollHeight;
+    if (el && atBottom.current && lines + streamed >= 0) el.scrollTop = el.scrollHeight;
   }, [lines, streamed]);
 
   if (detail.isPending || detail.error) {
@@ -270,6 +280,8 @@ export function ChatWindow({
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (!text.trim()) return;
+    // Sending follows the conversation down to its reply.
+    atBottom.current = true;
     if (active && latest) steer.mutate({ runId: latest.id, text }, { onSuccess: clear });
     else send.mutate(text, { onSuccess: clear });
   };
@@ -318,6 +330,10 @@ export function ChatWindow({
       </header>
       <div
         ref={scroller}
+        onScroll={(e) => {
+          const el = e.currentTarget;
+          atBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < NEAR_BOTTOM;
+        }}
         data-transcript
         className={`flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto overscroll-y-contain px-2.5 ${fill ? "min-h-12 py-2" : ""}`}
       >
@@ -429,7 +445,8 @@ export function ChatWindow({
             <button
               type="submit"
               className="shrink-0 cursor-pointer border-none bg-green px-2.5 py-1.25 font-display text-d7 text-ink uppercase disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={send.isPending || steer.isPending || !text.trim()}
+              // A message waits for a model settings change to be saved, so it runs on it.
+              disabled={send.isPending || steer.isPending || update.isPending || !text.trim()}
             >
               {active ? term("comms.direct") : term("comms.send")}
             </button>
@@ -438,17 +455,22 @@ export function ChatWindow({
         {embedded ? null : (
           <ModelPicker
             compact={fill}
-            value={session.modelSettings}
+            value={pending === undefined ? session.modelSettings : (pending ?? undefined)}
             agentModel={agentModel}
-            onChange={(modelSettings) =>
+            onChange={(modelSettings) => {
+              const write = ++writes.current;
+              setPending(modelSettings);
               update.mutate(
                 { modelSettings },
                 {
-                  onSuccess: () =>
-                    void client.invalidateQueries({ queryKey: ["session", sessionId] }),
+                  onSettled: async () => {
+                    await client.invalidateQueries({ queryKey: ["session", sessionId] });
+                    // Only the last write hands back to the session, now refetched.
+                    if (writes.current === write) setPending(undefined);
+                  },
                 },
-              )
-            }
+              );
+            }}
           />
         )}
         {active && !embedded ? <p className="sr-only">{term("model.applies")}</p> : null}

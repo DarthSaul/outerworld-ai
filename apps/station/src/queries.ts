@@ -224,6 +224,8 @@ export function useUpdateSession(id: string) {
       archived?: true;
       modelSettings?: ModelSettings | null;
     }) => api.send<SessionRecord>("PATCH", `/sessions/${encodeURIComponent(id)}`, input),
+    // One session's writes go out one at a time, in order: a later one never lands first.
+    scope: { id: `session:${id}` },
   });
 }
 

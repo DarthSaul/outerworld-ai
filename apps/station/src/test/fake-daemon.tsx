@@ -5,9 +5,11 @@ import {
   type AgentView,
   type ChatMessage,
   type CrewActivityEntry,
+  DEFAULT_MODEL,
   type Notification,
   type RuntimeEvent,
   resolveGrants,
+  resolveModelSettings,
   type StationConfig,
   type StationView,
   SUPPORTED_MODELS,
@@ -388,12 +390,17 @@ export function fakeApi() {
         return entry.session;
       }
       if (parts[2] === "messages") {
+        // As the runtime does: the crew member's model under the session's own settings.
+        const agentModel = state.agents.get(entry.session.agentId)?.config.model ?? DEFAULT_MODEL;
+        const settings = resolveModelSettings(agentModel, entry.session.modelSettings);
         const run: RunRecord = {
           id: nextId("r"),
           sessionId: entry.session.id,
           agentId: entry.session.agentId,
           state: "running",
-          model: "anthropic/claude-sonnet-5.5",
+          model: settings.model,
+          provider: settings.provider,
+          reasoning: settings.reasoning,
           createdAt: "2026-09-29T12:00:00.000Z",
           steps: 0,
         };

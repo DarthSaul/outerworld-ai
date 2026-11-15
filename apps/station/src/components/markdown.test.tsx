@@ -69,4 +69,9 @@ describe("plainText", () => {
     );
     expect(plainText("__bold__ and snake_case_name")).toBe("bold and snake_case_name");
   });
+
+  it("keeps a code block's code, dropping its fences, so a code-only reply has a preview", () => {
+    expect(plainText("```ts\nconst a = 1;\n```")).toBe("const a = 1;");
+    expect(plainText("Run:\n```\npnpm dev\n```\nthen open it")).toBe("Run: pnpm dev then open it");
+  });
 });

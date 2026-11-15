@@ -223,7 +223,10 @@ export function SessionButton({
               <span className="text-fg-mute">
                 {session.lastMessage.role === "user" ? term("comms.session.you") : agentName}:
               </span>{" "}
-              {plainText(session.lastMessage.text)}
+              {/* The Commander's own words as typed; a crew reply is Markdown, shown as plain text. */}
+              {session.lastMessage.role === "user"
+                ? session.lastMessage.text
+                : plainText(session.lastMessage.text)}
             </>
           ) : (
             term("comms.session.empty")

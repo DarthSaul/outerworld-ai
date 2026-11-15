@@ -88,7 +88,8 @@ const MAX_RUN = 48;
 export function plainText(markdown: string): string {
   return (
     markdown
-      .replace(/```[\s\S]*?```/g, " ")
+      // A fence's markers (and language tag) go; its code stays, so a code-only reply has a preview.
+      .replace(/```[^\n`]*\n?([\s\S]*?)```/g, " $1 ")
       .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
       .replace(/^\s{0,3}(#{1,6}|>|[-*+]|\d+\.)\s+/gm, "")
       .replace(/[*~`]+/g, "")

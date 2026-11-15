@@ -1,5 +1,5 @@
 import { ART_CHARACTERS, CHARACTER_COUNT, term } from "@darthsaul/outerworld-ai-core";
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { axe } from "vitest-axe";
@@ -43,6 +43,24 @@ describe("Appearance on a crew member's page", () => {
       expect(calls).toContainEqual({ method: "PATCH", path: "/agents/quill", body: { look: 1 } }),
     );
     expect(await screen.findByText("Quill now appears as BOLT")).toBeInTheDocument();
+  });
+
+  it("drops the note once the saved look changes again elsewhere", async () => {
+    const fake = fakeApi();
+    const { client } = renderApp("/crew/quill", fake);
+    await region();
+    await userEvent.click(within(strip()).getByRole("button", { name: "NOVA, Pilot" }));
+    fireEvent.keyDown(strip(), { key: "ArrowRight" });
+    fireEvent.keyDown(strip(), { key: "Enter" });
+    expect(await screen.findByText("Quill now appears as BOLT")).toBeInTheDocument();
+    // The refreshed crew member shows the saved look: the note stands.
+    await act(() => client.invalidateQueries());
+    expect(screen.getByText("Quill now appears as BOLT")).toBeInTheDocument();
+    // Another tab picks a different look: the note would now be false.
+    const quill = fake.state.agents.get("quill");
+    if (quill) quill.config = { ...quill.config, look: 7 };
+    await act(() => client.invalidateQueries());
+    await waitFor(() => expect(screen.queryByText("Quill now appears as BOLT")).toBeNull());
   });
 
   it("saves from the title strip, live only once the look has changed", async () => {

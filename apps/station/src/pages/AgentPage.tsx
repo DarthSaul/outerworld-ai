@@ -309,7 +309,9 @@ function AppearanceRow({ agentId }: { readonly agentId: string }) {
   const { dashboard } = useDashboard();
   const setLook = useSetLook();
   const [cursor, setCursor] = useState<number>();
-  const [assigned, setAssigned] = useState<string>();
+  // The look just saved, the one it replaced, and what to say. The note holds while the crew member
+  // shows either (the refresh may not be in yet); a different look, saved elsewhere, ends it.
+  const [assigned, setAssigned] = useState<{ look: number; before: number; text: string }>();
   if (!dashboard) return null;
   const toAgent = (c: (typeof dashboard.crew)[number]): CrewSelectAgent => {
     const room = dashboard.rooms.find((r) => r.id === c.roomId);
@@ -330,6 +332,10 @@ function AppearanceRow({ agentId }: { readonly agentId: string }) {
   const agent = everyone.find((a) => a.id === agentId);
   if (!agent) return null;
   const at = cursor ?? agent.look;
+  const note =
+    assigned && (agent.look === assigned.look || agent.look === assigned.before)
+      ? assigned.text
+      : "";
   return (
     <div className="flex flex-col gap-1.5">
       <CrewSelect
@@ -342,20 +348,22 @@ function AppearanceRow({ agentId }: { readonly agentId: string }) {
             { agentId, look: at },
             {
               onSuccess: () =>
-                setAssigned(
-                  termWith("crewSelect.assigned", {
+                setAssigned({
+                  look: at,
+                  before: agent.look,
+                  text: termWith("crewSelect.assigned", {
                     agent: agent.name,
                     character: CHARACTERS[at]?.name ?? "",
                   }),
-                ),
+                }),
             },
           )
         }
         busy={setLook.isPending}
       />
-      {assigned ? (
+      {note ? (
         <p role="status" className="m-0 text-b17 text-green">
-          {assigned}
+          {note}
         </p>
       ) : null}
       <ErrorNote error={setLook.error} />

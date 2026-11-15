@@ -57,11 +57,11 @@ export function OverseerPanel({
     setOpenState(sessionId);
     storeOpen(sessionId);
   };
+  // Listed: open unless archived. Not listed: only one just started here (the list is behind).
+  const listed = sessions.data?.find((s) => s.id === open);
   const live =
     open !== undefined &&
-    (open === started ||
-      sessions.data === undefined ||
-      sessions.data.some((s) => s.id === open && !s.archivedAt));
+    (listed ? !listed.archivedAt : open === started || sessions.data === undefined);
 
   if (open && live) {
     return (
@@ -89,8 +89,8 @@ export function OverseerPanel({
           setStarted(sessionId);
           setOpen(sessionId);
           setSettings(null);
+          onOrdered?.();
         });
-        onOrdered?.();
       }}
       busy={comms.busy}
       paused={paused}

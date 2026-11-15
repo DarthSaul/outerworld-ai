@@ -139,7 +139,7 @@ export function NotificationsPage() {
           <ul
             aria-labelledby="feed-title"
             data-feed
-            className="m-0 flex max-h-[60dvh] list-none flex-col gap-2 overflow-y-auto overscroll-y-contain p-0 pr-1 desktop:max-h-none desktop:overflow-visible"
+            className="m-0 flex max-h-[60dvh] list-none flex-col gap-2 overflow-y-auto p-0 pr-1 desktop:max-h-none desktop:overflow-visible"
           >
             {items.map((n) => (
               <Line

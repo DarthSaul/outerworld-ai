@@ -58,7 +58,11 @@ function KeyStep({ onDone }: { readonly onDone: () => void }) {
               <select
                 className={input}
                 value={provider}
-                onChange={(e) => setProvider(e.target.value as KeyProviderName)}
+                onChange={(e) => {
+                  // The last check's error was about the other provider's key.
+                  setKey.reset();
+                  setProvider(e.target.value as KeyProviderName);
+                }}
               >
                 <option value="anthropic">{term("settings.key.anthropic")}</option>
                 <option value="openrouter">{term("settings.key.openrouter")}</option>
