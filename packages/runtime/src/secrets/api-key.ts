@@ -44,12 +44,19 @@ const INVISIBLE = /[\s\u200B-\u200D\u2060\uFEFF]/g;
 /** What every provider key is made of: printable ASCII. */
 const KEY_CHARS = /^[\x21-\x7E]+$/;
 
-/** The provider's own reason from an error body (`{ error: { message } }`), if it has one. */
-async function providerReason(res: Response): Promise<string | undefined> {
+/**
+ * The provider's own reason from an error body (`{ error: { message } }`), if it has one, cleaned
+ * by `clean` before it is cut to 200 characters: a cut could split the key and hide it from
+ * redaction.
+ */
+async function providerReason(
+  res: Response,
+  clean: (text: string) => string,
+): Promise<string | undefined> {
   try {
     const body = (await res.json()) as { error?: { message?: unknown } };
     const message = body.error?.message;
-    return typeof message === "string" ? message.slice(0, 200) : undefined;
+    return typeof message === "string" ? clean(message).slice(0, 200) : undefined;
   } catch {
     return undefined;
   }
@@ -148,7 +155,7 @@ export class ApiKeyService {
       throw new InvalidKeyError(`${label} did not accept this key`);
     }
     if (!res.ok) {
-      const reason = await providerReason(res);
+      const reason = await providerReason(res, clean);
       throw new KeyCheckUnavailableError(
         clean(`${label}'s key check failed with HTTP ${res.status}${reason ? `: ${reason}` : ""}`),
       );

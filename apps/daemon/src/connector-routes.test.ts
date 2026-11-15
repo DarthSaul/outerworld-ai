@@ -242,17 +242,36 @@ describe("OAuth sign-in", () => {
 
   it("refuses a callback with the wrong state, a missing code, or an error from the service", async () => {
     const { call } = setup(signInFirst());
-    await call("POST", "/api/connectors/notion/connect");
+    const started = (await call("POST", "/api/connectors/notion/connect")).json as unknown as {
+      authorizationUrl: string;
+    };
+    const state = new URL(started.authorizationUrl).searchParams.get("state") ?? "";
     expect((await call("GET", "/oauth/callback/notion?code=abc&state=forged")).status).toBe(400);
     expect((await call("GET", "/oauth/callback/notion?state=x")).status).toBe(400);
-    const denied = await call("GET", "/oauth/callback/notion?error=access_denied");
+    // Without the sign-in's state, the error text is anyone's: it is not shown.
+    const forged = await call("GET", "/oauth/callback/notion?error=access_denied&state=forged");
+    expect(forged.status).toBe(400);
+    expect(forged.text).toContain("Sign-in was not completed");
+    expect(forged.text).not.toContain("access_denied");
+    const denied = await call("GET", `/oauth/callback/notion?error=access_denied&state=${state}`);
     expect(denied.status).toBe(400);
     expect(denied.text).toContain("access_denied");
+    // The state is spent: the same link cannot show its text twice or finish a sign-in.
+    const again = await call("GET", `/oauth/callback/notion?error=access_denied&state=${state}`);
+    expect(again.text).not.toContain("access_denied");
   });
 
   it("escapes whatever the service puts in the error, and still guards /api with the token", async () => {
-    const { call } = setup();
-    const res = await call("GET", "/oauth/callback/notion?error=%3Cscript%3Ex%3C%2Fscript%3E");
+    const { call } = setup(signInFirst());
+    const started = (await call("POST", "/api/connectors/notion/connect")).json as unknown as {
+      authorizationUrl: string;
+    };
+    const state = new URL(started.authorizationUrl).searchParams.get("state") ?? "";
+    const res = await call(
+      "GET",
+      `/oauth/callback/notion?error=%3Cscript%3Ex%3C%2Fscript%3E&state=${state}`,
+    );
+    expect(res.text).toContain("&#60;script&#62;");
     expect(res.text).not.toContain("<script>");
     expect(
       (

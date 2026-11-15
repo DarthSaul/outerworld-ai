@@ -221,6 +221,21 @@ describe("ApiKeyService: pasted keys and failures that are not a rejection", () 
     expect(error.message).toMatch(/HTTP 529: Overloaded/);
   });
 
+  it("redacts the key in the provider's reason before cutting it short", async () => {
+    // The key straddles the 200-character cut: cutting first would leave part of it unredacted.
+    const echoed = `${"x".repeat(180)} ${ANT}`;
+    const fetch = (async () =>
+      new Response(JSON.stringify({ error: { message: echoed } }), {
+        status: 500,
+      })) as unknown as typeof globalThis.fetch;
+    const error = (await anthropic(fetch)
+      .setKey(ANT)
+      .catch((e: unknown) => e)) as Error;
+    expect(error).toBeInstanceOf(KeyCheckUnavailableError);
+    expect(error.message).toContain("[redacted]");
+    expect(error.message).not.toContain(ANT.slice(0, 12));
+  });
+
   it("names the keychain when storing the checked key fails", async () => {
     const store = new MemorySecretStore();
     store.set = async () => Promise.reject(new Error("User canceled the operation."));

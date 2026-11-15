@@ -190,7 +190,12 @@ describe("spend and budgets", () => {
         type: "finish",
         finishReason: { unified: "stop", raw: "end_turn" },
         usage: {
-          inputTokens: { total: 1_100_000, noCache: 1_000_000, cacheRead: 100_000, cacheWrite: 0 },
+          inputTokens: {
+            total: 1_300_000,
+            noCache: 1_000_000,
+            cacheRead: 100_000,
+            cacheWrite: 200_000,
+          },
           outputTokens: { total: 100_000, text: 100_000, reasoning: 0 },
         },
         providerMetadata: { anthropic: {} },
@@ -200,8 +205,29 @@ describe("spend and budgets", () => {
     const session = t.service.createSession("vesper");
     const { runId } = await t.service.send(session.id, "Hi");
     await t.service.settled(runId);
-    // Sonnet 5.5: 1M × $2 + 0.1M × $0.10 cache reads + 0.1M × $10 output.
-    expect(t.spend.forRun(runId).costUsd).toBeCloseTo(2 + 0.01 + 1);
+    // Sonnet 5.5: 1M × $2 + 0.1M × $0.10 cache reads + 0.2M × $2.50 cache writes + 0.1M × $10 output.
+    expect(t.spend.forRun(runId).costUsd).toBeCloseTo(2 + 0.01 + 0.5 + 1);
+  });
+
+  it("refuses a budgeted run on an Anthropic model with no known price, before any call", async () => {
+    const model = scripted([reply("never")]);
+    // As the live factory's Anthropic model reports itself.
+    Object.defineProperty(model, "provider", { value: "anthropic.messages" });
+    const t = setup(model);
+    setBudgets(t.home, { stationDailyUsd: 5 });
+    const path = join(t.home, "agents", "vesper", "agent.json");
+    writeFileSync(
+      path,
+      JSON.stringify({
+        ...JSON.parse(readFileSync(path, "utf8")),
+        model: "anthropic/claude-haiku-9.1",
+      }),
+    );
+    const session = t.service.createSession("vesper");
+    const run = await t.service.settled((await t.service.send(session.id, "Hi")).runId);
+    expect(run.state).toBe("failed");
+    expect(run.error).toMatch(/no known price/);
+    expect(t.model.doStreamCalls).toHaveLength(0);
   });
 
   it("stops a run before a model call once its per-run cap is reached", async () => {

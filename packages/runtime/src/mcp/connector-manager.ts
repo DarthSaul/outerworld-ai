@@ -263,6 +263,17 @@ export class ConnectorManager {
     return { status: result.status, ...(result.detail ? { detail: result.detail } : {}) };
   }
 
+  /**
+   * The service ended a sign-in with an error: spends its `state` so the link cannot be reused.
+   * True only when the state is the one this sign-in issued.
+   */
+  cancelAuth(id: string, state: string): boolean {
+    const entry = this.#entries.get(id);
+    if (!entry?.provider.consumeState(state)) return false;
+    entry.pending = undefined;
+    return true;
+  }
+
   async disconnect(id: string, options: { forget?: boolean } = {}): Promise<void> {
     const entry = this.#entries.get(id);
     if (!entry) return;

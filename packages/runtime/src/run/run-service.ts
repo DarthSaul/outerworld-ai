@@ -121,6 +121,19 @@ const TITLE_CONCURRENCY = 2;
 
 const DEFAULT_RETRY: RetryPolicy = { attempts: 3, baseMs: 2000, maxMs: 60_000 };
 const DEFAULT_CONTEXT = 128_000;
+/** Whether any spend cap is set: then every call's cost must be known. */
+const hasBudget = (b: Budgets) =>
+  b.perRunUsd !== undefined || b.perAgentDailyUsd !== undefined || b.stationDailyUsd !== undefined;
+
+/**
+ * A direct Anthropic call reports tokens, not dollars, and is priced from the model list
+ * (ADR-0015); a model without a list price there has a cost no budget could count.
+ */
+const unpricedDirect = (model: LanguageModel, modelId: string) =>
+  typeof model === "object" &&
+  model.provider.startsWith("anthropic") &&
+  findModel(modelId)?.pricing === undefined;
+
 /** A provider's error message is kept this short in the run record. */
 const MAX_REASON_CHARS = 300;
 
@@ -498,6 +511,9 @@ export class RunService {
           throw new Cancelled("budget");
         }
         const model = await this.#o.models(modelId, { provider });
+        if (hasBudget(station.budgets) && unpricedDirect(model, modelId)) {
+          throw new Cancelled("budget");
+        }
         const prompt = titlePrompt(text);
         const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(TITLE_TIMEOUT_MS)]);
         let reply = "";
@@ -604,6 +620,12 @@ export class RunService {
       if (!agent || !loaded.station) throw new Error(`no agent "${run.agentId}"`);
       const station = loaded.station;
       const model = await this.#o.models(run.model, { provider: run.provider });
+      // Fail closed: a budget cannot be enforced on calls whose cost is unknown.
+      if (hasBudget(station.budgets) && unpricedDirect(model, run.model)) {
+        throw new Error(
+          `${run.model} has no known price on Anthropic, so the budgets cannot be enforced: pick a listed model, use OpenRouter, or clear the budgets`,
+        );
+      }
 
       const connectors = this.#o.connectors;
       const granted = resolveGrants(agent.config, station, connectors?.catalog() ?? {});
