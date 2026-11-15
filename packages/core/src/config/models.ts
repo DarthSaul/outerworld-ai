@@ -101,7 +101,8 @@ export type ReasoningLevel = z.infer<typeof ReasoningLevel>;
  * scheduled job (ADR-0016). Every field is optional: what is left out falls through.
  */
 export const ModelSettings = z.strictObject({
-  model: z.string().trim().min(1).max(200).optional(),
+  // The pattern keeps an all-whitespace id out of the JSON Schema too (trim is not expressible).
+  model: z.string().regex(/\S/).trim().min(1).max(200).optional(),
   provider: ProviderChoice.optional(),
   reasoning: ReasoningLevel.optional(),
 });
@@ -169,10 +170,12 @@ export function routeModel(
   }
   if (prefer === "openrouter") {
     if (!keys.openrouter) return { ok: false, reason: "needs_openrouter" };
-    // A bare Anthropic id has an OpenRouter twin under the `anthropic/` prefix.
+    // A listed model's OpenRouter id is known; an id with a provider prefix already is one. An
+    // unlisted bare Anthropic id has no known OpenRouter twin (OpenRouter's ids differ in form).
     const listed = findModel(id);
-    const openrouterId = listed ? listed.id : id.includes("/") ? id : `anthropic/${id}`;
-    return { ok: true, provider: "openrouter", modelId: openrouterId };
+    if (listed) return { ok: true, provider: "openrouter", modelId: listed.id };
+    if (!id.includes("/")) return { ok: false, reason: "needs_anthropic" };
+    return { ok: true, provider: "openrouter", modelId: id };
   }
   if (direct !== undefined && keys.anthropic) {
     return { ok: true, provider: "anthropic", modelId: direct };

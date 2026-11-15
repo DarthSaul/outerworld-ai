@@ -143,6 +143,7 @@ describe("per-conversation model settings (ADR-0016)", () => {
     expect(ModelSettings.safeParse({ provider: "openai" }).success).toBe(false);
     expect(ModelSettings.safeParse({ reasoning: "ultra" }).success).toBe(false);
     expect(ModelSettings.safeParse({ temperature: 1 }).success).toBe(false);
+    expect(ModelSettings.safeParse({ model: "   " }).success).toBe(false);
   });
 
   it("forces Anthropic when asked, or says why it cannot", () => {
@@ -169,6 +170,14 @@ describe("per-conversation model settings (ADR-0016)", () => {
     });
     expect(routeModel("claude-opus-5-5", both, "openrouter")).toMatchObject({
       modelId: "anthropic/claude-opus-5.5",
+    });
+    // An unlisted bare Anthropic id has no known OpenRouter id: refused, not guessed.
+    expect(routeModel("claude-haiku-9-1", both, "openrouter")).toEqual({
+      ok: false,
+      reason: "needs_anthropic",
+    });
+    expect(routeModel("anthropic/claude-haiku-9.1", both, "openrouter")).toMatchObject({
+      modelId: "anthropic/claude-haiku-9.1",
     });
     expect(
       routeModel("anthropic/claude-opus-5.5", { anthropic: true, openrouter: false }, "openrouter"),

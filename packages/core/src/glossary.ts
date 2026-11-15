@@ -298,7 +298,7 @@ export const glossary = {
   "model.provider.anthropic.hint": "Your Anthropic key, Claude models only",
   "model.provider.openrouter.hint": "Your OpenRouter key, any listed model",
   "model.reasoning.default.hint": "The provider decides",
-  "model.reasoning.none.hint": "Answer without extended thinking",
+  "model.reasoning.none.hint": "As little thinking as the model allows: off, or its lowest level",
   "model.reasoning.low.hint": "Quick, light thinking",
   "model.reasoning.medium.hint": "Balanced",
   "model.reasoning.high.hint": "Thinks harder on hard problems",
