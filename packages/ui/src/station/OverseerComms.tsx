@@ -1,5 +1,12 @@
 import { term } from "@darthsaul/outerworld-ai-core";
-import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
+import {
+  type FormEvent,
+  type KeyboardEvent,
+  type ReactNode,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { STATION_MS } from "../tokens/tokens.js";
 import { ChoiceButton, OutlineButton } from "./buttons.js";
 import { Panel } from "./Panel.js";
@@ -52,6 +59,8 @@ export interface OverseerCommsProps {
   readonly busy?: boolean;
   /** Not on screen (another tab is shown): hold the message rather than move on unseen. */
   readonly paused?: boolean;
+  /** Under the order box: the next order's model settings (the app supplies the control). */
+  readonly orderFoot?: ReactNode;
   readonly className?: string;
 }
 
@@ -81,6 +90,7 @@ export function OverseerCommsBody({
   onOrder,
   busy = false,
   paused = false,
+  orderFoot,
 }: Omit<OverseerCommsProps, "className">) {
   const typed = useTypewriter(message?.key ?? "", message?.text ?? "");
   const finished = message !== undefined && typed.length >= message.text.length;
@@ -130,9 +140,9 @@ export function OverseerCommsBody({
 
   return (
     <>
-      <div className="flex min-h-0 flex-1 gap-2.5 overflow-y-auto p-2.5">
+      <div className="flex min-h-0 flex-1 gap-1.5 overflow-y-auto p-2.5">
         <div role="img" aria-label={term("comms.portrait")} className="flex shrink-0 items-start">
-          {overseerLook === undefined ? null : <Sprite look={overseerLook} scale={2} />}
+          {overseerLook === undefined ? null : <Sprite look={overseerLook} scale={1.5} />}
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-1.5" aria-live="polite">
           <div className="font-display text-d8 text-amber uppercase">{message?.speaker ?? ""}</div>
@@ -162,34 +172,35 @@ export function OverseerCommsBody({
           </OutlineButton>
         </div>
       )}
-      <form
-        onSubmit={submit}
-        className="flex shrink-0 items-start gap-1.5 border-line-faint border-t-2 bg-input-row p-2.5"
-      >
-        <span aria-hidden="true" className="font-display text-d9 text-green leading-[inherit]">
-          &gt;
-        </span>
-        <textarea
-          ref={field}
-          rows={1}
-          value={order}
-          onChange={(e) => {
-            setOrder(e.target.value);
-            growToText(e.target);
-          }}
-          onKeyDown={onOrderKey}
-          placeholder={term("comms.order")}
-          aria-label={term("comms.order")}
-          className="max-h-[3lh] min-w-0 flex-1 resize-none overflow-y-auto border-none bg-transparent p-0 font-body text-b19 text-fg-hi outline-none"
-        />
-        <button
-          type="submit"
-          disabled={busy}
-          className="shrink-0 cursor-pointer border-none bg-green px-2 py-1.25 font-display text-d7 text-ink uppercase disabled:opacity-50"
+      {/* The order box, laid out like every composer: Send inside it, settings beneath. */}
+      <div className="flex shrink-0 flex-col gap-1.5 border-line-faint border-t-2 p-2.5">
+        <form
+          onSubmit={submit}
+          className="flex items-end gap-1.5 border-2 border-line-soft bg-input-row px-2.5 py-2 focus-within:border-cyan"
         >
-          {term("comms.send")}
-        </button>
-      </form>
+          <textarea
+            ref={field}
+            rows={1}
+            value={order}
+            onChange={(e) => {
+              setOrder(e.target.value);
+              growToText(e.target);
+            }}
+            onKeyDown={onOrderKey}
+            placeholder={term("comms.order")}
+            aria-label={term("comms.order")}
+            className="max-h-[3lh] min-w-0 flex-1 resize-none overflow-y-auto border-none bg-transparent p-0 font-body text-b19 text-fg-hi outline-none"
+          />
+          <button
+            type="submit"
+            disabled={busy}
+            className="shrink-0 cursor-pointer border-none bg-green px-2.5 py-1.25 font-display text-d7 text-ink uppercase disabled:opacity-50"
+          >
+            {term("comms.send")}
+          </button>
+        </form>
+        {orderFoot}
+      </div>
     </>
   );
 }

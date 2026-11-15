@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ModelSettings } from "../config/models.js";
 
 /** The HTTP contract for sessions, runs, and settings (Phase 3), shared by daemon and SPA. */
 
@@ -11,11 +12,13 @@ export const CreateSessionInput = z.strictObject({
 export const UpdateSessionInput = z.strictObject({
   title: z.string().trim().min(1).max(200).optional(),
   archived: z.literal(true).optional(),
+  /** This conversation's model, key, and reasoning level; `null` goes back to the crew member's. */
+  modelSettings: ModelSettings.nullable().optional(),
 });
 export const SendMessageInput = z.strictObject({
   text: z.string().trim().min(1).max(MAX_MESSAGE_CHARS),
 });
-/** The OpenRouter key goes in once and never comes back out. */
+/** A provider key (OpenRouter or Anthropic) goes in once and never comes back out. */
 export const ApiKeyInput = z.strictObject({ key: z.string().trim().min(1).max(500) });
 
 /** The Commander's answer to a consent request. */
@@ -68,16 +71,23 @@ export type UpdateSessionInput = z.infer<typeof UpdateSessionInput>;
 export type SendMessageInput = z.infer<typeof SendMessageInput>;
 export type ApiKeyInput = z.infer<typeof ApiKeyInput>;
 
-/** `GET /api/settings`: which models runs use, and whether a key is configured (never the key). */
+/** Whether one provider's key is configured, and where it is read from (never the key). */
+export interface ProviderKeyView {
+  readonly configured: boolean;
+  readonly source: "keychain" | "env" | null;
+  readonly keychainError?: string;
+}
+
+/**
+ * `GET /api/settings`: which models runs use, and whether each provider key is configured (never
+ * a key). `live` calls real providers (ADR-0015); `fake` is the scripted model.
+ */
 export interface SettingsView {
-  readonly modelMode: "openrouter" | "fake";
+  readonly modelMode: "live" | "fake";
   /** The machine's IANA zone: where a schedule with no zone of its own runs. */
   readonly timezone: string;
-  readonly openrouter: {
-    readonly configured: boolean;
-    readonly source: "keychain" | "env" | null;
-    readonly keychainError?: string;
-  };
+  readonly openrouter: ProviderKeyView;
+  readonly anthropic: ProviderKeyView;
 }
 
 /** `POST /api/notifications/read`: everything up to `seq` has been seen. */

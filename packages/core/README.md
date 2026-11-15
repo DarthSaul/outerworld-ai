@@ -1,8 +1,8 @@
 # @darthsaul/outerworld-ai-core
 
 Headless core for Outerworld AI: the station runtime's schemas (`station.json`, `agent.json`,
-runtime events), the glossary, an SSE parser, pure policy, the station dashboard model and the 24
-pixel characters (ADR-0013); plus the milestone 1 schemas and ledger parsing kept for the archive
+runtime events), the glossary, an SSE parser, pure policy, the station dashboard model and the 31
+pixel characters (ADR-0013, ADR-0017); plus the milestone 1 schemas and ledger parsing kept for the archive
 (ADR-0010). Zero React, zero DOM, zero filesystem. Private package,
 consumed in-workspace.
 
@@ -15,7 +15,7 @@ from the zod source (regenerate with `pnpm build && node scripts/write-schemas.m
 | Export | Description |
 |--------|-------------|
 | `parseStationConfig(input)` | `Result<StationConfig>` for `station.json`: rooms with props (`web`, `files`, `memory`), lanes between rooms, connectors (http or stdio transport, no secrets: headers and env are rejected), budgets in USD, dispatch policy (`maxDepth` 0 or 1, `autoReview`). Defaults filled; unknown fields kept. Never throws. |
-| `parseAgentConfig(input)` | `Result<AgentConfig>` for `agents/<id>/agent.json`: name, `roomId`, `role` (`overseer` \| `crew`), `model`, `approvalMode` (`ask` \| `full`), `connectorGrants`, `schedules` (cron with 5 or 6 fields, IANA time zone, prompt, `catchUp`, `enabled`), optional `look` (0–23, a character index). |
+| `parseAgentConfig(input)` | `Result<AgentConfig>` for `agents/<id>/agent.json`: name, `roomId`, `role` (`overseer` \| `crew`), `model`, `approvalMode` (`ask` \| `full`), `connectorGrants`, `schedules` (cron with 5 or 6 fields, IANA time zone, prompt, `catchUp`, `enabled`), optional `look` (0–30, a character index: 24 drawn, then 7 painted). |
 | `stationCrewIssues(station, crew)` | Cross-file rules: agent ids, known rooms, installed connectors, at most one overseer. |
 | `StationConfig`, `Room`, `Prop`, `PropKind`, `Lane`, `Connector`, `ConnectorTransport`, `Budgets`, `DispatchPolicy`, `AgentConfig`, `AgentRole`, `ApprovalMode`, `AgentSchedule` | zod schemas and inferred types. |
 
@@ -30,6 +30,10 @@ from the zod source (regenerate with `pnpm build && node scripts/write-schemas.m
 ### Session titles (ADR-0014)
 | Export | Description |
 |--------|-------------|
+| `SUPPORTED_MODELS`, `DEFAULT_MODEL`, `isSupportedModel(id)`, `findModel(id)` | The tested model list (OpenRouter ids, with `anthropicId` and list `pricing` for Claude). |
+| `routeModel(id, { anthropic, openrouter })`, `anthropicModelId(id)` | Which provider a model call goes to with the keys present (ADR-0015): Claude to Anthropic when its key is set, otherwise OpenRouter; or why it cannot run (`no_key`, `needs_openrouter`). |
+| `ModelSettings`, `resolveModelSettings(agentModel, ...layers)`, `ProviderChoice`, `ReasoningLevel` | A conversation's or scheduled job's model, key, and reasoning level, and how they layer over the crew member's model (ADR-0016). `routeModel` takes the key choice as a third argument. |
+| `estimateCostUsd(id, { input, cacheRead, cacheWrite, output })` | USD for one call at list price, or undefined without a known price. |
 | `DEFAULT_SESSION_TITLE`, `titlePrompt(firstMessage)`, `TITLE_INSTRUCTIONS` | A new session's title, and the short request that asks a model to name it from the first message (cut to 2,000 characters, passed as data). |
 | `cleanTitle(reply)`, `fallbackTitle(message)`, `MAX_TITLE_CHARS` | A model reply as one plain line of at most 60 characters (undefined when nothing usable is left), and the message itself as the title when the model gives none. |
 
@@ -75,7 +79,7 @@ from the zod source (regenerate with `pnpm build && node scripts/write-schemas.m
 | `placeRooms(roomIds, bridgeId)`, `routeBetween(a, b, others)`, `pointAlong`, `tagPoint`, `routeLength`, `laneLabel`, `sectorFor` | Layout in percent of the map. The Bridge (the Overseer's room) sits in the middle with the other rooms in slots around it. Hallways route orthogonally (straight, L, Z, then a U detour) around other rooms. |
 | `runDisplayStatus`, `crewDisplayStatus`, `sortRuns`, `isLive`, `alertCount`, `initials` | The dashboard's status words, mapped from run states and crew activity. |
 | `chatterLines(snapshot)` | The Overseer's ambient lines: glossary keys filled only from proven state, plus tips. |
-| `CHARACTERS`, `characterGrid(spec)`, `gridRuns`, `lookFor(id, look)`, `SPRITE_W`, `SPRITE_H` | The 24 pixel characters and their 20×26 grids, checked pixel for pixel against the exported sprites, and a stable look for an agent without one. |
+| `CHARACTERS`, `characterGrid(spec)`, `gridRuns`, `lookFor(id, look)`, `SPRITE_W`, `SPRITE_H` | The 31 characters (24 drawn 20×26 grids, then 7 painted, `ART_CHARACTERS`), checked pixel for pixel against the exported sprites, and a stable look for an agent without one. |
 
 ### Glossary
 | Export | Description |

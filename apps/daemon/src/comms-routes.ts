@@ -67,14 +67,18 @@ export interface CommsDeps {
   readonly consents: ConsentStore;
   readonly spend: SpendStore;
   readonly dispatches: DispatchStore;
+  /** The OpenRouter key. */
   readonly apiKeys: ApiKeyService;
-  readonly modelMode: "openrouter" | "fake";
+  /** The Anthropic key (ADR-0015). */
+  readonly anthropicKeys: ApiKeyService;
+  readonly modelMode: "live" | "fake";
   readonly events: EventStore;
 }
 
 /**
  * Sessions, runs, and settings (Phase 3). Sending a message returns 202 with the run id at once;
- * the reply streams as events. The OpenRouter key goes in through PUT and never comes back out.
+ * the reply streams as events. Provider keys (OpenRouter, Anthropic) go in through PUT and never
+ * come back out.
  */
 export function commsRoutes(deps: CommsDeps): Hono {
   const app = jsonApi(new Hono());
@@ -118,6 +122,7 @@ export function commsRoutes(deps: CommsDeps): Hono {
     const input = await readBody(c, UpdateSessionInput);
     let result = s;
     if (input.title !== undefined) result = runs.renameSession(s.id, input.title);
+    if (input.modelSettings !== undefined) result = runs.setSessionModel(s.id, input.modelSettings);
     if (input.archived) result = runs.archiveSession(s.id);
     return c.json(result);
   });
@@ -189,18 +194,22 @@ export function commsRoutes(deps: CommsDeps): Hono {
       modelMode: deps.modelMode,
       timezone: machineTimeZone(),
       openrouter: await deps.apiKeys.status(),
+      anthropic: await deps.anthropicKeys.status(),
     };
     return c.json(view);
   });
-  app.put("/settings/openrouter", async (c) => {
-    const { key } = await readBody(c, ApiKeyInput);
-    await deps.apiKeys.setKey(key);
-    return c.body(null, 204);
-  });
-  app.delete("/settings/openrouter", async (c) => {
-    await deps.apiKeys.clearKey();
-    return c.body(null, 204);
-  });
+  const providers = { openrouter: deps.apiKeys, anthropic: deps.anthropicKeys };
+  for (const [name, keys] of Object.entries(providers)) {
+    app.put(`/settings/${name}`, async (c) => {
+      const { key } = await readBody(c, ApiKeyInput);
+      await keys.setKey(key);
+      return c.body(null, 204);
+    });
+    app.delete(`/settings/${name}`, async (c) => {
+      await keys.clearKey();
+      return c.body(null, 204);
+    });
+  }
 
   return app;
 }

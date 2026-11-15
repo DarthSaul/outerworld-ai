@@ -14,6 +14,8 @@ export interface DropdownOption {
   readonly label: ReactNode;
   /** The option as plain words: its accessible name, and what type-ahead matches. */
   readonly text: string;
+  /** A short line under the label ("For complex work"); also read after the name. */
+  readonly description?: string;
 }
 
 export interface DropdownGroup {
@@ -33,6 +35,15 @@ export interface DropdownProps {
   readonly groups: readonly DropdownGroup[];
   readonly onChange: (value: string) => void;
   readonly className?: string;
+  /**
+   * `field` (default): a full-width select. `chip`: a compact text button that sizes to its value,
+   * for a row of settings under a message box; its list is wider than the button.
+   */
+  readonly variant?: "field" | "chip";
+  /** Where the list opens: under the button (default) or over it (near the bottom of a panel). */
+  readonly placement?: "below" | "above";
+  /** Which edge of the button the list lines up with. */
+  readonly align?: "start" | "end";
 }
 
 /**
@@ -50,7 +61,11 @@ export function Dropdown({
   groups,
   onChange,
   className = "",
+  variant = "field",
+  placement = "below",
+  align = "start",
 }: DropdownProps) {
+  const chip = variant === "chip";
   const id = useId();
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
@@ -139,7 +154,7 @@ export function Dropdown({
 
   let index = -1;
   return (
-    <div ref={root} className={`relative min-w-0 ${className}`}>
+    <div ref={root} className={`relative ${chip ? "inline-flex" : "min-w-0"} ${className}`}>
       <button
         ref={button}
         type="button"
@@ -149,11 +164,15 @@ export function Dropdown({
         aria-labelledby={`${labelledBy} ${id}-value`}
         onClick={() => (open ? close(false) : show(chosenIndex))}
         onKeyDown={onButtonKey}
-        className={`flex h-9 w-full min-w-0 cursor-pointer items-center gap-2 border-2 bg-well px-2 text-left font-body text-b19 hover:border-cyan focus-visible:border-cyan ${open ? "border-cyan" : "border-line-soft"}`}
+        className={
+          chip
+            ? `flex min-w-0 cursor-pointer items-center gap-1.5 border-2 px-1.5 py-0.5 text-left font-body text-b17 hover:border-line-soft hover:bg-well focus-visible:border-cyan ${open ? "border-cyan bg-well" : "border-transparent bg-transparent"}`
+            : `flex h-9 w-full min-w-0 cursor-pointer items-center gap-2 border-2 bg-well px-2 text-left font-body text-b19 hover:border-cyan focus-visible:border-cyan ${open ? "border-cyan" : "border-line-soft"}`
+        }
       >
         <span
           id={`${id}-value`}
-          className={`flex min-w-0 flex-1 truncate ${chosen ? "text-fg-hi" : "text-fg-mute"}`}
+          className={`flex min-w-0 flex-1 truncate ${chosen ? (chip ? "text-fg" : "text-fg-hi") : "text-fg-mute"}`}
         >
           {chosen ? (
             <>
@@ -166,7 +185,10 @@ export function Dropdown({
             placeholder
           )}
         </span>
-        <span aria-hidden="true" className="font-display text-cyan text-d7">
+        <span
+          aria-hidden="true"
+          className={`font-display ${chip ? "text-d6 text-fg-mute" : "text-cyan text-d7"}`}
+        >
           {open ? "▲" : "▼"}
         </span>
       </button>
@@ -175,7 +197,9 @@ export function Dropdown({
         role="listbox"
         aria-labelledby={labelledBy}
         hidden={!open}
-        className="absolute inset-x-0 top-full z-30 mt-1 max-h-80 overflow-y-auto border-2 border-cyan bg-panel p-1 shadow-panel"
+        className={`absolute z-30 max-h-80 overflow-y-auto border-2 border-cyan bg-panel p-1 shadow-panel ${
+          placement === "above" ? "bottom-full mb-1" : "top-full mt-1"
+        } ${chip ? `w-max min-w-60 max-w-[min(22rem,85vw)] ${align === "end" ? "right-0" : "left-0"}` : "inset-x-0"}`}
       >
         {/* Options render only while open: each can draw a character, and a closed list of
             them would weigh down every page that holds a dropdown. */}
@@ -202,17 +226,31 @@ export function Dropdown({
                     }}
                     role="option"
                     aria-selected={selected}
-                    aria-label={group.label ? `${option.text}, ${group.label}` : option.text}
+                    aria-label={[option.text, option.description, group.label]
+                      .filter(Boolean)
+                      .join(", ")}
                     tabIndex={i === active ? 0 : -1}
                     onPointerMove={() => setActive(i)}
                     onClick={() => choose(i)}
                     onKeyDown={(e) => onOptionKey(e, i)}
                     className={`flex cursor-pointer items-center gap-2 border-2 px-1.5 py-1 text-b19 outline-none ${i === active ? "border-cyan bg-hover" : "border-transparent"} ${selected ? "text-fg-hi" : "text-fg"}`}
                   >
-                    <span aria-hidden="true" className="w-2 shrink-0 text-cyan">
-                      {selected ? "▸" : ""}
+                    {chip ? null : (
+                      <span aria-hidden="true" className="w-2 shrink-0 text-cyan">
+                        {selected ? "▸" : ""}
+                      </span>
+                    )}
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      {option.label}
+                      {option.description ? (
+                        <span className="text-b15 text-fg-mute">{option.description}</span>
+                      ) : null}
                     </span>
-                    {option.label}
+                    {chip ? (
+                      <span aria-hidden="true" className="w-3 shrink-0 text-cyan">
+                        {selected ? "✓" : ""}
+                      </span>
+                    ) : null}
                   </div>
                 );
               })}

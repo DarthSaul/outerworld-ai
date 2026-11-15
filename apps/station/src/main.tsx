@@ -5,6 +5,7 @@ import { BrowserRouter } from "react-router";
 import { App } from "./App.js";
 import { DaemonProvider } from "./daemon-context.js";
 import { readToken } from "./lib/api.js";
+import { applyDisplay, readDisplay } from "./lib/display.js";
 import { MissingToken } from "./pages/MissingToken.js";
 import "./styles.css";
 
@@ -12,6 +13,8 @@ const root = document.getElementById("root");
 if (!root) throw new Error("#root missing from index.html");
 const token = readToken(document);
 const queryClient = new QueryClient();
+// The display size first, so the first paint is already at the chosen size.
+applyDisplay(readDisplay());
 
 createRoot(root).render(
   <StrictMode>

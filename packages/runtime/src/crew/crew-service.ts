@@ -167,6 +167,7 @@ export class CrewService {
         prompt: input.prompt,
         catchUp: input.catchUp ?? false,
         enabled: input.enabled ?? true,
+        ...(input.modelSettings !== undefined ? { modelSettings: input.modelSettings } : {}),
       };
       await this.#saveSchedules(loaded, current, [...schedules, schedule]);
       return schedule;
@@ -182,12 +183,20 @@ export class CrewService {
       const loaded = await this.#loadWithStation();
       const current = this.#find(loaded, agentId);
       const existing = this.#findSchedule(current, scheduleId);
-      const { timezone, ...rest } = given(input);
-      const { timezone: _dropped, ...withoutZone } = existing;
+      const { timezone, modelSettings, ...rest } = given(input);
+      const { timezone: _zone, modelSettings: _settings, ...bare } = existing;
+      // `null` drops the field (back to the machine's zone / the crew member's model).
       const schedule: AgentSchedule = {
-        ...(timezone === null ? withoutZone : existing),
+        ...bare,
+        ...(timezone === null || existing.timezone === undefined
+          ? {}
+          : { timezone: existing.timezone }),
+        ...(modelSettings === undefined && existing.modelSettings !== undefined
+          ? { modelSettings: existing.modelSettings }
+          : {}),
         ...rest,
         ...(typeof timezone === "string" ? { timezone } : {}),
+        ...(modelSettings && Object.keys(modelSettings).length > 0 ? { modelSettings } : {}),
       };
       await this.#saveSchedules(
         loaded,

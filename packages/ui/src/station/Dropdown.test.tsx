@@ -175,4 +175,59 @@ describe("Dropdown", () => {
     await user.keyboard("{Enter}");
     expect(onChange).toHaveBeenCalledWith("quill");
   });
+
+  it("as a chip: sizes to its value, opens above at the end edge, with descriptions and a check", async () => {
+    const user = userEvent.setup();
+    function Chip() {
+      const [value, setValue] = useState("opus");
+      return (
+        <>
+          <span id="model-label">Model</span>
+          <Dropdown
+            labelledBy="model-label"
+            value={value}
+            placeholder="Model"
+            variant="chip"
+            placement="above"
+            align="end"
+            groups={[
+              {
+                id: "models",
+                label: "",
+                options: [
+                  {
+                    value: "opus",
+                    label: "Opus 5.5",
+                    text: "Opus 5.5",
+                    description: "For complex work",
+                  },
+                  {
+                    value: "sonnet",
+                    label: "Sonnet 5.5",
+                    text: "Sonnet 5.5",
+                    description: "Everyday work",
+                  },
+                ],
+              },
+            ]}
+            onChange={setValue}
+          />
+        </>
+      );
+    }
+    const { container } = render(<Chip />);
+    const button = screen.getByRole("button", { name: "Model Opus 5.5" });
+    expect(button.className).not.toMatch(/w-full/);
+    await user.click(button);
+    const list = screen.getByRole("listbox", { name: "Model" });
+    expect(list.className).toMatch(/bottom-full/);
+    expect(list.className).toMatch(/right-0/);
+    const opus = screen.getByRole("option", { name: "Opus 5.5, For complex work" });
+    expect(opus).toHaveAttribute("aria-selected", "true");
+    expect(opus).toHaveTextContent("✓");
+    expect(screen.getByText("Everyday work")).toBeInTheDocument();
+    expect(await axe(container)).toHaveNoViolations();
+    await user.click(screen.getByRole("option", { name: "Sonnet 5.5, Everyday work" }));
+    expect(screen.getByRole("button", { name: "Model Sonnet 5.5" })).toHaveFocus();
+  });
 });

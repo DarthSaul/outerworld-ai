@@ -78,6 +78,21 @@ const world = (start: string, schedules: unknown[], replies = 10) => {
 };
 
 describe("Scheduler", () => {
+  it("runs a job with its own model settings, over the crew member's (ADR-0016)", async () => {
+    const w = world("2026-10-05T08:00:00Z", [
+      schedule({ modelSettings: { model: "anthropic/claude-opus-5.5", reasoning: "xhigh" } }),
+    ]);
+    await w.scheduler.start();
+    await w.step("2026-10-05T09:00:00Z");
+    const sessionId = w.of("schedule.fired")[0]?.sessionId ?? "";
+    expect(w.sessions.runs(sessionId)[0]).toMatchObject({
+      trigger: "schedule",
+      model: "anthropic/claude-opus-5.5",
+      provider: "auto",
+      reasoning: "xhigh",
+    });
+  });
+
   it("runs the prompt at each occurrence in the schedule's own Scheduled session", async () => {
     const w = world("2026-10-05T08:00:00Z", [schedule()]);
     await w.scheduler.start();

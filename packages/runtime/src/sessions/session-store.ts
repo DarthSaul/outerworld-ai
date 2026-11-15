@@ -1,7 +1,10 @@
 import { randomUUID } from "node:crypto";
 import {
   ChatMessage,
+  ModelSettings,
   nextRunState,
+  ProviderChoice,
+  ReasoningLevel,
   type RunEvent,
   type RunState,
 } from "@darthsaul/outerworld-ai-core";
@@ -13,6 +16,8 @@ export interface SessionRecord {
   readonly title: string;
   readonly createdAt: string;
   readonly archivedAt?: string;
+  /** This conversation's model choice over the crew member's default (ADR-0016). */
+  readonly modelSettings?: ModelSettings;
 }
 
 /** A session in a list (COMMS): how much was said, when, and the last thing said. */
@@ -37,6 +42,9 @@ export interface RunRecord {
   readonly state: RunState;
   readonly trigger: RunTrigger;
   readonly model: string;
+  /** The key the run uses: `auto` routes by core's rule (ADR-0016). */
+  readonly provider: ProviderChoice;
+  readonly reasoning: ReasoningLevel;
   readonly createdAt: string;
   readonly startedAt?: string;
   readonly endedAt?: string;
@@ -66,6 +74,9 @@ const toSession = (r: Row): SessionRecord => ({
   title: String(r.title),
   createdAt: String(r.created_at),
   ...(r.archived_at !== null ? { archivedAt: String(r.archived_at) } : {}),
+  ...(r.model_settings !== null && r.model_settings !== undefined
+    ? { modelSettings: ModelSettings.parse(JSON.parse(String(r.model_settings))) }
+    : {}),
 });
 
 const toRun = (r: Row): RunRecord => {
@@ -82,6 +93,8 @@ const toRun = (r: Row): RunRecord => {
     state: r.state as RunState,
     trigger: r.trigger as RunTrigger,
     model: String(r.model),
+    provider: ProviderChoice.parse(r.provider ?? "auto"),
+    reasoning: ReasoningLevel.parse(r.reasoning ?? "default"),
     createdAt: String(r.created_at),
     steps: Number(r.steps),
     depth: Number(r.depth),
@@ -114,7 +127,7 @@ export class SessionStore {
         "insert into sessions (id, agent_id, title, created_at) values (@id, @agent_id, @title, @created_at)",
       )
       .run(row);
-    return toSession({ ...row, archived_at: null });
+    return toSession({ ...row, archived_at: null, model_settings: null });
   }
 
   getSession(id: string): SessionRecord | undefined {
@@ -179,6 +192,17 @@ export class SessionStore {
     return this.#updateSession(id, "update sessions set title = ? where id = ?", title);
   }
 
+  /** Sets this conversation's model settings; `null` (or nothing set) goes back to the default. */
+  setModelSettings(id: string, settings: ModelSettings | null): SessionRecord {
+    const parsed = settings === null ? null : ModelSettings.parse(settings);
+    const empty = parsed === null || Object.keys(parsed).length === 0;
+    const changes = this.#db
+      .prepare("update sessions set model_settings = ? where id = ?")
+      .run(empty ? null : JSON.stringify(parsed), id).changes;
+    if (changes === 0) throw new Error(`no session "${id}"`);
+    return this.getSession(id) as SessionRecord;
+  }
+
   archiveSession(id: string): SessionRecord {
     return this.#updateSession(id, "update sessions set archived_at = ? where id = ?", this.#at());
   }
@@ -240,6 +264,8 @@ export class SessionStore {
     agentId: string;
     trigger: RunTrigger;
     model: string;
+    provider?: ProviderChoice;
+    reasoning?: ReasoningLevel;
     depth?: number;
     dispatchId?: string;
   }): RunRecord {
@@ -250,13 +276,15 @@ export class SessionStore {
       state: "queued",
       trigger: input.trigger,
       model: input.model,
+      provider: input.provider ?? "auto",
+      reasoning: input.reasoning ?? "default",
       depth: input.depth ?? 0,
       dispatch_id: input.dispatchId ?? null,
       created_at: this.#at(),
     };
     this.#db
       .prepare(
-        "insert into runs (id, session_id, agent_id, state, trigger, model, depth, dispatch_id, created_at) values (@id, @session_id, @agent_id, @state, @trigger, @model, @depth, @dispatch_id, @created_at)",
+        "insert into runs (id, session_id, agent_id, state, trigger, model, provider, reasoning, depth, dispatch_id, created_at) values (@id, @session_id, @agent_id, @state, @trigger, @model, @provider, @reasoning, @depth, @dispatch_id, @created_at)",
       )
       .run(row);
     return this.getRun(row.id) as RunRecord;

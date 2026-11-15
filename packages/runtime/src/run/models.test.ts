@@ -1,8 +1,8 @@
 import { jsonSchema, streamText } from "ai";
 import { describe, expect, it } from "vitest";
-import { ApiKeyService } from "../secrets/api-key.js";
+import { ANTHROPIC_PROVIDER, ApiKeyService } from "../secrets/api-key.js";
 import { MemorySecretStore } from "../secrets/store.js";
-import { NoApiKeyError, openRouterModels, scriptedModels } from "./models.js";
+import { liveModels, NoApiKeyError, openRouterModels, scriptedModels } from "./models.js";
 
 describe("scriptedModels", () => {
   it("streams a reply that quotes the Commander and says it is fake", async () => {
@@ -62,5 +62,55 @@ describe("openRouterModels", () => {
       "anthropic/claude-sonnet-5.5",
     );
     expect(model).toMatchObject({ modelId: "anthropic/claude-sonnet-5.5" });
+  });
+});
+
+describe("liveModels (ADR-0015)", () => {
+  const ant = (env: Record<string, string>) =>
+    new ApiKeyService({ store: new MemorySecretStore(), env, provider: ANTHROPIC_PROVIDER });
+  const or = (env: Record<string, string>) =>
+    new ApiKeyService({ store: new MemorySecretStore(), env });
+  const ANT = { ANTHROPIC_API_KEY: "sk-ant-test-0000000000" };
+  const OR = { OPENROUTER_API_KEY: "sk-or-test-0000000000" };
+
+  it("sends Claude straight to Anthropic when there is an Anthropic key (no network)", async () => {
+    const model = await liveModels({ openrouter: or(OR), anthropic: ant(ANT) })(
+      "anthropic/claude-opus-5.5",
+    );
+    expect(model).toMatchObject({ modelId: "claude-opus-5-5" });
+    expect((model as { provider: string }).provider).toMatch(/^anthropic/);
+  });
+
+  it("sends other vendors through OpenRouter", async () => {
+    const model = await liveModels({ openrouter: or(OR), anthropic: ant(ANT) })(
+      "openai/gpt-5.6-terra",
+    );
+    expect(model).toMatchObject({ modelId: "openai/gpt-5.6-terra" });
+  });
+
+  it("says a non-Claude model needs an OpenRouter key when only Anthropic's is set", async () => {
+    await expect(
+      liveModels({ openrouter: or({}), anthropic: ant(ANT) })("openai/gpt-5.6-terra"),
+    ).rejects.toThrow(/OpenRouter key/);
+  });
+
+  it("uses the key the conversation chose, even for Claude with both keys set (ADR-0016)", async () => {
+    const model = await liveModels({ openrouter: or(OR), anthropic: ant(ANT) })(
+      "anthropic/claude-opus-5.5",
+      { provider: "openrouter" },
+    );
+    expect(model).toMatchObject({ modelId: "anthropic/claude-opus-5.5" });
+    expect((model as { provider: string }).provider).toMatch(/openrouter/);
+    await expect(
+      liveModels({ openrouter: or(OR), anthropic: ant({}) })("anthropic/claude-opus-5.5", {
+        provider: "anthropic",
+      }),
+    ).rejects.toThrow(/Anthropic key/);
+  });
+
+  it("refuses without any key, naming both providers", async () => {
+    await expect(
+      liveModels({ openrouter: or({}), anthropic: ant({}) })("anthropic/claude-sonnet-5.5"),
+    ).rejects.toThrow(/Anthropic or OpenRouter/);
   });
 });

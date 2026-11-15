@@ -107,8 +107,13 @@ describe("kill switch and spend", () => {
     fake.spend.agents = { vesper: 0.0042 };
     renderApp("/crew", fake);
     expect(await screen.findByText("Fuel · $0.43 today, no cap")).toBeInTheDocument();
-    const command = await screen.findByRole("region", { name: "Command" });
-    expect(within(command).getByText(`${term("spend.today")} $0.0042`)).toBeInTheDocument();
+    // The Crew screen opens on the crew list, each card with that crew member's spend today.
+    const vesper = await waitFor(() => {
+      const card = document.querySelector('[data-listing="agents"] [data-agent="vesper"]');
+      if (!card) throw new Error("no crew card yet");
+      return card as HTMLElement;
+    });
+    expect(within(vesper).getByText(`${term("spend.today")} $0.0042`)).toBeInTheDocument();
   });
 
   it("shows a session's spend, and says when some calls had no reported cost", async () => {

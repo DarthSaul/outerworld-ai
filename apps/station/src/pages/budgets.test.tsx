@@ -17,7 +17,7 @@ const withBudgets = () => {
 
 describe("Settings → Budgets", () => {
   it("shows each cap, says plainly when there is none, and today's station spend", async () => {
-    const { container } = renderApp("/settings", withBudgets());
+    const { container } = renderApp("/settings/budgets", withBudgets());
     const section = await screen.findByRole("region", { name: term("budgets") });
     expect(within(section).getByLabelText(term("budgets.perRun"))).toHaveValue(5);
     expect(within(section).getByLabelText(term("budgets.perAgentDaily"))).toHaveValue(25);
@@ -29,7 +29,7 @@ describe("Settings → Budgets", () => {
 
   it("saves caps; an emptied field removes that cap", async () => {
     const user = userEvent.setup();
-    const { calls } = renderApp("/settings", withBudgets());
+    const { calls } = renderApp("/settings/budgets", withBudgets());
     const section = await screen.findByRole("region", { name: term("budgets") });
     const perRun = within(section).getByLabelText(term("budgets.perRun"));
     await user.clear(perRun);
@@ -46,7 +46,7 @@ describe("Settings → Budgets", () => {
 
   it("refuses a cap of zero or less before sending it", async () => {
     const user = userEvent.setup();
-    const { calls } = renderApp("/settings", withBudgets());
+    const { calls } = renderApp("/settings/budgets", withBudgets());
     const section = await screen.findByRole("region", { name: term("budgets") });
     const perRun = within(section).getByLabelText(term("budgets.perRun"));
     await user.clear(perRun);

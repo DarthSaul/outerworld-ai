@@ -51,6 +51,7 @@ export {
 } from "./station/OverseerComms.js";
 export { Panel, PanelLabel, type PanelProps } from "./station/Panel.js";
 export { type PanelTab, PanelTabs, type PanelTabsProps } from "./station/PanelTabs.js";
+export { Popup, type PopupProps } from "./station/Popup.js";
 export {
   RESIZE_KEY_STEP,
   ResizeHandle,

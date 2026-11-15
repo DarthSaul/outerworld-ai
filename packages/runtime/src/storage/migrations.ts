@@ -171,4 +171,13 @@ export const MIGRATIONS: readonly Migration[] = [
       create index schedule_fires_by_schedule on schedule_fires (agent_id, schedule_id, id);
     `,
   },
+  {
+    version: 6,
+    name: "per-session and per-run model settings",
+    sql: `
+      alter table sessions add column model_settings text;
+      alter table runs add column provider text not null default 'auto';
+      alter table runs add column reasoning text not null default 'default';
+    `,
+  },
 ];

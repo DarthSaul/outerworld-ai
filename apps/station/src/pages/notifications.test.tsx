@@ -26,7 +26,7 @@ const feed: Notification[] = [
     runId: "r5",
     detail: "HTTP 500",
   },
-  { seq: 3, at, kind: "memory", level: "action", agentId: "vesper", detail: "Likes bullets." },
+  { seq: 3, at, kind: "memory", level: "action", agentId: "vesper", detail: "Likes **bullets**." },
   { seq: 2, at, kind: "budget_blocked", level: "alert", subject: "run", detail: "$5.10 of $5.00" },
   {
     seq: 1,
@@ -77,8 +77,42 @@ describe("Notifications feed", () => {
       within(items[i] as HTMLElement).getByRole("link", { name: term("notification.open") });
     expect(href(0)).toHaveAttribute("href", "/comms?agent=quill&open=s7");
     expect(href(2)).toHaveAttribute("href", "/memory?agent=vesper");
-    expect(href(3)).toHaveAttribute("href", "/settings");
+    expect(href(3)).toHaveAttribute("href", "/settings/budgets");
     expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it("previews each line in two plain lines, and scrolls the feed inside a bounded list", async () => {
+    renderApp("/notifications", withFeed());
+    const list = await screen.findByRole("list", { name: term("notifications.feed") });
+    const memory = list.querySelector('[data-kind="memory"]') as HTMLElement;
+    const preview = memory.querySelector("[data-preview]");
+    expect(preview?.className).toMatch(/line-clamp-2/);
+    expect(preview).toHaveTextContent("Likes bullets.");
+    expect(list.textContent).not.toContain("**");
+    expect(list.className).toMatch(/max-h-/);
+    expect(list.className).toMatch(/overflow-y-auto/);
+  });
+
+  it("expands a line into a popup with the full Markdown, and still offers Open", async () => {
+    const user = userEvent.setup();
+    const { container } = renderApp("/notifications", withFeed());
+    const list = await screen.findByRole("list", { name: term("notifications.feed") });
+    const first = within(list).getAllByRole("listitem")[0] as HTMLElement;
+    const expand = within(first).getByRole("button", { name: term("notification.expand") });
+    await user.click(expand);
+    const popup = screen.getByRole("dialog", { name: term("notification.title") });
+    expect(within(popup).getByRole("link", { name: term("notification.open") })).toHaveAttribute(
+      "href",
+      "/comms?agent=quill&open=s7",
+    );
+    expect(await axe(container)).toHaveNoViolations();
+    await user.click(within(popup).getByRole("button", { name: term("popup.close") }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(expand).toHaveFocus();
+    const memory = list.querySelector('[data-kind="memory"]') as HTMLElement;
+    await user.click(within(memory).getByRole("button", { name: term("notification.expand") }));
+    const full = screen.getByRole("dialog", { name: term("notification.title") });
+    expect(within(full).getByText("bullets").tagName).toBe("STRONG");
   });
 
   it("shows the unread count in the navigation", async () => {

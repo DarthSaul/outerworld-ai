@@ -117,8 +117,8 @@ only in manually run smoke tests gated by environment variables.
 Every color, radius, spacing step, type size, and motion duration is a `--st-*` CSS custom
 property in the `ui` tokens, consumed by Tailwind via theme extension (ADR-0003, ADR-0013).
 Components in `packages/ui` and `apps/*` never contain a hex, `rgb()`, `oklch()`, a pixel radius,
-or an `ms` literal. An agent's appearance is `look`, an index into the 24 pixel characters in core;
-sprites are drawn at integer scales with `image-rendering: pixelated`. Motion is state-driven CSS
+or an `ms` literal. An agent's appearance is `look`, an index into core's `CHARACTERS` (24 drawn,
+then painted art, ADR-0017); sprites are drawn with `image-rendering: pixelated`. Motion is state-driven CSS
 (blink, packets, typing) with `prefers-reduced-motion` respected; no animation library. The theme
 is **dark only** (ADR-0013); there is no light theme or `data-theme` toggle.
 

@@ -95,21 +95,26 @@ export function oauthCallback(connectors: ConnectorManager): Hono {
   app.get("/oauth/callback/:id", async (c) => {
     const id = c.req.param("id");
     const error = c.req.query("error");
+    const state = c.req.query("state");
     if (error) {
+      // The service's text is shown only for the sign-in this daemon started (its state): anyone
+      // can open this URL with words of their choosing.
+      const ours = state !== undefined && connectors.cancelAuth(id, state);
       return c.html(
         page(
           "Sign-in was not completed",
-          `The service said: ${error}. You can close this tab and try again.`,
+          ours
+            ? `The service said: ${error}. You can close this tab and try again.`
+            : "You can close this tab and try again from Outerworld AI.",
         ),
         400,
       );
     }
     const code = c.req.query("code");
-    const state = c.req.query("state");
     if (!code || !state)
       return c.html(page("Sign-in failed", "The response had no code or state."), 400);
     try {
-      const result = await connectors.finishAuth(id, code, state);
+      const result = await connectors.finishAuth(id, code, state, c.req.query("iss"));
       if (result.status !== "connected") {
         return c.html(
           page(

@@ -4,10 +4,13 @@ import { fileURLToPath } from "node:url";
 import { inflateSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 import {
+  ART_CHARACTERS,
   CHARACTER_COUNT,
   CHARACTERS,
   characterGrid,
+  DRAWN_CHARACTERS,
   gridRuns,
+  isArtCharacter,
   lookFor,
   OUTLINE,
   SPRITE_H,
@@ -68,27 +71,28 @@ function decodePng(buf: Buffer): (string | null)[][] {
 }
 
 describe("characters", () => {
-  it("has the 24 characters of the design, in export order", () => {
-    expect(CHARACTER_COUNT).toBe(24);
-    expect(CHARACTERS.map((c) => c.id)).toEqual(index.characters.map((c) => c.id));
-    expect(CHARACTERS.map((c) => [c.name, c.role])).toEqual(
+  it("has the 24 drawn characters of the design, in export order, then the painted ones", () => {
+    expect(DRAWN_CHARACTERS).toHaveLength(24);
+    expect(CHARACTER_COUNT).toBe(24 + ART_CHARACTERS.length);
+    expect(DRAWN_CHARACTERS.map((c) => c.id)).toEqual(index.characters.map((c) => c.id));
+    expect(DRAWN_CHARACTERS.map((c) => [c.name, c.role])).toEqual(
       index.characters.map((c) => [c.name, c.role]),
     );
   });
 
-  it.each(CHARACTERS.map((c, i) => [c.id, i] as const))(
+  it.each(DRAWN_CHARACTERS.map((c, i) => [c.id, i] as const))(
     "draws %s pixel for pixel as the exported 1x PNG",
     (_id, i) => {
       const file = index.characters[i]?.file1x ?? "";
       const png = decodePng(readFileSync(join(spriteDir, "..", file)));
-      const character = CHARACTERS[i];
+      const character = DRAWN_CHARACTERS[i];
       if (!character) throw new Error(`no character ${i}`);
       expect(characterGrid(character)).toEqual(png);
     },
   );
 
   it("draws on a 20×26 grid with an outline around the silhouette", () => {
-    const [first] = CHARACTERS;
+    const [first] = DRAWN_CHARACTERS;
     if (!first) throw new Error("no characters");
     const grid = characterGrid(first);
     expect(grid).toHaveLength(SPRITE_H);
@@ -102,7 +106,7 @@ describe("characters", () => {
   });
 
   it("collapses a grid into horizontal runs that cover every filled cell once", () => {
-    for (const character of CHARACTERS) {
+    for (const character of DRAWN_CHARACTERS) {
       const grid = characterGrid(character);
       const runs = gridRuns(grid);
       const covered = runs.reduce((n, r) => n + r.w, 0);
@@ -119,17 +123,47 @@ describe("lookFor", () => {
     expect(lookFor("wren", 5)).toBe(5);
   });
 
-  it.each([undefined, -1, 24, 2.5])("falls back to a stable look from the id for %s", (look) => {
-    const fallback = lookFor("wren", look);
-    expect(fallback).toBe(lookFor("wren", undefined));
-    expect(fallback).toBeGreaterThanOrEqual(0);
-    expect(fallback).toBeLessThan(CHARACTER_COUNT);
-  });
+  it.each([undefined, -1, CHARACTER_COUNT, 2.5])(
+    "falls back to a stable look from the id for %s",
+    (look) => {
+      const fallback = lookFor("wren", look);
+      expect(fallback).toBe(lookFor("wren", undefined));
+      expect(fallback).toBeGreaterThanOrEqual(0);
+      expect(fallback).toBeLessThan(CHARACTER_COUNT);
+    },
+  );
 
   it("spreads different ids over different looks", () => {
     const looks = new Set(
       ["vesper", "quill", "wren", "atlas", "nova"].map((id) => lookFor(id, undefined)),
     );
     expect(looks.size).toBeGreaterThan(1);
+  });
+
+  it.each(ART_CHARACTERS.map((c) => [c.id, c] as const))(
+    "ships %s's art exactly as the PNG in sprites/art, at its stated size (ADR-0017)",
+    (id, character) => {
+      const file = readFileSync(join(spriteDir, "art", `${id}.png`));
+      expect(character.art.src).toBe(`data:image/png;base64,${file.toString("base64")}`);
+      const png = decodePng(file);
+      expect(png).toHaveLength(character.art.size);
+      expect(png[0]).toHaveLength(character.art.size);
+      expect(isArtCharacter(character)).toBe(true);
+    },
+  );
+
+  it("keeps painted characters after the drawn ones, with unique ids and names", () => {
+    expect(CHARACTERS.slice(24)).toEqual(ART_CHARACTERS);
+    expect(new Set(CHARACTERS.map((c) => c.id)).size).toBe(CHARACTER_COUNT);
+    expect(new Set(CHARACTERS.map((c) => c.name)).size).toBe(CHARACTER_COUNT);
+    expect(DRAWN_CHARACTERS.some(isArtCharacter)).toBe(false);
+  });
+
+  it("only defaults agents to drawn characters, so new art never changes a default look", () => {
+    for (const id of ["vesper", "quill", "wren", "nova", "a", "project-manager"]) {
+      expect(lookFor(id, undefined)).toBeLessThan(DRAWN_CHARACTERS.length);
+    }
+    expect(lookFor("quill", 28)).toBe(28);
+    expect(lookFor("quill", CHARACTER_COUNT)).toBeLessThan(DRAWN_CHARACTERS.length);
   });
 });

@@ -1,9 +1,10 @@
-import { term } from "@darthsaul/outerworld-ai-core";
+import { findModel, type ModelSettings, term } from "@darthsaul/outerworld-ai-core";
 import { Checkbox } from "@darthsaul/outerworld-ai-ui";
 import { type FormEvent, useId, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { ErrorNote } from "../components/ErrorNote.js";
 import { formatWhen } from "../components/format.js";
+import { ModelPicker } from "../components/ModelPicker.js";
 import { previewCron } from "../lib/cron-preview.js";
 import { zoneGroups, zoneLabel } from "../lib/time-zones.js";
 import {
@@ -14,6 +15,7 @@ import {
   useRunSchedule,
   useSchedules,
   useSettings,
+  useStationView,
   useUpdateSchedule,
 } from "../queries.js";
 
@@ -28,6 +30,8 @@ interface Draft {
   timezone: string;
   prompt: string;
   catchUp: boolean;
+  /** The job's own model choice; null means the crew member's (ADR-0016). */
+  modelSettings: ModelSettings | null;
 }
 
 /** Add or edit. An empty zone means the machine's: omitted on add, `null` when clearing one. */
@@ -103,6 +107,7 @@ function CronPreviewLine({
 function ScheduleForm({
   title,
   machineZone,
+  agentModel,
   initial,
   pending,
   error,
@@ -111,6 +116,7 @@ function ScheduleForm({
 }: {
   readonly title: string;
   readonly machineZone: string;
+  readonly agentModel: string;
   readonly initial: Draft;
   readonly pending: boolean;
   readonly error: Error | null;
@@ -153,6 +159,17 @@ function ScheduleForm({
           onChange={(e) => set({ prompt: e.target.value })}
         />
       </label>
+      <div className="flex flex-col gap-1">
+        <span className="font-display text-d7 text-fg-mute uppercase">
+          {term("schedule.model")}
+        </span>
+        <ModelPicker
+          legend={term("schedule.model")}
+          value={draft.modelSettings ?? undefined}
+          agentModel={agentModel}
+          onChange={(modelSettings) => set({ modelSettings })}
+        />
+      </div>
       <Checkbox
         label={term("schedule.catchUp")}
         checked={draft.catchUp}
@@ -186,10 +203,12 @@ function FireLine({ fire }: { readonly fire: ScheduleFireItem }) {
 
 function ScheduleCard({
   agentId,
+  agentModel,
   schedule,
   machineZone,
 }: {
   readonly agentId: string;
+  readonly agentModel: string;
   readonly schedule: ScheduleItem;
   readonly machineZone: string;
 }) {
@@ -222,11 +241,13 @@ function ScheduleCard({
         <ScheduleForm
           title={term("schedule.edit")}
           machineZone={machineZone}
+          agentModel={agentModel}
           initial={{
             cron: schedule.cron,
             timezone: schedule.timezoneSet ? schedule.timezone : "",
             prompt: schedule.prompt,
             catchUp: schedule.catchUp,
+            modelSettings: schedule.modelSettings ?? null,
           }}
           pending={update.isPending}
           error={update.error}
@@ -239,6 +260,11 @@ function ScheduleCard({
                   cron: d.cron,
                   prompt: d.prompt,
                   catchUp: d.catchUp,
+                  ...(d.modelSettings
+                    ? { modelSettings: d.modelSettings }
+                    : schedule.modelSettings
+                      ? { modelSettings: null }
+                      : {}),
                   ...(d.timezone
                     ? { timezone: d.timezone }
                     : schedule.timezoneSet
@@ -257,6 +283,20 @@ function ScheduleCard({
             {preview?.ok ? ` · ${preview.description}` : ""}
           </p>
           <p className="m-0 text-b19 text-fg">{schedule.prompt}</p>
+          {schedule.modelSettings ? (
+            <p className="m-0 text-b17 text-fg-soft" data-schedule-model>
+              {term("model.model")}:{" "}
+              {findModel(schedule.modelSettings.model ?? agentModel)?.label ??
+                schedule.modelSettings.model ??
+                agentModel}
+              {schedule.modelSettings.provider
+                ? ` ${term("model.via")} ${term(`model.provider.${schedule.modelSettings.provider}`)}`
+                : ""}
+              {schedule.modelSettings.reasoning
+                ? ` · ${term("model.reasoning")} ${term(`model.reasoning.${schedule.modelSettings.reasoning}`)}`
+                : ""}
+            </p>
+          ) : null}
           <p className="text-b17 text-fg-mute">
             {schedule.error
               ? schedule.error
@@ -318,6 +358,8 @@ export function SchedulesSection({ agentId }: { readonly agentId: string }) {
   const settings = useSettings();
   const machineZone = settings.data?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
   const add = useAddSchedule(agentId);
+  const station = useStationView();
+  const agentModel = station.data?.agents.find((a) => a.id === agentId)?.config.model ?? "";
   const [adding, setAdding] = useState(false);
   const list = schedules.data ?? [];
   return (
@@ -337,13 +379,20 @@ export function SchedulesSection({ agentId }: { readonly agentId: string }) {
         <p className="m-0 text-b17 text-fg-mute">{term("schedule.none")}</p>
       ) : null}
       {list.map((s) => (
-        <ScheduleCard key={s.id} agentId={agentId} schedule={s} machineZone={machineZone} />
+        <ScheduleCard
+          key={s.id}
+          agentId={agentId}
+          agentModel={agentModel}
+          schedule={s}
+          machineZone={machineZone}
+        />
       ))}
       {adding ? (
         <ScheduleForm
           title={term("schedule.add")}
           machineZone={machineZone}
-          initial={{ cron: "", timezone: "", prompt: "", catchUp: false }}
+          agentModel={agentModel}
+          initial={{ cron: "", timezone: "", prompt: "", catchUp: false, modelSettings: null }}
           pending={add.isPending}
           error={add.error}
           onCancel={() => setAdding(false)}
@@ -354,6 +403,7 @@ export function SchedulesSection({ agentId }: { readonly agentId: string }) {
                 prompt: d.prompt,
                 catchUp: d.catchUp,
                 ...(d.timezone ? { timezone: d.timezone } : {}),
+                ...(d.modelSettings ? { modelSettings: d.modelSettings } : {}),
               },
               { onSuccess: () => setAdding(false) },
             )

@@ -130,6 +130,8 @@
 
   /* Media queries cannot read custom properties, so this is the one literal in the theme. It
      must equal --st-breakpoint-desktop in station.css; tokens.test.ts enforces that. */
+  --container-app: var(--st-app-max-width);
+
   --breakpoint-*: initial;
   --breakpoint-desktop: 720px;
 

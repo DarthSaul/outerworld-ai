@@ -23,7 +23,7 @@ const arg = (name, fallback) => {
 };
 const routes = arg(
   "routes",
-  "/dev,/,/crew-select,/crew,/crew/vesper,/crew/quill,/comms,/comms?agent=vesper,/memory,/memory?agent=wren,/settings,/notifications",
+  "/dev,/,/crew,/crew/vesper,/crew/quill,/comms,/comms?agent=vesper,/memory,/memory?agent=wren,/settings,/notifications",
 ).split(",");
 const port = Number(arg("port", "3300"));
 const outDir = join(process.cwd(), ".outerworld", "screenshots");
@@ -166,12 +166,15 @@ async function stationInteractions(page, width) {
     if (scan !== map) {
       failures.push(`home-${width}: the scanner ends at ${scan}px, the map at ${map}px`);
     }
-    // Comms over the scanner is 1fr / 1fr.
+    // Comms over the scanner is 1.5fr / 2fr: the scanner is 4/3 the height of comms.
     const height = (name) =>
       page.getByRole("region", { name }).evaluate((el) => el.getBoundingClientRect().height);
     const ratio = (await height("Scanner")) / (await height("Overseer comms"));
-    if (ratio < 0.95 || ratio > 1.05) {
-      failures.push(`home-${width}: scanner / comms height is ${ratio.toFixed(2)}, not 1`);
+    const want = 2 / 1.5;
+    if (Math.abs(ratio - want) > 0.05) {
+      failures.push(
+        `home-${width}: scanner / comms height is ${ratio.toFixed(2)}, not ${want.toFixed(2)}`,
+      );
     }
   }
   // The order line wraps, grows to three lines, then scrolls without growing the panel.

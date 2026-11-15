@@ -13,4 +13,6 @@ configure({ asyncUtilTimeout: 5000 });
 
 afterEach(() => {
   cleanup();
+  // Per-viewer preferences (the open Overseer order, the map style…) never leak between tests.
+  localStorage.clear();
 });

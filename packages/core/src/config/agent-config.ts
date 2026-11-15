@@ -9,7 +9,7 @@ import {
   toResult,
   versionIssues,
 } from "../schema/common.js";
-import { isSupportedModel } from "./models.js";
+import { isSupportedModel, ModelSettings } from "./models.js";
 
 /**
  * `agents/<id>/agent.json` (brief §9): the config half of a crew member. The documents
@@ -47,6 +47,8 @@ export const Schedule = z.looseObject({
   sessionId: z.string().min(1).optional(),
   catchUp: z.boolean().default(false),
   enabled: z.boolean().default(true),
+  /** The job's own model, key, and reasoning level; absent means the crew member's (ADR-0016). */
+  modelSettings: ModelSettings.optional(),
 });
 
 export const AgentConfig = z.looseObject({

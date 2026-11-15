@@ -1,6 +1,9 @@
+import { CHARACTER_ART } from "./character-art.js";
+
 /**
- * The 24 pixel characters an agent can appear as (ADR-0013), and the generator that draws one on
- * its 20×26 grid. Ported from docs/design/station-dashboard/src/characterSprites.ts; the
+ * The pixel characters an agent can appear as (ADR-0013): 24 drawn characters, generated on a
+ * 20×26 grid, then painted characters shipped as art (ADR-0017). The generator draws the drawn
+ * ones. Ported from docs/design/station-dashboard/src/characterSprites.ts; the
  * exported PNGs in docs/design/station-dashboard/sprites/1x are the reference, and
  * characters.test.ts checks every grid against them pixel for pixel. Pure: no DOM, no canvas.
  */
@@ -62,7 +65,8 @@ export type CharacterSpec = {
   ears?: false;
 };
 
-export const CHARACTERS: readonly CharacterSpec[] = [
+/** The 24 drawn characters, in the design export's order (`sprites/characters.json`). */
+export const DRAWN_CHARACTERS: readonly CharacterSpec[] = [
   {
     id: "nova",
     name: "NOVA",
@@ -371,6 +375,46 @@ export const CHARACTERS: readonly CharacterSpec[] = [
     mouth: "grin",
   },
 ];
+
+/**
+ * A painted character (ADR-0017): art from docs/design/station-dashboard/sprites/art, as a PNG
+ * data URI. Its canvas is `size` pixels square; it draws in a 32×32 box per sprite scale step (64px
+ * art at ½, 96px art at ⅓), so it stands about as tall as a drawn character.
+ */
+export type ArtCharacter = {
+  id: string;
+  name: string;
+  role: string;
+  art: { readonly src: string; readonly size: 64 | 96 };
+};
+
+/** The box a painted character draws in at scale 1. */
+export const ART_BOX = 32;
+
+const art = (id: string, name: string, role: string, size: 64 | 96 = 64): ArtCharacter => ({
+  id,
+  name,
+  role,
+  art: { src: CHARACTER_ART[id] ?? "", size },
+});
+
+/** The painted characters, after the drawn ones (indexes 24 and up). */
+export const ART_CHARACTERS: readonly ArtCharacter[] = [
+  art("razor", "RAZOR", "Captain"),
+  art("umbra", "UMBRA", "Shadow knight", 96),
+  art("asha", "ASHA", "Duelist"),
+  art("tali", "TALI", "Envoy"),
+  art("blip", "BLIP", "Utility droid"),
+  art("patch", "PATCH", "Hacker"),
+  art("dusty", "DUSTY", "Gunslinger"),
+];
+
+export type Character = CharacterSpec | ArtCharacter;
+
+/** Every character an agent can wear, by `look` index: the drawn 24, then the painted ones. */
+export const CHARACTERS: readonly Character[] = [...DRAWN_CHARACTERS, ...ART_CHARACTERS];
+
+export const isArtCharacter = (c: Character): c is ArtCharacter => "art" in c;
 
 export const CHARACTER_COUNT = CHARACTERS.length;
 
@@ -818,12 +862,16 @@ export function gridRuns(grid: CharacterGrid): PixelRun[] {
   return runs;
 }
 
-/** The character index stored in agent.json `look`, or a stable one from the agent id. */
+/**
+ * The character index stored in agent.json `look`, or a stable one from the agent id. The stable
+ * default draws only from the drawn 24, so adding painted characters never changes anyone's
+ * default look.
+ */
 export function lookFor(agentId: string, look: number | undefined): number {
   if (look !== undefined && Number.isInteger(look) && look >= 0 && look < CHARACTER_COUNT) {
     return look;
   }
   let hash = 0;
   for (const ch of agentId) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
-  return hash % CHARACTER_COUNT;
+  return hash % DRAWN_CHARACTERS.length;
 }

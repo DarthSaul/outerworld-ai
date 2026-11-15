@@ -93,7 +93,7 @@ export function PanelTabs({ label, tabs, active, onChange, meta, className = "" 
           id={panelId(tab.id)}
           aria-labelledby={tabId(tab.id)}
           hidden={tab.id !== shown}
-          className="min-h-0 flex-1 flex-col [&:not([hidden])]:flex"
+          className="min-h-0 flex-1 flex-col overflow-hidden [&:not([hidden])]:flex"
         >
           {tab.content}
         </div>

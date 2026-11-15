@@ -1,6 +1,7 @@
 import { chmod, mkdir } from "node:fs/promises";
 import type { AddressInfo } from "node:net";
 import {
+  ANTHROPIC_PROVIDER,
   ApiKeyService,
   ConnectorManager,
   ConsentStore,
@@ -14,13 +15,13 @@ import {
   EventStore,
   KeychainSecretStore,
   KillSwitch,
+  liveModels,
   loadStationDir,
   MemorySecretStore,
   MemoryService,
   MemoryStore,
   NotificationService,
   openDatabase,
-  openRouterModels,
   RunService,
   Scheduler,
   ScheduleStore,
@@ -47,9 +48,12 @@ export interface RunningDaemon {
 export interface StartOptions {
   readonly quiet?: boolean;
   readonly warn?: (message: string) => void;
-  /** Where the OpenRouter key lives; the OS keychain unless a test passes a memory store. */
+  /** Where provider keys live; the OS keychain unless a test passes a memory store. */
   readonly secrets?: SecretStore;
-  /** For the `OPENROUTER_API_KEY` development fallback; defaults to the process environment. */
+  /**
+   * For the `OPENROUTER_API_KEY` and `ANTHROPIC_API_KEY` development fallbacks; defaults to the
+   * process environment.
+   */
   readonly env?: Readonly<Record<string, string | undefined>>;
 }
 
@@ -73,12 +77,11 @@ export async function startDaemon(
   const secrets =
     options.secrets ??
     (config.secrets === "memory" ? new MemorySecretStore() : new KeychainSecretStore());
-  const apiKeys = new ApiKeyService({
-    store: secrets,
-    env: options.env ?? process.env,
-  });
+  const env = options.env ?? process.env;
+  const apiKeys = new ApiKeyService({ store: secrets, env });
+  const anthropicKeys = new ApiKeyService({ store: secrets, env, provider: ANTHROPIC_PROVIDER });
   const db = openDatabase(paths.database);
-  const redact = createRedactor(() => apiKeys.knownSecrets());
+  const redact = createRedactor(() => [...apiKeys.knownSecrets(), ...anthropicKeys.knownSecrets()]);
   const events = new EventStore(db, { redact });
   const sessions = new SessionStore(db);
   const consents = new ConsentStore(db);
@@ -108,7 +111,10 @@ export async function startDaemon(
       web_fetch: createWebFetch(),
       remember: createRememberTool({ memories, events }),
     },
-    models: config.modelMode === "fake" ? scriptedModels() : openRouterModels(apiKeys),
+    models:
+      config.modelMode === "fake"
+        ? scriptedModels()
+        : liveModels({ openrouter: apiKeys, anthropic: anthropicKeys }),
     redact,
     titles: true,
   });
@@ -159,6 +165,7 @@ export async function startDaemon(
     spend,
     dispatches,
     apiKeys,
+    anthropicKeys,
     modelMode: config.modelMode,
     version: VERSION,
     ...(config.spaDir !== undefined ? { spaDir: config.spaDir } : {}),
