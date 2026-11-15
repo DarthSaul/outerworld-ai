@@ -88,8 +88,10 @@ const MAX_RUN = 48;
 export function plainText(markdown: string): string {
   return (
     markdown
-      // A fence's markers (and language tag) go; its code stays, so a code-only reply has a preview.
-      .replace(/```[^\n`]*\n?([\s\S]*?)```/g, " $1 ")
+      // A fence's markers go, and a language tag on the fence's own line; the code stays, so a
+      // code-only reply has a preview. Text already flattened to one line (the API's previews) has
+      // no line to tell a tag from code, so all of it stays.
+      .replace(/```(?:[^\s`]*\n)?([\s\S]*?)```/g, " $1 ")
       .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
       .replace(/^\s{0,3}(#{1,6}|>|[-*+]|\d+\.)\s+/gm, "")
       .replace(/[*~`]+/g, "")

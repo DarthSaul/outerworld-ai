@@ -350,14 +350,41 @@ describe("COMMS: model settings per conversation (ADR-0016)", () => {
   });
 
   it("builds a quick second change on the first, before the session has refetched", async () => {
-    const { chat, user, calls } = await startChat();
+    const fake = fakeApi();
+    const { chat, user, calls } = await startChat(fake);
+    // Hold the first save's answer, and every read of the session, until the gate opens: the
+    // second change is made while the session still says the crew member's default.
+    let open = () => {};
+    const gate = new Promise<void>((resolve) => {
+      open = resolve;
+    });
+    let gated = true;
+    const { get, send } = fake.api;
+    fake.api.get = (async (path: string) => {
+      if (gated && path === "/sessions/s1") await gate;
+      return get(path);
+    }) as typeof get;
+    fake.api.send = (async (method, path, body) => {
+      const answer = await send(method, path, body);
+      if (gated && method === "PATCH") await gate;
+      return answer;
+    }) as typeof send;
     const picker = within(chat).getByRole("group", { name: term("model.settings") });
     await choose(user, picker, term("model.model"), /^Claude Opus 5\.5,/);
     await choose(user, picker, term("model.reasoning"), /^High,/);
-    expect(calls.filter((c) => c.method === "PATCH").map((c) => c.body)).toEqual([
-      { modelSettings: { model: "anthropic/claude-opus-5.5" } },
-      { modelSettings: { model: "anthropic/claude-opus-5.5", reasoning: "high" } },
-    ]);
+    // Still waiting: one save out, the second queued behind it, both choices shown from here.
+    expect(calls.filter((c) => c.method === "PATCH")).toHaveLength(1);
+    expect(menu(picker, term("model.model"))).toHaveTextContent("Claude Opus 5.5");
+    expect(menu(picker, term("model.reasoning"))).toHaveTextContent(term("model.reasoning.high"));
+    gated = false;
+    open();
+    // Built from the pending choice; from the stale session it would be reasoning alone.
+    await waitFor(() =>
+      expect(calls.filter((c) => c.method === "PATCH").map((c) => c.body)).toEqual([
+        { modelSettings: { model: "anthropic/claude-opus-5.5" } },
+        { modelSettings: { model: "anthropic/claude-opus-5.5", reasoning: "high" } },
+      ]),
+    );
   });
 
   it("goes back to the crew member's settings when every field is on its default", async () => {

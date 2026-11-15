@@ -73,5 +73,8 @@ describe("plainText", () => {
   it("keeps a code block's code, dropping its fences, so a code-only reply has a preview", () => {
     expect(plainText("```ts\nconst a = 1;\n```")).toBe("const a = 1;");
     expect(plainText("Run:\n```\npnpm dev\n```\nthen open it")).toBe("Run: pnpm dev then open it");
+    // As the API sends a preview, whitespace already flattened: the code is kept, not taken for a tag.
+    expect(plainText("```ts const a = 1; ```")).toBe("ts const a = 1;");
+    expect(plainText("Run: ``` pnpm dev ``` then open it")).toBe("Run: pnpm dev then open it");
   });
 });
