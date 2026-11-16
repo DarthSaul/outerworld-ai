@@ -1,5 +1,11 @@
 import { type Dashboard, term, termWith } from "@darthsaul/outerworld-ai-core";
-import { OutlineButton, Panel, PanelLabel, tabClass } from "@darthsaul/outerworld-ai-ui";
+import {
+  CaretButton,
+  OutlineButton,
+  Panel,
+  PanelLabel,
+  tabClass,
+} from "@darthsaul/outerworld-ai-ui";
 import { useState } from "react";
 import { CrewButton, SessionButton } from "../comms/CommsPage.js";
 import { ErrorNote } from "../components/ErrorNote.js";
@@ -51,19 +57,19 @@ export function CrewPanel({
       <Panel
         title={term("agents")}
         className="min-h-0 flex-1"
-        titleAction={
-          <button
-            type="button"
-            aria-expanded={true}
-            aria-controls={id}
-            aria-label={term("station.crew.collapse")}
-            title={term("station.crew.collapse")}
-            onClick={onCollapse}
-            data-caret
-            className="hidden size-5 cursor-pointer items-center justify-center border-2 border-transparent bg-transparent p-0 text-cyan hover:border-line-soft hover:text-fg-hi focus-visible:border-cyan desktop:inline-flex"
-          >
-            <span aria-hidden="true">◂</span>
-          </button>
+        // At the strip's far end, pointing the way the column folds. Desktop only: phones always
+        // show the column.
+        meta={
+          <span className="hidden items-center desktop:flex">
+            <CaretButton
+              direction="left"
+              aria-expanded={true}
+              aria-controls={id}
+              aria-label={term("station.crew.collapse")}
+              title={term("station.crew.collapse")}
+              onClick={onCollapse}
+            />
+          </span>
         }
       >
         <div className="flex min-h-0 flex-1 flex-col">

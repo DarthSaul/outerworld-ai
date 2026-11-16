@@ -564,7 +564,7 @@ describe("Crew column", () => {
     const tab = screen.getByRole("button", { name: term("station.crew.expand") });
     expect(tab).toHaveAttribute("aria-expanded", "false");
     expect(grid(first.container)?.style.getPropertyValue("--st-station-cols")).toBe(
-      "auto minmax(0,3.000fr) auto minmax(0,1.000fr)",
+      "minmax(0,3.000fr) auto minmax(0,1.000fr)",
     );
     first.unmount();
     const again = renderApp("/");

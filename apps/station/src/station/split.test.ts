@@ -15,9 +15,9 @@ describe("station split", () => {
     );
   });
 
-  it("gives a folded crew column's share to the map, leaving the folder tab", () => {
+  it("gives a folded crew column's share to the map, with no column left for it", () => {
     expect(splitTemplate(DEFAULT_SIDE, { crew: false })).toBe(
-      "auto minmax(0,3.000fr) auto minmax(0,1.000fr)",
+      "minmax(0,3.000fr) auto minmax(0,1.000fr)",
     );
   });
 

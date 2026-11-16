@@ -21,8 +21,10 @@ was the map beside a column that held comms tabs (Overseer comms, Crew comms) ov
   every session on the station, newest activity first. An All / Dispatched filter and New (clears
   COMMS for a new conversation) sit above the list. Search and projects from the reference are
   not built. The caret in the strip folds the column away, kept per viewer
-  (`outerworld.crewColumn`). A folded column leaves a folder tab on the left edge, and its 1fr
-  goes to the map.
+  (`outerworld.crewColumn`). A folded column has no column of its own: its 1fr goes to the map,
+  and a folder tab lies over the map's left edge, halfway down, to unfold it. The strip's fold
+  carets (crew and scanner) share one pixel caret (`CaretButton`), centered in its button; the
+  crew's sits at the far end of the strip.
 - **COMMS column.** The strip has COMMS and Expand. Expand widens COMMS across the row and hides
   crew and map; Collapse brings them back. Under the strip, the agent row is a crew dropdown.
   - **With a session open**, picking someone else hands the conversation to them.

@@ -218,7 +218,7 @@ export function StationPage() {
           "--st-station-cols": splitTemplate(side, { crew: crewOpen, expanded }),
         } as CSSProperties
       }
-      className="grid flex-1 grid-cols-1 items-stretch gap-3.5 py-3.5 desktop:min-h-0 desktop:grid-cols-(--st-station-cols) desktop:grid-rows-[minmax(0,1fr)] desktop:gap-0"
+      className="relative grid flex-1 grid-cols-1 items-stretch gap-3.5 py-3.5 desktop:min-h-0 desktop:grid-cols-(--st-station-cols) desktop:grid-rows-[minmax(0,1fr)] desktop:gap-0"
     >
       <h1 className="sr-only">{term("tab.station")}</h1>
       {crewOpen ? (
@@ -247,8 +247,10 @@ export function StationPage() {
             onCollapse={() => setCrewColumn("closed")}
             className="desktop:hidden"
           />
+          {/* Desktop: the folded column's tab lies over the map's left edge, halfway down. It takes
+              no column of its own. */}
           <div
-            className={`hidden desktop:flex desktop:items-start desktop:pr-1.5 ${desktopHidden}`}
+            className={`absolute top-1/2 left-0 z-10 hidden -translate-y-1/2 desktop:flex ${desktopHidden}`}
           >
             <FolderTab
               controls={CREW_ID}

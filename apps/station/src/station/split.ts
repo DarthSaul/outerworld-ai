@@ -21,8 +21,8 @@ export function resizeSide(side: number, dx: number, width: number): number {
 }
 
 /**
- * `grid-template-columns` for the row: crew (or the folded column's tab), map, handle, comms.
- * Expanded, comms is the only column.
+ * `grid-template-columns` for the row: crew, map, handle, comms. A folded crew column has no
+ * column at all (its tab lies over the map's edge). Expanded, comms is the only column.
  */
 export function splitTemplate(
   side: number,
@@ -31,7 +31,7 @@ export function splitTemplate(
   if (expanded) return "minmax(0,1fr)";
   const col = (fr: number) => `minmax(0,${fr.toFixed(3)}fr)`;
   const map = SPLIT_TOTAL - side - (crew ? CREW_SHARE : 0);
-  return `${crew ? col(CREW_SHARE) : "auto"} ${col(map)} auto ${col(side)}`;
+  return `${crew ? `${col(CREW_SHARE)} ` : ""}${col(map)} auto ${col(side)}`;
 }
 
 /** A share of the row in percent, for the handle's aria values. */
