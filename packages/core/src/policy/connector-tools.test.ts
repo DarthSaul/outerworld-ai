@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { classifyConnectorTool, KNOWN_TOOL_CLASSES, NOTION_PRESET } from "./connector-tools.js";
+import {
+  CONNECTOR_PRESET_IDS,
+  CONNECTOR_PRESETS,
+  classifyConnectorTool,
+  GITHUB_PRESET,
+  GMAIL_PRESET,
+  KNOWN_TOOL_CLASSES,
+  NOTION_PRESET,
+  needsOwnClient,
+} from "./connector-tools.js";
 
 describe("classifyConnectorTool", () => {
   it("uses our map for Notion's tools, whatever the server's annotations say", () => {
@@ -56,5 +65,32 @@ describe("NOTION_PRESET", () => {
       name: "Notion",
       transport: { type: "http", url: "https://mcp.notion.com/mcp" },
     });
+  });
+});
+
+describe("connector presets", () => {
+  it("offers Notion, GitHub, and Gmail, each over HTTP to its hosted MCP server", () => {
+    expect(CONNECTOR_PRESET_IDS).toEqual(["notion", "github", "gmail"]);
+    expect(GITHUB_PRESET).toEqual({
+      id: "github",
+      name: "GitHub",
+      transport: { type: "http", url: "https://api.githubcopilot.com/mcp/" },
+    });
+    expect(GMAIL_PRESET).toEqual({
+      id: "gmail",
+      name: "Gmail",
+      transport: { type: "http", url: "https://gmailmcp.googleapis.com/mcp/v1" },
+    });
+    for (const id of CONNECTOR_PRESET_IDS) expect(CONNECTOR_PRESETS[id].id).toBe(id);
+  });
+
+  it("knows which servers need the Commander's own OAuth client (no dynamic registration)", () => {
+    expect(needsOwnClient(NOTION_PRESET)).toBe(false);
+    expect(needsOwnClient(GITHUB_PRESET)).toBe(true);
+    expect(needsOwnClient(GMAIL_PRESET)).toBe(true);
+    // Keyed by the server, not the id: a GitHub id pointed elsewhere registers as usual.
+    expect(
+      needsOwnClient({ ...GITHUB_PRESET, transport: { type: "http", url: "https://x.test/mcp" } }),
+    ).toBe(false);
   });
 });

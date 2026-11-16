@@ -282,6 +282,60 @@ describe("ConnectorManager", () => {
   });
 });
 
+describe("a server that registers no clients (ADR-0019)", () => {
+  /** The demo station plus a GitHub connector at GitHub's hosted server. */
+  const withGitHub = async (t: ReturnType<typeof setup>) => {
+    const path = join(t.home, "station.json");
+    const station = JSON.parse(readFileSync(path, "utf8"));
+    station.connectors.push({
+      id: "github",
+      name: "GitHub",
+      transport: { type: "http", url: "https://api.githubcopilot.com/mcp/" },
+    });
+    writeFileSync(path, JSON.stringify(station));
+    await t.manager.refresh();
+  };
+  const github = (t: ReturnType<typeof setup>) => t.manager.views().find((v) => v.id === "github");
+
+  it("asks for the Commander's own OAuth client before connecting, with the redirect to register", async () => {
+    const t = setup(inMemory());
+    await withGitHub(t);
+    expect(github(t)?.ownClient).toEqual({
+      set: false,
+      redirectUrl: "http://127.0.0.1:4317/oauth/callback/github",
+    });
+    // Notion registers clients itself: nothing to ask for.
+    expect(t.manager.views().find((v) => v.id === "notion")?.ownClient).toBeUndefined();
+    const answer = await t.manager.connect("github");
+    expect(answer).toMatchObject({ status: "error", detail: expect.stringMatching(/client ID/) });
+  });
+
+  it("keeps the client in the keychain, reports only that it is set, and connects with it", async () => {
+    const t = setup(inMemory());
+    await withGitHub(t);
+    await t.manager.setOwnClient("github", { clientId: "Iv1.abc", clientSecret: "shh" });
+    expect(github(t)?.ownClient?.set).toBe(true);
+    expect(JSON.stringify(t.manager.views())).not.toContain("shh");
+    const key = connectorSecretKey("github", "https://api.githubcopilot.com/mcp/", "own");
+    expect(await t.secrets.get(key)).toContain("Iv1.abc");
+    expect((await t.manager.connect("github")).status).toBe("connected");
+    // Forgetting the sign-in keeps the client; removing the connector drops it.
+    await t.manager.disconnect("github", { forget: true });
+    expect(github(t)?.ownClient?.set).toBe(true);
+    await t.manager.disconnect("github", { forget: true, ownClient: true });
+    expect(await t.secrets.get(key)).toBeUndefined();
+    expect(github(t)?.ownClient?.set).toBe(false);
+  });
+
+  it("refuses an own client for a server that registers its own", async () => {
+    const t = setup(inMemory());
+    await t.manager.refresh();
+    await expect(t.manager.setOwnClient("notion", { clientId: "x" })).rejects.toThrow(
+      /registers its own/,
+    );
+  });
+});
+
 describe("KeychainOAuthProvider", () => {
   const provider = (secrets = new MemorySecretStore(), port = 4317, server = DEMO_SERVER) =>
     new KeychainOAuthProvider({
@@ -354,6 +408,26 @@ describe("KeychainOAuthProvider", () => {
     await p.forget();
     expect(await secrets.get("mcp.notion.tokens")).toBeUndefined();
     expect(await secrets.get("mcp.notion.client")).toBeUndefined();
+  });
+
+  it("signs in with the Commander's own client, whatever the port, and drops older sign-ins", async () => {
+    const secrets = new MemorySecretStore();
+    const p = provider(secrets);
+    await p.saveTokens({ access_token: "at", token_type: "Bearer" });
+    await p.setOwnClient({ clientId: "own-id", clientSecret: "own-secret" });
+    expect(await p.tokens()).toBeUndefined();
+    expect(await p.hasOwnClient()).toBe(true);
+    expect(await provider(secrets, 5000).clientInformation()).toEqual({
+      client_id: "own-id",
+      client_secret: "own-secret",
+      token_endpoint_auth_method: "client_secret_post",
+      redirect_uris: ["http://127.0.0.1:5000/oauth/callback/notion"],
+    });
+    await p.setOwnClient({ clientId: "public-id" });
+    expect(await p.clientInformation()).toEqual({
+      client_id: "public-id",
+      redirect_uris: ["http://127.0.0.1:4317/oauth/callback/notion"],
+    });
   });
 
   it("keeps the PKCE verifier in memory and checks state once", async () => {

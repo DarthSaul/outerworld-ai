@@ -20,3 +20,4 @@ supersedes the old one. Template: `0000-template.md`.
 | [0013](0013-station-dashboard-design.md) | The station dashboard design replaces the Reach spec, the rig, and light theme | Accepted |
 | [0014](0014-station-dashboard-revisions.md) | Station dashboard revisions: drawer, footer kill switch, pannable map, session titles | Accepted |
 | [0018](0018-station-three-columns-and-session-handover.md) | Station in three columns, and handing a session to another crew member | Accepted |
+| [0019](0019-github-gmail-connectors-own-oauth-client.md) | GitHub and Gmail connector presets, signed in with the Commander's own OAuth app | Accepted |

@@ -161,6 +161,44 @@ describe("connector routes", () => {
     expect(patched.json.transport).toEqual({ type: "http", url: "https://mcp.notion.com/mcp" });
   });
 
+  it("adds the GitHub and Gmail presets and takes an own OAuth client, never echoing it", async () => {
+    const { call, secrets } = setup();
+    expect((await call("POST", "/api/connectors", { preset: "slack" })).status).toBe(400);
+    const added = await call("POST", "/api/connectors", { preset: "github" });
+    expect(added.status).toBe(201);
+    expect(added.json.transport).toEqual({
+      type: "http",
+      url: "https://api.githubcopilot.com/mcp/",
+    });
+    expect((await call("POST", "/api/connectors", { preset: "gmail" })).status).toBe(201);
+    const listed = (await call("GET", "/api/connectors")).json as unknown as Array<{
+      id: string;
+      ownClient?: { set: boolean; redirectUrl: string };
+    }>;
+    expect(listed.map((c) => c.id)).toEqual(["notion", "github", "gmail"]);
+    expect(listed.find((c) => c.id === "github")?.ownClient).toEqual({
+      set: false,
+      redirectUrl: "http://127.0.0.1:4317/oauth/callback/github",
+    });
+    expect((await call("PUT", "/api/connectors/github/client", { clientId: "" })).status).toBe(400);
+    expect((await call("PUT", "/api/connectors/notion/client", { clientId: "x" })).status).toBe(
+      409,
+    );
+    const put = await call("PUT", "/api/connectors/github/client", {
+      clientId: "Iv1.abc",
+      clientSecret: "shh",
+    });
+    expect(put.status).toBe(204);
+    const after = await call("GET", "/api/connectors");
+    expect(after.text).not.toContain("shh");
+    expect(after.text).not.toContain("Iv1.abc");
+    const key = connectorSecretKey("github", "https://api.githubcopilot.com/mcp/", "own");
+    expect(await secrets.get(key)).toContain("Iv1.abc");
+    // Removing the connector forgets its client too.
+    expect((await call("DELETE", "/api/connectors/github")).status).toBe(204);
+    expect(await secrets.get(key)).toBeUndefined();
+  });
+
   it("disconnects and, when asked, forgets the stored sign-in", async () => {
     const { call, secrets } = setup();
     const key = connectorSecretKey("notion", "https://mcp.notion.example/mcp", "tokens");

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ModelSettings } from "../config/models.js";
+import { CONNECTOR_PRESET_IDS } from "../policy/connector-tools.js";
 import { Id } from "../schema/common.js";
 
 /** The HTTP contract for sessions, runs, and settings (Phase 3), shared by daemon and SPA. */
@@ -48,8 +49,13 @@ export interface HealthView {
   readonly startedAt: string;
 }
 
-/** Connectors (ADR-0012): the Notion preset, a URL change, and disconnecting. */
-export const AddConnectorInput = z.strictObject({ preset: z.literal("notion") });
+/** Connectors (ADR-0012, ADR-0019): a preset, a URL change, an own OAuth client, disconnecting. */
+export const AddConnectorInput = z.strictObject({ preset: z.enum(CONNECTOR_PRESET_IDS) });
+/** The Commander's own OAuth client, for a server that registers none (kept in the keychain). */
+export const ConnectorClientInput = z.strictObject({
+  clientId: z.string().trim().min(1).max(256),
+  clientSecret: z.string().trim().min(1).max(512).optional(),
+});
 export const UpdateConnectorInput = z.strictObject({
   url: z.url({ protocol: /^https?$/ }).optional(),
   name: z.string().trim().min(1).max(80).optional(),
@@ -58,6 +64,7 @@ export const DisconnectInput = z.strictObject({ forget: z.boolean().optional() }
 
 export type AddConnectorInput = z.infer<typeof AddConnectorInput>;
 export type UpdateConnectorInput = z.infer<typeof UpdateConnectorInput>;
+export type ConnectorClientInput = z.infer<typeof ConnectorClientInput>;
 export type DisconnectInput = z.infer<typeof DisconnectInput>;
 
 /** Approving a memory proposal, optionally with the Commander's edit; editing a belief. */

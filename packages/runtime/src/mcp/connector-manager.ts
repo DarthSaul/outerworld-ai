@@ -2,6 +2,7 @@ import {
   type Connector,
   type ConnectorToolCatalog,
   classifyConnectorTool,
+  needsOwnClient,
   type ToolClass,
 } from "@darthsaul/outerworld-ai-core";
 import {
@@ -11,10 +12,11 @@ import {
   type Transport,
   UnauthorizedError,
 } from "@modelcontextprotocol/client";
+import { ConflictError, NotFoundError } from "../crew/crew-service.js";
 import type { SecretStore } from "../secrets/store.js";
 import type { EventStore } from "../storage/event-store.js";
 import { loadStationDir } from "../storage/station-dir.js";
-import { KeychainOAuthProvider } from "./oauth-provider.js";
+import { KeychainOAuthProvider, type OwnClient } from "./oauth-provider.js";
 
 export type ConnectorStatus = "disconnected" | "needs_auth" | "connected" | "error";
 
@@ -32,6 +34,11 @@ export interface ConnectorView {
   readonly status: ConnectorStatus;
   readonly detail?: string;
   readonly tools: readonly ConnectorTool[];
+  /**
+   * For a server that registers no clients (ADR-0019): whether the Commander's own OAuth client
+   * is stored, and the redirect URL to register it with. Never the client itself.
+   */
+  readonly ownClient?: { readonly set: boolean; readonly redirectUrl: string };
 }
 
 /** Builds the transport for a connector; tests pass an in-memory one. */
@@ -57,6 +64,8 @@ interface Entry {
   wanted: boolean;
   retryTimer?: ReturnType<typeof setTimeout>;
   retries: number;
+  /** Whether the Commander's own OAuth client is stored, for a server that needs one. */
+  ownClient: boolean;
 }
 
 const httpTransport: TransportFactory = (connector, provider) => {
@@ -142,6 +151,7 @@ export class ConnectorManager {
         tools: [],
         wanted: false,
         retries: 0,
+        ownClient: false,
         provider: new KeychainOAuthProvider({
           connectorId: connector.id,
           server: serverOf(connector),
@@ -153,6 +163,7 @@ export class ConnectorManager {
         }),
       };
       this.#entries.set(connector.id, entry);
+      if (needsOwnClient(connector)) entry.ownClient = await entry.provider.hasOwnClient();
     }
   }
 
@@ -164,6 +175,9 @@ export class ConnectorManager {
       status: e.status,
       ...(e.detail !== undefined ? { detail: e.detail } : {}),
       tools: e.tools,
+      ...(needsOwnClient(e.connector)
+        ? { ownClient: { set: e.ownClient, redirectUrl: this.#redirectUrl(e.connector.id) } }
+        : {}),
     }));
   }
 
@@ -189,6 +203,11 @@ export class ConnectorManager {
     id: string,
   ): Promise<{ status: ConnectorStatus; authorizationUrl?: string; detail?: string }> {
     const entry = this.#entry(id);
+    if (needsOwnClient(entry.connector) && !entry.ownClient) {
+      const detail = `${entry.connector.name} needs your own OAuth app: add its client ID first`;
+      this.#set(entry, "error", detail);
+      return { status: "error", detail };
+    }
     entry.wanted = true;
     clearTimeout(entry.retryTimer);
     await entry.client?.close().catch(() => undefined);
@@ -274,7 +293,24 @@ export class ConnectorManager {
     return true;
   }
 
-  async disconnect(id: string, options: { forget?: boolean } = {}): Promise<void> {
+  /**
+   * Stores the Commander's own OAuth client for a server that registers none (ADR-0019), in the
+   * keychain. Any sign-in made before is dropped; the next connect signs in with this client.
+   */
+  async setOwnClient(id: string, client: OwnClient): Promise<void> {
+    const entry = this.#entry(id);
+    if (!needsOwnClient(entry.connector)) {
+      throw new ConflictError(`${entry.connector.name} registers its own sign-in clients`);
+    }
+    await this.disconnect(id);
+    await entry.provider.setOwnClient(client);
+    entry.ownClient = true;
+  }
+
+  async disconnect(
+    id: string,
+    options: { forget?: boolean; ownClient?: boolean } = {},
+  ): Promise<void> {
     const entry = this.#entries.get(id);
     if (!entry) return;
     entry.wanted = false;
@@ -284,7 +320,10 @@ export class ConnectorManager {
     entry.pending = undefined;
     entry.tools = [];
     await client?.close().catch(() => undefined);
-    if (options.forget) await entry.provider.forget();
+    if (options.forget) {
+      await entry.provider.forget({ ownClient: options.ownClient ?? false });
+      if (options.ownClient) entry.ownClient = false;
+    }
     if (entry.status !== "disconnected") this.#set(entry, "disconnected");
   }
 
@@ -315,7 +354,7 @@ export class ConnectorManager {
 
   #entry(id: string): Entry {
     const entry = this.#entries.get(id);
-    if (!entry) throw new Error(`no connector "${id}" on this station`);
+    if (!entry) throw new NotFoundError(`no connector "${id}" on this station`);
     return entry;
   }
 

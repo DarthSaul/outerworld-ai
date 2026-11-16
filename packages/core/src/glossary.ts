@@ -359,7 +359,16 @@ export const glossary = {
   "connector.disconnect": "Disconnect",
   "connector.forget": "Disconnect and forget sign-in",
   "connector.remove": "Remove",
-  "connector.addNotion": "Add Notion",
+  "connector.add": "Add {name}",
+  "connector.add.title": "Add a connector",
+  "connector.client": "Your OAuth app",
+  "connector.client.hint":
+    "{name} lets in only apps registered with it. Register an OAuth app there with this redirect URL, then paste its client ID (and secret, if it has one). They stay in your OS keychain.",
+  "connector.client.redirect": "Redirect URL",
+  "connector.client.id": "Client ID",
+  "connector.client.secret": "Client secret",
+  "connector.client.save": "Save OAuth app",
+  "connector.client.set": "An OAuth app is saved. Save another to replace it.",
   "connector.url": "Server URL",
   "connector.save": "Save URL",
   "connector.tools": "Tools",
@@ -368,7 +377,8 @@ export const glossary = {
   "connector.signInHint":
     "Opens the service in a new tab. Every granted crew member acts as the account you sign in with.",
   "empty.connectors.title": "No connectors yet",
-  "empty.connectors.body": "Add Notion to let crew members you grant it read and edit pages.",
+  "empty.connectors.body":
+    "Add Notion, GitHub, or Gmail to let crew members you grant it read and work in that service.",
   "connectors.hint":
     "MCP servers installed once for the whole station. Grant each one to crew members on their page.",
   "document.identity": "Identity",

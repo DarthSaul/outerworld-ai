@@ -54,7 +54,8 @@ allowed `Origin` and a `Sec-Fetch-Site` other than `cross-site`. Every `/api/*` 
 | `GET /api/spend?day=YYYY-MM-DD` | USD spent that UTC day (default today), station-wide and per agent, and `tokens` (input plus output) for the day. Session detail carries `spend` and `runSpend`. |
 | `GET /api/runs?limit=1..200` | The station's latest runs (default 40), newest first, each with a `title`: the task for a dispatch, else the session title. The dashboard's missions. |
 | `GET /api/connectors` | Each connector: status (`disconnected`, `needs_auth`, `connected`, `error`), its classified tools, and `grantedTo`. |
-| `POST /api/connectors` | `{ preset: "notion" }` installs Notion's hosted MCP server (ADR-0012). |
+| `POST /api/connectors` | `{ preset: "notion" \| "github" \| "gmail" }` installs that hosted MCP server (ADR-0012, ADR-0019). |
+| `PUT /api/connectors/:id/client` | `{ clientId, clientSecret? }`: your own OAuth app, for a server with no dynamic registration (GitHub, Gmail). Kept in the keychain, never returned; the list shows `ownClient: { set, redirectUrl }`. 409 for a server that registers its own. |
 | `PATCH /api/connectors/:id` | `{ url?, name? }`; `DELETE` removes it (409 while any crew member is granted it). |
 | `POST /api/connectors/:id/connect` | `{ status, authorizationUrl? }`: when the server needs sign-in, open `authorizationUrl`; Notion returns to the callback below. |
 | `POST /api/connectors/:id/disconnect` | `{ forget? }`: `forget: true` also removes the stored sign-in from the keychain. |

@@ -3,6 +3,8 @@ import type {
   AgentSchedule,
   AgentView,
   ChatMessage,
+  ConnectorClientInput,
+  ConnectorPresetId,
   CreateAgentInput,
   CreateLaneInput,
   CreateRoomInput,
@@ -334,6 +336,8 @@ export interface ConnectorItem {
   readonly detail?: string;
   readonly tools: readonly { name: string; class: "read" | "write"; description: string }[];
   readonly grantedTo: readonly string[];
+  /** For a server that registers no clients: whether the Commander's OAuth app is saved. */
+  readonly ownClient?: { readonly set: boolean; readonly redirectUrl: string };
 }
 
 export function useConnectors() {
@@ -344,9 +348,20 @@ export function useConnectors() {
   });
 }
 
-export function useAddNotion() {
+export function useAddConnector() {
   const { api } = useDaemon();
-  return useMutation({ mutationFn: () => api.send("POST", "/connectors", { preset: "notion" }) });
+  return useMutation({
+    mutationFn: (preset: ConnectorPresetId) => api.send("POST", "/connectors", { preset }),
+  });
+}
+
+/** The Commander's own OAuth app for a server that registers none (ADR-0019). */
+export function useSetConnectorClient() {
+  const { api } = useDaemon();
+  return useMutation({
+    mutationFn: ({ id, ...client }: { id: string } & ConnectorClientInput) =>
+      api.send("PUT", `/connectors/${encodeURIComponent(id)}/client`, client),
+  });
 }
 
 export function useUpdateConnector() {

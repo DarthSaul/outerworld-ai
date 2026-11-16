@@ -4,9 +4,12 @@ import {
   type AgentDocumentName,
   type AgentView,
   type ChatMessage,
+  CONNECTOR_PRESETS,
+  type ConnectorPresetId,
   type CrewActivityEntry,
   DEFAULT_MODEL,
   type Notification,
+  needsOwnClient,
   type RuntimeEvent,
   resolveGrants,
   resolveModelSettings,
@@ -422,14 +425,26 @@ export function fakeApi() {
       }
     }
     if (path === "/connectors") {
-      if (method === "GET") return connectors;
+      // A fresh array, as JSON from the daemon would be.
+      if (method === "GET") return [...connectors];
+      const preset = CONNECTOR_PRESETS[b.preset as ConnectorPresetId];
+      if (!preset || preset.transport.type !== "http") throw new ApiError(400, "no such preset");
+      if (connectors.some((c) => c.id === preset.id)) throw new ApiError(409, "already installed");
       const added: ConnectorItem = {
-        id: "notion",
-        name: "Notion",
-        url: "https://mcp.notion.com/mcp",
+        id: preset.id,
+        name: preset.name,
+        url: preset.transport.url,
         status: "disconnected",
         tools: [],
         grantedTo: [],
+        ...(needsOwnClient(preset)
+          ? {
+              ownClient: {
+                set: false,
+                redirectUrl: `http://127.0.0.1:4317/oauth/callback/${preset.id}`,
+              },
+            }
+          : {}),
       };
       connectors.push(added);
       return added;
@@ -441,6 +456,11 @@ export function fakeApi() {
       if (parts[2] === "connect") {
         connectors[i] = { ...c, status: connectAnswer.status };
         return connectAnswer;
+      }
+      if (parts[2] === "client") {
+        if (!c.ownClient) throw new ApiError(409, `${c.name} registers its own sign-in clients`);
+        connectors[i] = { ...c, ownClient: { ...c.ownClient, set: true } };
+        return undefined;
       }
       if (parts[2] === "disconnect") {
         connectors[i] = { ...c, status: "disconnected", tools: [] };

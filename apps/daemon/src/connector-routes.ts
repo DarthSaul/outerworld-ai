@@ -1,7 +1,8 @@
 import {
   AddConnectorInput,
+  CONNECTOR_PRESETS,
+  ConnectorClientInput,
   DisconnectInput,
-  NOTION_PRESET,
   UpdateConnectorInput,
 } from "@darthsaul/outerworld-ai-core";
 import type {
@@ -18,9 +19,10 @@ export interface ConnectorListItem extends ConnectorView {
 }
 
 /**
- * `/api/connectors/*` (ADR-0012): install the Notion preset, change a connector's URL, remove it,
- * connect (which may answer with a sign-in URL), and disconnect (optionally forgetting the
- * stored sign-in). Station changes refresh the manager.
+ * `/api/connectors/*` (ADR-0012, ADR-0019): install a preset (Notion, GitHub, Gmail), change a
+ * connector's URL, store the Commander's own OAuth client for a server that registers none,
+ * remove it, connect (which may answer with a sign-in URL), and disconnect (optionally
+ * forgetting the stored sign-in). Station changes refresh the manager.
  */
 export function connectorRoutes(deps: { crew: CrewService; connectors: ConnectorManager }): Hono {
   const app = jsonApi(new Hono());
@@ -39,8 +41,8 @@ export function connectorRoutes(deps: { crew: CrewService; connectors: Connector
   });
 
   app.post("/connectors", async (c) => {
-    await readBody(c, AddConnectorInput);
-    const added = await crew.addConnector(NOTION_PRESET);
+    const { preset } = await readBody(c, AddConnectorInput);
+    const added = await crew.addConnector(CONNECTOR_PRESETS[preset]);
     await connectors.refresh();
     return c.json(added, 201);
   });
@@ -55,10 +57,18 @@ export function connectorRoutes(deps: { crew: CrewService; connectors: Connector
     return c.json(updated);
   });
 
+  // The client secret goes to the keychain only; the list reports just whether one is stored.
+  app.put("/connectors/:id/client", async (c) => {
+    const input = await readBody(c, ConnectorClientInput);
+    await connectors.refresh();
+    await connectors.setOwnClient(c.req.param("id"), input);
+    return c.body(null, 204);
+  });
+
   app.delete("/connectors/:id", async (c) => {
     const id = c.req.param("id");
     await crew.removeConnector(id);
-    await connectors.disconnect(id, { forget: true });
+    await connectors.disconnect(id, { forget: true, ownClient: true });
     await connectors.refresh();
     return c.body(null, 204);
   });
