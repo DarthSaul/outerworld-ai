@@ -1,7 +1,7 @@
 import { term } from "@darthsaul/outerworld-ai-core";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { axe } from "vitest-axe";
 import { fakeApi, renderApp } from "../test/fake-daemon.js";
 import { choose } from "../test/menus.js";
@@ -10,7 +10,13 @@ const at = "2026-10-01T09:00:00.000Z";
 
 const map = () => screen.findByRole("region", { name: term("map.title") });
 const scanner = () => screen.getByRole("region", { name: term("scanner.title") });
-const comms = () => screen.getByRole("tabpanel", { name: term("comms.title") });
+const comms = () => screen.getByRole("region", { name: term("comms") });
+const crewColumn = () => screen.getByRole("region", { name: term("agents") });
+/** The COMMS message box when no session is open: "Message Vesper…". */
+const composer = (name = "Vesper") =>
+  within(comms()).getByRole("textbox", { name: `Message ${name}…` });
+const grid = (container: HTMLElement) =>
+  container.querySelector<HTMLElement>("[style*='--st-station-cols']");
 
 const withLane = () => {
   const fake = fakeApi();
@@ -22,6 +28,9 @@ const withLane = () => {
 };
 
 describe("Station map", () => {
+  // The scanner starts folded (ADR-0018); these read it, so it starts open here.
+  beforeEach(() => localStorage.setItem("outerworld.scanner", "open"));
+
   it("puts the Overseer's room on the Bridge and draws the other rooms with crew and objects", async () => {
     const { container } = renderApp("/");
     const m = await map();
@@ -101,6 +110,9 @@ describe("Station map", () => {
 });
 
 describe("hallways", () => {
+  // The scanner starts folded (ADR-0018); these read it, so it starts open here.
+  beforeEach(() => localStorage.setItem("outerworld.scanner", "open"));
+
   it("draws a hallway between two picked rooms and selects it", async () => {
     const user = userEvent.setup();
     const { calls } = renderApp("/");
@@ -147,6 +159,9 @@ describe("hallways", () => {
 });
 
 describe("crew actions", () => {
+  // The scanner starts folded (ADR-0018); these read it, so it starts open here.
+  beforeEach(() => localStorage.setItem("outerworld.scanner", "open"));
+
   it("stops a crew member's live runs", async () => {
     const user = userEvent.setup();
     const fake = fakeApi();
@@ -171,7 +186,7 @@ describe("crew actions", () => {
   });
 });
 
-describe("Overseer comms", () => {
+describe("COMMS", () => {
   it("chatters only about what is true: a quiet station says it is quiet", async () => {
     renderApp("/");
     await map();
@@ -234,16 +249,14 @@ describe("Overseer comms", () => {
     expect(calls).toContainEqual({ method: "POST", path: "/memories/m1/reject" });
   });
 
-  it("starts a new session for each order, never the open one, and streams it in the panel", async () => {
+  it("starts a new session with the Overseer by default and streams it in the panel", async () => {
     const user = userEvent.setup();
     const fake = fakeApi();
     const old = fake.seedSession("vesper", "Chat");
     const { calls, emit } = renderApp("/", fake);
     await map();
-    await user.type(
-      within(comms()).getByRole("textbox", { name: term("comms.order") }),
-      "Tell me the score{Enter}",
-    );
+    expect(within(comms()).getByRole("button", { name: /^Answering Vesper/ })).toBeInTheDocument();
+    await user.type(composer(), "Tell me the score{Enter}");
     await waitFor(() =>
       expect(calls).toContainEqual({ method: "POST", path: "/agents/vesper/sessions", body: {} }),
     );
@@ -270,20 +283,30 @@ describe("Overseer comms", () => {
     expect(await within(chat).findByText("On it, Commander.")).toBeInTheDocument();
   });
 
-  it("keeps the conversation until Give a new order, and the next order is a new session", async () => {
+  it("starts the conversation with whoever is picked in the agent row", async () => {
     const user = userEvent.setup();
     const { calls } = renderApp("/");
     await map();
-    await user.type(
-      within(comms()).getByRole("textbox", { name: term("comms.order") }),
-      "First{Enter}",
+    await choose(user, comms(), term("comms.agent"), /^Quill/);
+    await user.type(composer("Quill"), "Audit the hub{Enter}");
+    await waitFor(() =>
+      expect(calls).toContainEqual({ method: "POST", path: "/agents/quill/sessions", body: {} }),
     );
-    const chat = await within(comms()).findByRole("region", { name: /^Vesper · / });
+    expect(await within(comms()).findByRole("region", { name: /^Quill · / })).toBeVisible();
+  });
+
+  it("keeps the conversation until New, and the next message is a new session", async () => {
+    const user = userEvent.setup();
+    const { calls } = renderApp("/");
+    await map();
+    await user.type(composer(), "First{Enter}");
+    await within(comms()).findByRole("region", { name: /^Vesper · / });
     // No auto-advance back to chatter: the conversation stays put.
-    expect(within(comms()).queryByRole("textbox", { name: term("comms.order") })).toBeNull();
-    await user.click(within(chat).getByRole("button", { name: term("comms.newOrder") }));
-    const box = await within(comms()).findByRole("textbox", { name: term("comms.order") });
-    await user.type(box, "Second{Enter}");
+    expect(within(comms()).queryByRole("textbox", { name: "Message Vesper…" })).toBeNull();
+    await user.click(
+      within(crewColumn()).getByRole("button", { name: term("station.sessions.new") }),
+    );
+    await user.type(composer(), "Second{Enter}");
     await within(comms()).findByRole("region", { name: /^Vesper · / });
     const created = calls.filter(
       (c) => c.method === "POST" && c.path === "/agents/vesper/sessions",
@@ -293,7 +316,7 @@ describe("Overseer comms", () => {
     expect(new Set(messages.map((m) => m.path)).size).toBe(2);
   });
 
-  it("gives the next order the model and reasoning chosen under the order box", async () => {
+  it("gives the new conversation the model and reasoning chosen under the message box", async () => {
     const user = userEvent.setup();
     const fake = fakeApi();
     const { calls } = renderApp("/", fake);
@@ -301,10 +324,7 @@ describe("Overseer comms", () => {
     const picker = within(comms()).getByRole("group", { name: term("model.settings") });
     await choose(user, picker, term("model.model"), /^Claude Opus 5\.5,/);
     await choose(user, picker, term("model.reasoning"), /^High,/);
-    await user.type(
-      within(comms()).getByRole("textbox", { name: term("comms.order") }),
-      "Plan it{Enter}",
-    );
+    await user.type(composer(), "Plan it{Enter}");
     const patch = await waitFor(() => {
       const c = calls.find((x) => x.method === "PATCH" && x.path.startsWith("/sessions/"));
       if (!c) throw new Error("no settings yet");
@@ -313,7 +333,7 @@ describe("Overseer comms", () => {
     expect(patch.body).toEqual({
       modelSettings: { model: "anthropic/claude-opus-5.5", reasoning: "high" },
     });
-    // The order's own message, to the session those settings were saved on, after them.
+    // The message, to the session those settings were saved on, after them.
     const message = calls.findIndex(
       (c) => c.method === "POST" && c.path === `${patch.path}/messages`,
     );
@@ -326,141 +346,116 @@ describe("Overseer comms", () => {
     });
   });
 
-  it("remembers the open order across a reload, and drops one whose session is gone", async () => {
+  it("remembers the open session across a reload, and drops one that is gone", async () => {
     const fake = fakeApi();
     const s = fake.seedSession("vesper", "Score");
+    // The key the Overseer's open order used before the three columns still opens it.
     localStorage.setItem("outerworld.overseerOrder", s.session.id);
     const first = renderApp("/", fake);
     await map();
     expect(await within(comms()).findByRole("region", { name: "Vesper · Score" })).toBeVisible();
+    expect(localStorage.getItem("outerworld.overseerOrder")).toBeNull();
     first.unmount();
-    localStorage.setItem("outerworld.overseerOrder", "gone");
+    localStorage.setItem("outerworld.commsSession", "gone");
     renderApp("/", fakeApi());
     await map();
-    expect(
-      await within(comms()).findByRole("textbox", { name: term("comms.order") }),
-    ).toBeInTheDocument();
+    await waitFor(() => expect(composer()).toBeInTheDocument());
   });
-});
 
-describe("Scanner folding", () => {
-  it("folds the scanner to its strip, giving comms the column, and remembers it", async () => {
+  it("hands an open session to another crew member from the agent row", async () => {
     const user = userEvent.setup();
-    const first = renderApp("/");
-    await map();
-    const scanner = screen.getByRole("region", { name: term("scanner.title") });
-    const column = scanner.parentElement as HTMLElement;
-    expect(column.className).toMatch(/grid-rows-\[minmax\(0,1\.5fr\)_minmax\(0,2fr\)\]/);
-    await user.click(within(scanner).getByRole("button", { name: term("scanner.collapse") }));
-    expect(column.className).toMatch(/grid-rows-\[minmax\(0,1fr\)_auto\]/);
-    expect(within(scanner).queryByRole("group", { name: term("scanner.view") })).toBeNull();
-    first.unmount();
-    renderApp("/");
-    await map();
-    const again = screen.getByRole("region", { name: term("scanner.title") });
-    expect(within(again).getByRole("button", { name: term("scanner.expand") })).toHaveAttribute(
-      "aria-expanded",
-      "false",
-    );
-  });
-});
-
-describe("Crew comms", () => {
-  const crewTab = () => screen.getByRole("tab", { name: term("comms.crew.title") });
-
-  it("is a second comms tab: a crew dropdown, then the chosen crew member's sessions", async () => {
     const fake = fakeApi();
-    fake.seedSession("quill", "Hub audit");
-    const user = userEvent.setup();
-    const { container } = renderApp("/", fake);
+    const s = fake.seedSession("vesper", "Launch plan");
+    localStorage.setItem("outerworld.commsSession", s.session.id);
+    const { calls, container } = renderApp("/", fake);
     await map();
-    expect(screen.getByRole("tab", { name: term("comms.title") })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
-    await user.click(crewTab());
-    expect(crewTab()).toHaveAttribute("aria-selected", "true");
-    const panel = screen.getByRole("tabpanel", { name: term("comms.crew.title") });
-    // The scanner's dropdown: grouped by room, each crew member drawn as their character.
-    const picker = within(panel).getByRole("button", { name: /^Crew · 2/ });
-    await user.click(picker);
-    const options = within(panel).getAllByRole("option");
-    expect(options.map((o) => o.getAttribute("aria-label"))).toEqual([
-      "Vesper (Overseer) · Idle, Command",
-      "Quill · Idle, Operations",
-    ]);
-    for (const o of options) expect(o.querySelector("[data-look] svg")).not.toBeNull();
-    await user.click(within(panel).getByRole("option", { name: /^Quill/ }));
-    expect(picker).toHaveAccessibleName("Crew · 2 Quill · Idle");
-    const sessions = await within(panel).findByRole("region", { name: "Sessions · Quill" });
-    expect(await within(sessions).findByText("Hub audit")).toBeInTheDocument();
+    await within(comms()).findByRole("region", { name: "Vesper · Launch plan" });
+    await choose(user, comms(), term("comms.agent"), /^Quill/);
+    expect(calls).toContainEqual({
+      method: "PATCH",
+      path: `/sessions/${s.session.id}`,
+      body: { agentId: "quill" },
+    });
+    expect(
+      await within(comms()).findByRole("region", { name: "Quill · Launch plan" }),
+    ).toBeVisible();
     expect(await axe(container)).toHaveNoViolations();
   });
 
-  it("opens a session across the whole panel with a back button, and goes back to the list", async () => {
+  it("keeps each earlier reply under the name of the crew member who wrote it", async () => {
     const fake = fakeApi();
-    const seeded = fake.seedSession("vesper", "Launch plan");
-    const user = userEvent.setup();
-    renderApp("/", fake);
-    await map();
-    await user.click(crewTab());
-    const panel = screen.getByRole("tabpanel", { name: term("comms.crew.title") });
-    await user.click(await within(panel).findByRole("button", { name: "Launch plan" }));
-    const chat = await within(panel).findByRole("region", { name: /Vesper · Launch plan/ });
-    const back = within(chat).getByRole("button", { name: term("comms.back") });
-    await waitFor(() => expect(back).toHaveFocus());
-    expect(within(panel).queryByRole("button", { name: /^Crew · / })).toBeNull();
-    expect(within(chat).getByRole("textbox")).toBeInTheDocument();
-    await user.click(back);
-    const again = await within(panel).findByRole("button", { name: "Launch plan" });
-    await waitFor(() => expect(again).toHaveFocus());
-    expect(again).toHaveAttribute("data-session", seeded.session.id);
-  });
-
-  it("leaves focus in the message box when the panel refreshes", async () => {
-    const fake = fakeApi();
-    const seeded = fake.seedSession("vesper", "Launch plan");
-    const user = userEvent.setup();
-    const { emit } = renderApp("/", fake);
-    await map();
-    await user.click(crewTab());
-    const panel = screen.getByRole("tabpanel", { name: term("comms.crew.title") });
-    await user.click(await within(panel).findByRole("button", { name: "Launch plan" }));
-    const chat = await within(panel).findByRole("region", { name: /Vesper · Launch plan/ });
-    const back = within(chat).getByRole("button", { name: term("comms.back") });
-    await waitFor(() => expect(back).toHaveFocus());
-    const box = within(chat).getByRole("textbox");
-    await user.click(box);
-    // A run event refetches the session list, which rerenders the crew comms panel.
-    emit({
-      type: "run.completed",
-      agentId: "vesper",
-      sessionId: seeded.session.id,
-      runId: "r-refresh",
-      payload: {},
-    });
-    await waitFor(() =>
-      expect(fake.calls.filter((c) => c.path === "/agents/vesper/sessions").length).toBeGreaterThan(
-        1,
-      ),
+    const s = fake.seedSession("quill", "Handed over");
+    s.runs.push(
+      {
+        id: "r1",
+        sessionId: s.session.id,
+        agentId: "vesper",
+        state: "completed",
+        model: "m",
+        createdAt: at,
+        steps: 1,
+      },
+      {
+        id: "r2",
+        sessionId: s.session.id,
+        agentId: "quill",
+        state: "completed",
+        model: "m",
+        createdAt: at,
+        steps: 1,
+      },
     );
-    expect(box).toHaveFocus();
-  });
-
-  it("keeps Back when a session fails to load", async () => {
-    const fake = fakeApi();
-    const seeded = fake.seedSession("vesper", "Gone");
-    const user = userEvent.setup();
+    s.messages.push(
+      { role: "user", text: "Start" },
+      { role: "assistant", text: "Vesper here." },
+      { role: "user", text: "Next" },
+      { role: "assistant", text: "Quill here." },
+    );
+    s.messageRuns = { 0: "r1", 1: "r1", 2: "r2", 3: "r2" };
+    localStorage.setItem("outerworld.commsSession", s.session.id);
     renderApp("/", fake);
     await map();
-    await user.click(crewTab());
-    const panel = screen.getByRole("tabpanel", { name: term("comms.crew.title") });
-    const open = await within(panel).findByRole("button", { name: "Gone" });
-    fake.sessions.delete(seeded.session.id);
-    await user.click(open);
-    expect(await within(panel).findByText(/no session/)).toBeInTheDocument();
-    await user.click(within(panel).getByRole("button", { name: term("comms.back") }));
-    expect(await within(panel).findByRole("button", { name: /^Crew · / })).toBeInTheDocument();
+    const chat = await within(comms()).findByRole("region", { name: "Quill · Handed over" });
+    const replies = within(chat)
+      .getAllByRole("listitem")
+      .filter((li) => li.getAttribute("data-message") === "assistant");
+    expect(replies.map((r) => r.textContent)).toEqual(["VesperVesper here.", "QuillQuill here."]);
+  });
+
+  it("won't switch crew mid-run or on dispatched work, and says why", async () => {
+    const fake = fakeApi();
+    const busy = fake.seedSession("vesper", "Busy");
+    busy.runs.push({
+      id: "r9",
+      sessionId: busy.session.id,
+      agentId: "vesper",
+      state: "running",
+      model: "m",
+      createdAt: at,
+      steps: 1,
+    });
+    localStorage.setItem("outerworld.commsSession", busy.session.id);
+    const first = renderApp("/", fake);
+    await map();
+    expect(await within(comms()).findByText(term("comms.agent.busy"))).toBeInTheDocument();
+    expect(within(comms()).queryByRole("button", { name: /^Answering/ })).toBeNull();
+    first.unmount();
+    const worker = fake.seedSession("quill", "From Vesper");
+    fake.dispatches.push({
+      id: "d1",
+      leadAgentId: "vesper",
+      leadSessionId: busy.session.id,
+      leadRunId: "r9",
+      workerAgentId: "quill",
+      workerSessionId: worker.session.id,
+      task: "Look it up",
+      status: "running",
+      createdAt: at,
+    });
+    localStorage.setItem("outerworld.commsSession", worker.session.id);
+    renderApp("/", fake);
+    await map();
+    expect(await within(comms()).findByText(term("comms.agent.dispatched"))).toBeInTheDocument();
   });
 
   it("keeps focus in the message box while the station updates around it", async () => {
@@ -469,20 +464,16 @@ describe("Crew comms", () => {
     const user = userEvent.setup();
     const { emit, client } = renderApp("/", fake);
     await map();
-    await user.click(crewTab());
-    const panel = screen.getByRole("tabpanel", { name: term("comms.crew.title") });
-    await user.click(await within(panel).findByRole("button", { name: "Launch plan" }));
-    const chat = await within(panel).findByRole("region", { name: /Vesper · Launch plan/ });
-    await waitFor(() =>
-      expect(within(chat).getByRole("button", { name: term("comms.back") })).toHaveFocus(),
-    );
+    await user.click(await within(crewColumn()).findByRole("button", { name: "Launch plan" }));
+    const chat = await within(comms()).findByRole("region", { name: /Vesper · Launch plan/ });
     const box = within(chat).getByRole("textbox");
     await user.click(box);
     await user.type(box, "Hel");
-    // Live events refetch the station and dashboard: the chat re-renders, focus must stay put.
+    // Live events refetch the station, dashboard, and session list: focus must stay put.
     const quill = fake.state.agents.get("quill");
     if (quill) quill.config = { ...quill.config, name: "Quill II" };
     emit({ type: "agent.updated", agentId: "quill", payload: {} } as never);
+    emit({ type: "run.completed", agentId: "vesper", sessionId: "x", runId: "y", payload: {} });
     await client.invalidateQueries();
     await waitFor(() => expect(screen.getAllByText(/Quill II/).length).toBeGreaterThan(0));
     expect(box).toHaveFocus();
@@ -491,17 +482,120 @@ describe("Crew comms", () => {
     expect(box).toHaveValue("Hello");
   });
 
-  it("starts a new session and opens it", async () => {
+  it("expands across the station and collapses back", async () => {
     const user = userEvent.setup();
-    const { calls } = renderApp("/");
+    const { container } = renderApp("/");
     await map();
-    await user.click(crewTab());
-    const panel = screen.getByRole("tabpanel", { name: term("comms.crew.title") });
-    await user.click(await within(panel).findByRole("button", { name: term("comms.new") }));
+    await user.click(within(comms()).getByRole("button", { name: term("comms.expand") }));
+    expect(grid(container)?.style.getPropertyValue("--st-station-cols")).toBe("minmax(0,1fr)");
+    expect((await map()).parentElement?.className.split(" ").includes("desktop:hidden")).toBe(true);
+    await user.click(within(comms()).getByRole("button", { name: term("comms.collapse") }));
+    expect(grid(container)?.style.getPropertyValue("--st-station-cols")).toMatch(
+      /^minmax\(0,1\.000fr\)/,
+    );
+  });
+});
+
+describe("Crew column", () => {
+  it("lists the crew, and picking one scans them", async () => {
+    localStorage.setItem("outerworld.scanner", "open");
+    const user = userEvent.setup();
+    const { container } = renderApp("/");
+    await map();
+    const roster = within(crewColumn()).getByRole("list", { name: term("agents") });
     expect(
-      await within(panel).findByRole("region", { name: /Vesper · New session/ }),
-    ).toBeVisible();
-    expect(calls).toContainEqual({ method: "POST", path: "/agents/vesper/sessions", body: {} });
+      within(roster)
+        .getAllByRole("button")
+        .map((b) => b.getAttribute("aria-label")),
+    ).toEqual(["Vesper", "Quill"]);
+    expect(crewColumn()).toHaveTextContent("0 working");
+    expect(crewColumn()).toHaveTextContent("2 idle");
+    await user.click(within(roster).getByRole("button", { name: "Quill" }));
+    expect(within(roster).getByRole("button", { name: "Quill" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(scanner()).toHaveTextContent("Crew member · Operations");
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it("lists every crew member's sessions, filters to dispatched ones, and opens one", async () => {
+    const user = userEvent.setup();
+    const fake = fakeApi();
+    const lead = fake.seedSession("vesper", "Launch plan");
+    const worker = fake.seedSession("quill", "Hub audit");
+    fake.dispatches.push({
+      id: "d1",
+      leadAgentId: "vesper",
+      leadSessionId: lead.session.id,
+      leadRunId: "r1",
+      workerAgentId: "quill",
+      workerSessionId: worker.session.id,
+      task: "Audit the hub",
+      status: "completed",
+      createdAt: at,
+    });
+    renderApp("/", fake);
+    await map();
+    const column = crewColumn();
+    const audit = await within(column).findByRole("button", { name: "Hub audit" });
+    expect(within(column).getByRole("button", { name: "Launch plan" })).toBeInTheDocument();
+    expect(audit).toHaveTextContent(term("station.sessions.dispatchedTag"));
+    await user.click(
+      within(column).getByRole("button", { name: term("station.sessions.dispatched") }),
+    );
+    expect(within(column).queryByRole("button", { name: "Launch plan" })).toBeNull();
+    expect(within(column).getByRole("button", { name: "Hub audit" })).toBeInTheDocument();
+    await user.click(within(column).getByRole("button", { name: "Hub audit" }));
+    expect(await within(comms()).findByRole("region", { name: "Quill · Hub audit" })).toBeVisible();
+    expect(within(column).getByRole("button", { name: "Hub audit" })).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
+  });
+
+  it("folds to a folder tab that gives the map its share, and remembers it", async () => {
+    const user = userEvent.setup();
+    const first = renderApp("/");
+    await map();
+    await user.click(
+      within(crewColumn()).getByRole("button", { name: term("station.crew.collapse") }),
+    );
+    const tab = screen.getByRole("button", { name: term("station.crew.expand") });
+    expect(tab).toHaveAttribute("aria-expanded", "false");
+    expect(grid(first.container)?.style.getPropertyValue("--st-station-cols")).toBe(
+      "auto minmax(0,3.000fr) auto minmax(0,1.000fr)",
+    );
+    first.unmount();
+    const again = renderApp("/");
+    await map();
+    await user.click(screen.getByRole("button", { name: term("station.crew.expand") }));
+    expect(grid(again.container)?.style.getPropertyValue("--st-station-cols")).toBe(
+      "minmax(0,1.000fr) minmax(0,2.000fr) auto minmax(0,1.000fr)",
+    );
+  });
+});
+
+describe("Scanner folding", () => {
+  it("starts folded, opens to at most half the column, and remembers it", async () => {
+    const user = userEvent.setup();
+    const first = renderApp("/");
+    await map();
+    const folded = scanner();
+    expect(within(folded).getByRole("button", { name: term("scanner.expand") })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    expect(within(folded).queryByRole("group", { name: term("scanner.view") })).toBeNull();
+    await user.click(within(folded).getByRole("button", { name: term("scanner.expand") }));
+    expect(scanner().className).toMatch(/desktop:max-h-1\/2/);
+    expect(within(scanner()).getByRole("group", { name: term("scanner.view") })).toBeVisible();
+    first.unmount();
+    renderApp("/");
+    await map();
+    expect(
+      within(scanner()).getByRole("button", { name: term("scanner.collapse") }),
+    ).toHaveAttribute("aria-expanded", "true");
   });
 });
 
@@ -512,21 +606,18 @@ describe("Station split", () => {
     const { container } = renderApp("/");
     await map();
     const handle = screen.getByRole("separator", { name: term("station.resize") });
-    const grid = () => container.querySelector<HTMLElement>("[style*='--st-station-cols']");
-    expect(handle).toHaveAttribute("aria-valuenow", "33");
-    expect(handle).toHaveAttribute("aria-valuemin", "25");
-    expect(handle).toHaveAttribute("aria-valuemax", "50");
+    expect(handle).toHaveAttribute("aria-valuenow", "25");
     // happy-dom lays nothing out, so give the row a width for the pixel-to-fr conversion.
-    vi.spyOn(grid() as HTMLElement, "clientWidth", "get").mockReturnValue(1200);
+    vi.spyOn(grid(container) as HTMLElement, "clientWidth", "get").mockReturnValue(1600);
     handle.focus();
     await user.keyboard("{ArrowLeft}");
-    expect(Number(handle.getAttribute("aria-valuenow"))).toBeGreaterThan(33);
-    expect(grid()?.style.getPropertyValue("--st-station-cols")).toBe(
-      "minmax(0,1.940fr) auto minmax(0,1.060fr)",
+    expect(Number(handle.getAttribute("aria-valuenow"))).toBeGreaterThan(25);
+    expect(grid(container)?.style.getPropertyValue("--st-station-cols")).toBe(
+      "minmax(0,1.000fr) minmax(0,1.940fr) auto minmax(0,1.060fr)",
     );
     expect(localStorage.getItem("outerworld.split")).toBe("1.06");
     await user.keyboard("{Enter}");
-    expect(handle).toHaveAttribute("aria-valuenow", "33");
+    expect(handle).toHaveAttribute("aria-valuenow", "25");
     expect(await axe(container)).toHaveNoViolations();
     localStorage.removeItem("outerworld.split");
   });

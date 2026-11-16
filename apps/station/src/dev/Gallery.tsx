@@ -13,6 +13,7 @@ import {
   CREW_STATUS_TONE,
   DashboardMap,
   EmptyState,
+  FolderTab,
   lampBlink,
   MAP_STYLES,
   OutlineButton,
@@ -129,6 +130,12 @@ export function Gallery({ input }: { readonly input: DashboardInput }) {
                 alerts={0}
               />
               <span id="gallery-status" hidden />
+            </div>
+            <div className="flex h-30">
+              <FolderTab controls="gallery-folded" aria-label="Show the folded column">
+                Crew
+              </FolderTab>
+              <span id="gallery-folded" hidden />
             </div>
           </Cell>
           <Cell label="Stats and bars">

@@ -41,10 +41,12 @@ export interface Comms {
   readonly deny: () => void;
   readonly next: () => void;
   /**
-   * Gives the Overseer an order: always a new session (with `settings` as its model choice, if
-   * any), then the message. `onStarted` gets the session id once the run is under way.
+   * Starts a conversation with a crew member (the Overseer, by default on the Station): always a
+   * new session (with `settings` as its model choice, if any), then the message. `onStarted` gets
+   * the session id once the run is under way.
    */
-  readonly order: (
+  readonly start: (
+    agentId: string,
     text: string,
     settings: ModelSettings | null,
     onStarted: (sessionId: string) => void,
@@ -153,16 +155,16 @@ export function useComms(
     }
   };
 
-  const order: Comms["order"] = (text, settings, onStarted) => {
-    if (!overseer || sending) return;
+  const start: Comms["start"] = (agentId, text, settings, onStarted) => {
+    if (sending) return;
     setSending(true);
     setError(null);
     void (async () => {
       try {
-        // Every order is its own conversation (a new session), never appended to an old one.
+        // Every start is its own conversation (a new session), never appended to an old one.
         const { id: sessionId } = await api.send<{ id: string }>(
           "POST",
-          `/agents/${encodeURIComponent(overseer.id)}/sessions`,
+          `/agents/${encodeURIComponent(agentId)}/sessions`,
           {},
         );
         if (settings) {
@@ -185,7 +187,7 @@ export function useComms(
     approve: () => decide(true),
     deny: () => decide(false),
     next: () => setChatIdx((i) => i + 1),
-    order,
+    start,
     busy: sending || decideConsent.isPending || decideMemory.isPending,
     error: error ?? decideConsent.error ?? decideMemory.error,
   };

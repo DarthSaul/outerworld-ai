@@ -124,6 +124,8 @@ export interface SessionSummary extends SessionRecord {
   readonly lastMessageAt?: string;
   readonly lastMessage?: { readonly role: "user" | "assistant"; readonly text: string };
   readonly active: boolean;
+  /** `dispatch`: the Overseer opened it to hand a crew member work. */
+  readonly origin: "commander" | "dispatch";
 }
 export interface RunRecord {
   readonly id: string;
@@ -200,6 +202,15 @@ export function useSessions(agentId: string | undefined) {
   });
 }
 
+/** Every crew member's sessions, newest activity first (the Station's session list). */
+export function useAllSessions() {
+  const { api } = useDaemon();
+  return useQuery({
+    queryKey: ["sessions", "*"],
+    queryFn: () => api.get<SessionSummary[]>("/sessions"),
+  });
+}
+
 export function useSession(id: string) {
   const { api } = useDaemon();
   return useQuery({
@@ -223,6 +234,8 @@ export function useUpdateSession(id: string) {
       title?: string;
       archived?: true;
       modelSettings?: ModelSettings | null;
+      /** Hands the conversation to another crew member (ADR-0018). */
+      agentId?: string;
     }) => api.send<SessionRecord>("PATCH", `/sessions/${encodeURIComponent(id)}`, input),
     // One session's writes go out one at a time, in order: a later one never lands first.
     scope: { id: `session:${id}` },

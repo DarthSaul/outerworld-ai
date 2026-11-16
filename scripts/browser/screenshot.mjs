@@ -142,6 +142,43 @@ async function stationInteractions(page, width) {
     }
   }
 
+  // Header, screen, and footer share their left and right edges (ADR-0018).
+  const edges = (selector) =>
+    page
+      .locator(selector)
+      .first()
+      .evaluate((el) => {
+        const r = el.getBoundingClientRect();
+        return [Math.round(r.left), Math.round(r.right)];
+      });
+  const [head, body, foot] = [
+    await edges("header > div"),
+    await edges("main > div"),
+    await edges("footer > div"),
+  ];
+  if (head.join() !== body.join() || foot.join() !== body.join()) {
+    failures.push(
+      `home-${width}: edges differ: header ${head}, main ${body}, footer ${foot} (left,right)`,
+    );
+  }
+
+  // The scanner starts folded to its strip; COMMS fills the column above it.
+  const scannerRegion = page.getByRole("region", { name: "Scanner" });
+  const heightOf = (locator) => locator.evaluate((el) => el.getBoundingClientRect().height);
+  const commsRegion = page.getByRole("region", { name: "COMMS" });
+  const foldedScanner = await heightOf(scannerRegion);
+  if (width >= 720 && foldedScanner > 60) {
+    failures.push(`home-${width}: the folded scanner is ${foldedScanner}px tall`);
+  }
+  await scannerRegion.getByRole("button", { name: "Show the scanner" }).click();
+  if (width >= 720) {
+    // Open, it takes at most half the column.
+    const [scan, comms] = [await heightOf(scannerRegion), await heightOf(commsRegion)];
+    if (scan > (scan + comms) / 2 + 16) {
+      failures.push(`home-${width}: the open scanner is ${scan}px over comms' ${comms}px`);
+    }
+  }
+
   // The scanner's crew picker: opens, passes axe, picks from the keyboard, closes.
   const picker = page.getByRole("button", { name: /^Crew · \d+/ });
   await picker.click();
@@ -156,8 +193,8 @@ async function stationInteractions(page, width) {
   if ((await picker.textContent())?.includes("Pick a crew member")) {
     failures.push(`home-${width}: the crew picker did not show the chosen crew member`);
   }
-  // A crew member's scan is short: the scanner still fills its column, down to the map's edge.
   if (width >= 720) {
+    // The column ends where the map does.
     const bottom = (name) =>
       page
         .getByRole("region", { name })
@@ -166,28 +203,18 @@ async function stationInteractions(page, width) {
     if (scan !== map) {
       failures.push(`home-${width}: the scanner ends at ${scan}px, the map at ${map}px`);
     }
-    // Comms over the scanner is 1.5fr / 2fr: the scanner is 4/3 the height of comms.
-    const height = (name) =>
-      page.getByRole("region", { name }).evaluate((el) => el.getBoundingClientRect().height);
-    const ratio = (await height("Scanner")) / (await height("Overseer comms"));
-    const want = 2 / 1.5;
-    if (Math.abs(ratio - want) > 0.05) {
-      failures.push(
-        `home-${width}: scanner / comms height is ${ratio.toFixed(2)}, not ${want.toFixed(2)}`,
-      );
-    }
   }
-  // The order line wraps, grows to three lines, then scrolls without growing the panel.
-  const order = page.getByRole("textbox", { name: /order/ });
-  const commsBefore = await page
-    .getByRole("region", { name: "Overseer comms" })
-    .evaluate((el) => el.getBoundingClientRect().height);
-  // Shift+Enter starts a new line in the order rather than sending it.
+  await scannerRegion.getByRole("button", { name: "Hide the scanner" }).click();
+
+  // The message box wraps, grows to three lines, then scrolls without growing the panel.
+  const order = commsRegion.getByRole("textbox", { name: /^Message / });
+  const commsBefore = await heightOf(commsRegion);
+  // Shift+Enter starts a new line rather than sending.
   await order.fill("First line");
   await order.press("Shift+Enter");
   await order.pressSequentially("Second");
   if (!(await order.inputValue()).includes("\n")) {
-    failures.push(`home-${width}: Shift+Enter did not start a new line in the order`);
+    failures.push(`home-${width}: Shift+Enter did not start a new line in the message`);
   }
   await order.fill("Draft the plan. ".repeat(40));
   await order.dispatchEvent("input");
@@ -196,44 +223,60 @@ async function stationInteractions(page, width) {
     return { lines: el.clientHeight / line, scrolls: el.scrollHeight > el.clientHeight };
   });
   if (Math.round(field.lines) !== 3 || !field.scrolls) {
-    failures.push(`home-${width}: the order line shows ${field.lines.toFixed(1)} lines`);
+    failures.push(`home-${width}: the message box shows ${field.lines.toFixed(1)} lines`);
   }
-  const commsAfter = await page
-    .getByRole("region", { name: "Overseer comms" })
-    .evaluate((el) => el.getBoundingClientRect().height);
-  if (width >= 720 && Math.round(commsAfter) !== Math.round(commsBefore)) {
-    failures.push(`home-${width}: a long order grew the comms panel`);
+  if (width >= 720 && Math.round(await heightOf(commsRegion)) !== Math.round(commsBefore)) {
+    failures.push(`home-${width}: a long message grew the comms panel`);
   }
   await page.screenshot({ path: join(outDir, `home-order-${width}.png`) });
   await order.fill("");
-  await page.screenshot({ path: join(outDir, `home-crew-picked-${width}.png`) });
 
-  // Crew comms: the second comms tab, a session opened across the panel, and back.
-  await page.getByRole("tab", { name: "Crew comms" }).click();
-  const crewComms = page.getByRole("tabpanel", { name: "Crew comms" });
-  const crewPicker = crewComms.getByRole("button", { name: /^Crew · \d+/ });
-  await crewPicker.waitFor();
-  await page.screenshot({ path: join(outDir, `home-crew-comms-${width}.png`) });
-  await crewPicker.click();
-  await crewComms.getByRole("listbox").waitFor();
-  await page.screenshot({ path: join(outDir, `home-crew-comms-picker-${width}.png`) });
-  await axeBlocking(page, `home-crew-comms-picker-${width}`);
+  // The crew column: the agent row's dropdown, then a session opened from the list into COMMS.
+  const crewColumn = page.getByRole("region", { name: "Crew", exact: true });
+  await commsRegion.getByRole("button", { name: /^Answering/ }).click();
+  await commsRegion.getByRole("listbox").waitFor();
+  await page.screenshot({ path: join(outDir, `home-agent-picker-${width}.png`) });
+  await axeBlocking(page, `home-agent-picker-${width}`);
   await page.keyboard.press("Escape");
-  await axeBlocking(page, `home-crew-comms-${width}`);
-  const firstSession = crewComms.locator("[data-session]").first();
+  const firstSession = crewColumn.locator("[data-session]").first();
   if (await firstSession.count()) {
     await firstSession.click();
-    const back = crewComms.getByRole("button", { name: /Back/ });
-    await back.waitFor();
+    await commsRegion.locator("[data-transcript]").waitFor();
     await page.waitForTimeout(300);
-    await page.screenshot({ path: join(outDir, `home-crew-chat-${width}.png`) });
-    await axeBlocking(page, `home-crew-chat-${width}`);
-    await back.click();
-    await crewPicker.waitFor();
+    await page.screenshot({ path: join(outDir, `home-chat-${width}.png`) });
+    await axeBlocking(page, `home-chat-${width}`);
   } else {
-    failures.push(`home-${width}: crew comms listed no sessions to open`);
+    failures.push(`home-${width}: the crew column listed no sessions to open`);
   }
-  await page.getByRole("tab", { name: "Overseer comms" }).click();
+  await crewColumn.getByRole("button", { name: "Dispatched" }).click();
+  await page.screenshot({ path: join(outDir, `home-dispatched-${width}.png`) });
+  await crewColumn.getByRole("button", { name: "All" }).click();
+
+  if (width >= 720) {
+    const mapRegion = page.getByRole("region", { name: /^Station map/ });
+    const mapBefore = await mapRegion.evaluate((el) => el.getBoundingClientRect().width);
+    // Folding the crew column leaves a folder tab and gives the map its share.
+    await crewColumn.getByRole("button", { name: "Hide the crew column" }).click();
+    const tab = page.getByRole("button", { name: "Show the crew column" });
+    await tab.waitFor();
+    const mapFolded = await mapRegion.evaluate((el) => el.getBoundingClientRect().width);
+    if (!(mapFolded > mapBefore + 100)) {
+      failures.push(`home-${width}: folding the crew column did not widen the map`);
+    }
+    await page.screenshot({ path: join(outDir, `home-crew-folded-${width}.png`) });
+    await axeBlocking(page, `home-crew-folded-${width}`);
+    await tab.click();
+    await crewColumn.waitFor();
+    // Expand widens COMMS across the station; Collapse brings the columns back.
+    await commsRegion.getByRole("button", { name: "Expand" }).click();
+    if (await mapRegion.isVisible()) {
+      failures.push(`home-${width}: expanding comms left the map showing`);
+    }
+    await page.screenshot({ path: join(outDir, `home-comms-expanded-${width}.png`) });
+    await commsRegion.getByRole("button", { name: "Collapse" }).click();
+    await mapRegion.waitFor();
+  }
+  await crewColumn.getByRole("button", { name: "New" }).click();
 
   await page.locator('[aria-controls="station-status"]').click();
   await page.getByRole("dialog").waitFor();

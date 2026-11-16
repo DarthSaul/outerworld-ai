@@ -184,7 +184,8 @@ const NEAR_BOTTOM = 48;
  * working, the box sends a direction to it instead (steer). `embedded` is a worker's session
  * shown inside a dispatch card: no close or archive. `fill` fits it to a panel of fixed height
  * (the Station's crew comms): no frame, the transcript scrolls and follows new lines. `onBack`
- * puts a back button before the title, focused when the chat opens.
+ * puts a back button before the title, focused when the chat opens. `bare` drops the title strip
+ * (the Station's COMMS names the conversation in its own agent row).
  */
 export function ChatWindow({
   sessionId,
@@ -192,6 +193,7 @@ export function ChatWindow({
   onBack,
   embedded = false,
   fill = false,
+  bare = false,
   headerAction,
 }: {
   readonly sessionId: string;
@@ -199,6 +201,7 @@ export function ChatWindow({
   readonly onBack?: () => void;
   readonly embedded?: boolean;
   readonly fill?: boolean;
+  readonly bare?: boolean;
   /** A control at the end of the title strip (the Overseer's "Give a new order"). */
   readonly headerAction?: ReactNode;
 }) {
@@ -265,6 +268,11 @@ export function ChatWindow({
   const { session, messages, runs } = detail.data;
   const nameOf = (id: string) => station.data?.agents.find((a) => a.id === id)?.config.name ?? id;
   const agentName = nameOf(session.agentId);
+  // A session handed to another crew member keeps each reply under the name of whoever wrote it.
+  const speakerOf = (runId: string | undefined) => {
+    const run = runId ? runs.find((r) => r.id === runId) : undefined;
+    return run ? nameOf(run.agentId) : agentName;
+  };
   const agentModel = station.data?.agents.find((a) => a.id === session.agentId)?.config.model ?? "";
   const latest = runs[0];
   const active = latest !== undefined && !isTerminal(latest.state);
@@ -289,7 +297,9 @@ export function ChatWindow({
   return (
     <section
       ref={section}
-      aria-labelledby={titleId}
+      {...(bare
+        ? { "aria-label": `${agentName} · ${session.title}` }
+        : { "aria-labelledby": titleId })}
       data-session={sessionId}
       className={`flex min-w-0 flex-1 flex-col ${
         fill
@@ -298,36 +308,38 @@ export function ChatWindow({
           : `gap-2.5 border-2 border-line bg-panel ${embedded ? "max-h-[50dvh]" : "max-h-[78dvh] shadow-panel desktop:max-h-none desktop:min-h-0"}`
       }`}
     >
-      <header
-        className={`flex flex-wrap items-center gap-2 border-line border-b-2 px-2.5 ${fill ? "border-line-faint py-1.5" : "justify-between bg-panel-head py-2"}`}
-      >
-        {onBack ? (
-          <OutlineButton tone="line" data-back onClick={onBack}>
-            {term("comms.back")}
-          </OutlineButton>
-        ) : null}
-        <h2
-          id={titleId}
-          className={`m-0 font-display font-normal text-d9 text-panel-title uppercase tracking-st-1 ${fill ? "min-w-0 flex-1 truncate" : ""}`}
+      {bare ? null : (
+        <header
+          className={`flex flex-wrap items-center gap-2 border-line border-b-2 px-2.5 ${fill ? "border-line-faint py-1.5" : "justify-between bg-panel-head py-2"}`}
         >
-          {agentName} · {session.title}
-        </h2>
-        {headerAction}
-        {onClose && !embedded ? (
-          <div className="flex gap-2">
-            <OutlineButton
-              tone="line"
-              disabled={active}
-              onClick={() => update.mutate({ archived: true }, { onSuccess: () => onClose?.() })}
-            >
-              {term("comms.archive")}
+          {onBack ? (
+            <OutlineButton tone="line" data-back onClick={onBack}>
+              {term("comms.back")}
             </OutlineButton>
-            <OutlineButton tone="line" onClick={onClose}>
-              {term("comms.close")}
-            </OutlineButton>
-          </div>
-        ) : null}
-      </header>
+          ) : null}
+          <h2
+            id={titleId}
+            className={`m-0 font-display font-normal text-d9 text-panel-title uppercase tracking-st-1 ${fill ? "min-w-0 flex-1 truncate" : ""}`}
+          >
+            {agentName} · {session.title}
+          </h2>
+          {headerAction}
+          {onClose && !embedded ? (
+            <div className="flex gap-2">
+              <OutlineButton
+                tone="line"
+                disabled={active}
+                onClick={() => update.mutate({ archived: true }, { onSuccess: () => onClose?.() })}
+              >
+                {term("comms.archive")}
+              </OutlineButton>
+              <OutlineButton tone="line" onClick={onClose}>
+                {term("comms.close")}
+              </OutlineButton>
+            </div>
+          ) : null}
+        </header>
+      )}
       <div
         ref={scroller}
         onScroll={(e) => {
@@ -345,7 +357,7 @@ export function ChatWindow({
               <Message
                 key={m.id}
                 message={m.message}
-                agentName={agentName}
+                agentName={speakerOf(m.runId)}
                 nameOf={nameOf}
                 dispatches={detail.data.dispatches}
                 fromOverseer={

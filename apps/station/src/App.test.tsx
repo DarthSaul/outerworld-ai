@@ -84,7 +84,9 @@ describe("App shell", () => {
     const labels = SCREENS.map((s) => s.label);
     // Appearance moved onto each crew member's page (ADR-0017): no tab of its own.
     expect(labels).not.toContain("tab.crewSelect");
-    expect(labels.indexOf("memory")).toBe(labels.indexOf("agents") + 1);
+    // The crew roster's tab has its own on-screen name (ADR-0018), right before Memory.
+    expect(term("tab.crew")).not.toBe(term("agents"));
+    expect(labels.indexOf("memory")).toBe(labels.indexOf("tab.crew") + 1);
     expect(within(nav).getByRole("link", { name: term("tab.station") })).toHaveAttribute(
       "aria-current",
       "page",

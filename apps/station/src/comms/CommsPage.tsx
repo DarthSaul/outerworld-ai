@@ -178,12 +178,15 @@ export function SessionButton({
   open,
   onOpen,
   compact = false,
+  meta,
 }: {
   readonly session: SessionSummary;
   readonly agentName: string;
   readonly open: boolean;
   readonly onOpen: () => void;
   readonly compact?: boolean;
+  /** Leads the size line (the Station's list names the crew member and tags dispatches). */
+  readonly meta?: ReactNode;
 }) {
   const titleId = useId();
   const metaId = useId();
@@ -232,7 +235,8 @@ export function SessionButton({
             term("comms.session.empty")
           )}
         </span>
-        <span className="flex items-center gap-1.5 font-display text-d6 text-fg-mute uppercase">
+        <span className="flex flex-wrap items-center gap-1.5 font-display text-d6 text-fg-mute uppercase">
+          {meta}
           {count}
           {session.active ? (
             <span className="flex items-center gap-1 text-green">

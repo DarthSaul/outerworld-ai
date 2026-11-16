@@ -324,29 +324,32 @@ export function fakeApi() {
       memories[i] = { ...m, status, ...(b.text ? { text: String(b.text) } : {}) };
       return memories[i];
     }
+    const summaries = (agentId?: string) =>
+      [...sessions.values()]
+        .filter((x) => !x.session.archivedAt)
+        .filter((x) => agentId === undefined || x.session.agentId === agentId)
+        .map((x): SessionSummary => {
+          const last = [...x.messages]
+            .reverse()
+            .find((m) => (m.role === "user" || m.role === "assistant") && m.text !== "");
+          return {
+            ...x.session,
+            messageCount: x.messages.length,
+            ...(x.messages.length ? { lastMessageAt: "2026-09-29T12:05:00.000Z" } : {}),
+            ...(last && (last.role === "user" || last.role === "assistant")
+              ? { lastMessage: { role: last.role, text: last.text } }
+              : {}),
+            active: x.runs.some((r) => ["queued", "running", "awaiting_consent"].includes(r.state)),
+            origin: dispatches.some((d) => d.workerSessionId === x.session.id)
+              ? "dispatch"
+              : "commander",
+          };
+        })
+        .reverse();
+    if (path === "/sessions" && method === "GET") return summaries();
     if (parts[0] === "agents" && parts[2] === "sessions") {
       const agentId = parts[1] ?? "";
-      if (method === "GET") {
-        return [...sessions.values()]
-          .filter((x) => x.session.agentId === agentId)
-          .map((x): SessionSummary => {
-            const last = [...x.messages]
-              .reverse()
-              .find((m) => (m.role === "user" || m.role === "assistant") && m.text !== "");
-            return {
-              ...x.session,
-              messageCount: x.messages.length,
-              ...(x.messages.length ? { lastMessageAt: "2026-09-29T12:05:00.000Z" } : {}),
-              ...(last && (last.role === "user" || last.role === "assistant")
-                ? { lastMessage: { role: last.role, text: last.text } }
-                : {}),
-              active: x.runs.some((r) =>
-                ["queued", "running", "awaiting_consent"].includes(r.state),
-              ),
-            };
-          })
-          .reverse();
-      }
+      if (method === "GET") return summaries(agentId);
       const session: SessionRecord = {
         id: nextId("s"),
         agentId,
@@ -387,6 +390,15 @@ export function fakeApi() {
           ...(b.archived ? { archivedAt: "2026-09-29T12:00:00.000Z" } : {}),
           ...(nextSettings ? { modelSettings: nextSettings } : {}),
         };
+        if (b.agentId !== undefined) {
+          const agentId = String(b.agentId);
+          if (!state.agents.has(agentId)) throw new ApiError(404, `no agent "${agentId}"`);
+          const busy = entry.runs.some((r) =>
+            ["queued", "running", "awaiting_consent"].includes(r.state),
+          );
+          if (busy) throw new ApiError(409, "a run is still running in this session");
+          entry.session = { ...entry.session, agentId };
+        }
         return entry.session;
       }
       if (parts[2] === "messages") {
