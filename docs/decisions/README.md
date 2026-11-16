@@ -19,3 +19,4 @@ supersedes the old one. Template: `0000-template.md`.
 | [0012](0012-notion-connector.md) | Notion connector over hosted MCP with OAuth; per-agent grant is on or off | Accepted |
 | [0013](0013-station-dashboard-design.md) | The station dashboard design replaces the Reach spec, the rig, and light theme | Accepted |
 | [0014](0014-station-dashboard-revisions.md) | Station dashboard revisions: drawer, footer kill switch, pannable map, session titles | Accepted |
+| [0018](0018-station-three-columns-and-session-handover.md) | Station in three columns, and handing a session to another crew member | Accepted |

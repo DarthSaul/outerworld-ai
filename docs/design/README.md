@@ -10,6 +10,10 @@
 > - the map takes 2fr beside comms and the scanner, and the crew roster merges into the scanner;
 > - forms use the pixel checkbox.
 >
+> [ADR-0018](../decisions/0018-station-three-columns-and-session-handover.md) amends it again: the
+> Station is crew | map | COMMS (reference: `station-dashboard/reference/main-station-view.png`),
+> COMMS shows one session with a switchable crew member, and the app is up to 1920px wide.
+>
 > Everything below this note describes the superseded Reach spec and rig, kept for history.
 
 This folder was the design source of truth for the ui package. When a token, size, motion value,
