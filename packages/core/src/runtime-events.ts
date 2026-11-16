@@ -56,6 +56,8 @@ export const RuntimeEvent = z.discriminatedUnion("type", [
   event("session.created", about.session, { title: z.string() }),
   event("session.renamed", about.session, { title: z.string() }),
   event("session.archived", about.session, {}),
+  /** The Commander handed the conversation to another crew member; `agentId` is the new one. */
+  event("session.reassigned", about.session, { from: Id, to: Id }),
 
   event("run.queued", about.run, { trigger: RunTrigger }),
   event("run.started", about.run, { model: z.string().min(1) }),

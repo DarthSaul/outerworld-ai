@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ModelSettings } from "../config/models.js";
+import { Id } from "../schema/common.js";
 
 /** The HTTP contract for sessions, runs, and settings (Phase 3), shared by daemon and SPA. */
 
@@ -14,6 +15,8 @@ export const UpdateSessionInput = z.strictObject({
   archived: z.literal(true).optional(),
   /** This conversation's model, key, and reasoning level; `null` goes back to the crew member's. */
   modelSettings: ModelSettings.nullable().optional(),
+  /** Hands the conversation to another crew member; the next run is theirs (ADR-0018). */
+  agentId: Id.optional(),
 });
 export const SendMessageInput = z.strictObject({
   text: z.string().trim().min(1).max(MAX_MESSAGE_CHARS),

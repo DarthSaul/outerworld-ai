@@ -28,6 +28,12 @@ const samples: Record<RuntimeEvent["type"], NewRuntimeEvent> = {
     payload: { title: "Weekly" },
   },
   "session.archived": { type: "session.archived", agentId: "pm", sessionId: "s1", payload: {} },
+  "session.reassigned": {
+    type: "session.reassigned",
+    agentId: "scout",
+    sessionId: "s1",
+    payload: { from: "pm", to: "scout" },
+  },
   "run.queued": { type: "run.queued", ...ids, payload: { trigger: "user" } },
   "run.started": { type: "run.started", ...ids, payload: { model: "vendor/model-a" } },
   "run.delta": { type: "run.delta", ...ids, payload: { text: "Hel" } },

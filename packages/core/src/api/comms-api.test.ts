@@ -18,6 +18,8 @@ describe("comms API inputs", () => {
     expect(UpdateSessionInput.safeParse({ archived: true }).success).toBe(true);
     expect(UpdateSessionInput.safeParse({ archived: false }).success).toBe(false);
     expect(UpdateSessionInput.safeParse({ owner: "x" }).success).toBe(false);
+    expect(UpdateSessionInput.safeParse({ agentId: "scout" }).success).toBe(true);
+    expect(UpdateSessionInput.safeParse({ agentId: "Not An Id" }).success).toBe(false);
     expect(CreateSessionInput.safeParse({}).success).toBe(true);
   });
 
