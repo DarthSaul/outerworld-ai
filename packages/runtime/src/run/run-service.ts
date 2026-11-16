@@ -344,6 +344,34 @@ export class RunService {
     return this.#o.sessions.setModelSettings(sessionId, settings);
   }
 
+  /**
+   * Hands the conversation to another crew member (ADR-0018): the transcript stays, and the next
+   * run is theirs, with their documents, grants, and model. Not while a run is going, and never a
+   * dispatched worker's session (its report goes back to the lead).
+   */
+  async reassignSession(sessionId: string, agentId: string): Promise<SessionRecord> {
+    const s = this.#session(sessionId);
+    const loaded = await loadStationDir(this.#o.home);
+    if (!loaded.agents.some((a) => a.id === agentId)) {
+      throw new NotFoundError(`no agent "${agentId}"`);
+    }
+    if (s.agentId === agentId) return s;
+    if (this.#o.sessions.isDispatched(sessionId)) {
+      throw new ConflictError("a dispatched session stays with the crew member it was given to");
+    }
+    if (this.hasActiveRun(sessionId)) {
+      throw new ConflictError("a run is still running in this session");
+    }
+    const moved = this.#o.sessions.setAgent(sessionId, agentId);
+    this.#o.events.append({
+      type: "session.reassigned",
+      agentId,
+      sessionId,
+      payload: { from: s.agentId, to: agentId },
+    });
+    return moved;
+  }
+
   archiveSession(sessionId: string): SessionRecord {
     const s = this.#session(sessionId);
     const archived = this.#o.sessions.archiveSession(sessionId);

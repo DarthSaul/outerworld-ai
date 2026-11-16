@@ -54,6 +54,46 @@ describe("RunService: a chat turn", () => {
     await t.service.settled(runId);
   });
 
+  it("hands a session to another crew member: the next run is theirs, history kept", async () => {
+    const t = setup(scripted([reply("One"), reply("Two")]));
+    const session = t.service.createSession("vesper");
+    await t.service.settled((await t.service.send(session.id, "First")).runId);
+    const moved = await t.service.reassignSession(session.id, "quill");
+    expect(moved.agentId).toBe("quill");
+    const { runId } = await t.service.send(session.id, "Second");
+    const run = await t.service.settled(runId);
+    expect(run.agentId).toBe("quill");
+    const prompt = t.model.doStreamCalls[1]?.prompt ?? [];
+    expect(String(prompt[0]?.content)).not.toContain("You are Vesper");
+    expect(prompt.slice(1).map((m) => m.role)).toEqual(["user", "assistant", "user"]);
+    expect(t.stored()).toContain("session.reassigned");
+    // The same agent again changes nothing and logs nothing new.
+    const count = t.stored().length;
+    await t.service.reassignSession(session.id, "quill");
+    expect(t.stored()).toHaveLength(count);
+  });
+
+  it("refuses to hand over a session mid-run, to an unknown agent, or a dispatched one", async () => {
+    const t = setup(scripted([(s) => hanging(s)]));
+    const session = t.service.createSession("vesper");
+    await expect(t.service.reassignSession(session.id, "nobody")).rejects.toThrow(/no agent/);
+    await expect(t.service.reassignSession("nope", "quill")).rejects.toThrow(/no session/);
+    const { runId } = await t.service.send(session.id, "Go");
+    await expect(t.service.reassignSession(session.id, "quill")).rejects.toThrow(/running/);
+    await t.service.cancel(runId);
+    await t.service.settled(runId);
+    const worker = t.service.createSession("quill");
+    t.dispatches.create({
+      leadAgentId: "vesper",
+      leadSessionId: session.id,
+      leadRunId: runId,
+      workerAgentId: "quill",
+      workerSessionId: worker.id,
+      task: "Look it up",
+    });
+    await expect(t.service.reassignSession(worker.id, "wren")).rejects.toThrow(/dispatch/);
+  });
+
   it("refuses to send to an unknown or archived session", async () => {
     const t = setup(scripted([]));
     await expect(t.service.send("nope", "x")).rejects.toThrow(/no session/);

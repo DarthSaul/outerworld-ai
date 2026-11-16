@@ -75,7 +75,7 @@ increases monotonically, and `ephemeral` marks streamed deltas that are sent liv
 |---|---|
 | station | `station.started`, `station.stopped {reason}`, `station.updated`, `station.kill_switch {engaged}` |
 | agent | `agent.updated {change: created \| updated \| deleted}` |
-| session | `session.created {title}`, `session.renamed`, `session.archived` |
+| session | `session.created {title}`, `session.renamed`, `session.archived`, `session.reassigned {from, to}` |
 | run | `run.queued {trigger}`, `run.started {model}`, `run.delta {text}` (ephemeral), `run.tool_call {toolCallId, tool, input, class, rejected?}`, `run.tool_result {ok, summary?}`, `run.awaiting_consent {consentId}`, `run.retrying`, `run.steered`, `run.completed {reason?, trigger?}`, `run.failed {error, trigger?}`, `run.cancelled {by: user \| kill_switch \| budget}`, `run.interrupted` |
 | dispatch | `dispatch.started {to, task}`, `dispatch.completed {summary}`, `dispatch.failed {error}`, `dispatch.cancelled` |
 | consent | `consent.requested {tool, input}`, `consent.resolved {decision}` |
