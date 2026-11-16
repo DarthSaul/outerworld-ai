@@ -61,6 +61,8 @@ export interface OverseerCommsProps {
   readonly paused?: boolean;
   /** Under the order box: the next order's model settings (the app supplies the control). */
   readonly orderFoot?: ReactNode;
+  /** The order box's words when the message goes to someone else (the Station's COMMS). */
+  readonly orderPlaceholder?: string;
   readonly className?: string;
 }
 
@@ -91,6 +93,7 @@ export function OverseerCommsBody({
   busy = false,
   paused = false,
   orderFoot,
+  orderPlaceholder = term("comms.order"),
 }: Omit<OverseerCommsProps, "className">) {
   const typed = useTypewriter(message?.key ?? "", message?.text ?? "");
   const finished = message !== undefined && typed.length >= message.text.length;
@@ -187,8 +190,8 @@ export function OverseerCommsBody({
               growToText(e.target);
             }}
             onKeyDown={onOrderKey}
-            placeholder={term("comms.order")}
-            aria-label={term("comms.order")}
+            placeholder={orderPlaceholder}
+            aria-label={orderPlaceholder}
             className="max-h-[3lh] min-w-0 flex-1 resize-none overflow-y-auto border-none bg-transparent p-0 font-body text-b19 text-fg-hi outline-none"
           />
           <button

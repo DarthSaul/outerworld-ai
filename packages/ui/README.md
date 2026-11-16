@@ -19,7 +19,8 @@ the glossary.
 | Export | What it is |
 |--------|------------|
 | `DashboardMap` | The station map in three styles (`MAP_STYLES`: schematic, floorplan, polygon). It draws rooms around the Bridge, hallways routed between doors, packets while a dispatch runs, a draw-hallway mode (`drawFrom`), and the stopped scrim (`paused`). Room, crew and hallway selection go through callbacks. The plane is never smaller than `--st-map-min-*`: drag to pan, zoom buttons, and Recenter to fit every room (ADR-0014). |
-| `OverseerComms`, `OverseerCommsBody` | The typed Overseer message (`useTypewriter`), (A)/(B) approvals, Next, and the order line. Chatter and replies move on after the design's hold; a streaming reply waits. |
+| `OverseerComms`, `OverseerCommsBody` | The typed Overseer message (`useTypewriter`), (A)/(B) approvals, Next, and the order line (`orderPlaceholder` names who it goes to). Chatter and replies move on after the design's hold; a streaming reply waits. |
+| `FolderTab` | A folded column's handle: a tab on the left edge, cut at its free corners like a file folder's, its words running down it; `controls` names the column it unfolds (ADR-0018). |
 | `Scanner` | Crew and room pickers (each with its count), then the selected room, crew member, or hallway. It has Stop run (`onStopRun`) and Demolish (`onDemolish`). |
 | `CrewSelect` | Crew Select (the Appearance tab). The agent picker, an 8× stage on a pedestal, and the 6×4 character grid. Arrow keys move the P1 cursor and Enter assigns. |
 | `StationHeader`, `CrtToggle` | The header bar: station name, tabs, and controls (the status drawer's toggle, the scanline switch). |

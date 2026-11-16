@@ -36,6 +36,7 @@ export {
   type DropdownOption,
   type DropdownProps,
 } from "./station/Dropdown.js";
+export { FolderTab, type FolderTabProps } from "./station/FolderTab.js";
 export {
   Checkbox,
   type CheckboxProps,
