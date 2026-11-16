@@ -350,11 +350,14 @@ export class RunService {
    * dispatched worker's session (its report goes back to the lead).
    */
   async reassignSession(sessionId: string, agentId: string): Promise<SessionRecord> {
-    const s = this.#session(sessionId);
+    this.#session(sessionId);
     const loaded = await loadStationDir(this.#o.home);
     if (!loaded.agents.some((a) => a.id === agentId)) {
       throw new NotFoundError(`no agent "${agentId}"`);
     }
+    // Read again after the await: another handover may have landed meanwhile, and this one must
+    // compare against (and record) the owner it actually takes the session from.
+    const s = this.#session(sessionId);
     if (s.agentId === agentId) return s;
     if (this.#o.sessions.isDispatched(sessionId)) {
       throw new ConflictError("a dispatched session stays with the crew member it was given to");
@@ -414,14 +417,17 @@ export class RunService {
       throw new ConflictError("a run is already running in this session");
     }
     const loaded = await loadStationDir(this.#o.home);
-    const agentModel =
-      loaded.agents.find((a) => a.id === session.agentId)?.config.model ?? "unknown";
+    // The owner now, not before the await: a handover may have landed meanwhile. No await
+    // follows until the run is created, so the run and its model are that owner's.
+    const current = this.#session(sessionId);
+    const owner = current.agentId;
+    const agentModel = loaded.agents.find((a) => a.id === owner)?.config.model ?? "unknown";
     // The crew member's model, then this conversation's choice, then this send's (a schedule's).
-    const settings = resolveModelSettings(agentModel, session.modelSettings, options.modelSettings);
+    const settings = resolveModelSettings(agentModel, current.modelSettings, options.modelSettings);
     const model = settings.model;
     const run = this.#o.sessions.createRun({
       sessionId,
-      agentId: session.agentId,
+      agentId: owner,
       trigger,
       model,
       provider: settings.provider,
@@ -434,17 +440,17 @@ export class RunService {
     if (
       text !== undefined &&
       this.#o.titles &&
-      session.title === DEFAULT_SESSION_TITLE &&
+      current.title === DEFAULT_SESSION_TITLE &&
       this.#o.sessions.messages(sessionId).length === 1
     ) {
       // Runs beside the agent's run; a failure only means the message names the session.
-      void this.#nameSession(session, text, run.id, model, settings.provider).catch(
+      void this.#nameSession(current, text, run.id, model, settings.provider).catch(
         () => undefined,
       );
     }
     this.#o.events.append({
       type: "run.queued",
-      agentId: session.agentId,
+      agentId: owner,
       sessionId,
       runId: run.id,
       payload: { trigger },

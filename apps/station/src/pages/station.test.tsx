@@ -382,6 +382,59 @@ describe("COMMS", () => {
     expect(await axe(container)).toHaveNoViolations();
   });
 
+  it("applies a pick made while a handover is still in flight, and sends after it lands", async () => {
+    const user = userEvent.setup();
+    const fake = fakeApi();
+    const s = fake.seedSession("vesper", "Launch plan");
+    localStorage.setItem("outerworld.commsSession", s.session.id);
+    // Hold every PATCH until released, so the first handover is still in flight.
+    let release = () => {};
+    const held = new Promise<void>((r) => {
+      release = r;
+    });
+    const send = fake.api.send;
+    fake.api.send = async (method, path, body) => {
+      if (method === "PATCH") await held;
+      return send(method, path, body);
+    };
+    const { calls } = renderApp("/", fake);
+    await map();
+    await within(comms()).findByRole("region", { name: "Vesper · Launch plan" });
+    await choose(user, comms(), term("comms.agent"), /^Quill/);
+    // Back to Vesper before the first handover lands: not dropped as "already Vesper's".
+    await choose(user, comms(), term("comms.agent"), /^Vesper/);
+    await user.type(
+      within(comms()).getByRole("textbox", { name: term("comms.placeholder") }),
+      "Go{Enter}",
+    );
+    release();
+    await waitFor(() =>
+      expect(calls.filter((c) => c.method !== "GET").map((c) => [c.method, c.body])).toEqual([
+        ["PATCH", { agentId: "quill" }],
+        ["PATCH", { agentId: "vesper" }],
+        ["POST", { text: "Go" }],
+      ]),
+    );
+    expect(s.runs.at(-1)?.agentId).toBe("vesper");
+  });
+
+  it("leaves a refused handover's session exactly as it was", async () => {
+    const fake = fakeApi();
+    const worker = fake.seedSession("quill", "Worker");
+    fake.dispatches.push({ workerSessionId: worker.session.id } as never);
+    const before = { ...worker.session };
+    await expect(
+      fake.api.send("PATCH", `/sessions/${worker.session.id}`, {
+        title: "Renamed",
+        agentId: "vesper",
+      }),
+    ).rejects.toMatchObject({ status: 409 });
+    await expect(
+      fake.api.send("PATCH", `/sessions/${worker.session.id}`, { title: "X", agentId: "nobody" }),
+    ).rejects.toMatchObject({ status: 404 });
+    expect(worker.session).toEqual(before);
+  });
+
   it("keeps each earlier reply under the name of the crew member who wrote it", async () => {
     const fake = fakeApi();
     const s = fake.seedSession("quill", "Handed over");

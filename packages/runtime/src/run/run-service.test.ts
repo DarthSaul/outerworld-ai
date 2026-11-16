@@ -94,6 +94,33 @@ describe("RunService: a chat turn", () => {
     await expect(t.service.reassignSession(worker.id, "wren")).rejects.toThrow(/dispatch/);
   });
 
+  it("records the real previous owner when handovers overlap, so a later one can undo an earlier", async () => {
+    const t = setup(scripted([]));
+    const session = t.service.createSession("vesper");
+    const first = t.service.reassignSession(session.id, "quill");
+    const back = t.service.reassignSession(session.id, "vesper");
+    await Promise.all([first, back]);
+    const moves = t.events
+      .since(0)
+      .filter((e) => e.type === "session.reassigned")
+      .map((e) => e.payload);
+    expect(moves).toEqual([
+      { from: "vesper", to: "quill" },
+      { from: "quill", to: "vesper" },
+    ]);
+    expect(t.sessions.getSession(session.id)?.agentId).toBe("vesper");
+  });
+
+  it("starts a run as the session's owner at the moment it starts, after a handover lands", async () => {
+    const t = setup(scripted([reply("Hi")]));
+    const session = t.service.createSession("vesper");
+    const moving = t.service.reassignSession(session.id, "quill");
+    const sending = t.service.send(session.id, "Hello");
+    await moving;
+    const run = await t.service.settled((await sending).runId);
+    expect(run.agentId).toBe("quill");
+  });
+
   it("refuses to send to an unknown or archived session", async () => {
     const t = setup(scripted([]));
     await expect(t.service.send("nope", "x")).rejects.toThrow(/no session/);

@@ -250,7 +250,7 @@ export function StationPage() {
           {/* Desktop: the folded column's tab lies over the map's left edge, halfway down. It takes
               no column of its own. */}
           <div
-            className={`absolute top-1/2 left-0 z-10 hidden -translate-y-1/2 desktop:flex ${desktopHidden}`}
+            className={`absolute top-1/2 left-0 z-10 -translate-y-1/2 ${expanded ? "hidden" : "hidden desktop:flex"}`}
           >
             <FolderTab
               controls={CREW_ID}
@@ -302,7 +302,7 @@ export function StationPage() {
         valueMax={percentOf(SIDE_LIMITS.max)}
         onResize={(dx) => setSide(resizeSide(side, dx, grid.current?.clientWidth ?? 0))}
         onReset={() => setSide(DEFAULT_SIDE)}
-        className={`hidden desktop:block ${desktopHidden}`}
+        className={expanded ? "hidden" : "hidden desktop:block"}
       />
       {/* Comms fills the column over the scanner, which starts folded to its strip and opens to at
           most half the column. Neither sets the row's height (contain-size); each scrolls inside. */}

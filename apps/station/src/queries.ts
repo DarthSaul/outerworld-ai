@@ -251,6 +251,9 @@ export function useSendMessage(sessionId: string) {
       api.send<{ runId: string }>("POST", `/sessions/${encodeURIComponent(sessionId)}/messages`, {
         text,
       }),
+    // The same scope as the session's own writes: a message waits for a handover in flight, so
+    // it goes to the crew member the Commander just picked.
+    scope: { id: `session:${sessionId}` },
   });
 }
 

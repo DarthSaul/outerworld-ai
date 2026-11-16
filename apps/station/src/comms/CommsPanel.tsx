@@ -91,6 +91,13 @@ function SessionComms({
   const update = useUpdateSession(sessionId);
   const client = useQueryClient();
   const session = detail.data?.session;
+  // The crew member last picked here, until the session says so too. A pick made while an earlier
+  // handover is in flight compares against (and shows) this, so it is never dropped.
+  const [requested, setRequested] = useState<string>();
+  if (requested !== undefined && requested === session?.agentId && !update.isPending) {
+    setRequested(undefined);
+  }
+  const owner = requested ?? session?.agentId;
   const latest = detail.data?.runs[0];
   const running = latest !== undefined && !isTerminal(latest.state);
   const dispatched = all.data?.find((s) => s.id === sessionId)?.origin === "dispatch";
@@ -104,11 +111,13 @@ function SessionComms({
       {session ? (
         <AgentRow
           dashboard={dashboard}
-          agentId={session.agentId}
+          agentId={owner ?? session.agentId}
           title={session.title}
           {...(locked ? { locked } : {})}
           onPick={(agentId) => {
-            if (agentId === session.agentId) return;
+            if (agentId === owner) return;
+            setRequested(agentId);
+            // Handovers go out one at a time, in order (the session's mutation scope).
             update.mutate(
               { agentId },
               {
@@ -116,6 +125,8 @@ function SessionComms({
                   void client.invalidateQueries({ queryKey: ["session", sessionId] });
                   void client.invalidateQueries({ queryKey: ["sessions"] });
                 },
+                // Refused: show what the session really has.
+                onError: () => setRequested(undefined),
               },
             );
           }}

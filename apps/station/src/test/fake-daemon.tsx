@@ -382,6 +382,21 @@ export function fakeApi() {
         return detail;
       }
       if (method === "PATCH") {
+        // Every refusal comes before any change, as the daemon's: a refused request changes nothing.
+        if (b.agentId !== undefined && String(b.agentId) !== entry.session.agentId) {
+          const agentId = String(b.agentId);
+          if (!state.agents.has(agentId)) throw new ApiError(404, `no agent "${agentId}"`);
+          if (dispatches.some((d) => d.workerSessionId === entry.session.id)) {
+            throw new ApiError(
+              409,
+              "a dispatched session stays with the crew member it was given to",
+            );
+          }
+          const busy = entry.runs.some((r) =>
+            ["queued", "running", "awaiting_consent"].includes(r.state),
+          );
+          if (busy) throw new ApiError(409, "a run is still running in this session");
+        }
         const { modelSettings: _old, ...bare } = entry.session;
         const nextSettings =
           b.modelSettings === null
@@ -392,16 +407,8 @@ export function fakeApi() {
           ...(b.title ? { title: String(b.title) } : {}),
           ...(b.archived ? { archivedAt: "2026-09-29T12:00:00.000Z" } : {}),
           ...(nextSettings ? { modelSettings: nextSettings } : {}),
+          ...(b.agentId !== undefined ? { agentId: String(b.agentId) } : {}),
         };
-        if (b.agentId !== undefined) {
-          const agentId = String(b.agentId);
-          if (!state.agents.has(agentId)) throw new ApiError(404, `no agent "${agentId}"`);
-          const busy = entry.runs.some((r) =>
-            ["queued", "running", "awaiting_consent"].includes(r.state),
-          );
-          if (busy) throw new ApiError(409, "a run is still running in this session");
-          entry.session = { ...entry.session, agentId };
-        }
         return entry.session;
       }
       if (parts[2] === "messages") {
