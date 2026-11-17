@@ -388,6 +388,70 @@ describe("a server that registers no clients (ADR-0019)", () => {
     expect(await t.secrets.get(tokens)).toBeUndefined();
   });
 
+  it("leaves a connector disconnected when a disconnect lands during the code exchange", async () => {
+    let release = () => {};
+    const gate = new Promise<void>((r) => {
+      release = r;
+    });
+    const working = inMemory();
+    let signedIn = false;
+    const t = setup(async (connector, provider) => {
+      if (signedIn) return working(connector, provider);
+      return {
+        async start() {
+          const url = new URL("https://auth.example.test/authorize");
+          url.searchParams.set("state", await (provider.state?.() ?? ""));
+          await provider.redirectToAuthorization(url);
+          throw new UnauthorizedError("sign in required");
+        },
+        async send() {},
+        async close() {},
+        async finishAuth() {
+          await gate;
+          signedIn = true;
+        },
+      } as unknown as Transport;
+    });
+    await t.manager.refresh();
+    const asked = await t.manager.connect("notion");
+    const state = new URL(asked.authorizationUrl ?? "").searchParams.get("state") ?? "";
+    const finishing = t.manager.finishAuth("notion", "code", state);
+    await new Promise((r) => setTimeout(r, 5));
+    await t.manager.disconnect("notion");
+    release();
+    expect((await finishing).status).toBe("disconnected");
+    expect(t.manager.views()[0]).toMatchObject({ status: "disconnected" });
+    expect(t.statuses()).not.toContain("connected");
+  });
+
+  it("connects with the client a replacement in flight leaves, not the one it replaces", async () => {
+    const used: Array<string | undefined> = [];
+    const working = inMemory();
+    const t = setup(async (connector, provider) => {
+      used.push((await provider.clientInformation())?.client_id);
+      return working(connector, provider);
+    });
+    await withGitHub(t);
+    await t.manager.setOwnClient("github", { clientId: "first" });
+    let release = () => {};
+    const gate = new Promise<void>((r) => {
+      release = r;
+    });
+    const set = t.secrets.set.bind(t.secrets);
+    t.secrets.set = async (key, value) => {
+      if (key.endsWith(".own")) await gate;
+      return set(key, value);
+    };
+    const replacing = t.manager.setOwnClient("github", { clientId: "second" });
+    await new Promise((r) => setTimeout(r, 5));
+    const connecting = t.manager.connect("github");
+    await new Promise((r) => setTimeout(r, 5));
+    release();
+    await replacing;
+    expect((await connecting).status).toBe("connected");
+    expect(used).toEqual(["second"]);
+  });
+
   it("refuses an own client for a server that registers its own", async () => {
     const t = setup(inMemory());
     await t.manager.refresh();

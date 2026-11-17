@@ -213,11 +213,13 @@ export function useAllSessions() {
   });
 }
 
-export function useSession(id: string) {
+/** One session and its history; with no id, nothing is fetched. */
+export function useSession(id: string | undefined) {
   const { api } = useDaemon();
   return useQuery({
     queryKey: ["session", id],
-    queryFn: () => api.get<SessionDetail>(`/sessions/${encodeURIComponent(id)}`),
+    queryFn: () => api.get<SessionDetail>(`/sessions/${encodeURIComponent(id ?? "")}`),
+    enabled: id !== undefined,
   });
 }
 

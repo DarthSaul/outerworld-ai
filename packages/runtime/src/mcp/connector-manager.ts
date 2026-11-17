@@ -70,6 +70,8 @@ interface Entry {
   generation: number;
   /** Sign-in completions and client replacements, one at a time, in order. */
   auth: Promise<unknown>;
+  /** How many of those are queued or running. */
+  authQueued: number;
 }
 
 const httpTransport: TransportFactory = (connector, provider) => {
@@ -158,6 +160,7 @@ export class ConnectorManager {
         ownClient: false,
         generation: 0,
         auth: Promise.resolve(),
+        authQueued: 0,
         provider: new KeychainOAuthProvider({
           connectorId: connector.id,
           server: serverOf(connector),
@@ -209,6 +212,11 @@ export class ConnectorManager {
     id: string,
   ): Promise<{ status: ConnectorStatus; authorizationUrl?: string; detail?: string }> {
     const entry = this.#entry(id);
+    // Waits for sign-in completions and client replacements already queued, so it reads the
+    // client they leave. It does not join the queue: a slow server never holds up a replacement,
+    // whose disconnect makes this attempt stale instead. With none queued it does not yield, so a
+    // disconnect right after it still supersedes it.
+    if (entry.authQueued > 0) await entry.auth;
     if (needsOwnClient(entry.connector) && !entry.ownClient) {
       const detail = `${entry.connector.name} needs your own OAuth app: add its client ID first`;
       this.#set(entry, "error", detail);
@@ -273,9 +281,14 @@ export class ConnectorManager {
     iss?: string,
   ): Promise<{ status: ConnectorStatus; detail?: string }> {
     const entry = this.#entry(id);
+    const generation = entry.generation;
     // Serialized with client replacement: a new client never sees tokens from the old one's
     // exchange, and an exchange after a replacement finds no sign-in in progress.
     await this.#serialAuth(entry, () => this.#exchange(entry, code, state, iss));
+    // A disconnect landed during the exchange: it stands, and nothing reconnects.
+    if (entry.generation !== generation) {
+      return { status: entry.status, ...(entry.detail ? { detail: entry.detail } : {}) };
+    }
     const result = await this.connect(id);
     return { status: result.status, ...(result.detail ? { detail: result.detail } : {}) };
   }
@@ -304,7 +317,15 @@ export class ConnectorManager {
 
   /** Runs `task` after every earlier sign-in completion or client replacement for this entry. */
   #serialAuth<T>(entry: Entry, task: () => Promise<T>): Promise<T> {
-    const run = entry.auth.then(task, task);
+    entry.authQueued++;
+    const counted = async () => {
+      try {
+        return await task();
+      } finally {
+        entry.authQueued--;
+      }
+    };
+    const run = entry.auth.then(counted, counted);
     entry.auth = run.catch(() => undefined);
     return run;
   }

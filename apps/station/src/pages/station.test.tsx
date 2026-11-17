@@ -304,6 +304,29 @@ describe("COMMS", () => {
     await waitFor(() => expect(composer()).toBeInTheDocument());
   });
 
+  it("lets go of a session it started that is archived before the list ever has it", async () => {
+    const user = userEvent.setup();
+    const fake = fakeApi();
+    const { calls, emit } = renderApp("/", fake);
+    await map();
+    // The station-wide list never refetches from here on: it never includes the new session.
+    const get = fake.api.get;
+    const held = new Promise<never>(() => {});
+    fake.api.get = async <T,>(path: string) => (path === "/sessions" ? held : get<T>(path));
+    await user.type(composer(), "Plan the week{Enter}");
+    const sent = await waitFor(() => {
+      const c = calls.find((x) => x.method === "POST" && x.path.endsWith("/messages"));
+      if (!c) throw new Error("no message yet");
+      return c;
+    });
+    const sessionId = sent.path.split("/")[2] ?? "";
+    await within(comms()).findByRole("region", { name: /^Vesper · / });
+    const entry = fake.sessions.get(sessionId);
+    if (entry) entry.session = { ...entry.session, archivedAt: at };
+    emit({ type: "session.archived", agentId: "vesper", sessionId, payload: {} });
+    await waitFor(() => expect(composer()).toBeInTheDocument());
+  });
+
   it("starts the conversation with whoever is picked in the agent row", async () => {
     const user = userEvent.setup();
     const { calls } = renderApp("/");

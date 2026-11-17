@@ -12,6 +12,7 @@ import {
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { CommsPanel } from "../comms/CommsPanel.js";
 import { ErrorNote } from "../components/ErrorNote.js";
+import { ApiError } from "../lib/api.js";
 import {
   useActivity,
   useAllSessions,
@@ -19,6 +20,7 @@ import {
   useCreateLane,
   useDeleteLane,
   useKillSwitch,
+  useSession,
 } from "../queries.js";
 import { CrewPanel } from "../station/CrewPanel.js";
 import {
@@ -95,12 +97,17 @@ function useOpenSession(): [
     setOpenState(id);
     storeSession(id);
   };
-  // Trusted only until the list includes it: from then on the list alone decides (archived, gone).
+  // Trusted only until the list includes it, or its own record (refetched on every session
+  // event) says it was archived or deleted first: from then on the list alone decides.
   const startedListed =
     started !== undefined && (sessions.data?.some((s) => s.id === started) ?? false);
+  const startedDetail = useSession(started);
+  const startedGone =
+    startedDetail.data?.session.archivedAt !== undefined ||
+    (startedDetail.error instanceof ApiError && startedDetail.error.status === 404);
   useEffect(() => {
-    if (startedListed) setStarted(undefined);
-  }, [startedListed]);
+    if (startedListed || startedGone) setStarted(undefined);
+  }, [startedListed, startedGone]);
   const listed = sessions.data?.some((s) => s.id === open) ?? false;
   const live = open !== undefined && (listed || open === started || sessions.data === undefined);
   return [
