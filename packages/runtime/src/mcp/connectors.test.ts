@@ -476,6 +476,68 @@ describe("a server that registers no clients (ADR-0019)", () => {
     expect(t.statuses()).not.toContain("connected");
   });
 
+  it("forgets a sign-in whose code exchange was still finishing", async () => {
+    let release = () => {};
+    const gate = new Promise<void>((r) => {
+      release = r;
+    });
+    const signIn: TransportFactory = async (_connector, provider) =>
+      ({
+        async start() {
+          const url = new URL("https://auth.example.test/authorize");
+          url.searchParams.set("state", await (provider.state?.() ?? ""));
+          await provider.redirectToAuthorization(url);
+          throw new UnauthorizedError("sign in required");
+        },
+        async send() {},
+        async close() {},
+        async finishAuth() {
+          await gate;
+          await provider.saveTokens({ access_token: "late", token_type: "Bearer" });
+        },
+      }) as unknown as Transport;
+    const t = setup(signIn);
+    await withGitHub(t);
+    await t.manager.setOwnClient("github", { clientId: "mine" });
+    const asked = await t.manager.connect("github");
+    const state = new URL(asked.authorizationUrl ?? "").searchParams.get("state") ?? "";
+    const finishing = t.manager.finishAuth("github", "code", state);
+    await new Promise((r) => setTimeout(r, 5));
+    const forgetting = t.manager.disconnect("github", { forget: true });
+    // Give the forget every chance to finish first; the late exchange only writes after it.
+    await Promise.race([forgetting, new Promise((r) => setTimeout(r, 20))]);
+    release();
+    expect((await finishing).status).toBe("disconnected");
+    await forgetting;
+    const tokens = connectorSecretKey("github", "https://api.githubcopilot.com/mcp/", "tokens");
+    expect(await t.secrets.get(tokens)).toBeUndefined();
+    expect(t.statuses()).not.toContain("connected");
+  });
+
+  it("removes an own client whose replacement was still being saved", async () => {
+    const t = setup(inMemory());
+    await withGitHub(t);
+    await t.manager.setOwnClient("github", { clientId: "first" });
+    let release = () => {};
+    const gate = new Promise<void>((r) => {
+      release = r;
+    });
+    const set = t.secrets.set.bind(t.secrets);
+    t.secrets.set = async (key, value) => {
+      if (key.endsWith(".own")) await gate;
+      return set(key, value);
+    };
+    const replacing = t.manager.setOwnClient("github", { clientId: "second" });
+    await new Promise((r) => setTimeout(r, 5));
+    const removing = t.manager.disconnect("github", { forget: true, ownClient: true });
+    await Promise.race([removing, new Promise((r) => setTimeout(r, 20))]);
+    release();
+    await Promise.all([replacing, removing]);
+    const own = connectorSecretKey("github", "https://api.githubcopilot.com/mcp/", "own");
+    expect(await t.secrets.get(own)).toBeUndefined();
+    expect(t.manager.views().find((v) => v.id === "github")?.ownClient?.set).toBe(false);
+  });
+
   it("refuses an own client for a server that registers its own", async () => {
     const t = setup(inMemory());
     await t.manager.refresh();

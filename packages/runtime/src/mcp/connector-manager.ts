@@ -375,14 +375,18 @@ export class ConnectorManager {
     const entry = this.#entries.get(id);
     if (!entry) return;
     entry.cancels++;
-    await this.#takeDown(entry, options);
+    await this.#takeDown(entry);
+    if (!options.forget) return;
+    // After any code exchange or client replacement already under way, so neither writes its
+    // tokens or client back once they are deleted.
+    await this.#serialAuth(entry, async () => {
+      await entry.provider.forget({ ownClient: options.ownClient ?? false });
+      if (options.ownClient) entry.ownClient = false;
+    });
   }
 
   /** Closes the connection and drops any sign-in in progress; a connect under way goes stale. */
-  async #takeDown(
-    entry: Entry,
-    options: { forget?: boolean; ownClient?: boolean } = {},
-  ): Promise<void> {
+  async #takeDown(entry: Entry): Promise<void> {
     entry.wanted = false;
     entry.generation++;
     clearTimeout(entry.retryTimer);
@@ -391,10 +395,6 @@ export class ConnectorManager {
     entry.pending = undefined;
     entry.tools = [];
     await client?.close().catch(() => undefined);
-    if (options.forget) {
-      await entry.provider.forget({ ownClient: options.ownClient ?? false });
-      if (options.ownClient) entry.ownClient = false;
-    }
     if (entry.status !== "disconnected") this.#set(entry, "disconnected");
   }
 
