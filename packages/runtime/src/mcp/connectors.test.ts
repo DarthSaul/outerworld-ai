@@ -572,6 +572,39 @@ describe("a server that registers no clients (ADR-0019)", () => {
     });
   });
 
+  it("never lets a superseded connect clear tokens a newer sign-in saved", async () => {
+    let release = () => {};
+    const gate = new Promise<void>((r) => {
+      release = r;
+    });
+    const working = inMemory();
+    let first = true;
+    const t = setup(async (connector, provider) => {
+      if (first) {
+        first = false;
+        // An auth error that only surfaces after the client was replaced and signed in again.
+        await gate;
+        await provider.invalidateCredentials("all");
+        throw new Error("invalid_grant");
+      }
+      await provider.saveTokens({ access_token: "fresh", token_type: "Bearer" });
+      return working(connector, provider);
+    });
+    await withGitHub(t);
+    await t.manager.setOwnClient("github", { clientId: "first" });
+    const tokens = connectorSecretKey("github", "https://api.githubcopilot.com/mcp/", "tokens");
+    const old = t.manager.connect("github");
+    await new Promise((r) => setTimeout(r, 5));
+    await t.manager.setOwnClient("github", { clientId: "second" });
+    expect((await t.manager.connect("github")).status).toBe("connected");
+    release();
+    await old;
+    expect(JSON.parse((await t.secrets.get(tokens)) ?? "{}")).toMatchObject({
+      access_token: "fresh",
+    });
+    expect(t.manager.views().find((v) => v.id === "github")?.status).toBe("connected");
+  });
+
   it("refuses an own client for a server that registers its own", async () => {
     const t = setup(inMemory());
     await t.manager.refresh();

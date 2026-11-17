@@ -121,9 +121,10 @@ export class KeychainOAuthProvider implements OAuthClientProvider {
 
   /**
    * This provider as one connection attempt sees it. The SDK saves tokens (a refresh, a code
-   * exchange) and client registrations through it; once a forget or a new own client lands after
-   * the attempt began, those writes are dropped, so a superseded attempt never restores what was
-   * deleted. Attempts begun afterwards get a view of their own and write as usual.
+   * exchange) and client registrations through it, and clears them on some errors; once a forget
+   * or a new own client lands after the attempt began, those writes and clears are dropped, so a
+   * superseded attempt never restores what was deleted nor deletes what replaced it. Attempts
+   * begun afterwards get a view of their own and write as usual.
    */
   forAttempt(): KeychainOAuthProvider {
     const epoch = this.#epoch;
@@ -133,7 +134,13 @@ export class KeychainOAuthProvider implements OAuthClientProvider {
         const value: unknown = Reflect.get(target, prop, target);
         if (typeof value !== "function") return value;
         const method = value as (...args: unknown[]) => unknown;
-        if (prop === "saveTokens" || prop === "saveClientInformation") {
+        // Writes and deletes alike: a superseded attempt neither restores credentials nor wipes
+        // the ones a newer attempt saved.
+        if (
+          prop === "saveTokens" ||
+          prop === "saveClientInformation" ||
+          prop === "invalidateCredentials"
+        ) {
           return async (...args: unknown[]) => {
             if (current()) await method.apply(target, args);
           };
