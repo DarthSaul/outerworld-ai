@@ -66,6 +66,10 @@ interface Entry {
   retries: number;
   /** Whether the Commander's own OAuth client is stored, for a server that needs one. */
   ownClient: boolean;
+  /** Bumped by every disconnect: a connect that began before one never installs its client. */
+  generation: number;
+  /** Sign-in completions and client replacements, one at a time, in order. */
+  auth: Promise<unknown>;
 }
 
 const httpTransport: TransportFactory = (connector, provider) => {
@@ -152,6 +156,8 @@ export class ConnectorManager {
         wanted: false,
         retries: 0,
         ownClient: false,
+        generation: 0,
+        auth: Promise.resolve(),
         provider: new KeychainOAuthProvider({
           connectorId: connector.id,
           server: serverOf(connector),
@@ -209,6 +215,9 @@ export class ConnectorManager {
       return { status: "error", detail };
     }
     entry.wanted = true;
+    const generation = entry.generation;
+    // A disconnect landed while this connect waited: it is superseded and changes nothing.
+    const stale = () => entry.generation !== generation;
     clearTimeout(entry.retryTimer);
     await entry.client?.close().catch(() => undefined);
     entry.client = undefined;
@@ -219,6 +228,10 @@ export class ConnectorManager {
       const client = new Client({ name: "outerworld-ai", version: "0.1.0" });
       await client.connect(transport);
       const listed = await client.listTools();
+      if (stale()) {
+        await client.close().catch(() => undefined);
+        return { status: entry.status };
+      }
       entry.client = client;
       entry.pending = undefined;
       entry.retries = 0;
@@ -232,6 +245,7 @@ export class ConnectorManager {
       this.#set(entry, "connected");
       return { status: "connected" };
     } catch (error) {
+      if (stale()) return { status: entry.status };
       if (error instanceof UnauthorizedError || entry.authorizationUrl) {
         entry.pending = transport;
         entry.tools = [];
@@ -259,6 +273,14 @@ export class ConnectorManager {
     iss?: string,
   ): Promise<{ status: ConnectorStatus; detail?: string }> {
     const entry = this.#entry(id);
+    // Serialized with client replacement: a new client never sees tokens from the old one's
+    // exchange, and an exchange after a replacement finds no sign-in in progress.
+    await this.#serialAuth(entry, () => this.#exchange(entry, code, state, iss));
+    const result = await this.connect(id);
+    return { status: result.status, ...(result.detail ? { detail: result.detail } : {}) };
+  }
+
+  async #exchange(entry: Entry, code: string, state: string, iss?: string): Promise<void> {
     if (!entry.provider.consumeState(state)) {
       throw new Error("the sign-in link has expired or its state does not match; start again");
     }
@@ -278,8 +300,13 @@ export class ConnectorManager {
       throw error;
     }
     entry.pending = undefined;
-    const result = await this.connect(id);
-    return { status: result.status, ...(result.detail ? { detail: result.detail } : {}) };
+  }
+
+  /** Runs `task` after every earlier sign-in completion or client replacement for this entry. */
+  #serialAuth<T>(entry: Entry, task: () => Promise<T>): Promise<T> {
+    const run = entry.auth.then(task, task);
+    entry.auth = run.catch(() => undefined);
+    return run;
   }
 
   /**
@@ -302,9 +329,11 @@ export class ConnectorManager {
     if (!needsOwnClient(entry.connector)) {
       throw new ConflictError(`${entry.connector.name} registers its own sign-in clients`);
     }
-    await this.disconnect(id);
-    await entry.provider.setOwnClient(client);
-    entry.ownClient = true;
+    await this.#serialAuth(entry, async () => {
+      await this.disconnect(id);
+      await entry.provider.setOwnClient(client);
+      entry.ownClient = true;
+    });
   }
 
   async disconnect(
@@ -314,6 +343,7 @@ export class ConnectorManager {
     const entry = this.#entries.get(id);
     if (!entry) return;
     entry.wanted = false;
+    entry.generation++;
     clearTimeout(entry.retryTimer);
     const client = entry.client;
     entry.client = undefined;

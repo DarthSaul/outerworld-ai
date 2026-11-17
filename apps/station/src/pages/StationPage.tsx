@@ -9,7 +9,7 @@ import {
   Scanner,
   tabClass,
 } from "@darthsaul/outerworld-ai-ui";
-import { type CSSProperties, useRef, useState } from "react";
+import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { CommsPanel } from "../comms/CommsPanel.js";
 import { ErrorNote } from "../components/ErrorNote.js";
 import {
@@ -95,6 +95,12 @@ function useOpenSession(): [
     setOpenState(id);
     storeSession(id);
   };
+  // Trusted only until the list includes it: from then on the list alone decides (archived, gone).
+  const startedListed =
+    started !== undefined && (sessions.data?.some((s) => s.id === started) ?? false);
+  useEffect(() => {
+    if (startedListed) setStarted(undefined);
+  }, [startedListed]);
   const listed = sessions.data?.some((s) => s.id === open) ?? false;
   const live = open !== undefined && (listed || open === started || sessions.data === undefined);
   return [

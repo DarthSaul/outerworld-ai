@@ -93,11 +93,24 @@ export const CONNECTOR_PRESET_IDS = Object.keys(CONNECTOR_PRESETS) as ConnectorP
  * Servers that register no clients themselves: their sign-in needs the Commander's own OAuth
  * client (id, and a secret where the provider requires one), kept in the keychain (ADR-0019).
  */
-const OWN_CLIENT_SERVERS: readonly string[] = [GITHUB_URL, GMAIL_URL];
+/**
+ * One spelling per server: the parser drops a default port and lowercases the host; trailing
+ * slashes on the path are ignored. Host, path, and query otherwise still tell servers apart.
+ */
+const serverKey = (url: string): string | undefined => {
+  try {
+    const u = new URL(url);
+    return `${u.protocol}//${u.host}${u.pathname.replace(/\/+$/, "")}${u.search}`;
+  } catch {
+    return undefined;
+  }
+};
+
+const OWN_CLIENT_SERVERS: readonly string[] = [GITHUB_URL, GMAIL_URL].map((u) => serverKey(u) ?? u);
 
 /** Whether signing in to this connector needs an OAuth client the Commander registered. */
 export function needsOwnClient(connector: Connector): boolean {
-  return (
-    connector.transport.type === "http" && OWN_CLIENT_SERVERS.includes(connector.transport.url)
-  );
+  if (connector.transport.type !== "http") return false;
+  const key = serverKey(connector.transport.url);
+  return key !== undefined && OWN_CLIENT_SERVERS.includes(key);
 }

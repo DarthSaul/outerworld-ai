@@ -200,6 +200,26 @@ describe("ConnectorManager", () => {
     ).rejects.toThrow(/state/);
   });
 
+  it("drops a connect that a disconnect overtook: its client is closed, never installed", async () => {
+    const working = inMemory();
+    let release = () => {};
+    const gate = new Promise<void>((r) => {
+      release = r;
+    });
+    const t = setup(async (connector, provider) => {
+      await gate;
+      return working(connector, provider);
+    });
+    await t.manager.refresh();
+    const connecting = t.manager.connect("notion");
+    await t.manager.disconnect("notion");
+    release();
+    expect((await connecting).status).toBe("disconnected");
+    expect(t.manager.views()[0]).toMatchObject({ status: "disconnected", tools: [] });
+    expect(t.manager.catalog()).toEqual({});
+    expect(t.statuses()).not.toContain("connected");
+  });
+
   it("reports a server it cannot reach as an error, with the reason", async () => {
     const t = setup(async () => {
       throw new Error("connect ECONNREFUSED");
@@ -325,6 +345,47 @@ describe("a server that registers no clients (ADR-0019)", () => {
     await t.manager.disconnect("github", { forget: true, ownClient: true });
     expect(await t.secrets.get(key)).toBeUndefined();
     expect(github(t)?.ownClient?.set).toBe(false);
+  });
+
+  it("never keeps tokens from a sign-in that a client replacement overtook", async () => {
+    let release = () => {};
+    const gate = new Promise<void>((r) => {
+      release = r;
+    });
+    const signIn: TransportFactory = async (_connector, provider) =>
+      ({
+        async start() {
+          const url = new URL("https://auth.example.test/authorize");
+          url.searchParams.set("state", await (provider.state?.() ?? ""));
+          await provider.redirectToAuthorization(url);
+          throw new UnauthorizedError("sign in required");
+        },
+        async send() {},
+        async close() {},
+        async finishAuth() {
+          await gate;
+          await provider.saveTokens({ access_token: "old-client", token_type: "Bearer" });
+        },
+      }) as unknown as Transport;
+    const t = setup(signIn);
+    await withGitHub(t);
+    await t.manager.setOwnClient("github", { clientId: "first" });
+    const asked = await t.manager.connect("github");
+    const state = new URL(asked.authorizationUrl ?? "").searchParams.get("state") ?? "";
+    const finishing = t.manager.finishAuth("github", "code", state).catch((e: Error) => e);
+    const replacing = t.manager.setOwnClient("github", { clientId: "second" });
+    // Give the replacement every chance to finish first; the exchange only writes after it.
+    await Promise.race([replacing, new Promise((r) => setTimeout(r, 20))]);
+    release();
+    await Promise.all([finishing, replacing]);
+    const tokens = connectorSecretKey("github", "https://api.githubcopilot.com/mcp/", "tokens");
+    expect(await t.secrets.get(tokens)).toBeUndefined();
+    // And an exchange arriving after the replacement finds no sign-in to finish.
+    const again = await t.manager.connect("github");
+    const next = new URL(again.authorizationUrl ?? "").searchParams.get("state") ?? "";
+    await t.manager.setOwnClient("github", { clientId: "third" });
+    await expect(t.manager.finishAuth("github", "code", next)).rejects.toThrow(/no sign-in/);
+    expect(await t.secrets.get(tokens)).toBeUndefined();
   });
 
   it("refuses an own client for a server that registers its own", async () => {

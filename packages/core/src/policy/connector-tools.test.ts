@@ -88,6 +88,16 @@ describe("connector presets", () => {
     expect(needsOwnClient(NOTION_PRESET)).toBe(false);
     expect(needsOwnClient(GITHUB_PRESET)).toBe(true);
     expect(needsOwnClient(GMAIL_PRESET)).toBe(true);
+    // The same server however its URL is spelled: default port, host case, trailing slash.
+    const at = (url: string) =>
+      needsOwnClient({ ...GITHUB_PRESET, transport: { type: "http", url } });
+    expect(at("https://api.githubcopilot.com:443/mcp/")).toBe(true);
+    expect(at("https://API.githubcopilot.com/mcp")).toBe(true);
+    expect(at("https://gmailmcp.googleapis.com:443/mcp/v1/")).toBe(true);
+    // Another port, host, or path is another server.
+    expect(at("https://api.githubcopilot.com:8443/mcp/")).toBe(false);
+    expect(at("https://api.githubcopilot.com/other/")).toBe(false);
+    expect(at("https://evil.example/mcp/")).toBe(false);
     // Keyed by the server, not the id: a GitHub id pointed elsewhere registers as usual.
     expect(
       needsOwnClient({ ...GITHUB_PRESET, transport: { type: "http", url: "https://x.test/mcp" } }),

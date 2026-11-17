@@ -283,6 +283,27 @@ describe("COMMS", () => {
     expect(await within(chat).findByText("On it, Commander.")).toBeInTheDocument();
   });
 
+  it("lets go of a session it started once the list has it, so archiving it closes COMMS", async () => {
+    const user = userEvent.setup();
+    const fake = fakeApi();
+    const { calls, emit } = renderApp("/", fake);
+    await map();
+    await user.type(composer(), "Plan the week{Enter}");
+    const sent = await waitFor(() => {
+      const c = calls.find((x) => x.method === "POST" && x.path.endsWith("/messages"));
+      if (!c) throw new Error("no message yet");
+      return c;
+    });
+    const sessionId = sent.path.split("/")[2] ?? "";
+    // The list picks it up, then it is archived elsewhere.
+    emit({ type: "session.created", agentId: "vesper", sessionId, payload: { title: "x" } });
+    await within(crewColumn()).findByRole("button", { name: /New session/ });
+    const entry = fake.sessions.get(sessionId);
+    if (entry) entry.session = { ...entry.session, archivedAt: at };
+    emit({ type: "session.archived", agentId: "vesper", sessionId, payload: {} });
+    await waitFor(() => expect(composer()).toBeInTheDocument());
+  });
+
   it("starts the conversation with whoever is picked in the agent row", async () => {
     const user = userEvent.setup();
     const { calls } = renderApp("/");
@@ -416,6 +437,33 @@ describe("COMMS", () => {
       ]),
     );
     expect(s.runs.at(-1)?.agentId).toBe("vesper");
+  });
+
+  it("shows the session's real owner once the handover settles, even if it changed again", async () => {
+    const user = userEvent.setup();
+    const fake = fakeApi();
+    const s = fake.seedSession("vesper", "Launch plan");
+    localStorage.setItem("outerworld.commsSession", s.session.id);
+    // The handover lands, then another tab hands the session straight back before we refetch.
+    const send = fake.api.send;
+    fake.api.send = async <T,>(
+      method: Parameters<typeof send>[0],
+      path: string,
+      body?: unknown,
+    ) => {
+      const out = await send<T>(method, path, body);
+      if (method === "PATCH") s.session = { ...s.session, agentId: "vesper" };
+      return out;
+    };
+    renderApp("/", fake);
+    await map();
+    await within(comms()).findByRole("region", { name: "Vesper · Launch plan" });
+    await choose(user, comms(), term("comms.agent"), /^Quill/);
+    await waitFor(() =>
+      expect(
+        within(comms()).getByRole("button", { name: /^Answering Vesper/ }),
+      ).toBeInTheDocument(),
+    );
   });
 
   it("leaves a refused handover's session exactly as it was", async () => {

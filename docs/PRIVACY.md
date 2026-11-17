@@ -12,7 +12,7 @@ no telemetry, no analytics, and no error reporting.
 |------|----------|-------------------------|-------|
 | Station config: name, rooms, hallways, props, connector metadata, budgets | `$OUTERWORLD_HOME/station.json` (default `~/.outerworld/`) | Never | Human-editable. Connector entries hold names and URLs only, no tokens. |
 | Crew documents and config: `identity.md`, `purpose.md`, `standing-orders.md`, `context.md`, `agent.json` | `$OUTERWORLD_HOME/agents/<id>/` | Never | Edited in the SPA or by hand. |
-| Sessions, messages, runs, tool calls and results, dispatches, memory, schedule history, spend, events | `$OUTERWORLD_HOME/station.db` (SQLite) | Never | Tool results include web pages and Notion content your agents fetched. |
+| Sessions, messages, runs, tool calls and results, dispatches, memory, schedule history, spend, events | `$OUTERWORLD_HOME/station.db` (SQLite) | Never | Tool results include web pages and Notion, GitHub, or Gmail content your agents fetched. |
 | Files your agents write | `$OUTERWORLD_HOME/workspaces/<agent-id>/` | Never | The only place Files-prop tools can read or write. |
 | Daemon logs | `$OUTERWORLD_HOME/logs/` | Never | Secrets are redacted before anything is written. |
 | Daemon access token | `$OUTERWORLD_HOME/daemon.token`, file mode 0600 | Never | Generated on first start; lets the SPA talk to the daemon. Given to the page the daemon (or the dev server) serves. |
@@ -34,7 +34,7 @@ key is configured and where it came from (keychain or environment).
 
 ## What leaves the machine
 
-Exactly three kinds of request, all made by the daemon, all caused by your configuration or by an
+Exactly these kinds of request, all made by the daemon, all caused by your configuration or by an
 agent you created:
 
 1. **Model calls to Anthropic** (`api.anthropic.com`) **or OpenRouter** (`openrouter.ai`): the
@@ -51,10 +51,20 @@ agent you created:
    registration, token exchange and refresh). Notion's sign-in page opens in your browser and
    returns to the daemon's loopback callback. Every granted agent acts as the Notion account you
    signed in with.
-3. **`web_fetch` requests** to public http(s) URLs an agent with the Web prop chooses. Loopback,
+3. **Connector calls to GitHub** (`api.githubcopilot.com`) for agents granted GitHub, if you added
+   it: the repository, issue, pull request, and code reads and changes the agent requests, so
+   requests and results can carry your repository data. The OAuth flow goes to GitHub
+   (`github.com`) with the OAuth app you registered (ADR-0019): discovery, token exchange and
+   refresh. Every granted agent acts as the GitHub account you signed in with.
+4. **Connector calls to Gmail** (`gmailmcp.googleapis.com`) for agents granted Gmail, if you added
+   it: the mail searches, reads, drafts, and label changes the agent requests, so requests and
+   results can carry your email. The OAuth flow goes to Google (`accounts.google.com`,
+   `oauth2.googleapis.com`) with the OAuth client you registered. Every granted agent acts as the
+   Google account you signed in with.
+5. **`web_fetch` requests** to public http(s) URLs an agent with the Web prop chooses. Loopback,
    private-network, and link-local addresses are refused.
 
-Nothing else. The SPA talks only to the daemon on `127.0.0.1`. Fonts are self-hosted. Tests and CI
+Nothing else: no connector you have not added is ever contacted. The SPA talks only to the daemon on `127.0.0.1`. Fonts are self-hosted. Tests and CI
 make no network calls: they use a scripted fake model and a fake MCP server; a real-network smoke
 test runs only when you set its environment variable by hand.
 

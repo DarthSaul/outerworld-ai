@@ -14,7 +14,7 @@ import {
   Sprite,
 } from "@darthsaul/outerworld-ai-ui";
 import { useQueryClient } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { ErrorNote } from "../components/ErrorNote.js";
 import { ModelPicker } from "../components/ModelPicker.js";
 import { useAllSessions, useSession, useStationView, useUpdateSession } from "../queries.js";
@@ -91,12 +91,11 @@ function SessionComms({
   const update = useUpdateSession(sessionId);
   const client = useQueryClient();
   const session = detail.data?.session;
-  // The crew member last picked here, until the session says so too. A pick made while an earlier
-  // handover is in flight compares against (and shows) this, so it is never dropped.
+  // The crew member last picked here, shown until that handover and the refetch after it finish;
+  // then the session's own owner, whatever it is. A pick made while an earlier handover is in
+  // flight compares against this, so it is never dropped. Only the latest pick may clear it.
   const [requested, setRequested] = useState<string>();
-  if (requested !== undefined && requested === session?.agentId && !update.isPending) {
-    setRequested(undefined);
-  }
+  const latestPick = useRef(0);
   const owner = requested ?? session?.agentId;
   const latest = detail.data?.runs[0];
   const running = latest !== undefined && !isTerminal(latest.state);
@@ -116,17 +115,23 @@ function SessionComms({
           {...(locked ? { locked } : {})}
           onPick={(agentId) => {
             if (agentId === owner) return;
+            const pick = ++latestPick.current;
             setRequested(agentId);
+            const settle = () => {
+              if (pick === latestPick.current) setRequested(undefined);
+            };
             // Handovers go out one at a time, in order (the session's mutation scope).
             update.mutate(
               { agentId },
               {
                 onSuccess: () => {
-                  void client.invalidateQueries({ queryKey: ["session", sessionId] });
-                  void client.invalidateQueries({ queryKey: ["sessions"] });
+                  void Promise.all([
+                    client.invalidateQueries({ queryKey: ["session", sessionId] }),
+                    client.invalidateQueries({ queryKey: ["sessions"] }),
+                  ]).finally(settle);
                 },
                 // Refused: show what the session really has.
-                onError: () => setRequested(undefined),
+                onError: settle,
               },
             );
           }}
