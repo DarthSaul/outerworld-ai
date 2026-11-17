@@ -452,6 +452,30 @@ describe("a server that registers no clients (ADR-0019)", () => {
     expect(used).toEqual(["second"]);
   });
 
+  it("keeps a disconnect made while a connect waits on a client replacement", async () => {
+    const t = setup(inMemory());
+    await withGitHub(t);
+    await t.manager.setOwnClient("github", { clientId: "first" });
+    let release = () => {};
+    const gate = new Promise<void>((r) => {
+      release = r;
+    });
+    const set = t.secrets.set.bind(t.secrets);
+    t.secrets.set = async (key, value) => {
+      if (key.endsWith(".own")) await gate;
+      return set(key, value);
+    };
+    const replacing = t.manager.setOwnClient("github", { clientId: "second" });
+    await new Promise((r) => setTimeout(r, 5));
+    const connecting = t.manager.connect("github");
+    await t.manager.disconnect("github");
+    release();
+    await replacing;
+    expect((await connecting).status).toBe("disconnected");
+    expect(t.manager.catalog()).toEqual({});
+    expect(t.statuses()).not.toContain("connected");
+  });
+
   it("refuses an own client for a server that registers its own", async () => {
     const t = setup(inMemory());
     await t.manager.refresh();

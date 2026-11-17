@@ -497,6 +497,7 @@ export const glossary = {
   "comms.agent.busy": "Switch crew once this run ends.",
   "comms.agent.dispatched": "Dispatched work stays with its crew member.",
   "comms.agent.to": "Message {name}…",
+  "comms.agent.notSent": "Not sent: the switch of crew member didn't go through. Send it again.",
   "scanner.roomCount": "Rooms · {count}",
   "scanner.roomPick": "Pick a room",
   "scanner.roomCrew": "{count} crew",

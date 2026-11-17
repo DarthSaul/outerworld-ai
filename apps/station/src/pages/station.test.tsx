@@ -3,6 +3,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { axe } from "vitest-axe";
+import { ApiError } from "../lib/api.js";
 import { fakeApi, renderApp } from "../test/fake-daemon.js";
 import { choose } from "../test/menus.js";
 
@@ -460,6 +461,40 @@ describe("COMMS", () => {
       ]),
     );
     expect(s.runs.at(-1)?.agentId).toBe("vesper");
+  });
+
+  it("does not send a message queued behind a handover that is refused", async () => {
+    const user = userEvent.setup();
+    const fake = fakeApi();
+    const s = fake.seedSession("vesper", "Launch plan");
+    localStorage.setItem("outerworld.commsSession", s.session.id);
+    let release = () => {};
+    const held = new Promise<void>((r) => {
+      release = r;
+    });
+    const send = fake.api.send;
+    fake.api.send = async <T,>(
+      method: Parameters<typeof send>[0],
+      path: string,
+      body?: unknown,
+    ) => {
+      if (method === "PATCH") {
+        await held;
+        throw new ApiError(409, "the session has a run in progress", []);
+      }
+      return send<T>(method, path, body);
+    };
+    const { calls } = renderApp("/", fake);
+    await map();
+    await within(comms()).findByRole("region", { name: "Vesper · Launch plan" });
+    await choose(user, comms(), term("comms.agent"), /^Quill/);
+    const box = within(comms()).getByRole("textbox", { name: term("comms.placeholder") });
+    await user.type(box, "Go{Enter}");
+    release();
+    expect(await within(comms()).findByText(term("comms.agent.notSent"))).toBeVisible();
+    expect(calls.filter((c) => c.method === "POST")).toEqual([]);
+    expect(box).toHaveValue("Go");
+    expect(s.runs).toHaveLength(0);
   });
 
   it("shows the session's real owner once the handover settles, even if it changed again", async () => {

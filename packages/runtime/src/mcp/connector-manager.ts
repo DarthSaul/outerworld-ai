@@ -68,6 +68,11 @@ interface Entry {
   ownClient: boolean;
   /** Bumped by every disconnect: a connect that began before one never installs its client. */
   generation: number;
+  /**
+   * Bumped only by a disconnect the Commander (or the daemon) asked for, not by the one a client
+   * replacement makes: a connect waiting on that replacement gives up if this changes meanwhile.
+   */
+  cancels: number;
   /** Sign-in completions and client replacements, one at a time, in order. */
   auth: Promise<unknown>;
   /** How many of those are queued or running. */
@@ -159,6 +164,7 @@ export class ConnectorManager {
         retries: 0,
         ownClient: false,
         generation: 0,
+        cancels: 0,
         auth: Promise.resolve(),
         authQueued: 0,
         provider: new KeychainOAuthProvider({
@@ -216,7 +222,12 @@ export class ConnectorManager {
     // client they leave. It does not join the queue: a slow server never holds up a replacement,
     // whose disconnect makes this attempt stale instead. With none queued it does not yield, so a
     // disconnect right after it still supersedes it.
-    if (entry.authQueued > 0) await entry.auth;
+    if (entry.authQueued > 0) {
+      const cancels = entry.cancels;
+      await entry.auth;
+      // Disconnected while it waited: that stands.
+      if (entry.cancels !== cancels) return { status: entry.status };
+    }
     if (needsOwnClient(entry.connector) && !entry.ownClient) {
       const detail = `${entry.connector.name} needs your own OAuth app: add its client ID first`;
       this.#set(entry, "error", detail);
@@ -351,7 +362,7 @@ export class ConnectorManager {
       throw new ConflictError(`${entry.connector.name} registers its own sign-in clients`);
     }
     await this.#serialAuth(entry, async () => {
-      await this.disconnect(id);
+      await this.#takeDown(entry);
       await entry.provider.setOwnClient(client);
       entry.ownClient = true;
     });
@@ -363,6 +374,15 @@ export class ConnectorManager {
   ): Promise<void> {
     const entry = this.#entries.get(id);
     if (!entry) return;
+    entry.cancels++;
+    await this.#takeDown(entry, options);
+  }
+
+  /** Closes the connection and drops any sign-in in progress; a connect under way goes stale. */
+  async #takeDown(
+    entry: Entry,
+    options: { forget?: boolean; ownClient?: boolean } = {},
+  ): Promise<void> {
     entry.wanted = false;
     entry.generation++;
     clearTimeout(entry.retryTimer);
