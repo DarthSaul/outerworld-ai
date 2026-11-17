@@ -243,7 +243,8 @@ export class ConnectorManager {
     entry.authorizationUrl = undefined;
     let transport: Transport | undefined;
     try {
-      transport = await this.#transports(entry.connector, entry.provider);
+      // Its own view of the provider: a forget after this point drops its credential writes.
+      transport = await this.#transports(entry.connector, entry.provider.forAttempt());
       const client = new Client({ name: "outerworld-ai", version: "0.1.0" });
       await client.connect(transport);
       const listed = await client.listTools();

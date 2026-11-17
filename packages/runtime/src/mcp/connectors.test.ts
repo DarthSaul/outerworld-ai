@@ -538,6 +538,40 @@ describe("a server that registers no clients (ADR-0019)", () => {
     expect(t.manager.views().find((v) => v.id === "github")?.ownClient?.set).toBe(false);
   });
 
+  it("never lets a connect under way restore tokens that a forget deleted", async () => {
+    let release = () => {};
+    const gate = new Promise<void>((r) => {
+      release = r;
+    });
+    const working = inMemory();
+    let first = true;
+    const t = setup(async (connector, provider) => {
+      if (first) {
+        first = false;
+        // A token refresh that only lands after the forget.
+        await gate;
+        await provider.saveTokens({ access_token: "refreshed", token_type: "Bearer" });
+      } else {
+        await provider.saveTokens({ access_token: "fresh", token_type: "Bearer" });
+      }
+      return working(connector, provider);
+    });
+    await withGitHub(t);
+    await t.manager.setOwnClient("github", { clientId: "mine" });
+    const tokens = connectorSecretKey("github", "https://api.githubcopilot.com/mcp/", "tokens");
+    const connecting = t.manager.connect("github");
+    await new Promise((r) => setTimeout(r, 5));
+    await t.manager.disconnect("github", { forget: true });
+    release();
+    expect((await connecting).status).toBe("disconnected");
+    expect(await t.secrets.get(tokens)).toBeUndefined();
+    // A connect begun after the forget is not affected.
+    expect((await t.manager.connect("github")).status).toBe("connected");
+    expect(JSON.parse((await t.secrets.get(tokens)) ?? "{}")).toMatchObject({
+      access_token: "fresh",
+    });
+  });
+
   it("refuses an own client for a server that registers its own", async () => {
     const t = setup(inMemory());
     await t.manager.refresh();

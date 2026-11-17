@@ -45,6 +45,8 @@ export class KeychainOAuthProvider implements OAuthClientProvider {
   readonly #onAuthorizationUrl: (url: string) => void;
   #verifier = "";
   #state: string | undefined;
+  /** Bumped by forget and by a new own client: attempts begun before never write credentials. */
+  #epoch = 0;
 
   constructor(options: {
     connectorId: string;
@@ -117,12 +119,37 @@ export class KeychainOAuthProvider implements OAuthClientProvider {
     return info;
   }
 
+  /**
+   * This provider as one connection attempt sees it. The SDK saves tokens (a refresh, a code
+   * exchange) and client registrations through it; once a forget or a new own client lands after
+   * the attempt began, those writes are dropped, so a superseded attempt never restores what was
+   * deleted. Attempts begun afterwards get a view of their own and write as usual.
+   */
+  forAttempt(): KeychainOAuthProvider {
+    const epoch = this.#epoch;
+    const current = () => this.#epoch === epoch;
+    return new Proxy(this, {
+      get(target, prop) {
+        const value: unknown = Reflect.get(target, prop, target);
+        if (typeof value !== "function") return value;
+        const method = value as (...args: unknown[]) => unknown;
+        if (prop === "saveTokens" || prop === "saveClientInformation") {
+          return async (...args: unknown[]) => {
+            if (current()) await method.apply(target, args);
+          };
+        }
+        return method.bind(target);
+      },
+    });
+  }
+
   async saveClientInformation(info: StoredOAuthClientInformation): Promise<void> {
     await this.#secrets.set(this.#key("client"), JSON.stringify(info));
   }
 
   /** Stores the Commander's own OAuth client; a sign-in made with another client is dropped. */
   async setOwnClient(client: OwnClient): Promise<void> {
+    this.#epoch++;
     await this.#secrets.set(
       this.#key("own"),
       JSON.stringify({
@@ -177,6 +204,7 @@ export class KeychainOAuthProvider implements OAuthClientProvider {
    * stays unless `ownClient` is set (the connector is being removed).
    */
   async forget(options: { ownClient?: boolean } = {}): Promise<void> {
+    this.#epoch++;
     await this.invalidateCredentials("all");
     if (options.ownClient) await this.#secrets.delete(this.#key("own"));
     await this.#secrets.delete(legacyKey(this.#connectorId, "client"));
