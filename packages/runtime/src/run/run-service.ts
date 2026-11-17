@@ -247,6 +247,8 @@ export class RunService {
   readonly #titleCalls = new Set<AbortController>();
   readonly #active = new Map<string, AbortController>();
   readonly #done = new Map<string, Promise<RunRecord>>();
+  /** Each session's handovers, applied one at a time in the order they were asked for. */
+  readonly #handovers = new Map<string, Promise<unknown>>();
   readonly #sleep: (ms: number) => Promise<void>;
   /** Runs paused for consent, waiting for the Commander's decision. */
   readonly #waiting = new Map<string, (decision: "approved" | "denied") => void>();
@@ -349,7 +351,18 @@ export class RunService {
    * run is theirs, with their documents, grants, and model. Not while a run is going, and never a
    * dispatched worker's session (its report goes back to the lead).
    */
-  async reassignSession(sessionId: string, agentId: string): Promise<SessionRecord> {
+  reassignSession(sessionId: string, agentId: string): Promise<SessionRecord> {
+    const prior = this.#handovers.get(sessionId) ?? Promise.resolve();
+    const next = prior.then(() => this.#reassign(sessionId, agentId));
+    const tail = next.catch(() => undefined);
+    this.#handovers.set(sessionId, tail);
+    void tail.then(() => {
+      if (this.#handovers.get(sessionId) === tail) this.#handovers.delete(sessionId);
+    });
+    return next;
+  }
+
+  async #reassign(sessionId: string, agentId: string): Promise<SessionRecord> {
     this.#session(sessionId);
     const loaded = await loadStationDir(this.#o.home);
     if (!loaded.agents.some((a) => a.id === agentId)) {
@@ -408,6 +421,8 @@ export class RunService {
     options: SendOptions,
   ): Promise<{ runId: string }> {
     const trigger = options.trigger ?? "user";
+    // A handover asked for before this lands first: the run belongs to whoever it hands to.
+    await this.#handovers.get(sessionId);
     const session = this.#session(sessionId);
     if (this.#o.killSwitch.engaged()) {
       throw new ConflictError("the kill switch is on: clear it to run anything again");
