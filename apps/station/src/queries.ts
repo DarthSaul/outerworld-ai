@@ -1,32 +1,43 @@
-import type {
-  AgentDocumentName,
-  AgentSchedule,
-  AgentView,
-  ChatMessage,
-  CreateAgentInput,
-  CreateLaneInput,
-  CreateRoomInput,
-  CreateScheduleInput,
-  CrewActivityEntry,
-  HealthView,
-  Lane,
-  ModelSettings,
-  Notification,
-  OnboardInput,
-  ProviderChoice,
-  ReasoningLevel,
-  Room,
-  RunState,
-  SettingsView,
-  SpendView,
-  StationView,
-  SupportedModel,
-  UpdateAgentInput,
-  UpdateBudgetsInput,
-  UpdateRoomInput,
-  UpdateScheduleInput,
+import {
+  type AgentDocumentName,
+  type AgentSchedule,
+  type AgentView,
+  type ChatMessage,
+  type ConnectorClientInput,
+  type ConnectorPresetId,
+  type CreateAgentInput,
+  type CreateLaneInput,
+  type CreateRoomInput,
+  type CreateScheduleInput,
+  type CrewActivityEntry,
+  type HealthView,
+  type Lane,
+  type ModelSettings,
+  type Notification,
+  type OnboardInput,
+  type ProviderChoice,
+  type ReasoningLevel,
+  type Room,
+  type RunState,
+  type SettingsView,
+  type SpendView,
+  type StationView,
+  type SupportedModel,
+  term,
+  type UpdateAgentInput,
+  type UpdateBudgetsInput,
+  type UpdateRoomInput,
+  type UpdateScheduleInput,
 } from "@darthsaul/outerworld-ai-core";
-import { useInfiniteQuery, useMutation, useQueries, useQuery } from "@tanstack/react-query";
+import {
+  type MutateOptions,
+  type Mutation,
+  useInfiniteQuery,
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useDaemon } from "./daemon-context.js";
 
 /**
@@ -124,6 +135,8 @@ export interface SessionSummary extends SessionRecord {
   readonly lastMessageAt?: string;
   readonly lastMessage?: { readonly role: "user" | "assistant"; readonly text: string };
   readonly active: boolean;
+  /** `dispatch`: the Overseer opened it to hand a crew member work. */
+  readonly origin: "commander" | "dispatch";
 }
 export interface RunRecord {
   readonly id: string;
@@ -200,11 +213,22 @@ export function useSessions(agentId: string | undefined) {
   });
 }
 
-export function useSession(id: string) {
+/** Every crew member's sessions, newest activity first (the Station's session list). */
+export function useAllSessions() {
+  const { api } = useDaemon();
+  return useQuery({
+    queryKey: ["sessions", "*"],
+    queryFn: () => api.get<SessionSummary[]>("/sessions"),
+  });
+}
+
+/** One session and its history; with no id, nothing is fetched. */
+export function useSession(id: string | undefined) {
   const { api } = useDaemon();
   return useQuery({
     queryKey: ["session", id],
-    queryFn: () => api.get<SessionDetail>(`/sessions/${encodeURIComponent(id)}`),
+    queryFn: () => api.get<SessionDetail>(`/sessions/${encodeURIComponent(id ?? "")}`),
+    enabled: id !== undefined,
   });
 }
 
@@ -216,27 +240,62 @@ export function useCreateSession() {
   });
 }
 
+const sessionUpdateKey = (id: string) => ["session", id, "update"] as const;
+
 export function useUpdateSession(id: string) {
   const { api } = useDaemon();
   return useMutation({
+    mutationKey: sessionUpdateKey(id),
     mutationFn: (input: {
       title?: string;
       archived?: true;
       modelSettings?: ModelSettings | null;
+      /** Hands the conversation to another crew member (ADR-0018). */
+      agentId?: string;
     }) => api.send<SessionRecord>("PATCH", `/sessions/${encodeURIComponent(id)}`, input),
     // One session's writes go out one at a time, in order: a later one never lands first.
     scope: { id: `session:${id}` },
   });
 }
 
+interface QueuedMessage {
+  readonly text: string;
+  /** Handovers still in flight when the message was sent: it goes out only if they all land. */
+  readonly after: readonly Mutation<unknown, Error, unknown, unknown>[];
+}
+
 export function useSendMessage(sessionId: string) {
   const { api } = useDaemon();
-  return useMutation({
-    mutationFn: (text: string) =>
-      api.send<{ runId: string }>("POST", `/sessions/${encodeURIComponent(sessionId)}/messages`, {
-        text,
-      }),
+  const client = useQueryClient();
+  const send = useMutation({
+    mutationFn: async ({ text, after }: QueuedMessage) => {
+      // A failed handover leaves the session with its old crew member: the message was meant for
+      // the new one, so it is not sent, and stays in the box.
+      if (after.some((h) => h.state.status === "error"))
+        throw new Error(term("comms.agent.notSent"));
+      return api.send<{ runId: string }>(
+        "POST",
+        `/sessions/${encodeURIComponent(sessionId)}/messages`,
+        { text },
+      );
+    },
+    // The same scope as the session's own writes: a message waits for a handover in flight, so
+    // it goes to the crew member the Commander just picked.
+    scope: { id: `session:${sessionId}` },
   });
+  const mutate = (
+    text: string,
+    options?: MutateOptions<{ runId: string }, Error, QueuedMessage>,
+  ) => {
+    const after = client
+      .getMutationCache()
+      .findAll({ mutationKey: sessionUpdateKey(sessionId), status: "pending" })
+      .filter(
+        (m) => (m.state.variables as { agentId?: string } | undefined)?.agentId !== undefined,
+      );
+    send.mutate({ text, after }, options);
+  };
+  return { ...send, mutate };
 }
 
 export function useCancelRun() {
@@ -321,6 +380,8 @@ export interface ConnectorItem {
   readonly detail?: string;
   readonly tools: readonly { name: string; class: "read" | "write"; description: string }[];
   readonly grantedTo: readonly string[];
+  /** For a server that registers no clients: whether the Commander's OAuth app is saved. */
+  readonly ownClient?: { readonly set: boolean; readonly redirectUrl: string };
 }
 
 export function useConnectors() {
@@ -331,9 +392,20 @@ export function useConnectors() {
   });
 }
 
-export function useAddNotion() {
+export function useAddConnector() {
   const { api } = useDaemon();
-  return useMutation({ mutationFn: () => api.send("POST", "/connectors", { preset: "notion" }) });
+  return useMutation({
+    mutationFn: (preset: ConnectorPresetId) => api.send("POST", "/connectors", { preset }),
+  });
+}
+
+/** The Commander's own OAuth app for a server that registers none (ADR-0019). */
+export function useSetConnectorClient() {
+  const { api } = useDaemon();
+  return useMutation({
+    mutationFn: ({ id, ...client }: { id: string } & ConnectorClientInput) =>
+      api.send("PUT", `/connectors/${encodeURIComponent(id)}/client`, client),
+  });
 }
 
 export function useUpdateConnector() {

@@ -12,6 +12,7 @@ export {
   AddConnectorInput,
   ApiKeyInput,
   ApproveMemoryInput,
+  ConnectorClientInput,
   ConsentDecisionInput,
   CreateSessionInput,
   DisconnectInput,
@@ -195,9 +196,15 @@ export {
 } from "./policy/budget.js";
 // Connector tool classification and presets (ADR-0012)
 export {
+  CONNECTOR_PRESET_IDS,
+  CONNECTOR_PRESETS,
+  type ConnectorPresetId,
   classifyConnectorTool,
+  GITHUB_PRESET,
+  GMAIL_PRESET,
   KNOWN_TOOL_CLASSES,
   NOTION_PRESET,
+  needsOwnClient,
   type ToolHints,
 } from "./policy/connector-tools.js";
 // Dispatch (brief §7)

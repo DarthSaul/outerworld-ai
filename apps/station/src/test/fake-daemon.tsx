@@ -4,9 +4,12 @@ import {
   type AgentDocumentName,
   type AgentView,
   type ChatMessage,
+  CONNECTOR_PRESETS,
+  type ConnectorPresetId,
   type CrewActivityEntry,
   DEFAULT_MODEL,
   type Notification,
+  needsOwnClient,
   type RuntimeEvent,
   resolveGrants,
   resolveModelSettings,
@@ -324,29 +327,32 @@ export function fakeApi() {
       memories[i] = { ...m, status, ...(b.text ? { text: String(b.text) } : {}) };
       return memories[i];
     }
+    const summaries = (agentId?: string) =>
+      [...sessions.values()]
+        .filter((x) => !x.session.archivedAt)
+        .filter((x) => agentId === undefined || x.session.agentId === agentId)
+        .map((x): SessionSummary => {
+          const last = [...x.messages]
+            .reverse()
+            .find((m) => (m.role === "user" || m.role === "assistant") && m.text !== "");
+          return {
+            ...x.session,
+            messageCount: x.messages.length,
+            ...(x.messages.length ? { lastMessageAt: "2026-09-29T12:05:00.000Z" } : {}),
+            ...(last && (last.role === "user" || last.role === "assistant")
+              ? { lastMessage: { role: last.role, text: last.text } }
+              : {}),
+            active: x.runs.some((r) => ["queued", "running", "awaiting_consent"].includes(r.state)),
+            origin: dispatches.some((d) => d.workerSessionId === x.session.id)
+              ? "dispatch"
+              : "commander",
+          };
+        })
+        .reverse();
+    if (path === "/sessions" && method === "GET") return summaries();
     if (parts[0] === "agents" && parts[2] === "sessions") {
       const agentId = parts[1] ?? "";
-      if (method === "GET") {
-        return [...sessions.values()]
-          .filter((x) => x.session.agentId === agentId)
-          .map((x): SessionSummary => {
-            const last = [...x.messages]
-              .reverse()
-              .find((m) => (m.role === "user" || m.role === "assistant") && m.text !== "");
-            return {
-              ...x.session,
-              messageCount: x.messages.length,
-              ...(x.messages.length ? { lastMessageAt: "2026-09-29T12:05:00.000Z" } : {}),
-              ...(last && (last.role === "user" || last.role === "assistant")
-                ? { lastMessage: { role: last.role, text: last.text } }
-                : {}),
-              active: x.runs.some((r) =>
-                ["queued", "running", "awaiting_consent"].includes(r.state),
-              ),
-            };
-          })
-          .reverse();
-      }
+      if (method === "GET") return summaries(agentId);
       const session: SessionRecord = {
         id: nextId("s"),
         agentId,
@@ -376,6 +382,21 @@ export function fakeApi() {
         return detail;
       }
       if (method === "PATCH") {
+        // Every refusal comes before any change, as the daemon's: a refused request changes nothing.
+        if (b.agentId !== undefined && String(b.agentId) !== entry.session.agentId) {
+          const agentId = String(b.agentId);
+          if (!state.agents.has(agentId)) throw new ApiError(404, `no agent "${agentId}"`);
+          if (dispatches.some((d) => d.workerSessionId === entry.session.id)) {
+            throw new ApiError(
+              409,
+              "a dispatched session stays with the crew member it was given to",
+            );
+          }
+          const busy = entry.runs.some((r) =>
+            ["queued", "running", "awaiting_consent"].includes(r.state),
+          );
+          if (busy) throw new ApiError(409, "a run is still running in this session");
+        }
         const { modelSettings: _old, ...bare } = entry.session;
         const nextSettings =
           b.modelSettings === null
@@ -386,6 +407,7 @@ export function fakeApi() {
           ...(b.title ? { title: String(b.title) } : {}),
           ...(b.archived ? { archivedAt: "2026-09-29T12:00:00.000Z" } : {}),
           ...(nextSettings ? { modelSettings: nextSettings } : {}),
+          ...(b.agentId !== undefined ? { agentId: String(b.agentId) } : {}),
         };
         return entry.session;
       }
@@ -410,14 +432,26 @@ export function fakeApi() {
       }
     }
     if (path === "/connectors") {
-      if (method === "GET") return connectors;
+      // A fresh array, as JSON from the daemon would be.
+      if (method === "GET") return [...connectors];
+      const preset = CONNECTOR_PRESETS[b.preset as ConnectorPresetId];
+      if (!preset || preset.transport.type !== "http") throw new ApiError(400, "no such preset");
+      if (connectors.some((c) => c.id === preset.id)) throw new ApiError(409, "already installed");
       const added: ConnectorItem = {
-        id: "notion",
-        name: "Notion",
-        url: "https://mcp.notion.com/mcp",
+        id: preset.id,
+        name: preset.name,
+        url: preset.transport.url,
         status: "disconnected",
         tools: [],
         grantedTo: [],
+        ...(needsOwnClient(preset)
+          ? {
+              ownClient: {
+                set: false,
+                redirectUrl: `http://127.0.0.1:4317/oauth/callback/${preset.id}`,
+              },
+            }
+          : {}),
       };
       connectors.push(added);
       return added;
@@ -429,6 +463,11 @@ export function fakeApi() {
       if (parts[2] === "connect") {
         connectors[i] = { ...c, status: connectAnswer.status };
         return connectAnswer;
+      }
+      if (parts[2] === "client") {
+        if (!c.ownClient) throw new ApiError(409, `${c.name} registers its own sign-in clients`);
+        connectors[i] = { ...c, ownClient: { ...c.ownClient, set: true } };
+        return undefined;
       }
       if (parts[2] === "disconnect") {
         connectors[i] = { ...c, status: "disconnected", tools: [] };

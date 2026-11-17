@@ -1,4 +1,4 @@
-import { term } from "@darthsaul/outerworld-ai-core";
+import { term, termWith } from "@darthsaul/outerworld-ai-core";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
@@ -32,15 +32,65 @@ describe("Connectors, a section of Settings", () => {
     ).toBeInTheDocument();
   });
 
-  it("offers to add Notion when the station has no connectors", async () => {
+  it("offers Notion, GitHub, and Gmail when the station has no connectors", async () => {
     const user = userEvent.setup();
     const { calls } = renderApp("/settings/connectors");
-    await user.click(await screen.findByRole("button", { name: term("connector.addNotion") }));
+    const add = (name: string) => termWith("connector.add", { name });
+    await user.click(await screen.findByRole("button", { name: add("Notion") }));
     expect(calls).toContainEqual({
       method: "POST",
       path: "/connectors",
       body: { preset: "notion" },
     });
+    expect(screen.getByRole("button", { name: add("GitHub") })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: add("Gmail") })).toBeInTheDocument();
+  });
+
+  it("offers the presets not installed yet beside the installed ones", async () => {
+    renderApp("/settings/connectors", withNotion());
+    const adding = await screen.findByRole("region", { name: term("connector.add.title") });
+    expect(
+      within(adding)
+        .getAllByRole("button")
+        .map((b) => b.textContent),
+    ).toEqual([
+      termWith("connector.add", { name: "GitHub" }),
+      termWith("connector.add", { name: "Gmail" }),
+    ]);
+  });
+
+  it("takes GitHub's OAuth app: shows the redirect, sends the client, never shows it back", async () => {
+    const user = userEvent.setup();
+    const fake = fakeApi();
+    const { emit } = renderApp("/settings/connectors", fake);
+    // The daemon announces a station change after each install.
+    const added = () => emit({ type: "station.updated", payload: {} });
+    await user.click(
+      await screen.findByRole("button", { name: termWith("connector.add", { name: "GitHub" }) }),
+    );
+    added();
+    const card = await screen.findByRole("region", { name: "GitHub" });
+    const form = within(card).getByRole("form", { name: term("connector.client") });
+    expect(form).toHaveTextContent("http://127.0.0.1:4317/oauth/callback/github");
+    const secret = within(form).getByLabelText(term("connector.client.secret"));
+    expect(secret).toHaveAttribute("type", "password");
+    await user.type(within(form).getByLabelText(term("connector.client.id")), "Iv1.abc");
+    await user.type(secret, "shh");
+    await user.click(within(form).getByRole("button", { name: term("connector.client.save") }));
+    expect(fake.calls).toContainEqual({
+      method: "PUT",
+      path: "/connectors/github/client",
+      body: { clientId: "Iv1.abc", clientSecret: "shh" },
+    });
+    expect(await within(form).findByText(term("connector.client.set"))).toBeInTheDocument();
+    expect(within(form).getByLabelText(term("connector.client.id"))).toHaveValue("");
+    // Notion registers its own clients: no form there.
+    await user.click(
+      screen.getByRole("button", { name: termWith("connector.add", { name: "Notion" }) }),
+    );
+    added();
+    const notion = await screen.findByRole("region", { name: "Notion" });
+    expect(within(notion).queryByRole("form")).toBeNull();
   });
 
   it("shows a connected Notion's status, tools with their class, and who is granted it", async () => {

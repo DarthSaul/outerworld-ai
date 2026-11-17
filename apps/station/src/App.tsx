@@ -32,13 +32,13 @@ import { useCrt, useDashboard, useRadio } from "./station/use-dashboard.js";
 const Gallery = lazy(() => import("./dev/GalleryPage.js"));
 
 /**
- * The page tabs: the Station, then the other v1 screens in the same row (D26). Appearance (the
- * design's Crew Select) sits after Crew; Connectors is a section of Settings (ADR-0014).
+ * The page tabs: the Station, then the other v1 screens in the same row (D26). The crew roster is
+ * its own tab name (ADR-0018); Connectors is a section of Settings (ADR-0014).
  */
 export const SCREENS: ReadonlyArray<{ path: string; label: GlossaryKey }> = [
   { path: "/", label: "tab.station" },
   { path: "/comms", label: "comms" },
-  { path: "/crew", label: "agents" },
+  { path: "/crew", label: "tab.crew" },
   { path: "/memory", label: "memory" },
   { path: "/notifications", label: "notifications" },
 ];
@@ -137,8 +137,12 @@ function Chrome({ children }: { readonly children: ReactNode }) {
           </>
         }
       />
-      <main className="mx-auto flex w-full min-w-0 max-w-app flex-1 flex-col desktop:min-h-0 desktop:overflow-hidden">
-        {children}
+      {/* Laid out like the header and footer bars (padding outside, the app's width inside), so
+          every screen's edges line up with theirs. Screens pad only above and below. */}
+      <main className="flex min-w-0 flex-1 flex-col px-3.5 desktop:min-h-0 desktop:overflow-hidden">
+        <div className="mx-auto flex w-full min-w-0 max-w-app flex-1 flex-col desktop:min-h-0">
+          {children}
+        </div>
       </main>
       <ErrorNote error={setKill.error} />
       <StationVitals
@@ -174,9 +178,9 @@ function Chrome({ children }: { readonly children: ReactNode }) {
   );
 }
 
-/** Every screen but the Station and Crew Select sits in a padded page area. */
+/** Every screen but the Station sits in a page area padded above and below. */
 function Page({ children }: { readonly children: ReactNode }) {
-  return <div className="flex flex-1 flex-col p-3.5 desktop:min-h-0">{children}</div>;
+  return <div className="flex flex-1 flex-col py-3.5 desktop:min-h-0">{children}</div>;
 }
 
 /** An empty station (no station.json yet) shows onboarding instead of the screens. */

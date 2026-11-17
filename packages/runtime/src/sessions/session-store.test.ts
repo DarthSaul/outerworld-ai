@@ -2,6 +2,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { DispatchStore } from "../dispatch/dispatch-store.js";
 import { openDatabase } from "../storage/database.js";
 import { SessionStore } from "./session-store.js";
 
@@ -70,6 +71,36 @@ describe("SessionStore: sessions", () => {
       role: "user",
       text: "Plan the week",
     });
+  });
+
+  it("summarizes every agent's sessions when no agent is given, tagging dispatched ones", () => {
+    const db = openDatabase(":memory:");
+    const s = new SessionStore(db, { now: clock() });
+    const lead = s.createSession("vesper", "Lead");
+    const run = s.createRun({ sessionId: lead.id, agentId: "vesper", trigger: "user", model: "m" });
+    const worker = s.createSession("quill", "From Vesper");
+    new DispatchStore(db).create({
+      leadAgentId: "vesper",
+      leadSessionId: lead.id,
+      leadRunId: run.id,
+      workerAgentId: "quill",
+      workerSessionId: worker.id,
+      task: "Look it up",
+    });
+    const all = s.sessionSummaries();
+    expect(all.map((x) => [x.title, x.agentId, x.origin])).toEqual([
+      ["From Vesper", "quill", "dispatch"],
+      ["Lead", "vesper", "commander"],
+    ]);
+    expect(s.sessionSummaries("vesper").map((x) => x.origin)).toEqual(["commander"]);
+  });
+
+  it("hands a session to another agent", () => {
+    const s = store();
+    const session = s.createSession("vesper", "Chat");
+    expect(s.setAgent(session.id, "quill").agentId).toBe("quill");
+    expect(s.sessionSummaries("quill").map((x) => x.id)).toEqual([session.id]);
+    expect(() => s.setAgent("nope", "quill")).toThrow(/no session/);
   });
 
   it("returns undefined for an unknown session and refuses to rename one", () => {

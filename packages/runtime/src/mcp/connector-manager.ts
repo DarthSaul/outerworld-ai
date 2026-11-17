@@ -2,6 +2,7 @@ import {
   type Connector,
   type ConnectorToolCatalog,
   classifyConnectorTool,
+  needsOwnClient,
   type ToolClass,
 } from "@darthsaul/outerworld-ai-core";
 import {
@@ -11,10 +12,11 @@ import {
   type Transport,
   UnauthorizedError,
 } from "@modelcontextprotocol/client";
+import { ConflictError, NotFoundError } from "../crew/crew-service.js";
 import type { SecretStore } from "../secrets/store.js";
 import type { EventStore } from "../storage/event-store.js";
 import { loadStationDir } from "../storage/station-dir.js";
-import { KeychainOAuthProvider } from "./oauth-provider.js";
+import { KeychainOAuthProvider, type OwnClient } from "./oauth-provider.js";
 
 export type ConnectorStatus = "disconnected" | "needs_auth" | "connected" | "error";
 
@@ -32,6 +34,11 @@ export interface ConnectorView {
   readonly status: ConnectorStatus;
   readonly detail?: string;
   readonly tools: readonly ConnectorTool[];
+  /**
+   * For a server that registers no clients (ADR-0019): whether the Commander's own OAuth client
+   * is stored, and the redirect URL to register it with. Never the client itself.
+   */
+  readonly ownClient?: { readonly set: boolean; readonly redirectUrl: string };
 }
 
 /** Builds the transport for a connector; tests pass an in-memory one. */
@@ -57,6 +64,19 @@ interface Entry {
   wanted: boolean;
   retryTimer?: ReturnType<typeof setTimeout>;
   retries: number;
+  /** Whether the Commander's own OAuth client is stored, for a server that needs one. */
+  ownClient: boolean;
+  /** Bumped by every disconnect: a connect that began before one never installs its client. */
+  generation: number;
+  /**
+   * Bumped only by a disconnect the Commander (or the daemon) asked for, not by the one a client
+   * replacement makes: a connect waiting on that replacement gives up if this changes meanwhile.
+   */
+  cancels: number;
+  /** Sign-in completions and client replacements, one at a time, in order. */
+  auth: Promise<unknown>;
+  /** How many of those are queued or running. */
+  authQueued: number;
 }
 
 const httpTransport: TransportFactory = (connector, provider) => {
@@ -142,6 +162,11 @@ export class ConnectorManager {
         tools: [],
         wanted: false,
         retries: 0,
+        ownClient: false,
+        generation: 0,
+        cancels: 0,
+        auth: Promise.resolve(),
+        authQueued: 0,
         provider: new KeychainOAuthProvider({
           connectorId: connector.id,
           server: serverOf(connector),
@@ -153,6 +178,7 @@ export class ConnectorManager {
         }),
       };
       this.#entries.set(connector.id, entry);
+      if (needsOwnClient(connector)) entry.ownClient = await entry.provider.hasOwnClient();
     }
   }
 
@@ -164,6 +190,9 @@ export class ConnectorManager {
       status: e.status,
       ...(e.detail !== undefined ? { detail: e.detail } : {}),
       tools: e.tools,
+      ...(needsOwnClient(e.connector)
+        ? { ownClient: { set: e.ownClient, redirectUrl: this.#redirectUrl(e.connector.id) } }
+        : {}),
     }));
   }
 
@@ -189,17 +218,40 @@ export class ConnectorManager {
     id: string,
   ): Promise<{ status: ConnectorStatus; authorizationUrl?: string; detail?: string }> {
     const entry = this.#entry(id);
+    // Waits for sign-in completions and client replacements already queued, so it reads the
+    // client they leave. It does not join the queue: a slow server never holds up a replacement,
+    // whose disconnect makes this attempt stale instead. With none queued it does not yield, so a
+    // disconnect right after it still supersedes it.
+    if (entry.authQueued > 0) {
+      const cancels = entry.cancels;
+      await entry.auth;
+      // Disconnected while it waited: that stands.
+      if (entry.cancels !== cancels) return { status: entry.status };
+    }
+    if (needsOwnClient(entry.connector) && !entry.ownClient) {
+      const detail = `${entry.connector.name} needs your own OAuth app: add its client ID first`;
+      this.#set(entry, "error", detail);
+      return { status: "error", detail };
+    }
     entry.wanted = true;
+    const generation = entry.generation;
+    // A disconnect landed while this connect waited: it is superseded and changes nothing.
+    const stale = () => entry.generation !== generation;
     clearTimeout(entry.retryTimer);
     await entry.client?.close().catch(() => undefined);
     entry.client = undefined;
     entry.authorizationUrl = undefined;
     let transport: Transport | undefined;
     try {
-      transport = await this.#transports(entry.connector, entry.provider);
+      // Its own view of the provider: a forget after this point drops its credential writes.
+      transport = await this.#transports(entry.connector, entry.provider.forAttempt());
       const client = new Client({ name: "outerworld-ai", version: "0.1.0" });
       await client.connect(transport);
       const listed = await client.listTools();
+      if (stale()) {
+        await client.close().catch(() => undefined);
+        return { status: entry.status };
+      }
       entry.client = client;
       entry.pending = undefined;
       entry.retries = 0;
@@ -213,6 +265,7 @@ export class ConnectorManager {
       this.#set(entry, "connected");
       return { status: "connected" };
     } catch (error) {
+      if (stale()) return { status: entry.status };
       if (error instanceof UnauthorizedError || entry.authorizationUrl) {
         entry.pending = transport;
         entry.tools = [];
@@ -240,6 +293,19 @@ export class ConnectorManager {
     iss?: string,
   ): Promise<{ status: ConnectorStatus; detail?: string }> {
     const entry = this.#entry(id);
+    const generation = entry.generation;
+    // Serialized with client replacement: a new client never sees tokens from the old one's
+    // exchange, and an exchange after a replacement finds no sign-in in progress.
+    await this.#serialAuth(entry, () => this.#exchange(entry, code, state, iss));
+    // A disconnect landed during the exchange: it stands, and nothing reconnects.
+    if (entry.generation !== generation) {
+      return { status: entry.status, ...(entry.detail ? { detail: entry.detail } : {}) };
+    }
+    const result = await this.connect(id);
+    return { status: result.status, ...(result.detail ? { detail: result.detail } : {}) };
+  }
+
+  async #exchange(entry: Entry, code: string, state: string, iss?: string): Promise<void> {
     if (!entry.provider.consumeState(state)) {
       throw new Error("the sign-in link has expired or its state does not match; start again");
     }
@@ -259,8 +325,21 @@ export class ConnectorManager {
       throw error;
     }
     entry.pending = undefined;
-    const result = await this.connect(id);
-    return { status: result.status, ...(result.detail ? { detail: result.detail } : {}) };
+  }
+
+  /** Runs `task` after every earlier sign-in completion or client replacement for this entry. */
+  #serialAuth<T>(entry: Entry, task: () => Promise<T>): Promise<T> {
+    entry.authQueued++;
+    const counted = async () => {
+      try {
+        return await task();
+      } finally {
+        entry.authQueued--;
+      }
+    };
+    const run = entry.auth.then(counted, counted);
+    entry.auth = run.catch(() => undefined);
+    return run;
   }
 
   /**
@@ -274,17 +353,49 @@ export class ConnectorManager {
     return true;
   }
 
-  async disconnect(id: string, options: { forget?: boolean } = {}): Promise<void> {
+  /**
+   * Stores the Commander's own OAuth client for a server that registers none (ADR-0019), in the
+   * keychain. Any sign-in made before is dropped; the next connect signs in with this client.
+   */
+  async setOwnClient(id: string, client: OwnClient): Promise<void> {
+    const entry = this.#entry(id);
+    if (!needsOwnClient(entry.connector)) {
+      throw new ConflictError(`${entry.connector.name} registers its own sign-in clients`);
+    }
+    await this.#serialAuth(entry, async () => {
+      await this.#takeDown(entry);
+      await entry.provider.setOwnClient(client);
+      entry.ownClient = true;
+    });
+  }
+
+  async disconnect(
+    id: string,
+    options: { forget?: boolean; ownClient?: boolean } = {},
+  ): Promise<void> {
     const entry = this.#entries.get(id);
     if (!entry) return;
+    entry.cancels++;
+    await this.#takeDown(entry);
+    if (!options.forget) return;
+    // After any code exchange or client replacement already under way, so neither writes its
+    // tokens or client back once they are deleted.
+    await this.#serialAuth(entry, async () => {
+      await entry.provider.forget({ ownClient: options.ownClient ?? false });
+      if (options.ownClient) entry.ownClient = false;
+    });
+  }
+
+  /** Closes the connection and drops any sign-in in progress; a connect under way goes stale. */
+  async #takeDown(entry: Entry): Promise<void> {
     entry.wanted = false;
+    entry.generation++;
     clearTimeout(entry.retryTimer);
     const client = entry.client;
     entry.client = undefined;
     entry.pending = undefined;
     entry.tools = [];
     await client?.close().catch(() => undefined);
-    if (options.forget) await entry.provider.forget();
     if (entry.status !== "disconnected") this.#set(entry, "disconnected");
   }
 
@@ -315,7 +426,7 @@ export class ConnectorManager {
 
   #entry(id: string): Entry {
     const entry = this.#entries.get(id);
-    if (!entry) throw new Error(`no connector "${id}" on this station`);
+    if (!entry) throw new NotFoundError(`no connector "${id}" on this station`);
     return entry;
   }
 

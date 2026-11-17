@@ -90,6 +90,12 @@ export function commsRoutes(deps: CommsDeps): Hono {
     return s;
   };
 
+  /** Every crew member's sessions, newest activity first (the Station's session list). */
+  app.get("/sessions", (c) =>
+    c.json(
+      sessions.sessionSummaries(undefined, { includeArchived: c.req.query("archived") === "1" }),
+    ),
+  );
   app.get("/agents/:id/sessions", (c) =>
     c.json(
       sessions.sessionSummaries(c.req.param("id"), {
@@ -121,6 +127,7 @@ export function commsRoutes(deps: CommsDeps): Hono {
     const s = session(c.req.param("id"));
     const input = await readBody(c, UpdateSessionInput);
     let result = s;
+    if (input.agentId !== undefined) result = await runs.reassignSession(s.id, input.agentId);
     if (input.title !== undefined) result = runs.renameSession(s.id, input.title);
     if (input.modelSettings !== undefined) result = runs.setSessionModel(s.id, input.modelSettings);
     if (input.archived) result = runs.archiveSession(s.id);

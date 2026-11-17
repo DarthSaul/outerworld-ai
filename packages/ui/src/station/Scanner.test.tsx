@@ -272,9 +272,9 @@ describe("Scanner", () => {
     expect(within(panel).getByRole("heading", { name: "Scanner" }).nextElementSibling).toBe(caret);
     // A drawn caret in a square button, not a text glyph: down while open, right while folded.
     expect(caret).toHaveClass("size-5");
-    expect(caret.querySelector("svg")?.getAttribute("class")).not.toMatch(/rotate/);
+    expect(caret.querySelector("svg")).toHaveAttribute("data-caret-direction", "down");
     await userEvent.click(caret);
-    expect(caret.querySelector("svg")?.getAttribute("class")).toMatch(/-rotate-90/);
+    expect(caret.querySelector("svg")).toHaveAttribute("data-caret-direction", "right");
     expect(caret).toHaveAttribute("aria-expanded", "false");
     expect(caret).toHaveAccessibleName("Show the scanner");
     expect(within(panel).queryByRole("group", { name: "Scan" })).toBeNull();

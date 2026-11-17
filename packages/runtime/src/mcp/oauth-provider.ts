@@ -7,17 +7,22 @@ import type {
 } from "@modelcontextprotocol/client";
 import type { SecretStore } from "../secrets/store.js";
 
+/** A dynamic registration, the tokens, or the Commander's own OAuth client (ADR-0019). */
+type SecretKind = "client" | "tokens" | "own";
+
+/** The Commander's own OAuth client for a server that registers none (ADR-0019). */
+export interface OwnClient {
+  readonly clientId: string;
+  readonly clientSecret?: string | undefined;
+}
+
 /**
  * The keychain account for a connector's sign-in: the connector id plus a hash of the server URL
  * the sign-in was made for. A sign-in is only ever read back for that same server, so a station
  * whose connector shares an id but points elsewhere (a demo placeholder, a changed URL) never
  * sends another server's tokens, and two stations never overwrite each other's sign-in.
  */
-export function connectorSecretKey(
-  connectorId: string,
-  server: string,
-  kind: "client" | "tokens",
-): string {
+export function connectorSecretKey(connectorId: string, server: string, kind: SecretKind): string {
   const hash = createHash("sha256").update(server).digest("hex").slice(0, 16);
   return `mcp.${connectorId}.${hash}.${kind}`;
 }
@@ -40,6 +45,8 @@ export class KeychainOAuthProvider implements OAuthClientProvider {
   readonly #onAuthorizationUrl: (url: string) => void;
   #verifier = "";
   #state: string | undefined;
+  /** Bumped by forget and by a new own client: attempts begun before never write credentials. */
+  #epoch = 0;
 
   constructor(options: {
     connectorId: string;
@@ -56,11 +63,11 @@ export class KeychainOAuthProvider implements OAuthClientProvider {
     this.#onAuthorizationUrl = options.onAuthorizationUrl;
   }
 
-  #key(kind: "client" | "tokens") {
+  #key(kind: SecretKind) {
     return connectorSecretKey(this.#connectorId, this.#server, kind);
   }
 
-  async #read<T>(kind: "client" | "tokens"): Promise<T | undefined> {
+  async #read<T>(kind: SecretKind): Promise<T | undefined> {
     const raw = await this.#secrets.get(this.#key(kind));
     return raw ? (JSON.parse(raw) as T) : undefined;
   }
@@ -92,6 +99,18 @@ export class KeychainOAuthProvider implements OAuthClientProvider {
   }
 
   async clientInformation(): Promise<StoredOAuthClientInformation | undefined> {
+    // The Commander's own client wins; it is registered with the provider, not here, so it is
+    // never dropped for a changed port.
+    const own = await this.#read<OwnClient>("own");
+    if (own) {
+      return {
+        client_id: own.clientId,
+        redirect_uris: [this.#redirectUrl],
+        ...(own.clientSecret
+          ? { client_secret: own.clientSecret, token_endpoint_auth_method: "client_secret_post" }
+          : {}),
+      };
+    }
     const info = await this.#read<StoredOAuthClientInformation & { redirect_uris?: string[] }>(
       "client",
     );
@@ -100,8 +119,57 @@ export class KeychainOAuthProvider implements OAuthClientProvider {
     return info;
   }
 
+  /**
+   * This provider as one connection attempt sees it. The SDK saves tokens (a refresh, a code
+   * exchange) and client registrations through it, and clears them on some errors; once a forget
+   * or a new own client lands after the attempt began, those writes and clears are dropped, so a
+   * superseded attempt never restores what was deleted nor deletes what replaced it. Attempts
+   * begun afterwards get a view of their own and write as usual.
+   */
+  forAttempt(): KeychainOAuthProvider {
+    const epoch = this.#epoch;
+    const current = () => this.#epoch === epoch;
+    return new Proxy(this, {
+      get(target, prop) {
+        const value: unknown = Reflect.get(target, prop, target);
+        if (typeof value !== "function") return value;
+        const method = value as (...args: unknown[]) => unknown;
+        // Writes and deletes alike: a superseded attempt neither restores credentials nor wipes
+        // the ones a newer attempt saved.
+        if (
+          prop === "saveTokens" ||
+          prop === "saveClientInformation" ||
+          prop === "invalidateCredentials"
+        ) {
+          return async (...args: unknown[]) => {
+            if (current()) await method.apply(target, args);
+          };
+        }
+        return method.bind(target);
+      },
+    });
+  }
+
   async saveClientInformation(info: StoredOAuthClientInformation): Promise<void> {
     await this.#secrets.set(this.#key("client"), JSON.stringify(info));
+  }
+
+  /** Stores the Commander's own OAuth client; a sign-in made with another client is dropped. */
+  async setOwnClient(client: OwnClient): Promise<void> {
+    this.#epoch++;
+    await this.#secrets.set(
+      this.#key("own"),
+      JSON.stringify({
+        clientId: client.clientId,
+        ...(client.clientSecret ? { clientSecret: client.clientSecret } : {}),
+      }),
+    );
+    await this.invalidateCredentials("all");
+  }
+
+  /** Whether the Commander's own OAuth client is stored (never what it is). */
+  async hasOwnClient(): Promise<boolean> {
+    return (await this.#secrets.get(this.#key("own"))) !== undefined;
   }
 
   async tokens(): Promise<StoredOAuthTokens | undefined> {
@@ -139,10 +207,13 @@ export class KeychainOAuthProvider implements OAuthClientProvider {
 
   /**
    * Disconnect and forget: removes the tokens and the client registration, and any sign-in this
-   * connector id had from before sign-ins were tied to a server.
+   * connector id had from before sign-ins were tied to a server. The Commander's own OAuth client
+   * stays unless `ownClient` is set (the connector is being removed).
    */
-  async forget(): Promise<void> {
+  async forget(options: { ownClient?: boolean } = {}): Promise<void> {
+    this.#epoch++;
     await this.invalidateCredentials("all");
+    if (options.ownClient) await this.#secrets.delete(this.#key("own"));
     await this.#secrets.delete(legacyKey(this.#connectorId, "client"));
     await this.#secrets.delete(legacyKey(this.#connectorId, "tokens"));
   }

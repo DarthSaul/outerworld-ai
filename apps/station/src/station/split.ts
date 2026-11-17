@@ -1,27 +1,37 @@
 import { useState } from "react";
 
 /**
- * The Station's desktop split (ADR-0014): the map and the side column (comms over the scanner),
- * in fr of a 3fr row. The side column's share is the one stored; the map takes the rest.
+ * The Station's desktop split (ADR-0014, ADR-0018): crew, map, and comms in fr of a 4fr row,
+ * 1fr / 2fr / 1fr by default. The crew column keeps 1fr (a folded one gives it to the map); comms'
+ * share is the one stored, set with the handle between it and the map; the map takes the rest.
  */
-export const SPLIT_TOTAL = 3;
+export const SPLIT_TOTAL = 4;
+export const CREW_SHARE = 1;
 export const DEFAULT_SIDE = 1;
-/** The side column from a quarter of the row to a half; the map keeps at least half. */
+/** Comms from 0.75fr to 1.5fr; the map keeps at least 1.5fr beside an open crew column. */
 export const SIDE_LIMITS = { min: 0.75, max: 1.5 } as const;
 
 export const clampSide = (side: number) =>
   Math.min(SIDE_LIMITS.max, Math.max(SIDE_LIMITS.min, side));
 
-/** Moves the handle `dx` pixels across a row `width` pixels wide: rightwards narrows the side. */
+/** Moves the handle `dx` pixels across a row `width` pixels wide: rightwards narrows comms. */
 export function resizeSide(side: number, dx: number, width: number): number {
   if (width <= 0) return side;
   return clampSide(side - (dx * SPLIT_TOTAL) / width);
 }
 
-/** `grid-template-columns` for the row: map, handle, side column. */
-export function splitTemplate(side: number): string {
+/**
+ * `grid-template-columns` for the row: crew, map, handle, comms. A folded crew column has no
+ * column at all (its tab lies over the map's edge). Expanded, comms is the only column.
+ */
+export function splitTemplate(
+  side: number,
+  { crew, expanded = false }: { readonly crew: boolean; readonly expanded?: boolean },
+): string {
+  if (expanded) return "minmax(0,1fr)";
   const col = (fr: number) => `minmax(0,${fr.toFixed(3)}fr)`;
-  return `${col(SPLIT_TOTAL - side)} auto ${col(side)}`;
+  const map = SPLIT_TOTAL - side - (crew ? CREW_SHARE : 0);
+  return `${crew ? `${col(CREW_SHARE)} ` : ""}${col(map)} auto ${col(side)}`;
 }
 
 /** A share of the row in percent, for the handle's aria values. */

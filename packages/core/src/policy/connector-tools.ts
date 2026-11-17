@@ -54,3 +54,63 @@ export const NOTION_PRESET: Connector = {
   name: "Notion",
   transport: { type: "http", url: "https://mcp.notion.com/mcp" },
 };
+
+const GITHUB_URL = "https://api.githubcopilot.com/mcp/";
+const GMAIL_URL = "https://gmailmcp.googleapis.com/mcp/v1";
+
+/**
+ * GitHub's hosted MCP server (https://github.com/github/github-mcp-server, checked 2026-11-16).
+ * It does not offer dynamic client registration, so the Commander signs in through an OAuth app
+ * of their own (ADR-0019).
+ */
+export const GITHUB_PRESET: Connector = {
+  id: "github",
+  name: "GitHub",
+  transport: { type: "http", url: GITHUB_URL },
+};
+
+/**
+ * Google's Gmail MCP server (https://developers.google.com/workspace/gmail/api/reference/mcp,
+ * checked 2026-11-16). Like GitHub, sign-in goes through the Commander's own OAuth client.
+ */
+export const GMAIL_PRESET: Connector = {
+  id: "gmail",
+  name: "Gmail",
+  transport: { type: "http", url: GMAIL_URL },
+};
+
+/** The connectors the station offers to add in one click, by preset id. */
+export const CONNECTOR_PRESETS = {
+  notion: NOTION_PRESET,
+  github: GITHUB_PRESET,
+  gmail: GMAIL_PRESET,
+} as const satisfies Readonly<Record<string, Connector>>;
+
+export type ConnectorPresetId = keyof typeof CONNECTOR_PRESETS;
+export const CONNECTOR_PRESET_IDS = Object.keys(CONNECTOR_PRESETS) as ConnectorPresetId[];
+
+/**
+ * Servers that register no clients themselves: their sign-in needs the Commander's own OAuth
+ * client (id, and a secret where the provider requires one), kept in the keychain (ADR-0019).
+ */
+/**
+ * One spelling per server: the parser drops a default port and lowercases the host; trailing
+ * slashes on the path are ignored. Host, path, and query otherwise still tell servers apart.
+ */
+const serverKey = (url: string): string | undefined => {
+  try {
+    const u = new URL(url);
+    return `${u.protocol}//${u.host}${u.pathname.replace(/\/+$/, "")}${u.search}`;
+  } catch {
+    return undefined;
+  }
+};
+
+const OWN_CLIENT_SERVERS: readonly string[] = [GITHUB_URL, GMAIL_URL].map((u) => serverKey(u) ?? u);
+
+/** Whether signing in to this connector needs an OAuth client the Commander registered. */
+export function needsOwnClient(connector: Connector): boolean {
+  if (connector.transport.type !== "http") return false;
+  const key = serverKey(connector.transport.url);
+  return key !== undefined && OWN_CLIENT_SERVERS.includes(key);
+}

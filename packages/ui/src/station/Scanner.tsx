@@ -9,6 +9,7 @@ import {
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { stVar } from "../tokens/tokens.js";
 import { Diamond, OutlineButton, tabClass } from "./buttons.js";
+import { CaretButton } from "./Caret.js";
 import { crewOptionGroups } from "./crew-options.js";
 import { type DashboardSelection, grantName, roomColor } from "./DashboardMap.js";
 import { Dropdown, type DropdownGroup } from "./Dropdown.js";
@@ -521,28 +522,15 @@ export function Scanner(props: ScannerProps) {
       title={term("scanner.title")}
       titleAction={
         onToggleCollapsed ? (
-          <button
-            type="button"
+          // Down while open, pointing right while folded.
+          <CaretButton
+            direction={collapsed ? "right" : "down"}
             aria-expanded={!collapsed}
             aria-controls={bodyId}
             aria-label={term(collapsed ? "scanner.expand" : "scanner.collapse")}
             title={term(collapsed ? "scanner.expand" : "scanner.collapse")}
             onClick={onToggleCollapsed}
-            data-caret
-            className="inline-flex size-5 cursor-pointer items-center justify-center border-2 border-transparent bg-transparent p-0 text-cyan hover:border-line-soft hover:text-fg-hi focus-visible:border-cyan"
-          >
-            {/* A pixel triangle: down while open, turned to point right while folded. */}
-            <svg
-              aria-hidden="true"
-              viewBox="0 0 5 3"
-              shapeRendering="crispEdges"
-              className={`h-1.5 w-2.5 fill-current ${collapsed ? "-rotate-90" : ""}`}
-            >
-              <rect x="0" y="0" width="5" height="1" />
-              <rect x="1" y="1" width="3" height="1" />
-              <rect x="2" y="2" width="1" height="1" />
-            </svg>
-          </button>
+          />
         ) : undefined
       }
       meta={toggle}

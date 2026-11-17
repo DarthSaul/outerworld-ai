@@ -117,6 +117,30 @@ describe("sessions and runs", () => {
     });
   });
 
+  it("lists every agent's sessions station-wide, each with its origin", async () => {
+    const { call } = setup();
+    await call("POST", "/agents/vesper/sessions", { title: "Lead" });
+    const archived = await call("POST", "/agents/quill/sessions", { title: "Gone" });
+    await call("POST", "/agents/quill/sessions", { title: "Notes" });
+    await call("PATCH", `/sessions/${archived.json.id}`, { archived: true });
+    const all = (await call("GET", "/sessions")).json as { title: string; origin: string }[];
+    expect(all.map((s) => [s.title, s.origin])).toEqual([
+      ["Notes", "commander"],
+      ["Lead", "commander"],
+    ]);
+    expect((await call("GET", "/sessions?archived=1")).json).toHaveLength(3);
+  });
+
+  it("hands a session to another crew member, refusing an unknown one (ADR-0018)", async () => {
+    const { call } = setup();
+    const s = await call("POST", "/agents/vesper/sessions", {});
+    const moved = await call("PATCH", `/sessions/${s.json.id}`, { agentId: "quill" });
+    expect(moved.json.agentId).toBe("quill");
+    expect((await call("GET", "/agents/quill/sessions")).json).toHaveLength(1);
+    const unknown = await call("PATCH", `/sessions/${s.json.id}`, { agentId: "nobody" });
+    expect(unknown.status).toBe(404);
+  });
+
   it("renames a session", async () => {
     const { call } = setup();
     const s = await call("POST", "/agents/vesper/sessions", {});

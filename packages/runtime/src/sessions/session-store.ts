@@ -28,7 +28,11 @@ export interface SessionSummary extends SessionRecord {
   readonly lastMessage?: { readonly role: "user" | "assistant"; readonly text: string };
   /** A run in it is queued, running, or waiting for consent. */
   readonly active: boolean;
+  /** `dispatch`: the Overseer opened it to hand a crew member work; else the Commander did. */
+  readonly origin: SessionOrigin;
 }
+
+export type SessionOrigin = "commander" | "dispatch";
 
 /** A summary's preview is clipped to this many characters. */
 const PREVIEW_CHARS = 160;
@@ -147,11 +151,15 @@ export class SessionStore {
   }
 
   /**
-   * The agent's sessions with what a list needs, most recently active first (the newest message,
-   * or creation for a session with none).
+   * The agent's sessions (every agent's, when none is given) with what a list needs, most
+   * recently active first (the newest message, or creation for a session with none).
    */
-  sessionSummaries(agentId: string, options: { includeArchived?: boolean } = {}): SessionSummary[] {
+  sessionSummaries(
+    agentId?: string,
+    options: { includeArchived?: boolean } = {},
+  ): SessionSummary[] {
     const archived = options.includeArchived ? "" : "and s.archived_at is null";
+    const agent = agentId === undefined ? "" : "and s.agent_id = @agentId";
     const unfinished = UNFINISHED.map((u) => `'${u}'`).join(", ");
     const rows = this.#db
       .prepare(
@@ -165,12 +173,13 @@ export class SessionStore {
                          ' ' || char(9, 10, 13)) <> ''
               order by m.position desc limit 1) as last_message,
            exists (select 1 from runs r where r.session_id = s.id and r.state in (${unfinished}))
-             as active
+             as active,
+           exists (select 1 from dispatches d where d.worker_session_id = s.id) as dispatched
          from sessions s
-         where s.agent_id = ? ${archived}
+         where 1 = 1 ${agent} ${archived}
          order by coalesce(last_message_at, s.created_at) desc, s.rowid desc`,
       )
-      .all(agentId) as Row[];
+      .all(agentId === undefined ? {} : { agentId }) as Row[];
     return rows.map((r) => {
       const last =
         r.last_message === null ? undefined : ChatMessage.parse(JSON.parse(String(r.last_message)));
@@ -184,12 +193,26 @@ export class SessionStore {
         ...(r.last_message_at !== null ? { lastMessageAt: String(r.last_message_at) } : {}),
         ...(preview ? { lastMessage: preview } : {}),
         active: Number(r.active) === 1,
+        origin: Number(r.dispatched) === 1 ? "dispatch" : "commander",
       };
     });
   }
 
   renameSession(id: string, title: string): SessionRecord {
     return this.#updateSession(id, "update sessions set title = ? where id = ?", title);
+  }
+
+  /** Hands the conversation to another agent; its next run is that agent's. */
+  setAgent(id: string, agentId: string): SessionRecord {
+    return this.#updateSession(id, "update sessions set agent_id = ? where id = ?", agentId);
+  }
+
+  /** Whether a dispatch opened this session for its worker. */
+  isDispatched(id: string): boolean {
+    return (
+      this.#db.prepare("select 1 from dispatches where worker_session_id = ? limit 1").get(id) !==
+      undefined
+    );
   }
 
   /** Sets this conversation's model settings; `null` (or nothing set) goes back to the default. */

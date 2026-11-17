@@ -39,10 +39,11 @@ allowed `Origin` and a `Sec-Fetch-Site` other than `cross-site`. Every `/api/*` 
 | `POST /api/rooms`, `PATCH /api/rooms/:id`, `DELETE /api/rooms/:id` | Rooms and their props; deleting a room with crew or hallways is 409. |
 | `POST /api/lanes {from, to, note?}`, `DELETE /api/lanes/:id` | Open and close a hallway (ADR-0013). Config only: hallways are drawn, not enforced, in v1. A loop or a second hallway between linked rooms is 409. |
 
+| `GET /api/sessions` | Every crew member's sessions, the same shape as below plus `origin` (`dispatch` for a session the Overseer opened to hand work to crew, else `commander`); `?archived=1` includes archived ones. |
 | `GET /api/agents/:id/sessions` | The agent's sessions, most recently active first, each with `messageCount`, `lastMessageAt?`, `lastMessage? {role, text}` (clipped), and `active`; `?archived=1` includes archived ones. |
 | `POST /api/agents/:id/sessions` | `{ title? }` → 201 session. Without a title, the first message names it (one short model call, ADR-0014). |
 | `GET /api/sessions/:id` | `{ session, messages, runs }`: messages oldest first, runs newest first. |
-| `PATCH /api/sessions/:id` | `{ title?, archived?: true, modelSettings? }`; `modelSettings` is `{ model?, provider?, reasoning? }` for this conversation, `null` to go back to the crew member's (ADR-0016). |
+| `PATCH /api/sessions/:id` | `{ title?, archived?: true, modelSettings?, agentId? }`; `agentId` hands the conversation to another crew member, whose next run it is (404 unknown agent, 409 while a run is going or for a dispatched session, ADR-0018); `modelSettings` is `{ model?, provider?, reasoning? }` for this conversation, `null` to go back to the crew member's (ADR-0016). |
 | `POST /api/sessions/:id/messages` | `{ text }` → 202 `{ runId }`; the reply streams as events (deltas are ephemeral, D18). 409 while a run is active or the session is archived. |
 | `POST /api/runs/:id/cancel` | 202; a queued or running run becomes cancelled. |
 | `POST /api/runs/:id/steer` | `{ text }` → 202: a direction for a running run, added before its next model call. 409 if the run is not running. |
@@ -53,7 +54,8 @@ allowed `Origin` and a `Sec-Fetch-Site` other than `cross-site`. Every `/api/*` 
 | `GET /api/spend?day=YYYY-MM-DD` | USD spent that UTC day (default today), station-wide and per agent, and `tokens` (input plus output) for the day. Session detail carries `spend` and `runSpend`. |
 | `GET /api/runs?limit=1..200` | The station's latest runs (default 40), newest first, each with a `title`: the task for a dispatch, else the session title. The dashboard's missions. |
 | `GET /api/connectors` | Each connector: status (`disconnected`, `needs_auth`, `connected`, `error`), its classified tools, and `grantedTo`. |
-| `POST /api/connectors` | `{ preset: "notion" }` installs Notion's hosted MCP server (ADR-0012). |
+| `POST /api/connectors` | `{ preset: "notion" \| "github" \| "gmail" }` installs that hosted MCP server (ADR-0012, ADR-0019). |
+| `PUT /api/connectors/:id/client` | `{ clientId, clientSecret? }`: your own OAuth app, for a server with no dynamic registration (GitHub, Gmail). Kept in the keychain, never returned; the list shows `ownClient: { set, redirectUrl }`. 409 for a server that registers its own. |
 | `PATCH /api/connectors/:id` | `{ url?, name? }`; `DELETE` removes it (409 while any crew member is granted it). |
 | `POST /api/connectors/:id/connect` | `{ status, authorizationUrl? }`: when the server needs sign-in, open `authorizationUrl`; Notion returns to the callback below. |
 | `POST /api/connectors/:id/disconnect` | `{ forget? }`: `forget: true` also removes the stored sign-in from the keychain. |

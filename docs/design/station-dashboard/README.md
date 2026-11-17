@@ -64,6 +64,18 @@ Column flex, `min-height:100vh`.
   - **UPTIME**: `03d 04:12:11`.
 
 ## Page 1: Station
+> **Amended by ADR-0018** (reference: `reference/main-station-view.png`). The columns are now
+> CREW | MAP | COMMS at `1fr 2fr 1fr`, with the resize handle between the map and COMMS. The
+> screen pads only above and below, so its edges line up with the header and footer.
+>
+> - **CREW**: the roster, a working / idle count, then every session with an All / Dispatched
+>   filter and `+ NEW`. Its caret folds the column into a folder tab on the left edge.
+> - **COMMS**: a strip with `EXPAND` / `COLLAPSE`, an agent row (crew dropdown: who answers), the
+>   conversation, then the message box.
+> - **SCANNER**: under COMMS, folded by default, and at most half the column when open.
+>
+> The column notes below describe the original prototype.
+
 Main area: `display:grid; grid-template-columns: minmax(0,1fr) minmax(0,3fr) minmax(0,2fr); gap:14px; padding:14px; align-items:stretch`.
 
 ### Column 1: Crew Roster (fills the column height)

@@ -2,24 +2,27 @@ import { type Dashboard, term, termWith } from "@darthsaul/outerworld-ai-core";
 import {
   DashboardMap,
   type DashboardSelection,
+  FolderTab,
   MAP_STYLES,
   OutlineButton,
-  PanelTabs,
   ResizeHandle,
   Scanner,
   tabClass,
 } from "@darthsaul/outerworld-ai-ui";
-import { type CSSProperties, useRef, useState } from "react";
-import { CrewComms } from "../comms/CrewComms.js";
-import { OverseerPanel } from "../comms/OverseerPanel.js";
+import { type CSSProperties, useEffect, useRef, useState } from "react";
+import { CommsPanel } from "../comms/CommsPanel.js";
 import { ErrorNote } from "../components/ErrorNote.js";
+import { ApiError } from "../lib/api.js";
 import {
   useActivity,
+  useAllSessions,
   useCancelRun,
   useCreateLane,
   useDeleteLane,
   useKillSwitch,
+  useSession,
 } from "../queries.js";
+import { CrewPanel } from "../station/CrewPanel.js";
 import {
   DEFAULT_SIDE,
   percentOf,
@@ -30,6 +33,8 @@ import {
 } from "../station/split.js";
 import { useComms } from "../station/use-comms.js";
 import { useDashboard, useMapStyle, usePreference } from "../station/use-dashboard.js";
+
+const CREW_ID = "station-crew";
 
 const STYLE_LABEL = {
   schematic: "mapStyle.schematic",
@@ -49,9 +54,76 @@ function current(d: Dashboard, s: DashboardSelection | undefined): DashboardSele
   return first ? { type: "room", id: first } : undefined;
 }
 
+const SESSION_KEY = "outerworld.commsSession";
+/** Where the open order was kept before the three columns (ADR-0018); read once, as a fallback. */
+const OLD_SESSION_KEY = "outerworld.overseerOrder";
+
+function readSession(): string | undefined {
+  try {
+    const old = localStorage.getItem(OLD_SESSION_KEY);
+    if (old !== null) {
+      // Moved once to the new key, so the old one never overrides a later choice.
+      localStorage.removeItem(OLD_SESSION_KEY);
+      if (localStorage.getItem(SESSION_KEY) === null) localStorage.setItem(SESSION_KEY, old);
+    }
+    return localStorage.getItem(SESSION_KEY) ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function storeSession(sessionId: string | undefined): void {
+  try {
+    if (sessionId) localStorage.setItem(SESSION_KEY, sessionId);
+    else localStorage.removeItem(SESSION_KEY);
+  } catch {
+    // Storage can be blocked (private windows); the conversation stays open until the tab closes.
+  }
+}
+
 /**
- * The Station (ADR-0013): the station map, Overseer comms and the scanner (which picks crew), every
- * piece a projection of runtime state. Drawing a hallway opens one in station.json.
+ * The open conversation, kept per browser, but only while its session still exists and is not
+ * archived. One just started here is trusted before the list has been refetched to include it.
+ */
+function useOpenSession(): [
+  string | undefined,
+  (id: string | undefined) => void,
+  (id: string) => void,
+] {
+  const sessions = useAllSessions();
+  const [open, setOpenState] = useState(readSession);
+  const [started, setStarted] = useState<string>();
+  const setOpen = (id: string | undefined) => {
+    setOpenState(id);
+    storeSession(id);
+  };
+  // Trusted only until the list includes it, or its own record (refetched on every session
+  // event) says it was archived or deleted first: from then on the list alone decides.
+  const startedListed =
+    started !== undefined && (sessions.data?.some((s) => s.id === started) ?? false);
+  const startedDetail = useSession(started);
+  const startedGone =
+    startedDetail.data?.session.archivedAt !== undefined ||
+    (startedDetail.error instanceof ApiError && startedDetail.error.status === 404);
+  useEffect(() => {
+    if (startedListed || startedGone) setStarted(undefined);
+  }, [startedListed, startedGone]);
+  const listed = sessions.data?.some((s) => s.id === open) ?? false;
+  const live = open !== undefined && (listed || open === started || sessions.data === undefined);
+  return [
+    live ? open : undefined,
+    setOpen,
+    (id) => {
+      setStarted(id);
+      setOpen(id);
+    },
+  ];
+}
+
+/**
+ * The Station (ADR-0013, ADR-0018): crew and every session, the station map, and one conversation
+ * over the scanner, every piece a projection of runtime state. Drawing a hallway opens one in
+ * station.json.
  */
 export function StationPage() {
   const { dashboard, proposals, error } = useDashboard();
@@ -65,11 +137,17 @@ export function StationPage() {
   const [picked, setPicked] = useState<DashboardSelection>();
   const [draw, setDraw] = useState<{ from: string | null }>();
   const [note, setNote] = useState<string>();
-  const [commsTab, setCommsTab] = useState("overseer");
   const [side, setSide] = useSplit();
-  // Folded or open, per viewer (ADR-0013 #19, like the map style).
+  const [session, setSession, startedSession] = useOpenSession();
+  const [expanded, setExpanded] = useState(false);
+  // Folded or open, per viewer (ADR-0013 #19, like the map style). The scanner starts folded.
   const [scanner, setScanner] = usePreference<"open" | "closed">(
     "outerworld.scanner",
+    ["open", "closed"],
+    "closed",
+  );
+  const [crewColumn, setCrewColumn] = usePreference<"open" | "closed">(
+    "outerworld.crewColumn",
     ["open", "closed"],
     "open",
   );
@@ -139,17 +217,69 @@ export function StationPage() {
     </div>
   );
 
-  // Tablet and desktop: the map and the side column (comms over the scanner) split a 3fr row,
-  // 2fr / 1fr by default; the handle between them resizes the split, kept per viewer. Phones
-  // stack the map, comms, then the scanner.
+  const crewOpen = crewColumn === "open";
+  // Expanded, comms is the only column; the others stay mounted, hidden, so they keep their place.
+  const desktopHidden = expanded ? "desktop:hidden" : "";
+  // Desktop: crew (or its folder tab), the map, the handle, and comms over the scanner, 1fr / 2fr
+  // / 1fr by default; the handle resizes comms against the map, kept per viewer. Phones stack
+  // the map, crew, comms, then the scanner.
   return (
     <div
       ref={grid}
-      style={{ "--st-station-cols": splitTemplate(side) } as CSSProperties}
-      className="grid flex-1 grid-cols-1 items-stretch gap-3.5 p-3.5 desktop:min-h-0 desktop:grid-cols-(--st-station-cols) desktop:grid-rows-[minmax(0,1fr)] desktop:gap-0"
+      style={
+        {
+          "--st-station-cols": splitTemplate(side, { crew: crewOpen, expanded }),
+        } as CSSProperties
+      }
+      className="relative grid flex-1 grid-cols-1 items-stretch gap-3.5 py-3.5 desktop:min-h-0 desktop:grid-cols-(--st-station-cols) desktop:grid-rows-[minmax(0,1fr)] desktop:gap-0"
     >
       <h1 className="sr-only">{term("tab.station")}</h1>
-      <div className="flex min-w-0 flex-col gap-3.5 desktop:min-h-0">
+      {crewOpen ? (
+        <CrewPanel
+          id={CREW_ID}
+          dashboard={dashboard}
+          {...(selection?.type === "agent" ? { selectedAgent: selection.id } : {})}
+          onPickAgent={(id) => setPicked({ type: "agent", id })}
+          {...(session ? { openSession: session } : {})}
+          onOpenSession={setSession}
+          onNew={() => setSession(undefined)}
+          onCollapse={() => setCrewColumn("closed")}
+          className={`desktop:mr-3.5 desktop:contain-size ${desktopHidden}`}
+        />
+      ) : (
+        <>
+          {/* Phones have no folder tab: there the crew column is always shown. */}
+          <CrewPanel
+            id={CREW_ID}
+            dashboard={dashboard}
+            {...(selection?.type === "agent" ? { selectedAgent: selection.id } : {})}
+            onPickAgent={(id) => setPicked({ type: "agent", id })}
+            {...(session ? { openSession: session } : {})}
+            onOpenSession={setSession}
+            onNew={() => setSession(undefined)}
+            onCollapse={() => setCrewColumn("closed")}
+            className="desktop:hidden"
+          />
+          {/* Desktop: the folded column's tab lies over the map's left edge, halfway down. It takes
+              no column of its own. */}
+          <div
+            className={`absolute top-1/2 left-0 z-10 -translate-y-1/2 ${expanded ? "hidden" : "hidden desktop:flex"}`}
+          >
+            <FolderTab
+              controls={CREW_ID}
+              aria-label={term("station.crew.expand")}
+              title={term("station.crew.expand")}
+              onClick={() => setCrewColumn("open")}
+            >
+              {term("agents")}
+            </FolderTab>
+          </div>
+        </>
+      )}
+      {/* Phones put the map first, then crew, comms, and the scanner. */}
+      <div
+        className={`order-first flex min-w-0 flex-col gap-3.5 desktop:order-none desktop:min-h-0 ${desktopHidden}`}
+      >
         <section
           aria-labelledby="map-title"
           className="flex min-w-0 flex-1 flex-col border-2 border-line bg-panel shadow-panel"
@@ -185,46 +315,23 @@ export function StationPage() {
         valueMax={percentOf(SIDE_LIMITS.max)}
         onResize={(dx) => setSide(resizeSide(side, dx, grid.current?.clientWidth ?? 0))}
         onReset={() => setSide(DEFAULT_SIDE)}
-        className="hidden desktop:block"
+        className={expanded ? "hidden" : "hidden desktop:block"}
       />
-      {/* Tablet and desktop: comms over the scanner, 1.5fr / 2fr of the map's height; neither panel
-          sets the row's height (contain-size), and each scrolls inside when it needs to. */}
-      <div
-        className={`flex min-w-0 flex-col gap-3.5 desktop:grid desktop:contain-size ${
-          // A folded scanner keeps only its title strip; comms takes the rest of the column.
-          scanner === "closed"
-            ? "desktop:grid-rows-[minmax(0,1fr)_auto]"
-            : "desktop:grid-rows-[minmax(0,1.5fr)_minmax(0,2fr)]"
-        }`}
-      >
-        {/* min-w-0: as a grid item this row would otherwise grow to its longest unbroken text. */}
-        <div className="flex min-h-0 min-w-0 flex-col gap-3.5">
-          <PanelTabs
-            label={term("comms.tabs")}
-            active={commsTab}
-            onChange={setCommsTab}
-            meta={<span aria-hidden="true" className="st-blink size-2 bg-red" />}
-            className="min-h-0 flex-1"
-            tabs={[
-              {
-                id: "overseer",
-                label: term("comms.title"),
-                content: (
-                  <OverseerPanel
-                    dashboard={dashboard}
-                    comms={comms}
-                    onOrdered={() => {
-                      if (dashboard.bridgeId) setPicked({ type: "room", id: dashboard.bridgeId });
-                    }}
-                    paused={commsTab !== "overseer"}
-                  />
-                ),
-              },
-              { id: "crew", label: term("comms.crew.title"), content: <CrewComms /> },
-            ]}
-          />
-          <ErrorNote error={comms.error} />
-        </div>
+      {/* Comms fills the column over the scanner, which starts folded to its strip and opens to at
+          most half the column. Neither sets the row's height (contain-size); each scrolls inside. */}
+      <div className="flex min-w-0 flex-col gap-3.5 desktop:min-h-0 desktop:contain-size">
+        <CommsPanel
+          dashboard={dashboard}
+          comms={comms}
+          {...(session ? { sessionId: session } : {})}
+          onStarted={(id) => {
+            startedSession(id);
+            if (dashboard.bridgeId) setPicked({ type: "room", id: dashboard.bridgeId });
+          }}
+          expanded={expanded}
+          onToggleExpanded={() => setExpanded(!expanded)}
+          className="min-h-0 flex-1"
+        />
         {selection ? (
           <Scanner
             dashboard={dashboard}
@@ -232,7 +339,7 @@ export function StationPage() {
             onSelect={setPicked}
             collapsed={scanner === "closed"}
             onToggleCollapsed={() => setScanner(scanner === "closed" ? "open" : "closed")}
-            className={`min-w-0 ${scanner === "closed" ? "" : "min-h-0 flex-1"}`}
+            className={`min-w-0 shrink-0 ${scanner === "closed" ? "" : "min-h-0 desktop:max-h-1/2"}`}
             onStopRun={stopRuns}
             onDemolish={(id) =>
               deleteLane.mutate(id, {

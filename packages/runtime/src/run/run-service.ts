@@ -247,6 +247,8 @@ export class RunService {
   readonly #titleCalls = new Set<AbortController>();
   readonly #active = new Map<string, AbortController>();
   readonly #done = new Map<string, Promise<RunRecord>>();
+  /** Each session's handovers, applied one at a time in the order they were asked for. */
+  readonly #handovers = new Map<string, Promise<unknown>>();
   readonly #sleep: (ms: number) => Promise<void>;
   /** Runs paused for consent, waiting for the Commander's decision. */
   readonly #waiting = new Map<string, (decision: "approved" | "denied") => void>();
@@ -344,6 +346,48 @@ export class RunService {
     return this.#o.sessions.setModelSettings(sessionId, settings);
   }
 
+  /**
+   * Hands the conversation to another crew member (ADR-0018): the transcript stays, and the next
+   * run is theirs, with their documents, grants, and model. Not while a run is going, and never a
+   * dispatched worker's session (its report goes back to the lead).
+   */
+  reassignSession(sessionId: string, agentId: string): Promise<SessionRecord> {
+    const prior = this.#handovers.get(sessionId) ?? Promise.resolve();
+    const next = prior.then(() => this.#reassign(sessionId, agentId));
+    const tail = next.catch(() => undefined);
+    this.#handovers.set(sessionId, tail);
+    void tail.then(() => {
+      if (this.#handovers.get(sessionId) === tail) this.#handovers.delete(sessionId);
+    });
+    return next;
+  }
+
+  async #reassign(sessionId: string, agentId: string): Promise<SessionRecord> {
+    this.#session(sessionId);
+    const loaded = await loadStationDir(this.#o.home);
+    if (!loaded.agents.some((a) => a.id === agentId)) {
+      throw new NotFoundError(`no agent "${agentId}"`);
+    }
+    // Read again after the await: another handover may have landed meanwhile, and this one must
+    // compare against (and record) the owner it actually takes the session from.
+    const s = this.#session(sessionId);
+    if (s.agentId === agentId) return s;
+    if (this.#o.sessions.isDispatched(sessionId)) {
+      throw new ConflictError("a dispatched session stays with the crew member it was given to");
+    }
+    if (this.hasActiveRun(sessionId)) {
+      throw new ConflictError("a run is still running in this session");
+    }
+    const moved = this.#o.sessions.setAgent(sessionId, agentId);
+    this.#o.events.append({
+      type: "session.reassigned",
+      agentId,
+      sessionId,
+      payload: { from: s.agentId, to: agentId },
+    });
+    return moved;
+  }
+
   archiveSession(sessionId: string): SessionRecord {
     const s = this.#session(sessionId);
     const archived = this.#o.sessions.archiveSession(sessionId);
@@ -377,6 +421,8 @@ export class RunService {
     options: SendOptions,
   ): Promise<{ runId: string }> {
     const trigger = options.trigger ?? "user";
+    // A handover asked for before this lands first: the run belongs to whoever it hands to.
+    await this.#handovers.get(sessionId);
     const session = this.#session(sessionId);
     if (this.#o.killSwitch.engaged()) {
       throw new ConflictError("the kill switch is on: clear it to run anything again");
@@ -386,14 +432,17 @@ export class RunService {
       throw new ConflictError("a run is already running in this session");
     }
     const loaded = await loadStationDir(this.#o.home);
-    const agentModel =
-      loaded.agents.find((a) => a.id === session.agentId)?.config.model ?? "unknown";
+    // The owner now, not before the await: a handover may have landed meanwhile. No await
+    // follows until the run is created, so the run and its model are that owner's.
+    const current = this.#session(sessionId);
+    const owner = current.agentId;
+    const agentModel = loaded.agents.find((a) => a.id === owner)?.config.model ?? "unknown";
     // The crew member's model, then this conversation's choice, then this send's (a schedule's).
-    const settings = resolveModelSettings(agentModel, session.modelSettings, options.modelSettings);
+    const settings = resolveModelSettings(agentModel, current.modelSettings, options.modelSettings);
     const model = settings.model;
     const run = this.#o.sessions.createRun({
       sessionId,
-      agentId: session.agentId,
+      agentId: owner,
       trigger,
       model,
       provider: settings.provider,
@@ -406,17 +455,17 @@ export class RunService {
     if (
       text !== undefined &&
       this.#o.titles &&
-      session.title === DEFAULT_SESSION_TITLE &&
+      current.title === DEFAULT_SESSION_TITLE &&
       this.#o.sessions.messages(sessionId).length === 1
     ) {
       // Runs beside the agent's run; a failure only means the message names the session.
-      void this.#nameSession(session, text, run.id, model, settings.provider).catch(
+      void this.#nameSession(current, text, run.id, model, settings.provider).catch(
         () => undefined,
       );
     }
     this.#o.events.append({
       type: "run.queued",
-      agentId: session.agentId,
+      agentId: owner,
       sessionId,
       runId: run.id,
       payload: { trigger },

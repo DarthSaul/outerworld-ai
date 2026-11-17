@@ -20,7 +20,8 @@ describe("invalidateFor", () => {
       client,
     );
     const keys = spy.mock.calls.map(([filters]) => filters?.queryKey);
-    expect(keys).toContainEqual(["sessions", "quill"]);
+    // Every list: the crew member's own and the Station's station-wide one.
+    expect(keys).toContainEqual(["sessions"]);
     expect(keys).toContainEqual(["session", "s1"]);
     expect(keys).toContainEqual(["activity"]);
   });

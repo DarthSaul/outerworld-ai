@@ -117,7 +117,7 @@
   --st-display-line-height: 1.4;
 
   /* The app's content never grows wider than this; header and footer bars still span the page. */
-  --st-app-max-width: 1440px;
+  --st-app-max-width: 1920px;
 
   /* Geometry. No border radius anywhere except the A/B glyphs, the pause pill, and the pedestal. */
   --st-gap: calc(14 * var(--st-u));
@@ -403,6 +403,23 @@ label:hover .st-check:not(:disabled) + .st-check-box {
   width: max(100%, var(--st-map-min-w));
   height: max(100%, var(--st-map-min-h));
   transform-origin: 0 0;
+}
+
+/*
+ * A folder tab (the folded crew column's handle): a strip on the left edge whose free side has
+ * its two corners cut, like the tab of a file folder in a cabinet drawer.
+ */
+.st-folder-tab {
+  --st-folder-cut: calc(8 * var(--st-u));
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--st-folder-cut)) 0,
+    100% var(--st-folder-cut),
+    100% calc(100% - var(--st-folder-cut)),
+    calc(100% - var(--st-folder-cut)) 100%,
+    0 100%
+  );
+  writing-mode: vertical-rl;
 }
 
 .st-pixelated {

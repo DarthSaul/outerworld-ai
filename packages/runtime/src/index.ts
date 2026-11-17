@@ -99,6 +99,7 @@ export {
 export {
   type RunRecord,
   type RunTrigger,
+  type SessionOrigin,
   type SessionRecord,
   SessionStore,
   type SessionSummary,
