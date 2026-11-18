@@ -41,9 +41,10 @@ import {
 import { useDaemon } from "./daemon-context.js";
 
 /**
- * Server state for the Crew screens. Mutations do not patch the cache themselves: the daemon's
- * `agent.updated` / `station.updated` events invalidate it (daemon-context), so a change made in
- * another tab or by hand on disk shows up the same way as one made here.
+ * Server state for the Crew screens. Mutations mostly do not patch the cache themselves: the
+ * daemon's `agent.updated` / `station.updated` events invalidate it (daemon-context), so a change
+ * made in another tab or by hand on disk shows up the same way as one made here. The one exception
+ * is `useUpdateAgent`, which writes the saved crew member back at once (see there).
  */
 export function useStationView() {
   const { api } = useDaemon();
@@ -78,6 +79,12 @@ export function useCreateAgent() {
  * Saves a crew member's config. The daemon answers with the saved crew member, which replaces the
  * cached one before the save reports done: the next edit (another connector grant, say) builds on
  * what was saved, not on a snapshot from before it, even before the refetch arrives.
+ *
+ * Ordered so an older answer never lands over a newer one: every save of one crew member, from any
+ * form on the page, shares a scope and goes out one at a time, in order, each answer reflecting
+ * all saves before it. A refetch already in flight (started by an event before this save landed)
+ * is cancelled first, so its older snapshot cannot overwrite the answer; the save's own
+ * `agent.updated` event refetches afterwards.
  */
 export function useUpdateAgent(id: string) {
   const { api } = useDaemon();
@@ -85,8 +92,11 @@ export function useUpdateAgent(id: string) {
   return useMutation({
     mutationFn: (input: UpdateAgentInput) =>
       api.send<AgentView>("PATCH", `/agents/${encodeURIComponent(id)}`, input),
-    onSuccess: (saved) => {
-      if (saved) client.setQueryData(["agent", id], saved);
+    scope: { id: `agent:${id}` },
+    onSuccess: async (saved) => {
+      if (!saved) return;
+      await client.cancelQueries({ queryKey: ["agent", id] });
+      client.setQueryData(["agent", id], saved);
     },
   });
 }

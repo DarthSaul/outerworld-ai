@@ -541,6 +541,56 @@ describe("Config", () => {
     ]);
   });
 
+  it("sends a crew member's saves one at a time, in order, so no older answer lands last", async () => {
+    const user = userEvent.setup();
+    const fake = fakeApi();
+    // Hold the first save's answer until the test lets it through.
+    let release = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const send = fake.api.send;
+    let held = false;
+    (fake.api as { send: typeof send }).send = async (method, path, body) => {
+      if (method === "PATCH" && !held) {
+        held = true;
+        await gate;
+      }
+      return send(method, path, body);
+    };
+    const { calls } = renderApp("/crew/quill?tab=config", fake);
+    const form = await screen.findByRole("form", { name: "Configuration" });
+    await user.click(
+      within(form).getByRole("radio", { name: new RegExp(term("approvalMode.ask")) }),
+    );
+    await user.click(within(form).getByRole("button", { name: "Save changes" }));
+    // The Config form's save is in flight; a grant from the Connectors panel waits its turn.
+    const panel = screen.getByRole("region", { name: term("connectors") });
+    await user.click(
+      within(panel).getByRole("checkbox", {
+        name: termWith("agentConnectors.grantName", { name: "Notion" }),
+      }),
+    );
+    expect(calls.filter((c) => c.method === "PATCH")).toHaveLength(0);
+    release();
+    await waitFor(() => expect(calls.filter((c) => c.method === "PATCH")).toHaveLength(2));
+    expect(calls.filter((c) => c.method === "PATCH").map((c) => c.body)).toEqual([
+      { approvalMode: "ask" },
+      { connectorGrants: ["notion"] },
+    ]);
+    // Both saves stand in the cached crew member: the grant's answer came last and holds both.
+    await waitFor(() =>
+      expect(
+        within(panel).getByRole("checkbox", {
+          name: termWith("agentConnectors.grantName", { name: "Notion" }),
+        }),
+      ).toBeChecked(),
+    );
+    expect(
+      within(form).getByRole("radio", { name: new RegExp(term("approvalMode.ask")) }),
+    ).toBeChecked();
+  });
+
   it("lists each connector full width, with the Abilities logo, kind, status, and description", async () => {
     const fake = fakeApi();
     fake.connectors.push({
