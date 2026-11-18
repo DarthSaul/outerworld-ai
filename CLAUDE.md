@@ -145,7 +145,7 @@ pnpm lint           # biome check .   (pnpm lint:fix to apply)
 pnpm typecheck      # tsc --noEmit across packages
 pnpm check:task     # before every commit: lint, types, secrets, floor guard, tests (< 90 s)
 pnpm check:full     # check:task + build; what CI's quality job runs
-pnpm browser:verify # Playwright: screenshots, console errors, reduced motion, axe; CI's browser job
+pnpm browser:verify # Playwright: screenshots, console errors, reduced motion, axe. CI only (see below)
 ```
 
 Use Node 22 (`nvm use`). Packages build with `tsc` to `dist/`; dependents typecheck against
@@ -171,5 +171,7 @@ is wrong for this project, say so and propose a change to CONSTRAINTS.md.
 - TDD for logic: schemas, policy, prompt assembly, state machine, storage, the agent loop with
   the fake provider.
 - Every package has a README documenting its public API.
-- Browser-verify ui and SPA work in a real browser (reduced motion, narrow layout)
-  before calling a step done: headless Playwright under `scripts/browser/`.
+- No local browser or screenshot verification while the owner iterates alone (2026-11-18): CI's
+  browser job runs `pnpm browser:verify` on every PR. Don't run it or review screenshots as part
+  of a step; run it locally only when asked or to debug a failing CI browser job. Component
+  tests (Testing Library + `vitest-axe`) carry ui and SPA work.
