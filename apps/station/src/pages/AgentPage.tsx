@@ -584,6 +584,16 @@ function Brief({ agent, station }: { readonly agent: AgentView; readonly station
             ) : null}
           </div>
         </div>
+        {/* Brief is read only; this is the way to change it. It also gives the tab's scroll area
+            something a keyboard can reach, so a long Brief can be scrolled without a mouse. */}
+        <Link
+          to="?tab=config"
+          replace
+          data-brief-edit
+          className="ml-auto self-start text-b17 text-cyan underline hover:text-fg-hi"
+        >
+          {term("brief.edit")}
+        </Link>
       </header>
       <Capabilities agent={agent} station={station} />
       <Panel title={term("document.identity")}>

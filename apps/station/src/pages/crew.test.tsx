@@ -306,6 +306,21 @@ describe("Brief", () => {
     );
   });
 
+  it("links to Config, so a read-only Brief always has something a keyboard can reach", async () => {
+    const user = userEvent.setup();
+    renderApp("/crew/quill");
+    const brief = await screen.findByRole("tabpanel", { name: term("agentTabs.brief") });
+    const edit = within(brief).getByRole("link", { name: term("brief.edit") });
+    // Inside the tab's scroll area: a keyboard reaches it, and from there can scroll.
+    expect(brief.querySelector("[data-scroll-area]")?.contains(edit)).toBe(true);
+    await user.click(edit);
+    expect(await screen.findByRole("form", { name: "Configuration" })).toBeVisible();
+    expect(screen.getByRole("tab", { name: term("agentTabs.config") })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  });
+
   it("lists what the crew member can use by readable name, in two columns", async () => {
     renderApp("/crew/vesper");
     const tools = await screen.findByRole("region", { name: term("tools.effective") });

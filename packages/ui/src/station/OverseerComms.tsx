@@ -143,38 +143,51 @@ export function OverseerCommsBody({
 
   return (
     <>
-      <div className="flex min-h-0 flex-1 gap-1.5 overflow-y-auto p-2.5">
-        <div role="img" aria-label={term("comms.portrait")} className="flex shrink-0 items-start">
-          {overseerLook === undefined ? null : <Sprite look={overseerLook} scale={1.5} />}
+      {/* The message scrolls when the column is short. Its buttons ride along inside the scroll
+          box, pinned to its foot: always in view, and the box always holds something a keyboard
+          can reach (so it can scroll it too). */}
+      <div data-comms-message className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+        <div className="flex flex-1 gap-1.5 p-2.5">
+          <div role="img" aria-label={term("comms.portrait")} className="flex shrink-0 items-start">
+            {overseerLook === undefined ? null : <Sprite look={overseerLook} scale={1.5} />}
+          </div>
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5" aria-live="polite">
+            <div className="font-display text-d8 text-amber uppercase">
+              {message?.speaker ?? ""}
+            </div>
+            <p className="m-0 text-b19 text-fg-hi">
+              <span aria-hidden="true">{typed}</span>
+              <span className="sr-only">{message?.text}</span>
+              <span
+                aria-hidden="true"
+                className="st-blink ml-0.5 inline-block h-3.75 w-2.25 bg-cyan align-[-2px]"
+              />
+            </p>
+          </div>
         </div>
-        <div className="flex min-w-0 flex-1 flex-col gap-1.5" aria-live="polite">
-          <div className="font-display text-d8 text-amber uppercase">{message?.speaker ?? ""}</div>
-          <p className="m-0 text-b19 text-fg-hi">
-            <span aria-hidden="true">{typed}</span>
-            <span className="sr-only">{message?.text}</span>
-            <span
-              aria-hidden="true"
-              className="st-blink ml-0.5 inline-block h-3.75 w-2.25 bg-cyan align-[-2px]"
-            />
-          </p>
-        </div>
+        {message?.kind === "approval" ? (
+          <div
+            data-comms-actions
+            className="sticky bottom-0 flex shrink-0 gap-2.5 bg-panel px-2.5 pb-2.5"
+          >
+            <ChoiceButton glyph="A" tone="green" disabled={busy} onClick={onApprove}>
+              {term("comms.approve")}
+            </ChoiceButton>
+            <ChoiceButton glyph="B" tone="red" disabled={busy} onClick={onDeny}>
+              {term("comms.deny")}
+            </ChoiceButton>
+          </div>
+        ) : (
+          <div
+            data-comms-actions
+            className="sticky bottom-0 flex shrink-0 justify-end bg-panel px-2.5 pb-2.5"
+          >
+            <OutlineButton tone="line" className="text-d8" onClick={onNext}>
+              {term("comms.next")}
+            </OutlineButton>
+          </div>
+        )}
       </div>
-      {message?.kind === "approval" ? (
-        <div className="flex shrink-0 gap-2.5 px-2.5 pb-2.5">
-          <ChoiceButton glyph="A" tone="green" disabled={busy} onClick={onApprove}>
-            {term("comms.approve")}
-          </ChoiceButton>
-          <ChoiceButton glyph="B" tone="red" disabled={busy} onClick={onDeny}>
-            {term("comms.deny")}
-          </ChoiceButton>
-        </div>
-      ) : (
-        <div className="flex shrink-0 justify-end px-2.5 pb-2.5">
-          <OutlineButton tone="line" className="text-d8" onClick={onNext}>
-            {term("comms.next")}
-          </OutlineButton>
-        </div>
-      )}
       {/* The order box, laid out like every composer: Send inside it, settings beneath. */}
       <div className="flex shrink-0 flex-col gap-1.5 border-line-faint border-t-2 p-2.5">
         <form
