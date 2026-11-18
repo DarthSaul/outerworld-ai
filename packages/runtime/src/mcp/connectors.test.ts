@@ -731,6 +731,60 @@ describe("a server that registers no clients (ADR-0019)", () => {
     expect(t.manager.catalog()).toEqual({});
   });
 
+  it("keeps a disconnect that lands while a refused sign-in is being dropped", async () => {
+    const t = setup(async (connector, provider) => {
+      const transport = await inMemory()(connector, provider);
+      const send = transport.send.bind(transport);
+      transport.send = async (message, options) => {
+        if ("method" in message && message.method === "tools/call") {
+          throw new UnauthorizedError("Unauthorized");
+        }
+        return send(message, options);
+      };
+      // The Commander disconnects while the refused connection is closing.
+      const close = transport.close.bind(transport);
+      transport.close = async () => {
+        void t.manager.disconnect("gmail");
+        await close();
+      };
+      return transport;
+    });
+    await withGmail(t);
+    await t.manager.setOwnClient("gmail", { clientId: "web" });
+    const stale = JSON.stringify({ access_token: "stale", token_type: "Bearer" });
+    await t.secrets.set(gmailTokens, stale);
+    expect((await t.manager.connect("gmail")).status).toBe("connected");
+    await expect(
+      t.manager.call("gmail", "notion-search", { query: "is:unread" }, ctxSignal()),
+    ).rejects.toThrow(/sign in again/);
+    // The disconnect stands: nothing reconnects, and a plain disconnect keeps the sign-in.
+    expect(gmail(t)).toMatchObject({ status: "disconnected" });
+    expect(gmail(t)).not.toHaveProperty("authorizationUrl");
+    expect(await t.secrets.get(gmailTokens)).toBe(stale);
+  });
+
+  it("points the agent at Abilities when a sign-in is refused", async () => {
+    const refusing: TransportFactory = async (connector, provider) => {
+      const transport = await inMemory()(connector, provider);
+      const send = transport.send.bind(transport);
+      transport.send = async (message, options) => {
+        if ("method" in message && message.method === "tools/call") {
+          throw new UnauthorizedError("Unauthorized");
+        }
+        return send(message, options);
+      };
+      return transport;
+    };
+    const t = setup(refusing);
+    await withGmail(t);
+    await t.manager.setOwnClient("gmail", { clientId: "web" });
+    await t.secrets.set(gmailTokens, aToken);
+    await t.manager.connect("gmail");
+    await expect(
+      t.manager.call("gmail", "notion-search", { query: "x" }, ctxSignal()),
+    ).rejects.toThrow("Abilities › Installed");
+  });
+
   it("leaves other tool errors as they are", async () => {
     const t = setup(inMemory());
     await t.manager.refresh();
@@ -869,6 +923,31 @@ describe("KeychainOAuthProvider", () => {
       onAuthorizationUrl: (u) => plain.push(u),
     }).redirectToAuthorization(new URL("https://auth.example.test/a?scope=x"));
     expect(plain).toEqual(["https://auth.example.test/a?scope=x"]);
+  });
+
+  it("lets only the newest attempt set the verifier, the state, and the sign-in URL", async () => {
+    const urls: string[] = [];
+    const p = new KeychainOAuthProvider({
+      connectorId: "notion",
+      server: DEMO_SERVER,
+      secrets: new MemorySecretStore(),
+      redirectUrl: "http://127.0.0.1:4317/oauth/callback/notion",
+      onAuthorizationUrl: (url) => urls.push(url),
+    });
+    // A disconnect and reconnect: no forget, so the epoch is unchanged.
+    const older = p.forAttempt();
+    const newer = p.forAttempt();
+    await newer.saveCodeVerifier("new");
+    const state = await (newer.state?.() ?? "");
+    await newer.redirectToAuthorization(new URL("https://auth.example.test/a?n=new"));
+    // The superseded attempt finishes discovery late; none of it lands.
+    await older.saveCodeVerifier("old");
+    const olderState = await (older.state?.() ?? "");
+    await older.redirectToAuthorization(new URL("https://auth.example.test/a?n=old"));
+    expect(await p.codeVerifier()).toBe("new");
+    expect(urls).toEqual(["https://auth.example.test/a?n=new"]);
+    expect(p.consumeState(olderState)).toBe(false);
+    expect(p.consumeState(state)).toBe(true);
   });
 
   it("keeps the PKCE verifier in memory and checks state once", async () => {

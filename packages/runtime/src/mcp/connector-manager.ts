@@ -493,7 +493,7 @@ export class ConnectorManager {
       if (!refused) throw error;
       await this.#signInAgain(entry, client);
       throw new Error(
-        `${entry.connector.name} refused the sign-in. The Commander must sign in again from the connector's card in Settings; nothing was done.`,
+        `${entry.connector.name} refused the sign-in. The Commander must sign in again from the connector's card under Abilities › Installed; nothing was done.`,
       );
     }
     const content = Array.isArray(result.content) ? result.content : [];
@@ -506,11 +506,17 @@ export class ConnectorManager {
     return text || (result.structuredContent ?? null);
   }
 
-  /** A tool call found the sign-in refused: drop it and ask for a new one, once per client. */
+  /**
+   * A tool call found the sign-in refused: drop it and ask for a new one, once per client. A
+   * disconnect that lands meanwhile stands: the stored sign-in is kept and nothing reconnects.
+   */
   async #signInAgain(entry: Entry, client: Client): Promise<void> {
     if (entry.client !== client) return;
+    const cancels = entry.cancels;
     await this.#takeDown(entry);
+    if (entry.cancels !== cancels) return;
     await entry.provider.invalidateCredentials("tokens");
+    if (entry.cancels !== cancels) return;
     await this.connect(entry.connector.id);
   }
 

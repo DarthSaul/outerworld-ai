@@ -57,6 +57,8 @@ export class KeychainOAuthProvider implements OAuthClientProvider {
   #state: string | undefined;
   /** Bumped by forget and by a new own client: attempts begun before never write credentials. */
   #epoch = 0;
+  /** Bumped by every attempt: only the newest one sets the verifier, the state, and the URL. */
+  #attempts = 0;
 
   constructor(options: {
     connectorId: string;
@@ -138,10 +140,16 @@ export class KeychainOAuthProvider implements OAuthClientProvider {
    * or a new own client lands after the attempt began, those writes and clears are dropped, so a
    * superseded attempt never restores what was deleted nor deletes what replaced it. Attempts
    * begun afterwards get a view of their own and write as usual.
+   *
+   * The sign-in in progress (PKCE verifier, `state`, authorization URL) belongs to the newest
+   * attempt alone, even across a disconnect and reconnect that leave the epoch unchanged: an
+   * older attempt that finishes discovery late never replaces them.
    */
   forAttempt(): KeychainOAuthProvider {
     const epoch = this.#epoch;
+    const attempt = ++this.#attempts;
     const current = () => this.#epoch === epoch;
+    const newest = () => this.#attempts === attempt;
     return new Proxy(this, {
       get(target, prop) {
         const value: unknown = Reflect.get(target, prop, target);
@@ -149,6 +157,13 @@ export class KeychainOAuthProvider implements OAuthClientProvider {
         const method = value as (...args: unknown[]) => unknown;
         // Writes and deletes alike: a superseded attempt neither restores credentials nor wipes
         // the ones a newer attempt saved.
+        if (prop === "saveCodeVerifier" || prop === "redirectToAuthorization") {
+          return (...args: unknown[]) => (newest() ? method.apply(target, args) : undefined);
+        }
+        // A superseded attempt gets a state of its own that no callback will ever match.
+        if (prop === "state") {
+          return () => (newest() ? method.apply(target) : randomBytes(24).toString("base64url"));
+        }
         if (
           prop === "saveTokens" ||
           prop === "saveClientInformation" ||
