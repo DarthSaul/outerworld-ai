@@ -59,8 +59,10 @@ agent you created:
 4. **Connector calls to Gmail** (`gmailmcp.googleapis.com`) for agents granted Gmail, if you added
    it: the mail searches, reads, drafts, and label changes the agent requests, so requests and
    results can carry your email. The OAuth flow goes to Google (`accounts.google.com`,
-   `oauth2.googleapis.com`) with the OAuth client you registered. Every granted agent acts as the
-   Google account you signed in with.
+   `oauth2.googleapis.com`) with the OAuth client you registered, asking only for
+   `gmail.modify` (read, draft, label, trash; no permanent delete) and for offline access, so a
+   refresh token is kept in the keychain. A token Gmail refuses is deleted at once and you are asked
+   to sign in again. Every granted agent acts as the Google account you signed in with.
 5. **`web_fetch` requests** to public http(s) URLs an agent with the Web prop chooses. Loopback,
    private-network, and link-local addresses are refused.
 

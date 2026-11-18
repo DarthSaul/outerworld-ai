@@ -40,6 +40,8 @@ the glossary.
 | `OutlineButton`, `ChoiceButton`, `tabClass`, `Diamond` | Outline buttons (also `type="submit"`), the (A)/(B) buttons, tab classes for router links, and the placed-object diamond. |
 | `ResizeHandle`, `RESIZE_KEY_STEP` | A vertical column splitter (an `<hr>` separator with aria values): drag, arrow keys, Enter or double-click to reset (ADR-0014). |
 | `crewOptionGroups` | Every crew member as `Dropdown` options grouped by room: character, name underlined in their color, colored status. Shared by the scanner and crew comms. |
+| `MenuButton`, `menuItemClass`, `MenuItemBody` | A tab-styled button opening a menu of destinations (the footer's System menu): items are the caller's links with `role="menuitem"`, an icon beside a title over a subtitle. ↓ ↑ Home End move, Escape closes to the button, Tab closes and moves on, a click outside closes. |
+| `PixelIcon` | A 9 × 9 pixel glyph in the current color: `gear`, `sliders`, `bolt`. Decorative. |
 | `Dropdown` | A select drawn in the station style: a button opening a listbox of grouped options with rich labels (avatar, colored status). Arrow keys, Home/End, type-ahead, Enter/Space, Escape and Tab; focus moves to the options while open; a click outside closes it. |
 | `Checkbox`, `fieldClass`, `inputClass` | A checkbox drawn as a pixel box (the native input stays, visually hidden and focusable), and the classes for a labelled field and an input or select at the shared form height. |
 | `EmptyState` | A status region: a title, one sentence, and at most one action. |

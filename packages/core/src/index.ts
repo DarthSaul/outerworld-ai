@@ -205,6 +205,9 @@ export {
   KNOWN_TOOL_CLASSES,
   NOTION_PRESET,
   needsOwnClient,
+  type OwnClientProfile,
+  type OwnClientSetupStep,
+  ownClientProfile,
   type ToolHints,
 } from "./policy/connector-tools.js";
 // Dispatch (brief §7)

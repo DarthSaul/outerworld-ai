@@ -1,7 +1,7 @@
 # ADR-0015: An Anthropic key beside OpenRouter, and Settings as a side menu of sections
 
 ## Status
-Accepted
+Accepted. Routes moved under `/system/settings` by ADR-0020.
 
 ## Date
 2026-11-11

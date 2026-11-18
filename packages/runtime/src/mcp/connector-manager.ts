@@ -3,10 +3,13 @@ import {
   type ConnectorToolCatalog,
   classifyConnectorTool,
   needsOwnClient,
+  ownClientProfile,
   type ToolClass,
 } from "@darthsaul/outerworld-ai-core";
 import {
+  auth,
   Client,
+  InsufficientScopeError,
   IssuerMismatchError,
   StreamableHTTPClientTransport,
   type Transport,
@@ -39,6 +42,8 @@ export interface ConnectorView {
    * is stored, and the redirect URL to register it with. Never the client itself.
    */
   readonly ownClient?: { readonly set: boolean; readonly redirectUrl: string };
+  /** While it needs sign-in: where to sign in, so the card can offer it whoever asked. */
+  readonly authorizationUrl?: string;
 }
 
 /** Builds the transport for a connector; tests pass an in-memory one. */
@@ -46,6 +51,16 @@ export type TransportFactory = (
   connector: Connector,
   provider: KeychainOAuthProvider,
 ) => Promise<Transport> | Transport;
+
+/**
+ * Starts a sign-in without a connection: discovery, then the authorization URL through the
+ * provider. For a server that answers without a token until a tool is called (Gmail's does), so
+ * an unsigned connection is never taken for a working one. Tests pass a fake.
+ */
+export type SignInStarter = (
+  connector: Connector,
+  provider: KeychainOAuthProvider,
+) => Promise<void>;
 
 /** A connector tool's result is text for the model, capped like other tool output. */
 const MAX_RESULT_CHARS = 64 * 1024;
@@ -88,6 +103,13 @@ const httpTransport: TransportFactory = (connector, provider) => {
   });
 };
 
+const sdkSignIn: SignInStarter = async (connector, provider) => {
+  if (connector.transport.type !== "http") {
+    throw new Error("only HTTP connectors are supported in v1 (ADR-0012)");
+  }
+  await auth(provider, { serverUrl: new URL(connector.transport.url) });
+};
+
 /** What a sign-in is tied to: the server URL, or the whole transport for a non-HTTP one. */
 const serverOf = (connector: Connector) =>
   connector.transport.type === "http"
@@ -108,6 +130,7 @@ export class ConnectorManager {
   readonly #secrets: SecretStore;
   readonly #redirectUrl: (connectorId: string) => string;
   readonly #transports: TransportFactory;
+  readonly #signIn: SignInStarter;
   readonly #reconnect: { baseMs: number; maxMs: number };
   readonly #entries = new Map<string, Entry>();
 
@@ -117,6 +140,7 @@ export class ConnectorManager {
     secrets: SecretStore;
     redirectUrl: (connectorId: string) => string;
     transports?: TransportFactory;
+    signIn?: SignInStarter;
     reconnect?: { baseMs: number; maxMs: number };
   }) {
     this.#home = options.home;
@@ -124,6 +148,7 @@ export class ConnectorManager {
     this.#secrets = options.secrets;
     this.#redirectUrl = options.redirectUrl;
     this.#transports = options.transports ?? httpTransport;
+    this.#signIn = options.signIn ?? sdkSignIn;
     this.#reconnect = options.reconnect ?? { baseMs: 1000, maxMs: 60_000 };
   }
 
@@ -156,6 +181,9 @@ export class ConnectorManager {
         existing.connector = connector;
         continue;
       }
+      const profile = ownClientProfile(
+        connector.transport.type === "http" ? connector.transport.url : undefined,
+      );
       const entry: Entry = {
         connector,
         status: "disconnected",
@@ -175,6 +203,7 @@ export class ConnectorManager {
           onAuthorizationUrl: (url) => {
             entry.authorizationUrl = url;
           },
+          authorization: { scope: profile?.scope, params: profile?.authorizationParams },
         }),
       };
       this.#entries.set(connector.id, entry);
@@ -192,6 +221,9 @@ export class ConnectorManager {
       tools: e.tools,
       ...(needsOwnClient(e.connector)
         ? { ownClient: { set: e.ownClient, redirectUrl: this.#redirectUrl(e.connector.id) } }
+        : {}),
+      ...(e.status === "needs_auth" && e.authorizationUrl
+        ? { authorizationUrl: e.authorizationUrl }
         : {}),
     }));
   }
@@ -241,6 +273,11 @@ export class ConnectorManager {
     await entry.client?.close().catch(() => undefined);
     entry.client = undefined;
     entry.authorizationUrl = undefined;
+    // A server that needs the Commander's own client may answer without a token until a tool is
+    // called: without a stored sign-in, sign in first rather than trust that answer.
+    if (needsOwnClient(entry.connector) && !(await entry.provider.hasTokens())) {
+      return this.#beginSignIn(entry, stale);
+    }
     let transport: Transport | undefined;
     try {
       // Its own view of the provider: a forget after this point drops its credential writes.
@@ -275,6 +312,34 @@ export class ConnectorManager {
           ...(entry.authorizationUrl ? { authorizationUrl: entry.authorizationUrl } : {}),
         };
       }
+      entry.tools = [];
+      this.#set(entry, "error", message(error));
+      return { status: "error", detail: message(error) };
+    }
+  }
+
+  /** Asks for sign-in without connecting; the callback finishes it on the transport kept here. */
+  async #beginSignIn(
+    entry: Entry,
+    stale: () => boolean,
+  ): Promise<{ status: ConnectorStatus; authorizationUrl?: string; detail?: string }> {
+    let transport: Transport | undefined;
+    try {
+      const provider = entry.provider.forAttempt();
+      transport = await this.#transports(entry.connector, provider);
+      await this.#signIn(entry.connector, provider);
+      if (stale()) {
+        await transport.close().catch(() => undefined);
+        return { status: entry.status };
+      }
+      if (!entry.authorizationUrl) throw new Error("the server did not offer a sign-in");
+      entry.pending = transport;
+      entry.tools = [];
+      this.#set(entry, "needs_auth", "Sign in to connect");
+      return { status: "needs_auth", authorizationUrl: entry.authorizationUrl };
+    } catch (error) {
+      await transport?.close().catch(() => undefined);
+      if (stale()) return { status: entry.status };
       entry.tools = [];
       this.#set(entry, "error", message(error));
       return { status: "error", detail: message(error) };
@@ -410,10 +475,27 @@ export class ConnectorManager {
     if (!entry.client || entry.status !== "connected") {
       throw new Error(`${entry.connector.name} is not connected`);
     }
-    const result = await entry.client.callTool(
-      { name: tool, arguments: (input ?? {}) as Record<string, unknown> },
-      { signal },
-    );
+    const client = entry.client;
+    const asked = entry.authorizationUrl;
+    let result: Awaited<ReturnType<Client["callTool"]>>;
+    try {
+      result = await client.callTool(
+        { name: tool, arguments: (input ?? {}) as Record<string, unknown> },
+        { signal },
+      );
+    } catch (error) {
+      // The server refused the sign-in (expired with no refresh, revoked, too narrow): the SDK
+      // could not renew it without the Commander, so ask them, and say so to the agent.
+      const refused =
+        error instanceof UnauthorizedError ||
+        error instanceof InsufficientScopeError ||
+        entry.authorizationUrl !== asked;
+      if (!refused) throw error;
+      await this.#signInAgain(entry, client);
+      throw new Error(
+        `${entry.connector.name} refused the sign-in. The Commander must sign in again from the connector's card in Settings; nothing was done.`,
+      );
+    }
     const content = Array.isArray(result.content) ? result.content : [];
     const text = content
       .map((c) => (c && typeof c === "object" && "text" in c ? String(c.text) : ""))
@@ -422,6 +504,14 @@ export class ConnectorManager {
       .slice(0, MAX_RESULT_CHARS);
     if (result.isError) throw new Error(text || `${tool} failed`);
     return text || (result.structuredContent ?? null);
+  }
+
+  /** A tool call found the sign-in refused: drop it and ask for a new one, once per client. */
+  async #signInAgain(entry: Entry, client: Client): Promise<void> {
+    if (entry.client !== client) return;
+    await this.#takeDown(entry);
+    await entry.provider.invalidateCredentials("tokens");
+    await this.connect(entry.connector.id);
   }
 
   #entry(id: string): Entry {

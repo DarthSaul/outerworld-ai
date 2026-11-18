@@ -461,7 +461,13 @@ export function fakeApi() {
       if (!c) throw new ApiError(404, "no connector");
       const i = connectors.indexOf(c);
       if (parts[2] === "connect") {
-        connectors[i] = { ...c, status: connectAnswer.status };
+        connectors[i] = {
+          ...c,
+          status: connectAnswer.status,
+          ...(connectAnswer.authorizationUrl
+            ? { authorizationUrl: connectAnswer.authorizationUrl }
+            : {}),
+        };
         return connectAnswer;
       }
       if (parts[2] === "client") {

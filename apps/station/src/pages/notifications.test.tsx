@@ -77,7 +77,7 @@ describe("Notifications feed", () => {
       within(items[i] as HTMLElement).getByRole("link", { name: term("notification.open") });
     expect(href(0)).toHaveAttribute("href", "/comms?agent=quill&open=s7");
     expect(href(2)).toHaveAttribute("href", "/memory?agent=vesper");
-    expect(href(3)).toHaveAttribute("href", "/settings/budgets");
+    expect(href(3)).toHaveAttribute("href", "/system/settings/budgets");
     expect(await axe(container)).toHaveNoViolations();
   });
 

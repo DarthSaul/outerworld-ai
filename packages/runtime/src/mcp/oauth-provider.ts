@@ -17,6 +17,15 @@ export interface OwnClient {
 }
 
 /**
+ * What a server's sign-in asks for beyond the SDK's defaults (ADR-0019): a scope in place of every
+ * scope the server lists, and extra authorization parameters (Google's offline access).
+ */
+export interface AuthorizationRequest {
+  readonly scope?: string | undefined;
+  readonly params?: Readonly<Record<string, string>> | undefined;
+}
+
+/**
  * The keychain account for a connector's sign-in: the connector id plus a hash of the server URL
  * the sign-in was made for. A sign-in is only ever read back for that same server, so a station
  * whose connector shares an id but points elsewhere (a demo placeholder, a changed URL) never
@@ -43,6 +52,7 @@ export class KeychainOAuthProvider implements OAuthClientProvider {
   readonly #secrets: SecretStore;
   readonly #redirectUrl: string;
   readonly #onAuthorizationUrl: (url: string) => void;
+  readonly #authorization: AuthorizationRequest;
   #verifier = "";
   #state: string | undefined;
   /** Bumped by forget and by a new own client: attempts begun before never write credentials. */
@@ -55,12 +65,14 @@ export class KeychainOAuthProvider implements OAuthClientProvider {
     secrets: SecretStore;
     redirectUrl: string;
     onAuthorizationUrl: (url: string) => void;
+    authorization?: AuthorizationRequest | undefined;
   }) {
     this.#connectorId = options.connectorId;
     this.#server = options.server;
     this.#secrets = options.secrets;
     this.#redirectUrl = options.redirectUrl;
     this.#onAuthorizationUrl = options.onAuthorizationUrl;
+    this.#authorization = options.authorization ?? {};
   }
 
   #key(kind: SecretKind) {
@@ -83,6 +95,7 @@ export class KeychainOAuthProvider implements OAuthClientProvider {
       grant_types: ["authorization_code", "refresh_token"],
       response_types: ["code"],
       token_endpoint_auth_method: "none",
+      ...(this.#authorization.scope ? { scope: this.#authorization.scope } : {}),
     };
   }
 
@@ -180,8 +193,17 @@ export class KeychainOAuthProvider implements OAuthClientProvider {
     await this.#secrets.set(this.#key("tokens"), JSON.stringify(tokens));
   }
 
+  /**
+   * Hands the sign-in URL to the daemon. The SDK picks the scope from the server's metadata;
+   * a profiled server's own scope and parameters (ADR-0019) replace what it picked.
+   */
   redirectToAuthorization(url: URL): void {
-    this.#onAuthorizationUrl(url.href);
+    const out = new URL(url.href);
+    if (this.#authorization.scope) out.searchParams.set("scope", this.#authorization.scope);
+    for (const [k, v] of Object.entries(this.#authorization.params ?? {})) {
+      out.searchParams.set(k, v);
+    }
+    this.#onAuthorizationUrl(out.href);
   }
 
   saveCodeVerifier(verifier: string): void {

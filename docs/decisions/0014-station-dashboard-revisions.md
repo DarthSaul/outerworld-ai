@@ -1,7 +1,7 @@
 # ADR-0014: Station dashboard revisions: drawer, footer kill switch, pannable map, session titles
 
 ## Status
-Accepted
+Accepted. Connectors moved to Abilities by ADR-0020.
 
 ## Date
 2026-10-12
