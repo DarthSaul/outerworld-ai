@@ -105,6 +105,24 @@ describe("App shell", () => {
   });
 
   it.each([
+    ["{Enter}", term("settings"), "settings.nav"],
+    [" ", term("abilities"), "abilities.nav"],
+  ] as const)("opens the focused System menu item with %j", async (key, title, nav) => {
+    const user = userEvent.setup();
+    renderApp("/");
+    const footer = await screen.findByRole("contentinfo");
+    within(footer)
+      .getByRole("button", { name: term("nav.system") })
+      .focus();
+    await user.keyboard("{ArrowDown}");
+    if (key === " ") await user.keyboard("{ArrowDown}");
+    await user.keyboard(key);
+    expect(await screen.findByRole("heading", { level: 1, name: title })).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: term(nav) })).toBeInTheDocument();
+    expect(within(footer).queryByRole("menu")).toBeNull();
+  });
+
+  it.each([
     ["/system", "/system/settings/providers"],
     ["/settings", "/system/settings/providers"],
     ["/settings/budgets", "/system/settings/budgets"],

@@ -34,8 +34,8 @@ export interface MenuButtonProps {
 /**
  * A tab-styled button that opens a small menu of destinations (the footer's System menu). The
  * menu is in the page only while open. Keyboard: Enter, Space, or ↓ open it on the first item, ↑
- * on the last; in the menu ↓ ↑ Home End move, Escape closes and returns to the button, Tab closes
- * and moves on. A click outside closes it.
+ * on the last; in the menu ↓ ↑ Home End move, Enter or Space choose, Escape closes and returns to
+ * the button, Tab closes and moves on. A click outside closes it.
  */
 export function MenuButton({
   label,
@@ -87,6 +87,8 @@ export function MenuButton({
     else if (e.key === "Home") move(0);
     else if (e.key === "End") move(list.length - 1);
     else if (e.key === "Escape") close(true);
+    // Space chooses the item, as Enter does; Enter is left to the link itself, so it acts once.
+    else if (e.key === " ") list[at]?.click();
     else if (e.key === "Tab") {
       setOpen(false);
       return;
