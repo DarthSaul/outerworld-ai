@@ -121,8 +121,8 @@ describe("Avatar", () => {
 
 describe("Sprite", () => {
   it("draws every filled cell of the character, at an integer scale", () => {
-    const { container } = render(<Sprite look={5} scale={4} label="Rivet" />);
-    const svg = screen.getByRole("img", { name: "Rivet" });
+    const { container } = render(<Sprite look={5} scale={4} label="Zephyr" />);
+    const svg = screen.getByRole("img", { name: "Zephyr" });
     expect(svg).toHaveAttribute("width", "80");
     expect(svg).toHaveAttribute("height", "104");
     const covered = [...container.querySelectorAll("rect")].reduce(

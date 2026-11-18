@@ -70,23 +70,25 @@ function decodePng(buf: Buffer): (string | null)[][] {
   );
 }
 
+/** Drawn characters in the design export that the station no longer offers (ADR-0021). */
+const RETIRED = ["rivet", "sable", "tock", "sprocket", "quill", "atlas", "juno"];
+
 describe("characters", () => {
-  it("has the 24 drawn characters of the design, in export order, then the painted ones", () => {
-    expect(DRAWN_CHARACTERS).toHaveLength(24);
-    expect(CHARACTER_COUNT).toBe(24 + ART_CHARACTERS.length);
-    expect(DRAWN_CHARACTERS.map((c) => c.id)).toEqual(index.characters.map((c) => c.id));
+  it("has the drawn characters still in use, in export order, then the painted ones", () => {
+    const kept = index.characters.filter((c) => !RETIRED.includes(c.id));
+    expect(DRAWN_CHARACTERS).toHaveLength(17);
+    expect(CHARACTER_COUNT).toBe(17 + ART_CHARACTERS.length);
+    expect(DRAWN_CHARACTERS.map((c) => c.id)).toEqual(kept.map((c) => c.id));
     expect(DRAWN_CHARACTERS.map((c) => [c.name, c.role])).toEqual(
-      index.characters.map((c) => [c.name, c.role]),
+      kept.map((c) => [c.name, c.role]),
     );
   });
 
-  it.each(DRAWN_CHARACTERS.map((c, i) => [c.id, i] as const))(
+  it.each(DRAWN_CHARACTERS.map((c) => [c.id, c] as const))(
     "draws %s pixel for pixel as the exported 1x PNG",
-    (_id, i) => {
-      const file = index.characters[i]?.file1x ?? "";
+    (id, character) => {
+      const file = index.characters.find((c) => c.id === id)?.file1x ?? "";
       const png = decodePng(readFileSync(join(spriteDir, "..", file)));
-      const character = DRAWN_CHARACTERS[i];
-      if (!character) throw new Error(`no character ${i}`);
       expect(characterGrid(character)).toEqual(png);
     },
   );
@@ -153,7 +155,7 @@ describe("lookFor", () => {
   );
 
   it("keeps painted characters after the drawn ones, with unique ids and names", () => {
-    expect(CHARACTERS.slice(24)).toEqual(ART_CHARACTERS);
+    expect(CHARACTERS.slice(DRAWN_CHARACTERS.length)).toEqual(ART_CHARACTERS);
     expect(new Set(CHARACTERS.map((c) => c.id)).size).toBe(CHARACTER_COUNT);
     expect(new Set(CHARACTERS.map((c) => c.name)).size).toBe(CHARACTER_COUNT);
     expect(DRAWN_CHARACTERS.some(isArtCharacter)).toBe(false);
@@ -163,7 +165,7 @@ describe("lookFor", () => {
     for (const id of ["vesper", "quill", "wren", "nova", "a", "project-manager"]) {
       expect(lookFor(id, undefined)).toBeLessThan(DRAWN_CHARACTERS.length);
     }
-    expect(lookFor("quill", 28)).toBe(28);
+    expect(lookFor("quill", 20)).toBe(20);
     expect(lookFor("quill", CHARACTER_COUNT)).toBeLessThan(DRAWN_CHARACTERS.length);
   });
 });

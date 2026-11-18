@@ -22,3 +22,4 @@ supersedes the old one. Template: `0000-template.md`.
 | [0018](0018-station-three-columns-and-session-handover.md) | Station in three columns, and handing a session to another crew member | Accepted |
 | [0019](0019-github-gmail-connectors-own-oauth-client.md) | GitHub and Gmail connector presets, signed in with the Commander's own OAuth app | Accepted |
 | [0020](0020-system-menu-settings-and-abilities.md) | System menu in the footer; Settings and Abilities under `/system` | Accepted |
+| [0021](0021-retire-seven-drawn-characters.md) | Retire seven drawn characters; add MERLO and SHADE as painted art | Accepted |

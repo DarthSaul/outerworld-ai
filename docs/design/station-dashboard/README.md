@@ -5,7 +5,7 @@ An AI-agent management dashboard with a 16-bit / Super FX-era space-station look
 
 There are two pages:
 1. **Station**: the live ops dashboard (map, crew, Overseer comms, scanner, vitals).
-2. **Crew Select**: picking an agent's appearance from 24 pixel characters.
+2. **Crew Select**: picking an agent's appearance from the pixel characters (24 drawn here; the station offers 17 of them plus painted art, ADR-0017, ADR-0021).
 
 ## About the design files
 Everything in `reference/` is a **design reference built in HTML**: a working prototype that shows the intended look and behavior. It is not production code to copy. Rebuild it in the existing **React + Vite SPA**, following that codebase's patterns (component structure, state management, data fetching, styling approach). The prototype runs on a custom runtime; ignore that runtime and treat the template and logic only as a spec.

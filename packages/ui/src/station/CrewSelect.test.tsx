@@ -21,7 +21,7 @@ const agents: CrewSelectAgent[] = [
     role: "Crew member",
     roomName: "Operations",
     color: stVar("room-0"),
-    look: 21,
+    look: 16,
   },
   {
     id: "wren",
@@ -66,9 +66,9 @@ describe("CrewSelect", () => {
     const title = within(panel).getByRole("heading", { name: "Appearance" });
     expect(title.parentElement?.parentElement).toBe(save().parentElement);
     expect(panel).not.toHaveTextContent("Operations");
-    expect(screen.getByRole("img", { name: "QUILL" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "FENNEC" })).toBeInTheDocument();
     expect(screen.getByText("Equipped on Quill")).toBeInTheDocument();
-    expect(cursorName()).toBe("QUILL, Scribe");
+    expect(cursorName()).toBe("FENNEC, Pathfinder");
     expect(screen.queryByRole("button", { name: "Random" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Assign" })).toBeNull();
   });
@@ -81,7 +81,7 @@ describe("CrewSelect", () => {
     expect(save()).toBeEnabled();
     fireEvent.click(save());
     expect(onSave).toHaveBeenCalledWith("quill", 0);
-    fireEvent.click(within(grid()).getByRole("button", { name: "QUILL, Scribe" }));
+    fireEvent.click(within(grid()).getByRole("button", { name: "FENNEC, Pathfinder" }));
     expect(save()).toBeDisabled();
   });
 
@@ -105,8 +105,8 @@ describe("CrewSelect", () => {
     fireEvent.keyDown(grid(), { key: "Enter" });
     expect(onSave).not.toHaveBeenCalled();
     fireEvent.keyDown(grid(), { key: "ArrowRight" });
-    expect(cursorName()).toBe("ATLAS, Heavy Lifter");
-    expect(within(grid()).getByRole("button", { name: "ATLAS, Heavy Lifter" })).toHaveFocus();
+    expect(cursorName()).toBe("RAZOR, Captain");
+    expect(within(grid()).getByRole("button", { name: "RAZOR, Captain" })).toHaveFocus();
     fireEvent.keyDown(grid(), { key: "Home" });
     expect(cursorName()).toBe("NOVA, Pilot");
     fireEvent.keyDown(grid(), { key: "ArrowDown" });
@@ -127,7 +127,7 @@ describe("CrewSelect", () => {
   it("leaves the arrow keys alone outside the grid", () => {
     render(<Harness />);
     fireEvent.keyDown(window, { key: "ArrowRight" });
-    expect(cursorName()).toBe("QUILL, Scribe");
+    expect(cursorName()).toBe("FENNEC, Pathfinder");
   });
 
   it("says who else wears a look, and badges those tiles", () => {
@@ -136,7 +136,7 @@ describe("CrewSelect", () => {
     expect(
       within(grid("Wren")).getByRole("button", { name: "KESTREL, Commander" }),
     ).toHaveTextContent("VE");
-    fireEvent.click(within(grid("Wren")).getByRole("button", { name: "QUILL, Scribe" }));
+    fireEvent.click(within(grid("Wren")).getByRole("button", { name: "FENNEC, Pathfinder" }));
     expect(screen.getByText("Also worn by Quill")).toBeInTheDocument();
     fireEvent.click(within(grid("Wren")).getByRole("button", { name: "NOVA, Pilot" }));
     expect(screen.getByText("Available")).toBeInTheDocument();

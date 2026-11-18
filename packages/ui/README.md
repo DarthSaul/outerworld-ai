@@ -36,7 +36,7 @@ the glossary.
 | `StatBox` | A labelled value in a well. `alert` blinks its border. |
 | `SegmentBar` | A segmented bar. It is a meter when it has a percent; with no proven amount it marches while `active`. |
 | `Avatar`, `overseerAvatarProps` | A square initials chip, or with `look` the crew member's character in a frame of the chip color; an optional double ring and status lamp. |
-| `Sprite` | One of core's 24 characters as SVG rects, at an integer scale. |
+| `Sprite` | One of core's characters at an integer scale: a drawn one as SVG rects, a painted one as pixelated art. |
 | `OutlineButton`, `ChoiceButton`, `tabClass`, `Diamond` | Outline buttons (also `type="submit"`), the (A)/(B) buttons, tab classes for router links, and the placed-object diamond. |
 | `ResizeHandle`, `RESIZE_KEY_STEP` | A vertical column splitter (an `<hr>` separator with aria values): drag, arrow keys, Enter or double-click to reset (ADR-0014). |
 | `crewOptionGroups` | Every crew member as `Dropdown` options grouped by room: character, name underlined in their color, colored status. Shared by the scanner and crew comms. |

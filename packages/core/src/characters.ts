@@ -1,8 +1,9 @@
 import { CHARACTER_ART } from "./character-art.js";
 
 /**
- * The pixel characters an agent can appear as (ADR-0013): 24 drawn characters, generated on a
- * 20×26 grid, then painted characters shipped as art (ADR-0017). The generator draws the drawn
+ * The pixel characters an agent can appear as (ADR-0013): 17 drawn characters, generated on a
+ * 20×26 grid (the design exports 24; 7 are retired, ADR-0021), then painted characters shipped as
+ * art (ADR-0017). The generator draws the drawn
  * ones. Ported from docs/design/station-dashboard/src/characterSprites.ts; the
  * exported PNGs in docs/design/station-dashboard/sprites/1x are the reference, and
  * characters.test.ts checks every grid against them pixel for pixel. Pure: no DOM, no canvas.
@@ -65,7 +66,7 @@ export type CharacterSpec = {
   ears?: false;
 };
 
-/** The 24 drawn characters, in the design export's order (`sprites/characters.json`). */
+/** The drawn characters still in use, in the design export's order (`sprites/characters.json`). */
 export const DRAWN_CHARACTERS: readonly CharacterSpec[] = [
   {
     id: "nova",
@@ -127,21 +128,6 @@ export const DRAWN_CHARACTERS: readonly CharacterSpec[] = [
     fit: "labcoat",
     eyes: "glasses",
     item: "clipboard",
-  },
-  {
-    id: "rivet",
-    name: "RIVET",
-    role: "Mechanic",
-    skin: "#f7d4b4",
-    hair: "#3a2a20",
-    hairStyle: "beanie",
-    cap: "#d04a3a",
-    suit: "#e8d6b0",
-    fit: "overalls",
-    alt: "#3a5aa0",
-    item: "wrench",
-    mouth: "grin",
-    blush: true,
   },
   {
     id: "zephyr",
@@ -213,32 +199,6 @@ export const DRAWN_CHARACTERS: readonly CharacterSpec[] = [
     mouth: "flat",
   },
   {
-    id: "sable",
-    name: "SABLE",
-    role: "Strategist",
-    skin: "#f7d4b4",
-    hair: "#2a1e3a",
-    hairStyle: "long",
-    suit: "#3a2a5a",
-    cape: "#8a3ad0",
-    acc: "#d0b0ff",
-    emblem: true,
-    eyes: "sleepy",
-  },
-  {
-    id: "tock",
-    name: "TOCK",
-    role: "Clockwork Unit",
-    skin: "#e08a3c",
-    robot: "mono",
-    glow: "#ffec5a",
-    suit: "#5a4a3a",
-    acc: "#ffec5a",
-    ears: false,
-    item: "scanner",
-    antenna: 1,
-  },
-  {
     id: "bramble",
     name: "BRAMBLE",
     role: "Mystic",
@@ -301,20 +261,6 @@ export const DRAWN_CHARACTERS: readonly CharacterSpec[] = [
     emblem: true,
   },
   {
-    id: "sprocket",
-    name: "SPROCKET",
-    role: "Apprentice",
-    skin: "#eab38a",
-    hair: "#e0a040",
-    hairStyle: "capback",
-    cap: "#3a7ad0",
-    suit: "#e05a3a",
-    acc: "#ffffff",
-    emblem: true,
-    mouth: "grin",
-    blush: true,
-  },
-  {
     id: "onyx",
     name: "ONYX",
     role: "Operative",
@@ -336,43 +282,6 @@ export const DRAWN_CHARACTERS: readonly CharacterSpec[] = [
     suit: "#4a5a3a",
     scarf: "#3a8ad0",
     ears: false,
-  },
-  {
-    id: "quill",
-    name: "QUILL",
-    role: "Scribe",
-    skin: "#8e5b3b",
-    hair: "#2a1e18",
-    hairStyle: "bun",
-    suit: "#e07aa0",
-    item: "clipboard",
-    blush: true,
-  },
-  {
-    id: "atlas",
-    name: "ATLAS",
-    role: "Heavy Lifter",
-    skin: "#c98c5e",
-    hairStyle: "helmet",
-    cap: "#8a929e",
-    acc: "#e05a3a",
-    suit: "#6a727e",
-    fit: "armor",
-    eyes: "visor",
-    visor: "#ffb040",
-    mouth: "none",
-  },
-  {
-    id: "juno",
-    name: "JUNO",
-    role: "Dispatcher",
-    skin: "#c98c5e",
-    hair: "#4a2a1a",
-    hairStyle: "pigtails",
-    suit: "#40b070",
-    acc: "#ffd84a",
-    headset: true,
-    mouth: "grin",
   },
 ];
 
@@ -398,7 +307,7 @@ const art = (id: string, name: string, role: string, size: 64 | 96 = 64): ArtCha
   art: { src: CHARACTER_ART[id] ?? "", size },
 });
 
-/** The painted characters, after the drawn ones (indexes 24 and up). */
+/** The painted characters, after the drawn ones (indexes 17 and up). */
 export const ART_CHARACTERS: readonly ArtCharacter[] = [
   art("razor", "RAZOR", "Captain"),
   art("umbra", "UMBRA", "Shadow knight", 96),
@@ -407,11 +316,13 @@ export const ART_CHARACTERS: readonly ArtCharacter[] = [
   art("blip", "BLIP", "Utility droid"),
   art("patch", "PATCH", "Hacker"),
   art("dusty", "DUSTY", "Gunslinger"),
+  art("merlo", "MERLO", "Star mage"),
+  art("shade", "SHADE", "Hooded adept"),
 ];
 
 export type Character = CharacterSpec | ArtCharacter;
 
-/** Every character an agent can wear, by `look` index: the drawn 24, then the painted ones. */
+/** Every character an agent can wear, by `look` index: the drawn ones, then the painted ones. */
 export const CHARACTERS: readonly Character[] = [...DRAWN_CHARACTERS, ...ART_CHARACTERS];
 
 export const isArtCharacter = (c: Character): c is ArtCharacter => "art" in c;
@@ -864,7 +775,7 @@ export function gridRuns(grid: CharacterGrid): PixelRun[] {
 
 /**
  * The character index stored in agent.json `look`, or a stable one from the agent id. The stable
- * default draws only from the drawn 24, so adding painted characters never changes anyone's
+ * default draws only from the drawn characters, so adding painted characters never changes anyone's
  * default look.
  */
 export function lookFor(agentId: string, look: number | undefined): number {
