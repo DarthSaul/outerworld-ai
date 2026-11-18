@@ -24,11 +24,15 @@ import {
 } from "../queries.js";
 import { CrewPanel } from "../station/CrewPanel.js";
 import {
+  CREW_LIMITS,
+  CREW_SHARE,
   DEFAULT_SIDE,
   percentOf,
+  resizeCrew,
   resizeSide,
   SIDE_LIMITS,
   splitTemplate,
+  useCrewSplit,
   useSplit,
 } from "../station/split.js";
 import { useComms } from "../station/use-comms.js";
@@ -138,6 +142,9 @@ export function StationPage() {
   const [draw, setDraw] = useState<{ from: string | null }>();
   const [note, setNote] = useState<string>();
   const [side, setSide] = useSplit();
+  const [crewShare, setCrewShare] = useCrewSplit();
+  /** The width a handle's drag (or key press) started from; it reports movement from there. */
+  const dragFrom = useRef(0);
   const [session, setSession, startedSession] = useOpenSession();
   const [expanded, setExpanded] = useState(false);
   // Folded or open, per viewer (ADR-0013 #19, like the map style). The scanner starts folded.
@@ -220,15 +227,15 @@ export function StationPage() {
   const crewOpen = crewColumn === "open";
   // Expanded, comms is the only column; the others stay mounted, hidden, so they keep their place.
   const desktopHidden = expanded ? "desktop:hidden" : "";
-  // Desktop: crew (or its folder tab), the map, the handle, and comms over the scanner, 1fr / 2fr
-  // / 1fr by default; the handle resizes comms against the map, kept per viewer. Phones stack
-  // the map, crew, comms, then the scanner.
+  // Desktop: crew (or its folder tab), its handle, the map, comms' handle, and comms over the
+  // scanner, 1fr / 2fr / 1fr by default; each handle resizes its column against the map, kept per
+  // viewer. Phones stack the map, crew, comms, then the scanner.
   return (
     <div
       ref={grid}
       style={
         {
-          "--st-station-cols": splitTemplate(side, { crew: crewOpen, expanded }),
+          "--st-station-cols": splitTemplate(side, { crew: crewOpen, crewShare, expanded }),
         } as CSSProperties
       }
       className="relative grid flex-1 grid-cols-1 items-stretch gap-3.5 py-3.5 desktop:min-h-0 desktop:grid-cols-(--st-station-cols) desktop:grid-rows-[minmax(0,1fr)] desktop:gap-0"
@@ -244,7 +251,7 @@ export function StationPage() {
           onOpenSession={setSession}
           onNew={() => setSession(undefined)}
           onCollapse={() => setCrewColumn("closed")}
-          className={`desktop:mr-3.5 desktop:contain-size ${desktopHidden}`}
+          className={`desktop:contain-size ${desktopHidden}`}
         />
       ) : (
         <>
@@ -276,6 +283,22 @@ export function StationPage() {
           </div>
         </>
       )}
+      {crewOpen ? (
+        <ResizeHandle
+          label={term("station.resize.crew")}
+          valueNow={percentOf(crewShare)}
+          valueMin={percentOf(CREW_LIMITS.min)}
+          valueMax={percentOf(CREW_LIMITS.max)}
+          onResizeStart={() => {
+            dragFrom.current = crewShare;
+          }}
+          onResize={(dx) =>
+            setCrewShare(resizeCrew(dragFrom.current, dx, grid.current?.clientWidth ?? 0))
+          }
+          onReset={() => setCrewShare(CREW_SHARE)}
+          className={expanded ? "hidden" : "hidden desktop:block"}
+        />
+      ) : null}
       {/* Phones put the map first, then crew, comms, and the scanner. */}
       <div
         className={`order-first flex min-w-0 flex-col gap-3.5 desktop:order-none desktop:min-h-0 ${desktopHidden}`}
@@ -313,7 +336,10 @@ export function StationPage() {
         valueNow={percentOf(side)}
         valueMin={percentOf(SIDE_LIMITS.min)}
         valueMax={percentOf(SIDE_LIMITS.max)}
-        onResize={(dx) => setSide(resizeSide(side, dx, grid.current?.clientWidth ?? 0))}
+        onResizeStart={() => {
+          dragFrom.current = side;
+        }}
+        onResize={(dx) => setSide(resizeSide(dragFrom.current, dx, grid.current?.clientWidth ?? 0))}
         onReset={() => setSide(DEFAULT_SIDE)}
         className={expanded ? "hidden" : "hidden desktop:block"}
       />

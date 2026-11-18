@@ -322,6 +322,17 @@ describe("COMMS: model settings per conversation (ADR-0016)", () => {
     expect(menu(picker, term("model.provider"))).toHaveTextContent(term("model.provider.auto"));
   });
 
+  it("lets the menus wrap into a column when the comms column is too narrow, never overflowing", async () => {
+    const { chat } = await startChat();
+    const picker = within(chat).getByRole("group", { name: term("model.settings") });
+    expect(picker.className).toMatch(/\bflex-wrap\b/);
+    expect(picker.className).not.toMatch(/nowrap/);
+    const menus = picker.querySelector("[data-model-menus]") as HTMLElement;
+    expect(menus.className).toMatch(/\bflex-wrap\b/);
+    expect(menus.className).toMatch(/\bmin-w-0\b/);
+    expect(menus.contains(menu(picker, term("model.provider")))).toBe(true);
+  });
+
   it("starts on the crew member's model, and saves a change to the conversation", async () => {
     const { chat, user, calls } = await startChat();
     const picker = within(chat).getByRole("group", { name: term("model.settings") });

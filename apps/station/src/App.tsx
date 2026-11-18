@@ -123,7 +123,7 @@ function SystemMenu() {
   return (
     <MenuButton
       label={term("nav.system")}
-      icon={<PixelIcon name="gear" />}
+      icon={<PixelIcon name="gear" size="sm" />}
       active={within(SYSTEM_PATH)}
     >
       {SYSTEM_ITEMS.map((item) => (

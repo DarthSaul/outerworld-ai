@@ -73,6 +73,21 @@ describe("CrewSelect", () => {
     expect(screen.queryByRole("button", { name: "Assign" })).toBeNull();
   });
 
+  it("puts the stage beside the pick's name, role, and status, and the character grid below", () => {
+    const { container } = render(<Harness />);
+    const layout = container.querySelector("[data-crew-select-layout]") as HTMLElement;
+    const [stage, pick, picker] = Array.from(layout.children) as HTMLElement[];
+    expect(stage).toHaveAttribute("data-stage");
+    expect(pick).toHaveAttribute("data-pick");
+    expect(Array.from(pick?.children ?? []).map((c) => c.textContent)).toEqual([
+      "QUILL",
+      "Scribe",
+      "Equipped on Quill",
+    ]);
+    expect(picker?.className).toMatch(/col-span-2/);
+    expect(picker?.contains(grid())).toBe(true);
+  });
+
   it("enables Save only when another character is picked, and saves it", () => {
     const onSave = vi.fn();
     render(<Harness onSave={onSave} />);
@@ -85,18 +100,32 @@ describe("CrewSelect", () => {
     expect(save()).toBeDisabled();
   });
 
-  it("lays every character, drawn and painted, in two rows that scroll sideways", () => {
+  it("lays every character, drawn and painted, in three rows that scroll sideways", () => {
     render(<Harness />);
     expect(within(grid()).getAllByRole("listitem")).toHaveLength(CHARACTER_COUNT);
     expect(grid().className).toMatch(/overflow-x-auto/);
     expect(grid().style.gridTemplateColumns).toBe(
-      `repeat(${Math.ceil(CHARACTER_COUNT / 2)}, max-content)`,
+      `repeat(${Math.ceil(CHARACTER_COUNT / 3)}, max-content)`,
     );
     const painted = ART_CHARACTERS[0];
     const tile = within(grid()).getByRole("button", {
       name: `${painted?.name}, ${painted?.role}`,
     });
     expect(tile.querySelector("img")?.getAttribute("src")).toMatch(/^data:image\/png;base64,/);
+    // The painted seven lead the grid, then the drawn characters.
+    const names = within(grid())
+      .getAllByRole("button")
+      .map((b) => b.getAttribute("aria-label")?.split(",")[0]);
+    expect(names.slice(0, 8)).toEqual([
+      "RAZOR",
+      "UMBRA",
+      "ASHA",
+      "TALI",
+      "BLIP",
+      "PATCH",
+      "DUSTY",
+      "NOVA",
+    ]);
   });
 
   it("moves with the arrow keys (wrapping across, rows up and down) and saves on Enter", () => {
@@ -107,21 +136,22 @@ describe("CrewSelect", () => {
     fireEvent.keyDown(grid(), { key: "ArrowRight" });
     expect(cursorName()).toBe("ATLAS, Heavy Lifter");
     expect(within(grid()).getByRole("button", { name: "ATLAS, Heavy Lifter" })).toHaveFocus();
+    // The keys follow the tiles as shown: the painted characters first, the drawn ones after.
     fireEvent.keyDown(grid(), { key: "Home" });
-    expect(cursorName()).toBe("NOVA, Pilot");
+    expect(cursorName()).toBe("RAZOR, Captain");
     fireEvent.keyDown(grid(), { key: "ArrowDown" });
-    expect(cursorName()).not.toBe("NOVA, Pilot");
+    expect(cursorName()).not.toBe("RAZOR, Captain");
     fireEvent.keyDown(grid(), { key: "ArrowUp" });
-    expect(cursorName()).toBe("NOVA, Pilot");
+    expect(cursorName()).toBe("RAZOR, Captain");
     fireEvent.keyDown(grid(), { key: "ArrowUp" });
-    expect(cursorName()).toBe("NOVA, Pilot");
+    expect(cursorName()).toBe("RAZOR, Captain");
     fireEvent.keyDown(grid(), { key: "ArrowLeft" });
-    const last = ART_CHARACTERS[ART_CHARACTERS.length - 1];
-    expect(cursorName()).toBe(`${last?.name}, ${last?.role}`);
+    expect(cursorName()).toBe("JUNO, Dispatcher");
     fireEvent.keyDown(grid(), { key: "ArrowRight" });
-    expect(cursorName()).toBe("NOVA, Pilot");
+    expect(cursorName()).toBe("RAZOR, Captain");
     fireEvent.keyDown(grid(), { key: "Enter" });
-    expect(onSave).toHaveBeenCalledWith("quill", 0);
+    // RAZOR keeps its look index (the first painted one), whatever order the grid shows.
+    expect(onSave).toHaveBeenCalledWith("quill", CHARACTER_COUNT - ART_CHARACTERS.length);
   });
 
   it("leaves the arrow keys alone outside the grid", () => {

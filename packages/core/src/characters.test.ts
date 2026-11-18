@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import {
   ART_CHARACTERS,
   CHARACTER_COUNT,
+  CHARACTER_ORDER,
   CHARACTERS,
   characterGrid,
   DRAWN_CHARACTERS,
@@ -157,6 +158,20 @@ describe("lookFor", () => {
     expect(new Set(CHARACTERS.map((c) => c.id)).size).toBe(CHARACTER_COUNT);
     expect(new Set(CHARACTERS.map((c) => c.name)).size).toBe(CHARACTER_COUNT);
     expect(DRAWN_CHARACTERS.some(isArtCharacter)).toBe(false);
+  });
+
+  it("shows the painted characters first in the picker, every look exactly once", () => {
+    expect(CHARACTER_ORDER.slice(0, 7).map((i) => CHARACTERS[i]?.id)).toEqual([
+      "razor",
+      "umbra",
+      "asha",
+      "tali",
+      "blip",
+      "patch",
+      "dusty",
+    ]);
+    expect(CHARACTERS[CHARACTER_ORDER[7] ?? -1]?.name).toBe("NOVA");
+    expect([...CHARACTER_ORDER].sort((a, b) => a - b)).toEqual(CHARACTERS.map((_, i) => i));
   });
 
   it("only defaults agents to drawn characters, so new art never changes a default look", () => {

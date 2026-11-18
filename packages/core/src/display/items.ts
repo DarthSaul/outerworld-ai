@@ -1,0 +1,119 @@
+import type { PropKind } from "../config/station-config.js";
+import { type GlossaryKey, term } from "../glossary.js";
+import type { ConnectorPresetId } from "../policy/connector-tools.js";
+import type { BUILTIN_TOOLS } from "../policy/grants.js";
+
+/**
+ * How a capability looks to people: one place that turns a code name (`web_fetch`, the `files`
+ * prop, a connector) into a readable title, a one-line description, and an icon id. The words come
+ * from the glossary; the ui draws each icon id (`PixelIcon`).
+ */
+export const ITEM_ICONS = [
+  "dispatch",
+  "session",
+  "web",
+  "files",
+  "file-read",
+  "file-list",
+  "file-write",
+  "memory",
+  "connector",
+  "tool",
+] as const;
+export type ItemIconName = (typeof ITEM_ICONS)[number];
+
+export interface ItemDisplay {
+  readonly title: string;
+  /** One plain line; empty when there is nothing to say (an unknown tool). */
+  readonly description: string;
+  readonly icon: ItemIconName;
+}
+
+type BuiltinToolName = (typeof BUILTIN_TOOLS)[keyof typeof BUILTIN_TOOLS][number]["name"];
+
+interface Entry {
+  readonly title: GlossaryKey;
+  readonly description: GlossaryKey;
+  readonly icon: ItemIconName;
+}
+
+const TOOLS = {
+  dispatch: { title: "item.dispatch", description: "item.dispatch.hint", icon: "dispatch" },
+  read_session: {
+    title: "item.read_session",
+    description: "item.read_session.hint",
+    icon: "session",
+  },
+  web_fetch: { title: "item.web_fetch", description: "item.web_fetch.hint", icon: "web" },
+  read_file: { title: "item.read_file", description: "item.read_file.hint", icon: "file-read" },
+  list_files: { title: "item.list_files", description: "item.list_files.hint", icon: "file-list" },
+  write_file: {
+    title: "item.write_file",
+    description: "item.write_file.hint",
+    icon: "file-write",
+  },
+  remember: { title: "item.remember", description: "item.remember.hint", icon: "memory" },
+} as const satisfies Record<BuiltinToolName, Entry>;
+
+const PROPS = {
+  web: { title: "prop.web", description: "item.prop.web.hint", icon: "web" },
+  files: { title: "prop.files", description: "item.prop.files.hint", icon: "files" },
+  memory: { title: "prop.memory", description: "item.prop.memory.hint", icon: "memory" },
+} as const satisfies Record<PropKind, Entry>;
+
+const shown = (entry: Entry): ItemDisplay => ({
+  title: term(entry.title),
+  description: term(entry.description),
+  icon: entry.icon,
+});
+
+/** A tool by its name; a name it does not know (a connector's tool) shows as itself. */
+export function toolDisplay(name: string): ItemDisplay {
+  const entry = (TOOLS as Readonly<Record<string, Entry>>)[name];
+  return entry ? shown(entry) : { title: name, description: "", icon: "tool" };
+}
+
+/** A prop placed in a room. */
+export function propDisplay(kind: PropKind): ItemDisplay {
+  return shown(PROPS[kind]);
+}
+
+/** A connector, by its display name. */
+export function connectorDisplay(name: string): ItemDisplay {
+  return { title: name, description: term("item.connector.hint"), icon: "connector" };
+}
+
+/** The services whose logos the ui draws (`BrandIcon`), one per connector preset. */
+export const ABILITY_BRANDS = ["notion", "github", "gmail"] as const;
+export type AbilityBrand = (typeof ABILITY_BRANDS)[number];
+
+/** What an ability is underneath; only MCP servers so far, toolsets and skills join later. */
+export type AbilityKind = "mcp";
+
+export interface AbilityDisplay {
+  readonly title: string;
+  readonly description: string;
+  readonly kind: AbilityKind;
+  /** The service's logo; absent for a server the station has no preset for. */
+  readonly brand?: AbilityBrand;
+}
+
+const ABILITIES = {
+  notion: { description: "ability.notion.hint", brand: "notion" },
+  github: { description: "ability.github.hint", brand: "github" },
+  gmail: { description: "ability.gmail.hint", brand: "gmail" },
+} as const satisfies Record<
+  ConnectorPresetId,
+  { readonly description: GlossaryKey; readonly brand: AbilityBrand }
+>;
+
+/**
+ * An ability as a card shows it, by its id and display name: a preset gets its logo and its own
+ * description; any other connector reads as a plain MCP server.
+ */
+export function abilityDisplay(id: string, name: string): AbilityDisplay {
+  const entry = (ABILITIES as Readonly<Record<string, (typeof ABILITIES)[ConnectorPresetId]>>)[id];
+  return entry
+    ? { title: name, description: term(entry.description), kind: "mcp", brand: entry.brand }
+    : { title: name, description: term("item.connector.hint"), kind: "mcp" };
+}

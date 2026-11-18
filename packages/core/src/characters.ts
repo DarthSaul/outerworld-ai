@@ -418,6 +418,15 @@ export const isArtCharacter = (c: Character): c is ArtCharacter => "art" in c;
 
 export const CHARACTER_COUNT = CHARACTERS.length;
 
+/**
+ * The order the character picker shows: the painted characters first, then the drawn ones. A
+ * saved `look` is an index into CHARACTERS, so only the order shown changes, never an index.
+ */
+export const CHARACTER_ORDER: readonly number[] = [
+  ...ART_CHARACTERS.map((_, i) => DRAWN_CHARACTERS.length + i),
+  ...DRAWN_CHARACTERS.map((_, i) => i),
+];
+
 /** A grid cell: a hex color, or null for transparent. Indexed [y][x]. */
 export type Cell = string | null;
 export type CharacterGrid = Cell[][];

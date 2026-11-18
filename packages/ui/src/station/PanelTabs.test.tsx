@@ -55,6 +55,21 @@ describe("PanelTabs", () => {
     expect(screen.getByRole("button", { name: "Pressed 1" })).toBeInTheDocument();
   });
 
+  it("drops the panel frame when told, for tabs inside a panel", () => {
+    render(
+      <PanelTabs
+        label="Views"
+        active="a"
+        onChange={() => {}}
+        framed={false}
+        tabs={[{ id: "a", label: "Brief", content: <p>Hi</p> }]}
+      />,
+    );
+    const region = screen.getByRole("region", { name: "Brief" });
+    expect(region.className).not.toMatch(/border-2|shadow-panel/);
+    expect(region.className).not.toMatch(/bg-panel/);
+  });
+
   it("moves between tabs with the arrow keys, Home and End, wrapping around", () => {
     render(<Harness />);
     const [one, two] = screen.getAllByRole("tab") as [HTMLElement, HTMLElement];
