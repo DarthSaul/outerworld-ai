@@ -278,7 +278,11 @@ function ConnectorCard({
               type="button"
               className={button}
               disabled={busy}
-              onClick={() => disconnect.mutate({ id: connector.id, forget: false })}
+              onClick={() => {
+                // Connect's old answer would offer its stale sign-in link again.
+                connect.reset();
+                disconnect.mutate({ id: connector.id, forget: false });
+              }}
             >
               {term("connector.disconnect")}
             </button>
@@ -286,7 +290,11 @@ function ConnectorCard({
               type="button"
               className={button}
               disabled={busy}
-              onClick={() => disconnect.mutate({ id: connector.id, forget: true })}
+              onClick={() => {
+                // Connect's old answer would offer its stale sign-in link again.
+                connect.reset();
+                disconnect.mutate({ id: connector.id, forget: true });
+              }}
             >
               {term("connector.forget")}
             </button>

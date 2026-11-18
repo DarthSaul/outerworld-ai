@@ -460,11 +460,13 @@ export function fakeApi() {
       const c = connectors.find((x) => x.id === parts[1]);
       if (!c) throw new ApiError(404, "no connector");
       const i = connectors.indexOf(c);
+      // As the daemon's views: a sign-in URL only while it needs sign-in, never carried over.
+      const { authorizationUrl: _old, ...bare } = c;
       if (parts[2] === "connect") {
         connectors[i] = {
-          ...c,
+          ...bare,
           status: connectAnswer.status,
-          ...(connectAnswer.authorizationUrl
+          ...(connectAnswer.status === "needs_auth" && connectAnswer.authorizationUrl
             ? { authorizationUrl: connectAnswer.authorizationUrl }
             : {}),
         };
@@ -476,7 +478,7 @@ export function fakeApi() {
         return undefined;
       }
       if (parts[2] === "disconnect") {
-        connectors[i] = { ...c, status: "disconnected", tools: [] };
+        connectors[i] = { ...bare, status: "disconnected", tools: [] };
         return undefined;
       }
       if (method === "PATCH") {

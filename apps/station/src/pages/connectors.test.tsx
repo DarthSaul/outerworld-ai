@@ -48,14 +48,16 @@ describe("Abilities: connectors under Discover and Installed", () => {
     const user = userEvent.setup();
     const { calls } = renderApp("/system/abilities");
     const add = (name: string) => termWith("connector.add", { name });
-    await user.click(await screen.findByRole("button", { name: add("Notion") }));
+    const notion = await screen.findByRole("button", { name: add("Notion") });
+    // All three while Discover still shows them: installing one moves to Installed.
+    expect(screen.getByRole("button", { name: add("GitHub") })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: add("Gmail") })).toBeInTheDocument();
+    await user.click(notion);
     expect(calls).toContainEqual({
       method: "POST",
       path: "/connectors",
       body: { preset: "notion" },
     });
-    expect(screen.getByRole("button", { name: add("GitHub") })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: add("Gmail") })).toBeInTheDocument();
   });
 
   it("discovers only the presets not installed yet", async () => {
@@ -209,6 +211,32 @@ describe("Abilities: connectors under Discover and Installed", () => {
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAttribute("rel", "noopener noreferrer");
     expect(within(card).getByText(term("connector.signInHint"))).toBeInTheDocument();
+  });
+
+  it("drops an old sign-in link once a connector signed in and then disconnected", async () => {
+    const user = userEvent.setup();
+    const fake = withNotion("disconnected");
+    fake.connectAnswer.status = "needs_auth";
+    fake.connectAnswer.authorizationUrl = "https://auth.example.test/authorize?state=s1";
+    const { emit } = renderApp("/system/abilities/installed", fake);
+    const card = await screen.findByRole("region", { name: "Notion" });
+    const signIn = { name: `${term("connector.signIn")} Notion` };
+    await user.click(within(card).getByRole("button", { name: term("connector.connect") }));
+    await within(card).findByRole("link", signIn);
+    // The Commander signs in in the other tab; the daemon's callback connects it.
+    const first = fake.connectors[0];
+    if (first) {
+      const { authorizationUrl: _signedIn, ...rest } = first;
+      fake.connectors[0] = { ...rest, status: "connected" };
+    }
+    emit({ type: "connector.status", payload: { connectorId: "notion", status: "connected" } });
+    await user.click(
+      await within(card).findByRole("button", { name: term("connector.disconnect") }),
+    );
+    emit({ type: "connector.status", payload: { connectorId: "notion", status: "disconnected" } });
+    await within(card).findByRole("button", { name: term("connector.connect") });
+    expect(fake.connectors[0]).not.toHaveProperty("authorizationUrl");
+    expect(within(card).queryByRole("link", signIn)).toBeNull();
   });
 
   it("disconnects, or disconnects and forgets the sign-in", async () => {
