@@ -1,5 +1,6 @@
 import {
   CHARACTER_COUNT,
+  CHARACTER_ORDER,
   CHARACTERS,
   initials,
   term,
@@ -36,13 +37,14 @@ export interface CrewSelectProps {
   readonly busy?: boolean;
 }
 
-/** The grid has two rows, filled in reading order; it scrolls sideways past the panel's width. */
-const ROWS = 2;
+/** The grid has three rows, filled in reading order; it scrolls sideways past the panel's width. */
+const ROWS = 3;
 const COLS = Math.ceil(CHARACTER_COUNT / ROWS);
 
 /**
  * Appearance (ADR-0013, ADR-0017): how one crew member appears. A small stage shows the character
- * under the cursor; beside it every character sits in a two-row grid that scrolls sideways. Save,
+ * under the cursor with its name, role, and status beside it; below them, across the full width,
+ * every character sits in a three-row grid that scrolls sideways, painted ones first. Save,
  * in the title strip, is live only while the cursor is on a character other than the saved one.
  * With focus in the grid, ← → move the cursor (wrapping), ↑ ↓ change row, Home and End jump, and
  * Enter saves; a click only moves the cursor.
@@ -71,6 +73,9 @@ export function CrewSelect(props: CrewSelectProps) {
     tile?.focus();
     tile?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
   };
+  // The keys move through the tiles as shown (CHARACTER_ORDER), not through look indexes.
+  const at = Math.max(0, CHARACTER_ORDER.indexOf(cursor));
+  const lookAt = (position: number) => CHARACTER_ORDER[position] ?? cursor;
   const onKeyDown = (e: KeyboardEvent<HTMLUListElement>) => {
     const wrap = (i: number) => (i + CHARACTER_COUNT) % CHARACTER_COUNT;
     const steps: Readonly<Record<string, number>> = {
@@ -82,18 +87,18 @@ export function CrewSelect(props: CrewSelectProps) {
     const step = steps[e.key];
     if (step !== undefined) {
       e.preventDefault();
-      const next = cursor + step;
+      const next = at + step;
       // Up or down off the grid stays in the same column; left or right wraps around.
       moveTo(
         Math.abs(step) === COLS
           ? next >= 0 && next < CHARACTER_COUNT
-            ? next
+            ? lookAt(next)
             : cursor
-          : wrap(next),
+          : lookAt(wrap(next)),
       );
     } else if (e.key === "Home" || e.key === "End") {
       e.preventDefault();
-      moveTo(e.key === "Home" ? 0 : CHARACTER_COUNT - 1);
+      moveTo(lookAt(e.key === "Home" ? 0 : CHARACTER_COUNT - 1));
     } else if (e.key === "Enter") {
       e.preventDefault();
       if (changed && !busy) onSave();
@@ -110,30 +115,33 @@ export function CrewSelect(props: CrewSelectProps) {
         </OutlineButton>
       }
     >
-      <div className="flex min-w-0 flex-col gap-3 p-3 desktop:flex-row desktop:items-stretch">
-        <div className="flex shrink-0 flex-col gap-2 desktop:w-52">
-          <div
-            className="relative flex h-32 flex-col items-center justify-end overflow-hidden border-2 border-line-soft pb-3"
-            style={{ background: "var(--st-stage-bg)" }}
-          >
-            <div className="relative z-10 -mb-2.5">
-              <Sprite look={cursor} scale={3} label={pick.name} />
-            </div>
-            <div
-              aria-hidden="true"
-              className="h-3.5 w-24 rounded-round border-2 border-cyan bg-pedestal"
-              style={{ boxShadow: "var(--st-pedestal-glow)" }}
-            />
+      {/* Two rows: the stage beside the character's name, role, and status; the grid below. */}
+      <div
+        data-crew-select-layout
+        className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-3 p-3"
+      >
+        <div
+          data-stage
+          className="relative flex h-32 w-40 flex-col items-center justify-end overflow-hidden border-2 border-line-soft pb-3 desktop:w-52"
+          style={{ background: "var(--st-stage-bg)" }}
+        >
+          <div className="relative z-10 -mb-2.5">
+            <Sprite look={cursor} scale={3} label={pick.name} />
           </div>
-          <div className="flex flex-col gap-1" aria-live="polite">
-            <div className="font-display text-d10 text-title tracking-st-1">{pick.name}</div>
-            <div className="text-b17 text-fg-soft">{pick.role}</div>
-            <div className="font-display text-d7 uppercase" style={{ color: status.color }}>
-              {status.text}
-            </div>
+          <div
+            aria-hidden="true"
+            className="h-3.5 w-24 rounded-round border-2 border-cyan bg-pedestal"
+            style={{ boxShadow: "var(--st-pedestal-glow)" }}
+          />
+        </div>
+        <div data-pick className="flex min-w-0 flex-col justify-center gap-1" aria-live="polite">
+          <div className="font-display text-d10 text-title tracking-st-1">{pick.name}</div>
+          <div className="text-b17 text-fg-soft">{pick.role}</div>
+          <div className="font-display text-d7 uppercase" style={{ color: status.color }}>
+            {status.text}
           </div>
         </div>
-        <div className="flex min-w-0 flex-1 flex-col gap-2">
+        <div data-character-picker className="col-span-2 flex min-w-0 flex-col gap-2">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <PanelLabel>{heading}</PanelLabel>
             <span className="font-display text-d6 text-fg-mute uppercase">
@@ -148,7 +156,9 @@ export function CrewSelect(props: CrewSelectProps) {
             className="m-0 grid list-none gap-2.5 overflow-x-auto overscroll-x-contain p-1 pb-2.5"
             style={{ gridTemplateColumns: `repeat(${COLS}, max-content)` }}
           >
-            {CHARACTERS.map((c, i) => {
+            {CHARACTER_ORDER.map((i) => {
+              const c = CHARACTERS[i];
+              if (!c) return null;
               const isCursor = i === cursor;
               const mine = agent.look === i;
               const owners = wearing(i);

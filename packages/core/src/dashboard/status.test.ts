@@ -5,6 +5,7 @@ import {
   crewDisplayStatus,
   initials,
   isLive,
+  overseerFirst,
   RUN_DISPLAY_STATUSES,
   runDisplayStatus,
   sortRuns,
@@ -86,5 +87,21 @@ describe("initials", () => {
     expect(initials("dr. iso")).toBe("DR");
     expect(initials("Ålfrida")).toBe("ÅL");
     expect(initials("!!")).toBe("??");
+  });
+});
+
+describe("overseerFirst", () => {
+  const crew = (id: string, role: string) => ({ id, config: { role } });
+  it("lists the Overseer first and keeps everyone else in order", () => {
+    const list = [crew("a", "crew"), crew("b", "crew"), crew("o", "overseer"), crew("c", "crew")];
+    expect(overseerFirst(list).map((c) => c.id)).toEqual(["o", "a", "b", "c"]);
+    expect(list.map((c) => c.id)).toEqual(["a", "b", "o", "c"]);
+  });
+
+  it("leaves a crew with no Overseer as it was", () => {
+    expect(overseerFirst([crew("a", "crew"), crew("b", "crew")]).map((c) => c.id)).toEqual([
+      "a",
+      "b",
+    ]);
   });
 });

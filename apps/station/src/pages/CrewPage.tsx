@@ -1,4 +1,11 @@
-import { lookFor, type PropKind, type Room, term, termWith } from "@darthsaul/outerworld-ai-core";
+import {
+  lookFor,
+  overseerFirst,
+  type PropKind,
+  type Room,
+  term,
+  termWith,
+} from "@darthsaul/outerworld-ai-core";
 import {
   Checkbox,
   EmptyState,
@@ -10,6 +17,7 @@ import {
   roomColor,
   Sprite,
   stVar,
+  Tag,
   tabClass,
 } from "@darthsaul/outerworld-ai-ui";
 import { useQueryClient } from "@tanstack/react-query";
@@ -32,8 +40,6 @@ import { AgentDetail } from "./AgentPage.js";
 
 const PROPS: readonly PropKind[] = ["web", "files", "memory"];
 
-const chip = "border px-1.5 font-display text-d6 uppercase";
-
 interface CrewRow {
   readonly id: string;
   readonly name: string;
@@ -43,24 +49,24 @@ interface CrewRow {
 }
 
 /**
- * One crew member in the crew screen's sidenav: character, name, and room; then model, tags, and
- * today's spend on a line of their own. Opens their setup in the main panel.
+ * One crew member in the crew screen's sidenav: character, name, and room (cut short with an
+ * ellipsis when long); then, at the bottom, their tags (Overseer, Full power) and today's spend.
+ * Opens their setup in the main panel.
  */
 function CrewItem({
   row,
-  model,
   roomName,
   color,
   spendUsd,
   current,
 }: {
   readonly row: CrewRow;
-  readonly model: string;
   readonly roomName: string;
   readonly color: string;
   readonly spendUsd: number | undefined;
   readonly current: boolean;
 }) {
+  const tagged = row.role === "overseer" || row.approvalMode === "full";
   return (
     <li data-agent={row.id}>
       <Link
@@ -71,39 +77,33 @@ function CrewItem({
         <span className="flex min-w-0 items-center gap-2">
           <Sprite look={lookFor(row.id, row.look)} />
           <span className="flex min-w-0 flex-1 flex-col">
-            {/* The name with its tags on one row. */}
-            <span className="flex min-w-0 items-center gap-1.5">
-              <span className="min-w-0 truncate text-b19 text-fg-chip uppercase">{row.name}</span>
-              {row.role === "overseer" ? (
-                <span className={`${chip} shrink-0 border-white text-white`}>
-                  {term("overseer.role")}
-                </span>
-              ) : null}
-              {row.approvalMode === "full" ? (
-                <span data-flag="full-power" className={`${chip} shrink-0 border-amber text-amber`}>
-                  {term("approvalMode.full")}
-                </span>
-              ) : null}
+            <span data-agent-name className="min-w-0 truncate text-b19 text-fg-chip uppercase">
+              {row.name}
             </span>
             <span className="flex min-w-0 items-center gap-1.5 text-b15 uppercase">
               <span aria-hidden="true" className="size-2 shrink-0" style={{ background: color }} />
-              <span className="truncate" style={{ color }}>
+              <span data-room-name className="min-w-0 truncate" style={{ color }} title={roomName}>
                 {roomName}
               </span>
             </span>
           </span>
         </span>
-        {/* The model on the left, today's spend on the right. */}
-        <span className="flex min-w-0 items-center justify-between gap-2 text-b15 text-fg-soft">
-          <span className="min-w-0 truncate" title={model}>
-            {model}
+        {/* The bottom row: tags on the left, today's spend on the right. */}
+        {tagged || spendUsd ? (
+          <span data-agent-foot className="flex min-w-0 flex-wrap items-center gap-1.5">
+            {row.role === "overseer" ? <Tag tone="white">{term("overseer.role")}</Tag> : null}
+            {row.approvalMode === "full" ? (
+              <Tag tone="amber" data-flag="full-power">
+                {term("approvalMode.full")}
+              </Tag>
+            ) : null}
+            {spendUsd ? (
+              <span className="ml-auto text-b15 text-fg-mute" data-agent-spend>
+                {term("spend.today")} {formatUsd(spendUsd)}
+              </span>
+            ) : null}
           </span>
-          {spendUsd ? (
-            <span className="shrink-0 text-fg-mute" data-agent-spend>
-              {term("spend.today")} {formatUsd(spendUsd)}
-            </span>
-          ) : null}
-        </span>
+        ) : null}
       </Link>
     </li>
   );
@@ -235,15 +235,11 @@ function RoomSection({
                     <Link to={`/crew/${a.id}`} className="text-b19 uppercase">
                       {a.name}
                     </Link>
-                    {a.role === "overseer" ? (
-                      <span className={`${chip} border-white text-white`}>
-                        {term("overseer.role")}
-                      </span>
-                    ) : null}
+                    {a.role === "overseer" ? <Tag tone="white">{term("overseer.role")}</Tag> : null}
                     {a.approvalMode === "full" ? (
-                      <span data-flag="full-power" className={`${chip} border-amber text-amber`}>
+                      <Tag tone="amber" data-flag="full-power">
                         {term("approvalMode.full")}
-                      </span>
+                      </Tag>
                     ) : null}
                     {spend.data?.agents[a.id] ? (
                       <span className="ml-auto text-b17 text-fg-mute" data-agent-spend>
@@ -480,6 +476,21 @@ export function CrewPage() {
       );
   }
 
+  const crewItem = (a: (typeof view.agents)[number]) => (
+    <CrewItem
+      key={a.id}
+      row={rowOf(a)}
+      roomName={rooms.find((r) => r.id === a.config.roomId)?.name ?? a.config.roomId}
+      color={colorOf(a.config.roomId)}
+      spendUsd={spend.data?.agents[a.id]}
+      current={a.id === id && !adding}
+    />
+  );
+  // The Overseer heads the crew list, above Add; everyone else follows Add, below a thin rule.
+  const crew = overseerFirst(view.agents);
+  const overseers = listing === "agents" ? crew.filter((a) => a.config.role === "overseer") : [];
+  const others = crew.filter((a) => !overseers.includes(a));
+
   const listLink = (next: Listing) => (next === "agents" ? "/crew" : "/crew?listing=rooms");
   const addLink = listing === "agents" ? "/crew?add=agent" : "/crew?listing=rooms&add=room";
   const addCurrent = adding === (listing === "agents" ? "agent" : "room");
@@ -515,9 +526,17 @@ export function CrewPage() {
       <div className="flex flex-1 flex-col gap-3.5 p-3 desktop:min-h-0 desktop:flex-row">
         <nav
           aria-label={term("crewPage.nav")}
-          className="flex shrink-0 flex-col gap-2 desktop:min-h-0 desktop:w-80"
+          className="flex shrink-0 flex-col gap-2 desktop:min-h-0 desktop:w-60"
         >
           <h2 className="sr-only">{term("crewPage.nav")}</h2>
+          {overseers.length > 0 ? (
+            <>
+              <ul data-overseer-list className="m-0 mr-1 flex list-none flex-col gap-1.5 p-0">
+                {overseers.map(crewItem)}
+              </ul>
+              <hr data-overseer-rule className="m-0 mr-1 border-0 border-line-faint border-t" />
+            </>
+          ) : null}
           {/* mr-1 matches the list's pr-1 (room for its scrollbar), so both are the same width. */}
           <Link
             to={addLink}
@@ -533,17 +552,7 @@ export function CrewPage() {
             className="m-0 flex list-none flex-col gap-1.5 overflow-y-auto overscroll-y-contain p-0 pr-1 desktop:min-h-0 desktop:flex-1"
           >
             {listing === "agents"
-              ? view.agents.map((a) => (
-                  <CrewItem
-                    key={a.id}
-                    row={rowOf(a)}
-                    model={a.config.model}
-                    roomName={rooms.find((r) => r.id === a.config.roomId)?.name ?? a.config.roomId}
-                    color={colorOf(a.config.roomId)}
-                    spendUsd={spend.data?.agents[a.id]}
-                    current={a.id === id && !adding}
-                  />
-                ))
+              ? others.map(crewItem)
               : rooms.map((room) => (
                   <RoomItem
                     key={room.id}

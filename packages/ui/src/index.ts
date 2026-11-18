@@ -7,6 +7,7 @@
 export { EmptyState, type EmptyStateProps } from "./components/EmptyState.js";
 // Station dashboard primitives (ADR-0013)
 export { Avatar, type AvatarProps, overseerAvatarProps } from "./station/Avatar.js";
+export { BrandIcon, type BrandIconProps } from "./station/BrandIcon.js";
 export {
   ChoiceButton,
   type ChoiceButtonProps,
@@ -59,7 +60,12 @@ export {
 } from "./station/OverseerComms.js";
 export { Panel, PanelLabel, type PanelProps } from "./station/Panel.js";
 export { type PanelTab, PanelTabs, type PanelTabsProps } from "./station/PanelTabs.js";
-export { PIXEL_ICONS, PixelIcon, type PixelIconName } from "./station/PixelIcon.js";
+export {
+  PIXEL_ICONS,
+  PixelIcon,
+  type PixelIconName,
+  type PixelIconProps,
+} from "./station/PixelIcon.js";
 export { Popup, type PopupProps } from "./station/Popup.js";
 export {
   RESIZE_KEY_STEP,
@@ -89,6 +95,7 @@ export {
   StatusDrawerToggle,
   type StatusDrawerToggleProps,
 } from "./station/StatusDrawer.js";
+export { Tag, type TagProps, type TagSize, type TagTone } from "./station/Tag.js";
 export {
   CREW_STATUS_TONE,
   lampBlink,

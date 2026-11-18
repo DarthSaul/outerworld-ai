@@ -10,21 +10,23 @@ const strip = (name = "Quill") => screen.getByRole("list", { name: `Choose how $
 
 /** Appearance on a crew member's page (ADR-0017): it replaced the Crew Select tab. */
 describe("Appearance on a crew member's page", () => {
-  it("is the first row under the header, opening on the crew member's look", async () => {
+  it("is the last panel on Config, opening on the crew member's look", async () => {
     const fake = fakeApi();
     const vesper = fake.state.agents.get("vesper");
     if (vesper) vesper.config = { ...vesper.config, look: 3 };
-    const { container } = renderApp("/crew/vesper", fake);
+    const { container } = renderApp("/crew/vesper?tab=config", fake);
     const appearance = await region();
-    const header = screen.getByRole("heading", { level: 2, name: "Vesper" }).closest("header");
-    expect(header?.nextElementSibling?.contains(appearance)).toBe(true);
+    const config = screen.getByRole("tabpanel", { name: term("agentTabs.config") });
+    expect(config.querySelector("[data-scroll-area]")?.lastElementChild?.contains(appearance)).toBe(
+      true,
+    );
     expect(screen.getByText("Equipped on Vesper")).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "KESTREL" })).toBeInTheDocument();
     expect(await axe(container)).toHaveNoViolations();
   });
 
-  it("offers the painted characters too, in two rows that scroll sideways", async () => {
-    renderApp("/crew/quill");
+  it("offers the painted characters too, in three rows that scroll sideways", async () => {
+    renderApp("/crew/quill?tab=config");
     await region();
     expect(within(strip()).getAllByRole("listitem")).toHaveLength(CHARACTER_COUNT);
     const painted = ART_CHARACTERS[0];
@@ -34,7 +36,7 @@ describe("Appearance on a crew member's page", () => {
   });
 
   it("saves the character under the cursor with Enter, and says so", async () => {
-    const { calls } = renderApp("/crew/quill");
+    const { calls } = renderApp("/crew/quill?tab=config");
     await region();
     await userEvent.click(within(strip()).getByRole("button", { name: "NOVA, Pilot" }));
     fireEvent.keyDown(strip(), { key: "ArrowRight" });
@@ -47,7 +49,7 @@ describe("Appearance on a crew member's page", () => {
 
   it("drops the note once the saved look changes again elsewhere", async () => {
     const fake = fakeApi();
-    const { client } = renderApp("/crew/quill", fake);
+    const { client } = renderApp("/crew/quill?tab=config", fake);
     await region();
     await userEvent.click(within(strip()).getByRole("button", { name: "NOVA, Pilot" }));
     fireEvent.keyDown(strip(), { key: "ArrowRight" });
@@ -64,7 +66,7 @@ describe("Appearance on a crew member's page", () => {
   });
 
   it("saves from the title strip, live only once the look has changed", async () => {
-    const { calls } = renderApp("/crew/vesper");
+    const { calls } = renderApp("/crew/vesper?tab=config");
     const appearance = await region();
     const save = within(appearance).getByRole("button", { name: term("crewSelect.save") });
     expect(save).toBeDisabled();
@@ -77,13 +79,21 @@ describe("Appearance on a crew member's page", () => {
     expect((patch?.body as { look?: number } | undefined)?.look).toBe(0);
   });
 
-  it("names the crew member's room under their name, Delete aligned to the top", async () => {
-    renderApp("/crew/quill");
+  it("shows the saved look on Brief beside the name and room, with Delete in the tab strip", async () => {
+    const fake = fakeApi();
+    const quill = fake.state.agents.get("quill");
+    if (quill) quill.config = { ...quill.config, look: 3 };
+    renderApp("/crew/quill", fake);
     const name = await screen.findByRole("heading", { level: 2, name: "Quill" });
-    const room = name.parentElement?.querySelector("[data-room-line]");
-    expect(room).toHaveTextContent("Room: Operations");
-    const header = name.closest("header");
-    expect(header?.className).toMatch(/items-start/);
+    const header = name.closest("header") as HTMLElement;
+    expect(header.querySelector("[data-room-line]")).toHaveTextContent("Room: Operations");
+    expect(within(header).getByRole("img", { name: "KESTREL" })).toBeInTheDocument();
+    // A fifth larger than the scale-2 portrait (40×52): 48 wide, in a box padded a fifth more.
+    expect(within(header).getByRole("img", { name: "KESTREL" })).toHaveAttribute("width", "48");
+    expect(header.querySelector("[data-brief-avatar]")?.className).toMatch(/\bp-1\.25\b/);
+    const strip = screen.getByRole("tablist", { name: term("agentTabs.label") }).parentElement;
+    expect(strip?.contains(screen.getByRole("button", { name: "Delete" }))).toBe(true);
+    expect(header.contains(screen.getByRole("button", { name: "Delete" }))).toBe(false);
   });
 
   it("sends the old Crew Select address to the crew list, and has no tab", async () => {

@@ -107,9 +107,10 @@ describe("kill switch and spend", () => {
     fake.spend.agents = { vesper: 0.0042 };
     renderApp("/crew", fake);
     expect(await screen.findByText("Fuel · $0.43 today, no cap")).toBeInTheDocument();
-    // The Crew screen opens on the crew list, each card with that crew member's spend today.
+    // The Crew screen opens on the crew list, each card with that crew member's spend today. Vesper,
+    // the Overseer, heads the list above Add.
     const vesper = await waitFor(() => {
-      const card = document.querySelector('[data-listing="agents"] [data-agent="vesper"]');
+      const card = document.querySelector('[data-overseer-list] [data-agent="vesper"]');
       if (!card) throw new Error("no crew card yet");
       return card as HTMLElement;
     });

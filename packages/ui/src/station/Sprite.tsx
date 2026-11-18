@@ -14,9 +14,10 @@ export interface SpriteProps {
   readonly look: number;
   /**
    * Scale: 1 (20×26), 2, 3, 4 (80×104), 8 (160×208). 1.5 (30×39, the Overseer's comms portrait) is
-   * whole device pixels on a 2× display; on a 1× display its pixels are slightly uneven.
+   * whole device pixels on a 2× display; on a 1× display its pixels are slightly uneven. 2.4
+   * (48×62.4, a crew member's Brief) is 2 grown by a fifth; its pixels are slightly uneven too.
    */
-  readonly scale?: 1 | 1.5 | 2 | 3 | 4 | 8;
+  readonly scale?: 1 | 1.5 | 2 | 2.4 | 3 | 4 | 8;
   /** Accessible name; without one the sprite is decorative. */
   readonly label?: string;
   readonly className?: string;

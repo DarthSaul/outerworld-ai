@@ -22,7 +22,7 @@ the glossary.
 | `OverseerComms`, `OverseerCommsBody` | The typed Overseer message (`useTypewriter`), (A)/(B) approvals, Next, and the order line (`orderPlaceholder` names who it goes to). Chatter and replies move on after the design's hold; a streaming reply waits. |
 | `FolderTab` | A folded column's handle: a tab on the left edge, cut at its free corners like a file folder's, its words running down it; `controls` names the column it unfolds (ADR-0018). |
 | `Scanner` | Crew and room pickers (each with its count), then the selected room, crew member, or hallway. It has Stop run (`onStopRun`) and Demolish (`onDemolish`). |
-| `CrewSelect` | Crew Select (the Appearance tab). The agent picker, an 8× stage on a pedestal, and the 6×4 character grid. Arrow keys move the P1 cursor and Enter assigns. |
+| `CrewSelect` | Appearance, on a crew member's Config tab. A stage on a pedestal beside the pick's name, role, and status; below them, across the full width, every character in a three-row grid that scrolls sideways, the painted ones first. Arrow keys move the P1 cursor and Enter saves. |
 | `StationHeader`, `CrtToggle` | The header bar: station name, tabs, and controls (the status drawer's toggle, the scanline switch). |
 | `StatusDrawer`, `StatusDrawerToggle`, `RadioChatter` | The status drawer: TASKS LIVE, ALERTS and the radio (lines open where they point) in a modal overlay from the right; the toggle keeps a live dot and the alert count in sight (ADR-0014). |
 | `StationVitals`, `StopButton`, `formatTokens`, `formatUptime`, `useUptime` | The footer: today's tokens, fuel against the daily cap, uptime, and `controls` at its right end (stop/resume). |
@@ -31,17 +31,19 @@ the glossary.
 
 | Export | What it is |
 |--------|------------|
-| `PanelTabs` | A panel whose title strip is a tab list (the active tab filled); ← → Home End move; every tab stays mounted (ADR-0014). |
+| `PanelTabs` | A panel whose title strip is a tab list (the active tab filled); ← → Home End move; every tab stays mounted (ADR-0014). `framed={false}` drops the frame for tabs inside a panel. |
 | `Panel`, `PanelLabel` | A region with a title strip (2px line border, hard shadow), and a small section label. |
 | `StatBox` | A labelled value in a well. `alert` blinks its border. |
 | `SegmentBar` | A segmented bar. It is a meter when it has a percent; with no proven amount it marches while `active`. |
 | `Avatar`, `overseerAvatarProps` | A square initials chip, or with `look` the crew member's character in a frame of the chip color; an optional double ring and status lamp. |
-| `Sprite` | One of core's 24 characters as SVG rects, at an integer scale. |
+| `Sprite` | One of core's characters: a drawn one as SVG rects, a painted one as its art. Scale 1, 1.5, 2, 2.4 (a crew member's Brief), 3, 4, or 8. |
+| `Tag` | The outlined pixel-face label for roles, modes, classes, states, and values (OVERSEER, FULL POWER, a model id). `tone` (`white`, `amber`, `cyan`, `green`, `mute`), `size` (`sm`, or `md` one step larger), and `caps` (off for a value shown as written). |
 | `OutlineButton`, `ChoiceButton`, `tabClass`, `Diamond` | Outline buttons (also `type="submit"`), the (A)/(B) buttons, tab classes for router links, and the placed-object diamond. |
-| `ResizeHandle`, `RESIZE_KEY_STEP` | A vertical column splitter (an `<hr>` separator with aria values): drag, arrow keys, Enter or double-click to reset (ADR-0014). |
+| `ResizeHandle`, `RESIZE_KEY_STEP` | A vertical column splitter (an `<hr>` separator with aria values): drag, arrow keys, Enter or double-click to reset (ADR-0014). `onResizeStart` marks where a resize begins; `onResize(dx)` reports movement since then. A drag listens on the window, so any release ends it. |
 | `crewOptionGroups` | Every crew member as `Dropdown` options grouped by room: character, name underlined in their color, colored status. Shared by the scanner and crew comms. |
 | `MenuButton`, `menuItemClass`, `MenuItemBody` | A tab-styled button opening a menu of destinations (the footer's System menu): items are the caller's links with `role="menuitem"`, an icon beside a title over a subtitle. ↓ ↑ Home End move, Escape closes to the button, Tab closes and moves on, a click outside closes. |
-| `PixelIcon` | A 9 × 9 pixel glyph in the current color: `gear`, `sliders`, `bolt`. Decorative. |
+| `BrandIcon` | A service's logo by core's `AbilityBrand` (`notion`, `github`, `gmail`), from Simple Icons, in the current color. Decorative. |
+| `PixelIcon` | A pixel glyph in the current color, `size` `sm` / `md` / `lg`: the menu's `gear`, `sliders`, `bolt` (9 × 9) and every capability icon in core's `ItemIconName` (8 × 8). Decorative. |
 | `Dropdown` | A select drawn in the station style: a button opening a listbox of grouped options with rich labels (avatar, colored status). Arrow keys, Home/End, type-ahead, Enter/Space, Escape and Tab; focus moves to the options while open; a click outside closes it. |
 | `Checkbox`, `fieldClass`, `inputClass` | A checkbox drawn as a pixel box (the native input stays, visually hidden and focusable), and the classes for a labelled field and an input or select at the shared form height. |
 | `EmptyState` | A status region: a title, one sentence, and at most one action. |

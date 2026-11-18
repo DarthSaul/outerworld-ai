@@ -75,6 +75,19 @@ export function sortRuns<T extends { readonly state: RunState; readonly createdA
   );
 }
 
+/**
+ * The crew in listing order: the Overseer first, everyone else after in the order given. Stable
+ * and pure; every crew list (the crew screen's sidenav, the dashboard's crew column) reads it.
+ */
+export function overseerFirst<T extends { readonly config: { readonly role: string } }>(
+  crew: readonly T[],
+): T[] {
+  return [
+    ...crew.filter((a) => a.config.role === "overseer"),
+    ...crew.filter((a) => a.config.role !== "overseer"),
+  ];
+}
+
 /** Live runs: queued, running, or waiting for consent (the TASKS LIVE count, #16). */
 export function isLive(state: RunState): boolean {
   return state === "queued" || state === "running" || state === "awaiting_consent";

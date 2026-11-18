@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  CREW_LIMITS,
+  CREW_SHARE,
   DEFAULT_SIDE,
+  parseCrew,
   parseSide,
+  resizeCrew,
   resizeSide,
   SIDE_LIMITS,
   SPLIT_TOTAL,
@@ -9,10 +13,32 @@ import {
 } from "./split.js";
 
 describe("station split", () => {
-  it("starts as crew 1fr, map 2fr, comms 1fr, with the handle before comms", () => {
+  it("starts as crew 1fr, map 2fr, comms 1fr, with a handle after crew and one before comms", () => {
     expect(splitTemplate(DEFAULT_SIDE, { crew: true })).toBe(
-      "minmax(0,1.000fr) minmax(0,2.000fr) auto minmax(0,1.000fr)",
+      "minmax(0,1.000fr) auto minmax(0,2.000fr) auto minmax(0,1.000fr)",
     );
+  });
+
+  it("takes a wider crew column from the map", () => {
+    expect(splitTemplate(DEFAULT_SIDE, { crew: true, crewShare: 1.5 })).toBe(
+      "minmax(0,1.500fr) auto minmax(0,1.500fr) auto minmax(0,1.000fr)",
+    );
+  });
+
+  it("converts pixels to fr for the crew handle: dragging right widens crew, within limits", () => {
+    expect(resizeCrew(CREW_SHARE, 100, 1600)).toBeCloseTo(1.25);
+    expect(resizeCrew(CREW_SHARE, -100, 1600)).toBeCloseTo(0.75);
+    expect(resizeCrew(CREW_SHARE, 5000, 1600)).toBe(CREW_LIMITS.max);
+    expect(resizeCrew(CREW_SHARE, -5000, 1600)).toBe(CREW_LIMITS.min);
+    expect(resizeCrew(CREW_SHARE, 100, 0)).toBe(CREW_SHARE);
+    // At both limits the map still keeps a full fr.
+    expect(SPLIT_TOTAL - CREW_LIMITS.max - SIDE_LIMITS.max).toBe(1);
+  });
+
+  it("reads a stored crew width, clamped, and falls back on anything else", () => {
+    expect(parseCrew("1.2")).toBe(1.2);
+    expect(parseCrew("9")).toBe(CREW_LIMITS.max);
+    expect(parseCrew(null)).toBe(CREW_SHARE);
   });
 
   it("gives a folded crew column's share to the map, with no column left for it", () => {

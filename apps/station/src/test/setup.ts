@@ -11,6 +11,12 @@ expect.extend(axeMatchers);
 // element never appears; they just allow for a slower machine.
 configure({ asyncUtilTimeout: 5000 });
 
+// Browsers hide `[hidden]` with a built-in rule that jsdom leaves out, so axe would count the
+// content of a hidden tab (PanelTabs keeps every tab mounted) as on screen. Restore the rule.
+const userAgentRules = document.createElement("style");
+userAgentRules.textContent = "[hidden] { display: none; }";
+document.head.append(userAgentRules);
+
 afterEach(() => {
   cleanup();
   // Per-viewer preferences (the open Overseer order, the map style…) never leak between tests.

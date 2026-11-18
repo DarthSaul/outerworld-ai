@@ -1,4 +1,4 @@
-import { type Dashboard, term, termWith } from "@darthsaul/outerworld-ai-core";
+import { type Dashboard, overseerFirst, term, termWith } from "@darthsaul/outerworld-ai-core";
 import {
   CaretButton,
   OutlineButton,
@@ -44,7 +44,7 @@ export function CrewPanel({
   const station = useStationView();
   const sessions = useAllSessions();
   const [filter, setFilter] = useState<Filter>("all");
-  const agents = station.data?.agents ?? [];
+  const agents = overseerFirst(station.data?.agents ?? []);
   const roomName = (roomId: string) => dashboard.rooms.find((r) => r.id === roomId)?.name ?? "";
   const nameOf = (agentId: string) => agents.find((a) => a.id === agentId)?.config.name ?? agentId;
   const working = dashboard.crew.filter((c) => c.status === "active").length;

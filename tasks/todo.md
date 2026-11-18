@@ -160,6 +160,32 @@ decisions made, open questions.
     also gives the scroll area keyboard access.
   - The roster shows each crew member's room where the design shows a role: crew have no role
     text.
+- **D27 Crew member page tabs (owner 2026-11-18).** A crew member's page is three tabs: Brief
+  (read only: look, name, room, model, what they can use, identity, schedules), Memory (their
+  proposals and stored beliefs, the Memory screen's panels), and Config (every editable field,
+  Appearance last). The tab is in the address (`?tab=memory|config`; Brief has none); tabs stay
+  mounted so a half-made Config edit survives a look at Brief. Readable capability names,
+  descriptions, and icons come from one catalog, core's `toolDisplay` / `propDisplay` /
+  `connectorDisplay` (words in the glossary, `item.*`); ui's `PixelIcon` draws the icons as
+  pixels. Appearance now stacks: the stage beside the pick's name, role, and status, and the
+  character grid below across the full width.
+- **D28 Ability cards with service logos (owner 2026-11-18).** Abilities cards show the service's
+  logo, its name, an "MCP server" tag, and a one-line description from core's `abilityDisplay`
+  (glossary `ability.*`). Discover is a grid (two columns on desktop) of every preset; an
+  installed one is tagged and links to Installed instead of offering Add. Installed keeps one
+  full-width card per row (its forms need the room) and no longer lists who is granted a
+  connector; that lives on each crew member's page. Logos come from `simple-icons` (CC0, bundled,
+  no network), drawn by ui's `BrandIcon` in the current text color, so no hex enters a component.
+- **D29 Crew screen and Station layout pass (owner 2026-11-18).** The Overseer leads every crew
+  list (core's `overseerFirst`): on the crew screen above Add, set off by a thin rule, and at the
+  top of the Station's crew column. The sidenav is a quarter narrower (`w-60`), drops the model,
+  cuts long room names short, and puts tags with spend on each item's bottom row. A crew member's
+  tabs are Brief, Schedules, Memory, Config; Config's Connectors is a panel of its own whose grants
+  save at once. The picker shows the painted characters first (`CHARACTER_ORDER`) in three rows;
+  saved `look` indexes are unchanged. The Station's crew column resizes from its own handle
+  (`outerworld.crewSplit`). A resize handle now measures each drag from where it began and listens
+  on the window, so a release anywhere (or a lost capture, a blur, a move with the button up) ends
+  it. COMMS' model menus wrap into a column only when the column is too narrow.
 
 ## Phase 0 — Housekeeping and decisions
 

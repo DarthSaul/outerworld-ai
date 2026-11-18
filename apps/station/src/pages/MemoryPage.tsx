@@ -109,6 +109,58 @@ function Belief({ memory }: { readonly memory: MemoryItem }) {
 }
 
 /**
+ * One crew member's memory: what they asked to remember, waiting on the Commander, and what they
+ * already believe. Used by the Memory screen and by the Memory tab of a crew member's page.
+ */
+export function AgentMemory({ agentId }: { readonly agentId: string }) {
+  const memories = useMemories(agentId);
+  const proposals = memories.data?.proposals ?? [];
+  const beliefs = memories.data?.beliefs ?? [];
+  return (
+    <>
+      <ErrorNote error={memories.error} />
+      {memories.isSuccess ? (
+        <>
+          <Panel title={term("memory.proposals")}>
+            <div className="flex flex-col gap-2 p-3">
+              {proposals.length === 0 ? (
+                <EmptyState
+                  title={term("memory.none.proposals.title")}
+                  body={term("memory.none.proposals.body")}
+                />
+              ) : (
+                <ul className="m-0 flex list-none flex-col gap-2 p-0">
+                  {proposals.map((m) => (
+                    <Proposal key={m.id} memory={m} />
+                  ))}
+                </ul>
+              )}
+            </div>
+          </Panel>
+          <Panel title={term("memory.beliefs")}>
+            <div className="flex flex-col gap-2 p-3">
+              <p className="m-0 text-b17 text-fg-soft">{term("memory.hint")}</p>
+              {beliefs.length === 0 ? (
+                <EmptyState
+                  title={term("memory.none.beliefs.title")}
+                  body={term("memory.none.beliefs.body")}
+                />
+              ) : (
+                <ul className="m-0 flex list-none flex-col gap-2 p-0">
+                  {beliefs.map((m) => (
+                    <Belief key={m.id} memory={m} />
+                  ))}
+                </ul>
+              )}
+            </div>
+          </Panel>
+        </>
+      ) : null}
+    </>
+  );
+}
+
+/**
  * Memory (brief §14): pick a crew member, decide on what they asked to remember, and curate what
  * they already believe. Nothing an agent proposes reaches a prompt until it is approved here.
  * The selection lives in the URL (`?agent=…`).
@@ -117,9 +169,6 @@ export function MemoryPage() {
   const [params, setParams] = useSearchParams();
   const station = useStationView();
   const agentId = params.get("agent") ?? undefined;
-  const memories = useMemories(agentId);
-  const proposals = memories.data?.proposals ?? [];
-  const beliefs = memories.data?.beliefs ?? [];
 
   return (
     <section
@@ -149,46 +198,12 @@ export function MemoryPage() {
             ))}
           </ul>
         </nav>
-        <ErrorNote error={station.error ?? memories.error} />
+        <ErrorNote error={station.error} />
         {agentId === undefined ? (
           <p className="m-0 text-b19 text-fg-soft">{term("memory.pick")}</p>
-        ) : memories.isSuccess ? (
-          <>
-            <Panel title={term("memory.proposals")}>
-              <div className="flex flex-col gap-2 p-3">
-                {proposals.length === 0 ? (
-                  <EmptyState
-                    title={term("memory.none.proposals.title")}
-                    body={term("memory.none.proposals.body")}
-                  />
-                ) : (
-                  <ul className="m-0 flex list-none flex-col gap-2 p-0">
-                    {proposals.map((m) => (
-                      <Proposal key={m.id} memory={m} />
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </Panel>
-            <Panel title={term("memory.beliefs")}>
-              <div className="flex flex-col gap-2 p-3">
-                <p className="m-0 text-b17 text-fg-soft">{term("memory.hint")}</p>
-                {beliefs.length === 0 ? (
-                  <EmptyState
-                    title={term("memory.none.beliefs.title")}
-                    body={term("memory.none.beliefs.body")}
-                  />
-                ) : (
-                  <ul className="m-0 flex list-none flex-col gap-2 p-0">
-                    {beliefs.map((m) => (
-                      <Belief key={m.id} memory={m} />
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </Panel>
-          </>
-        ) : null}
+        ) : (
+          <AgentMemory key={agentId} agentId={agentId} />
+        )}
       </ScrollArea>
     </section>
   );
