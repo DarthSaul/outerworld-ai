@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { AgentConfig, AgentRole, ApprovalMode, Schedule } from "../config/agent-config.js";
+import { characterById } from "../characters.js";
+import { type AgentConfig, AgentRole, ApprovalMode, Schedule } from "../config/agent-config.js";
 import { Prop, type StationConfig } from "../config/station-config.js";
 import type { EffectiveTool } from "../policy/grants.js";
 import { Id, type Issue } from "../schema/common.js";
@@ -32,7 +33,8 @@ export const UpdateAgentInput = z.strictObject({
   model: z.string().min(1).optional(),
   approvalMode: ApprovalMode.optional(),
   connectorGrants: z.array(Id).optional(),
-  look: AgentConfig.shape.look,
+  /** Only a character that exists; a stored look may name a deleted one (a warning on load). */
+  look: Id.refine((id) => characterById(id) !== undefined, "no such character").optional(),
 });
 
 /** A scheduled prompt is sent like a Commander's message, so it has the same practical limit. */

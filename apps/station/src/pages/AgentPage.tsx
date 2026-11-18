@@ -4,7 +4,7 @@ import {
   type AgentDocumentName,
   type AgentView,
   type ApprovalMode,
-  CHARACTERS,
+  characterById,
   type EffectiveTool,
   lookFor,
   type StationConfig,
@@ -308,10 +308,10 @@ function ConfigForm({
 function AppearanceRow({ agentId }: { readonly agentId: string }) {
   const { dashboard } = useDashboard();
   const setLook = useSetLook();
-  const [cursor, setCursor] = useState<number>();
+  const [cursor, setCursor] = useState<string>();
   // The look just saved, the one it replaced, and what to say. The note holds while the crew member
   // shows either (the refresh may not be in yet); a different look, saved elsewhere, ends it.
-  const [assigned, setAssigned] = useState<{ look: number; before: number; text: string }>();
+  const [assigned, setAssigned] = useState<{ look: string; before: string; text: string }>();
   if (!dashboard) return null;
   const toAgent = (c: (typeof dashboard.crew)[number]): CrewSelectAgent => {
     const room = dashboard.rooms.find((r) => r.id === c.roomId);
@@ -353,7 +353,7 @@ function AppearanceRow({ agentId }: { readonly agentId: string }) {
                   before: agent.look,
                   text: termWith("crewSelect.assigned", {
                     agent: agent.name,
-                    character: CHARACTERS[at]?.name ?? "",
+                    character: characterById(at)?.name ?? "",
                   }),
                 }),
             },

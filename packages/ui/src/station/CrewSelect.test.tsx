@@ -13,7 +13,7 @@ const agents: CrewSelectAgent[] = [
     role: "Overseer",
     roomName: "Command",
     color: stVar("cyan"),
-    look: 3,
+    look: "kestrel",
   },
   {
     id: "quill",
@@ -21,7 +21,7 @@ const agents: CrewSelectAgent[] = [
     role: "Crew member",
     roomName: "Operations",
     color: stVar("room-0"),
-    look: 16,
+    look: "fennec",
   },
   {
     id: "wren",
@@ -29,7 +29,7 @@ const agents: CrewSelectAgent[] = [
     role: "Crew member",
     roomName: "Research",
     color: stVar("room-1"),
-    look: 3,
+    look: "kestrel",
   },
 ];
 
@@ -38,7 +38,7 @@ function Harness({
   onSave = vi.fn(),
 }: {
   readonly who?: string;
-  readonly onSave?: (id: string, look: number) => void;
+  readonly onSave?: (id: string, look: string) => void;
 }) {
   const agent = agents.find((a) => a.id === who) ?? (agents[1] as CrewSelectAgent);
   const [cursor, setCursor] = useState(agent.look);
@@ -80,7 +80,7 @@ describe("CrewSelect", () => {
     fireEvent.click(within(grid()).getByRole("button", { name: "NOVA, Pilot" }));
     expect(save()).toBeEnabled();
     fireEvent.click(save());
-    expect(onSave).toHaveBeenCalledWith("quill", 0);
+    expect(onSave).toHaveBeenCalledWith("quill", "nova");
     fireEvent.click(within(grid()).getByRole("button", { name: "FENNEC, Pathfinder" }));
     expect(save()).toBeDisabled();
   });
@@ -121,7 +121,7 @@ describe("CrewSelect", () => {
     fireEvent.keyDown(grid(), { key: "ArrowRight" });
     expect(cursorName()).toBe("NOVA, Pilot");
     fireEvent.keyDown(grid(), { key: "Enter" });
-    expect(onSave).toHaveBeenCalledWith("quill", 0);
+    expect(onSave).toHaveBeenCalledWith("quill", "nova");
   });
 
   it("leaves the arrow keys alone outside the grid", () => {

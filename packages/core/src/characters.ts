@@ -3,7 +3,7 @@ import { CHARACTER_ART } from "./character-art.js";
 /**
  * The pixel characters an agent can appear as (ADR-0013): 17 drawn characters, generated on a
  * 20×26 grid (the design exports 24; 7 are retired, ADR-0021), then painted characters shipped as
- * art (ADR-0017). The generator draws the drawn
+ * art (ADR-0017). An agent stores its character's `id`, so order here is only the picker's order. The generator draws the drawn
  * ones. Ported from docs/design/station-dashboard/src/characterSprites.ts; the
  * exported PNGs in docs/design/station-dashboard/sprites/1x are the reference, and
  * characters.test.ts checks every grid against them pixel for pixel. Pure: no DOM, no canvas.
@@ -307,7 +307,7 @@ const art = (id: string, name: string, role: string, size: 64 | 96 = 64): ArtCha
   art: { src: CHARACTER_ART[id] ?? "", size },
 });
 
-/** The painted characters, after the drawn ones (indexes 17 and up). */
+/** The painted characters, after the drawn ones in the picker. */
 export const ART_CHARACTERS: readonly ArtCharacter[] = [
   art("razor", "RAZOR", "Captain"),
   art("umbra", "UMBRA", "Shadow knight", 96),
@@ -322,7 +322,7 @@ export const ART_CHARACTERS: readonly ArtCharacter[] = [
 
 export type Character = CharacterSpec | ArtCharacter;
 
-/** Every character an agent can wear, by `look` index: the drawn ones, then the painted ones. */
+/** Every character an agent can wear, in picker order: the drawn ones, then the painted ones. */
 export const CHARACTERS: readonly Character[] = [...DRAWN_CHARACTERS, ...ART_CHARACTERS];
 
 export const isArtCharacter = (c: Character): c is ArtCharacter => "art" in c;
@@ -773,16 +773,20 @@ export function gridRuns(grid: CharacterGrid): PixelRun[] {
   return runs;
 }
 
+/** Every character by its id, the key an agent.json `look` stores (ADR-0021). */
+const BY_ID: ReadonlyMap<string, Character> = new Map(CHARACTERS.map((c) => [c.id, c]));
+
+/** The character with this id, or undefined (an unknown id, such as a deleted sprite). */
+export const characterById = (id: string): Character | undefined => BY_ID.get(id);
+
 /**
- * The character index stored in agent.json `look`, or a stable one from the agent id. The stable
- * default draws only from the drawn characters, so adding painted characters never changes anyone's
- * default look.
+ * The character id an agent appears as: its agent.json `look` when that names a character, or else
+ * a stable pick from the agent id. The stable default draws only from the drawn characters, so
+ * adding painted characters never changes anyone's default look.
  */
-export function lookFor(agentId: string, look: number | undefined): number {
-  if (look !== undefined && Number.isInteger(look) && look >= 0 && look < CHARACTER_COUNT) {
-    return look;
-  }
+export function lookFor(agentId: string, look: string | undefined): string {
+  if (look !== undefined && BY_ID.has(look)) return look;
   let hash = 0;
   for (const ch of agentId) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
-  return hash % DRAWN_CHARACTERS.length;
+  return DRAWN_CHARACTERS[hash % DRAWN_CHARACTERS.length]?.id ?? "";
 }

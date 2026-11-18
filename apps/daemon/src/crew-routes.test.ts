@@ -1,12 +1,7 @@
 import { cpSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-  type AgentView,
-  CHARACTER_COUNT,
-  type StationView,
-  SUPPORTED_MODELS,
-} from "@darthsaul/outerworld-ai-core";
+import { type AgentView, type StationView, SUPPORTED_MODELS } from "@darthsaul/outerworld-ai-core";
 import { EventStore, openDatabase } from "@darthsaul/outerworld-ai-runtime";
 import { describe, expect, it } from "vitest";
 import { createApp } from "./app.js";
@@ -82,13 +77,14 @@ describe("crew and room routes", () => {
     ]);
   });
 
-  it("PATCH /agents/:id sets the character look, painted ones too, and rejects one out of range", async () => {
+  it("PATCH /agents/:id sets the character look by id, painted ones too, and rejects an unknown one", async () => {
     const { call } = setup();
-    const patched = await call("PATCH", "/agents/quill", { look: 21 });
-    expect(((await patched.json()) as AgentView).config.look).toBe(21);
-    const painted = await call("PATCH", "/agents/quill", { look: 24 });
-    expect(((await painted.json()) as AgentView).config.look).toBe(24);
-    expect((await call("PATCH", "/agents/quill", { look: CHARACTER_COUNT })).status).toBe(400);
+    const patched = await call("PATCH", "/agents/quill", { look: "fennec" });
+    expect(((await patched.json()) as AgentView).config.look).toBe("fennec");
+    const painted = await call("PATCH", "/agents/quill", { look: "dusty" });
+    expect(((await painted.json()) as AgentView).config.look).toBe("dusty");
+    expect((await call("PATCH", "/agents/quill", { look: "rivet" })).status).toBe(400);
+    expect((await call("PATCH", "/agents/quill", { look: 3 })).status).toBe(400);
   });
 
   it("POST /lanes opens a hallway (201) and DELETE /lanes/:id closes it (204), each logged", async () => {

@@ -39,7 +39,8 @@ interface CrewRow {
   readonly name: string;
   readonly role: string;
   readonly approvalMode: string;
-  readonly look: number | undefined;
+  /** The stored character id; `lookFor` resolves it or picks a default. */
+  readonly look: string | undefined;
 }
 
 /**

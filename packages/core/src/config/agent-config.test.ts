@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { CHARACTER_COUNT } from "../characters.js";
 import { type AgentConfig, parseAgentConfig } from "./agent-config.js";
 
 const valid = (): Record<string, unknown> => ({
@@ -25,12 +24,17 @@ const valid = (): Record<string, unknown> => ({
 const paths = (input: unknown) => parseAgentConfig(input).issues.map((i) => `${i.level} ${i.path}`);
 
 describe("parseAgentConfig", () => {
-  it("accepts a look that indexes one of the characters, drawn or painted, and nothing else", () => {
-    expect(parseAgentConfig({ ...valid(), look: 0 }).ok).toBe(true);
-    expect(parseAgentConfig({ ...valid(), look: CHARACTER_COUNT - 1 }).ok).toBe(true);
-    expect(paths({ ...valid(), look: CHARACTER_COUNT })).toEqual(["error look"]);
-    expect(paths({ ...valid(), look: -1 })).toEqual(["error look"]);
-    expect(paths({ ...valid(), look: 1.5 })).toEqual(["error look"]);
+  it("stores a look as a character id, drawn or painted, and nothing else (ADR-0021)", () => {
+    expect(paths({ ...valid(), look: "nova" })).toEqual([]);
+    expect(paths({ ...valid(), look: "dusty" })).toEqual([]);
+    expect(paths({ ...valid(), look: 3 })).toEqual(["error look"]);
+    expect(paths({ ...valid(), look: "Nova" })).toEqual(["error look"]);
+  });
+
+  it("still loads an agent whose look names a deleted character, with a warning", () => {
+    const r = parseAgentConfig({ ...valid(), look: "rivet" });
+    expect(r.ok).toBe(true);
+    expect(r.issues.map((i) => `${i.level} ${i.path}`)).toEqual(["warn look"]);
   });
 
   it("accepts a full valid agent.json with no issues", () => {

@@ -7,5 +7,5 @@
   "approvalMode": "full",
   "connectorGrants": [],
   "schedules": [],
-  "look": 11
+  "look": "echo"
 }

@@ -52,7 +52,8 @@ export interface DashboardCrew {
   readonly roomId: string;
   readonly overseer: boolean;
   readonly status: CrewDisplayStatus;
-  readonly look: number;
+  /** The character id this crew member appears as, always one that exists. */
+  readonly look: string;
   readonly colorIndex: number;
   /** Why the last run ended badly, when it did. */
   readonly detail?: string;

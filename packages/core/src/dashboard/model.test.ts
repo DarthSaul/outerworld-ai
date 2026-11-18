@@ -47,8 +47,8 @@ describe("dashboardModel on the demo station", () => {
     const d = dashboardModel(input());
     expect(d.crew.map((c) => [c.id, c.overseer, c.look])).toEqual([
       ["quill", false, lookFor("quill", undefined)],
-      ["wren", false, 11],
-      ["vesper", true, 3],
+      ["wren", false, "echo"],
+      ["vesper", true, "kestrel"],
     ]);
     expect(d.overseer?.name).toBe("Vesper");
     expect(d.crew.every((c) => c.status === "idle")).toBe(true);

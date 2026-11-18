@@ -1,6 +1,8 @@
 import {
   ART_BOX,
   CHARACTERS,
+  type Character,
+  characterById,
   characterGrid,
   gridRuns,
   isArtCharacter,
@@ -10,8 +12,8 @@ import {
 } from "@darthsaul/outerworld-ai-core";
 
 export interface SpriteProps {
-  /** Index into core's CHARACTERS. */
-  readonly look: number;
+  /** A character id from core's CHARACTERS, such as `"nova"`; an unknown id draws the first one. */
+  readonly look: string;
   /**
    * Scale: 1 (20×26), 2, 3, 4 (80×104), 8 (160×208). 1.5 (30×39, the Overseer's comms portrait) is
    * whole device pixels on a 2× display; on a 1× display its pixels are slightly uneven.
@@ -22,14 +24,13 @@ export interface SpriteProps {
   readonly className?: string;
 }
 
-const cache = new Map<number, PixelRun[]>();
+const cache = new Map<string, PixelRun[]>();
 
-function runsFor(look: number): PixelRun[] {
-  let runs = cache.get(look);
+function runsFor(character: Character): PixelRun[] {
+  let runs = cache.get(character.id);
   if (!runs) {
-    const character = CHARACTERS[look] ?? CHARACTERS[0];
-    runs = character && !isArtCharacter(character) ? gridRuns(characterGrid(character)) : [];
-    cache.set(look, runs);
+    runs = isArtCharacter(character) ? [] : gridRuns(characterGrid(character));
+    cache.set(character.id, runs);
   }
   return runs;
 }
@@ -40,8 +41,9 @@ function runsFor(look: number): PixelRun[] {
  * same grid the design exported. Colors are the character's own, from core.
  */
 export function Sprite({ look, scale = 1, label, className = "" }: SpriteProps) {
-  const character = CHARACTERS[look];
-  if (character && isArtCharacter(character)) {
+  const character = characterById(look) ?? CHARACTERS[0];
+  if (!character) return null;
+  if (isArtCharacter(character)) {
     // A painted character (ADR-0017): its art in a 32×32 box per scale step, still pixelated.
     return (
       <img
@@ -65,7 +67,7 @@ export function Sprite({ look, scale = 1, label, className = "" }: SpriteProps) 
       {...(label ? { role: "img", "aria-label": label } : { "aria-hidden": true })}
     >
       <title>{label ?? ""}</title>
-      {runsFor(look).map((r) => (
+      {runsFor(character).map((r) => (
         <rect key={`${r.x}-${r.y}`} x={r.x} y={r.y} width={r.w} height={1} fill={r.color} />
       ))}
     </svg>

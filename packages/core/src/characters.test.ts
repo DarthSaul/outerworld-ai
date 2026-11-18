@@ -7,6 +7,7 @@ import {
   ART_CHARACTERS,
   CHARACTER_COUNT,
   CHARACTERS,
+  characterById,
   characterGrid,
   DRAWN_CHARACTERS,
   gridRuns,
@@ -121,17 +122,19 @@ describe("characters", () => {
 });
 
 describe("lookFor", () => {
-  it("uses a valid stored look", () => {
-    expect(lookFor("wren", 5)).toBe(5);
+  const drawnIds = new Set(DRAWN_CHARACTERS.map((c) => c.id));
+
+  it("uses a stored look that names a character, drawn or painted", () => {
+    expect(lookFor("wren", "zephyr")).toBe("zephyr");
+    expect(lookFor("wren", "dusty")).toBe("dusty");
   });
 
-  it.each([undefined, -1, CHARACTER_COUNT, 2.5])(
-    "falls back to a stable look from the id for %s",
+  it.each([undefined, "", "rivet", "no-such-character"])(
+    "falls back to a stable drawn character from the id for %s",
     (look) => {
       const fallback = lookFor("wren", look);
       expect(fallback).toBe(lookFor("wren", undefined));
-      expect(fallback).toBeGreaterThanOrEqual(0);
-      expect(fallback).toBeLessThan(CHARACTER_COUNT);
+      expect(drawnIds.has(fallback)).toBe(true);
     },
   );
 
@@ -140,6 +143,12 @@ describe("lookFor", () => {
       ["vesper", "quill", "wren", "atlas", "nova"].map((id) => lookFor(id, undefined)),
     );
     expect(looks.size).toBeGreaterThan(1);
+  });
+
+  it("finds every character by id, and nothing else", () => {
+    for (const c of CHARACTERS) expect(characterById(c.id)).toBe(c);
+    expect(characterById("rivet")).toBeUndefined();
+    expect(characterById("constructor")).toBeUndefined();
   });
 
   it.each(ART_CHARACTERS.map((c) => [c.id, c] as const))(
@@ -163,9 +172,7 @@ describe("lookFor", () => {
 
   it("only defaults agents to drawn characters, so new art never changes a default look", () => {
     for (const id of ["vesper", "quill", "wren", "nova", "a", "project-manager"]) {
-      expect(lookFor(id, undefined)).toBeLessThan(DRAWN_CHARACTERS.length);
+      expect(drawnIds.has(lookFor(id, undefined))).toBe(true);
     }
-    expect(lookFor("quill", 20)).toBe(20);
-    expect(lookFor("quill", CHARACTER_COUNT)).toBeLessThan(DRAWN_CHARACTERS.length);
   });
 });

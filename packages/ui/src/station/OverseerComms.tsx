@@ -48,7 +48,7 @@ export function useTypewriter(key: string, text: string): string {
 export interface OverseerCommsProps {
   readonly message?: CommsMessage;
   /** The Overseer's look, for the portrait slot (the final portrait is still to be designed). */
-  readonly overseerLook?: number;
+  readonly overseerLook?: string;
   readonly onApprove?: () => void;
   readonly onDeny?: () => void;
   /** Move on: the next approval, chatter line, or back from a reply. */

@@ -631,7 +631,7 @@ export function useAddProjectManager() {
 export function useSetLook() {
   const { api } = useDaemon();
   return useMutation({
-    mutationFn: ({ agentId, look }: { agentId: string; look: number }) =>
+    mutationFn: ({ agentId, look }: { agentId: string; look: string }) =>
       api.send<AgentView>("PATCH", `/agents/${encodeURIComponent(agentId)}`, { look }),
   });
 }

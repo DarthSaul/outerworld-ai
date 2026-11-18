@@ -71,6 +71,26 @@ const readJson = async (path: string, label: string): Promise<[unknown, Issue[]]
 const prefixed = (issues: readonly Issue[], prefix: string): Issue[] =>
   issues.map((i) => ({ ...i, path: i.path ? `${prefix}.${i.path}` : prefix }));
 
+/**
+ * A numeric `look` (a list position, from before ADR-0021) is dropped with a warning, so the agent
+ * still loads with its schedules and shows its default character. The file is untouched.
+ */
+function migrateLook(raw: unknown): [unknown, Issue[]] {
+  if (typeof raw !== "object" || raw === null || !("look" in raw)) return [raw, []];
+  const { look, ...rest } = raw as { look: unknown };
+  if (typeof look !== "number") return [raw, []];
+  return [
+    rest,
+    [
+      {
+        level: "warn",
+        path: "look",
+        message: `look ${look} is a list position from before ADR-0021; set a character id, such as "nova"`,
+      },
+    ],
+  ];
+}
+
 async function loadAgent(
   home: string,
   id: string,
@@ -78,8 +98,9 @@ async function loadAgent(
   const dir = stationPaths(home).agentDir(id);
   const [raw, readIssues] = await readJson(join(dir, "agent.json"), `agents/${id}/agent.json`);
   if (readIssues.length) return { issues: readIssues };
-  const parsed = parseAgentConfig(raw);
-  const issues = prefixed(parsed.issues, `agents/${id}/agent.json`);
+  const [migrated, lookIssues] = migrateLook(raw);
+  const parsed = parseAgentConfig(migrated);
+  const issues = prefixed([...lookIssues, ...parsed.issues], `agents/${id}/agent.json`);
   if (!parsed.ok) return { issues };
   const documents = {} as Record<AgentDocumentName, string>;
   for (const name of AGENT_DOCUMENTS) {

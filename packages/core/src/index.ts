@@ -62,6 +62,7 @@ export {
   type Character,
   type CharacterGrid,
   type CharacterSpec,
+  characterById,
   characterGrid,
   DRAWN_CHARACTERS,
   gridRuns,

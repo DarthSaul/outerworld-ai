@@ -7,5 +7,5 @@
   "approvalMode": "ask",
   "connectorGrants": [],
   "schedules": [],
-  "look": 3
+  "look": "kestrel"
 }

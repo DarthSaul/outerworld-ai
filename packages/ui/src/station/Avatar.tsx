@@ -14,10 +14,10 @@ export interface AvatarProps {
   /** What shows through the ring's gap; defaults to the room surface. */
   readonly ringGap?: string;
   /**
-   * The crew member's pixel character (core's look index). With it, the chip draws the character
+   * The crew member's pixel character (a core character id). With it, the chip draws the character
    * at 1× in a frame of `color` instead of initials; use 30 or larger so the 26px sprite fits.
    */
-  readonly look?: number;
+  readonly look?: string;
   /** A 6px status lamp at the top-right corner. */
   readonly lamp?: { readonly color: string; readonly className?: string };
   readonly className?: string;
