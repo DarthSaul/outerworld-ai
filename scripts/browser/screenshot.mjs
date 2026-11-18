@@ -23,7 +23,7 @@ const arg = (name, fallback) => {
 };
 const routes = arg(
   "routes",
-  "/dev,/,/crew,/crew/vesper,/crew/quill,/comms,/comms?agent=vesper,/memory,/memory?agent=wren,/settings,/notifications",
+  "/dev,/,/crew,/crew/vesper,/crew/quill,/comms,/comms?agent=vesper,/memory,/memory?agent=wren,/system/settings,/system/abilities/discover,/system/abilities/installed,/notifications",
 ).split(",");
 const port = Number(arg("port", "3300"));
 const outDir = join(process.cwd(), ".outerworld", "screenshots");
@@ -287,6 +287,15 @@ async function stationInteractions(page, width) {
   if (await page.getByRole("dialog").isVisible()) {
     failures.push(`home-${width}: Escape did not close the status drawer`);
   }
+  // The footer's System menu opens over the footer, routes, and closes with Escape.
+  const footer = page.getByRole("contentinfo");
+  await footer.getByRole("button", { name: "System" }).click();
+  const menu = footer.getByRole("menu");
+  await menu.waitFor();
+  await page.screenshot({ path: join(outDir, `home-system-menu-${width}.png`) });
+  await axeBlocking(page, `home-system-menu-${width}`);
+  await page.keyboard.press("Escape");
+  if (await menu.isVisible()) failures.push(`home-${width}: Escape did not close the System menu`);
 }
 
 try {

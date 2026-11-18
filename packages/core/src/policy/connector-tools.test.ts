@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { GLOSSARY_KEYS } from "../glossary.js";
 import {
   CONNECTOR_PRESET_IDS,
   CONNECTOR_PRESETS,
@@ -8,6 +9,7 @@ import {
   KNOWN_TOOL_CLASSES,
   NOTION_PRESET,
   needsOwnClient,
+  ownClientProfile,
 } from "./connector-tools.js";
 
 describe("classifyConnectorTool", () => {
@@ -102,5 +104,55 @@ describe("connector presets", () => {
     expect(
       needsOwnClient({ ...GITHUB_PRESET, transport: { type: "http", url: "https://x.test/mcp" } }),
     ).toBe(false);
+  });
+});
+
+describe("ownClientProfile", () => {
+  it("has none for a server that registers its own clients, or no server at all", () => {
+    expect(ownClientProfile(undefined)).toBeUndefined();
+    expect(ownClientProfile("https://mcp.notion.com/mcp")).toBeUndefined();
+    expect(ownClientProfile("not a url")).toBeUndefined();
+  });
+
+  it("asks Gmail for one scope that covers its tools, and for a refresh token", () => {
+    const gmail = ownClientProfile("https://gmailmcp.googleapis.com:443/mcp/v1/");
+    // Google offers a refresh token only with access_type=offline (and again only with consent).
+    expect(gmail).toMatchObject({
+      scope: "https://www.googleapis.com/auth/gmail.modify",
+      authorizationParams: { access_type: "offline", prompt: "consent" },
+    });
+  });
+
+  it("leaves GitHub's scopes to the server", () => {
+    const github = ownClientProfile("https://api.githubcopilot.com/mcp/");
+    expect(github).toBeDefined();
+    expect(github?.scope).toBeUndefined();
+    expect(github?.authorizationParams).toBeUndefined();
+  });
+
+  it("gives setup steps in glossary words, with links only to the provider's own consoles", () => {
+    for (const url of [
+      "https://gmailmcp.googleapis.com/mcp/v1",
+      "https://api.githubcopilot.com/mcp/",
+    ]) {
+      const steps = ownClientProfile(url)?.setup ?? [];
+      expect(steps.length).toBeGreaterThan(2);
+      for (const s of steps) {
+        expect(GLOSSARY_KEYS).toContain(s.step);
+        if (s.href) expect(new URL(s.href).hostname).toMatch(/(^|\.)(google\.com|github\.com)$/);
+      }
+    }
+    // Gmail's steps name the scope the sign-in asks for, and the MCP API that is easy to miss.
+    const gmail = ownClientProfile("https://gmailmcp.googleapis.com/mcp/v1");
+    expect(gmail?.setup.some((s) => s.href?.includes("gmailmcp.googleapis.com"))).toBe(true);
+    // Before anything else: the server refuses projects outside the Developer Preview Program.
+    expect(gmail?.setup[0]?.step).toBe("connector.setup.google.preview");
+  });
+
+  it("matches needsOwnClient", () => {
+    for (const preset of [NOTION_PRESET, GITHUB_PRESET, GMAIL_PRESET]) {
+      const url = preset.transport.type === "http" ? preset.transport.url : undefined;
+      expect(ownClientProfile(url) !== undefined).toBe(needsOwnClient(preset));
+    }
   });
 });

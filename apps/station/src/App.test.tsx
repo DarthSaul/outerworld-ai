@@ -1,6 +1,6 @@
 import { type RuntimeEvent, term } from "@darthsaul/outerworld-ai-core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, render, screen, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { describe, expect, it } from "vitest";
@@ -47,18 +47,92 @@ const renderAt = (path: string, conn = fakeConnection()) => {
 };
 
 describe("App shell", () => {
-  it("links Settings from the footer, where the vitals title was, and not from the header", async () => {
+  it("opens a System menu from the footer, where the vitals title was, and not from the header", async () => {
+    const user = userEvent.setup();
     renderApp("/");
     const footer = await screen.findByRole("contentinfo");
-    const settings = within(footer).getByRole("link", { name: term("settings") });
-    expect(settings).toHaveAttribute("href", "/settings");
+    const system = within(footer).getByRole("button", { name: term("nav.system") });
+    expect(system).toHaveAttribute("aria-haspopup", "menu");
+    expect(system).toHaveAttribute("aria-expanded", "false");
+    expect(system.querySelector('svg[data-icon="gear"]')).not.toBeNull();
     expect(footer).not.toHaveTextContent(/budget · tokens · uptime/i);
     // The vitals keep their name for screen readers only.
     expect(within(footer).getByRole("heading", { name: term("vitals.title") })).toHaveClass(
       "sr-only",
     );
     const nav = screen.getByRole("navigation", { name: "Primary" });
-    expect(within(nav).queryByRole("link", { name: term("settings") })).toBeNull();
+    expect(within(nav).queryByRole("link", { name: /settings/i })).toBeNull();
+
+    await user.click(system);
+    const menu = within(footer).getByRole("menu");
+    const items = within(menu).getAllByRole("menuitem");
+    expect(items.map((i) => i.getAttribute("href"))).toEqual([
+      "/system/settings",
+      "/system/abilities",
+    ]);
+    expect(items[0]).toHaveTextContent(term("settings"));
+    expect(items[0]).toHaveTextContent(term("nav.settings.hint"));
+    expect(items[1]).toHaveTextContent(term("abilities"));
+    expect(items[1]).toHaveTextContent(term("abilities.hint"));
+    // Focus moves into the menu; choosing an item routes there and closes it.
+    expect(items[0]).toHaveFocus();
+    await user.click(items[1] as HTMLElement);
+    expect(
+      await screen.findByRole("heading", { level: 1, name: term("abilities") }),
+    ).toBeInTheDocument();
+    expect(within(footer).queryByRole("menu")).toBeNull();
+    // On a System screen, the button reads as the current tab.
+    expect(system.className).toMatch(/bg-cyan/);
+  });
+
+  it("moves through the System menu by keyboard and closes it with Escape", async () => {
+    const user = userEvent.setup();
+    renderApp("/");
+    const footer = await screen.findByRole("contentinfo");
+    const system = within(footer).getByRole("button", { name: term("nav.system") });
+    system.focus();
+    await user.keyboard("{ArrowUp}");
+    const items = within(within(footer).getByRole("menu")).getAllByRole("menuitem");
+    expect(items[1]).toHaveFocus();
+    await user.keyboard("{ArrowDown}");
+    expect(items[0]).toHaveFocus();
+    await user.keyboard("{End}");
+    expect(items[1]).toHaveFocus();
+    await user.keyboard("{Escape}");
+    expect(within(footer).queryByRole("menu")).toBeNull();
+    expect(system).toHaveFocus();
+    expect(system).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it.each([
+    ["{Enter}", term("settings"), "settings.nav"],
+    [" ", term("abilities"), "abilities.nav"],
+  ] as const)("opens the focused System menu item with %j", async (key, title, nav) => {
+    const user = userEvent.setup();
+    renderApp("/");
+    const footer = await screen.findByRole("contentinfo");
+    within(footer)
+      .getByRole("button", { name: term("nav.system") })
+      .focus();
+    await user.keyboard("{ArrowDown}");
+    if (key === " ") await user.keyboard("{ArrowDown}");
+    await user.keyboard(key);
+    expect(await screen.findByRole("heading", { level: 1, name: title })).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: term(nav) })).toBeInTheDocument();
+    expect(within(footer).queryByRole("menu")).toBeNull();
+  });
+
+  it.each([
+    ["/system", "/system/settings/providers"],
+    ["/settings", "/system/settings/providers"],
+    ["/settings/budgets", "/system/settings/budgets"],
+    ["/system/settings/nowhere", "/system/settings/providers"],
+  ])("sends %s to %s", async (from, to) => {
+    renderApp(from);
+    const nav = await screen.findByRole("navigation", { name: term("settings.nav") });
+    await waitFor(() =>
+      expect(within(nav).getByRole("link", { current: "page" })).toHaveAttribute("href", to),
+    );
   });
 
   it("fits the viewport on desktop: header and footer stay, screens scroll inside", async () => {

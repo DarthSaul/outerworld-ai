@@ -382,6 +382,8 @@ export interface ConnectorItem {
   readonly grantedTo: readonly string[];
   /** For a server that registers no clients: whether the Commander's OAuth app is saved. */
   readonly ownClient?: { readonly set: boolean; readonly redirectUrl: string };
+  /** While it needs sign-in: where to sign in. */
+  readonly authorizationUrl?: string;
 }
 
 export function useConnectors() {

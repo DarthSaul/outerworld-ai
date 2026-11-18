@@ -1,8 +1,9 @@
 import { term, termWith } from "@darthsaul/outerworld-ai-core";
-import { screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { axe } from "vitest-axe";
+import type { ConnectorItem } from "../queries.js";
 import { fakeApi, renderApp } from "../test/fake-daemon.js";
 
 const withNotion = (status: "connected" | "disconnected" = "connected") => {
@@ -24,36 +25,45 @@ const withNotion = (status: "connected" | "disconnected" = "connected") => {
   return fake;
 };
 
-describe("Connectors, a section of Settings", () => {
+/** Gmail as the daemon lists it: a server that needs the Commander's own OAuth app. */
+const gmail = (ownClient: { set: boolean } = { set: false }): ConnectorItem => ({
+  id: "gmail",
+  name: "Gmail",
+  url: "https://gmailmcp.googleapis.com/mcp/v1",
+  status: "disconnected",
+  tools: [],
+  grantedTo: [],
+  ownClient: { set: ownClient.set, redirectUrl: "http://127.0.0.1:4317/oauth/callback/gmail" },
+});
+
+describe("Abilities: connectors under Discover and Installed", () => {
   it("ignores a malformed fragment in the address", async () => {
-    renderApp("/settings#%E0%A4%A");
+    renderApp("/system/abilities#%E0%A4%A");
     expect(
-      await screen.findByRole("heading", { name: term("settings"), level: 1 }),
+      await screen.findByRole("heading", { name: term("abilities"), level: 1 }),
     ).toBeInTheDocument();
   });
 
-  it("offers Notion, GitHub, and Gmail when the station has no connectors", async () => {
+  it("offers Notion, GitHub, and Gmail under Discover when the station has no connectors", async () => {
     const user = userEvent.setup();
-    const { calls } = renderApp("/settings/connectors");
+    const { calls } = renderApp("/system/abilities");
     const add = (name: string) => termWith("connector.add", { name });
-    await user.click(await screen.findByRole("button", { name: add("Notion") }));
+    const notion = await screen.findByRole("button", { name: add("Notion") });
+    // All three while Discover still shows them: installing one moves to Installed.
+    expect(screen.getByRole("button", { name: add("GitHub") })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: add("Gmail") })).toBeInTheDocument();
+    await user.click(notion);
     expect(calls).toContainEqual({
       method: "POST",
       path: "/connectors",
       body: { preset: "notion" },
     });
-    expect(screen.getByRole("button", { name: add("GitHub") })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: add("Gmail") })).toBeInTheDocument();
   });
 
-  it("offers the presets not installed yet beside the installed ones", async () => {
-    renderApp("/settings/connectors", withNotion());
-    const adding = await screen.findByRole("region", { name: term("connector.add.title") });
-    expect(
-      within(adding)
-        .getAllByRole("button")
-        .map((b) => b.textContent),
-    ).toEqual([
+  it("discovers only the presets not installed yet", async () => {
+    renderApp("/system/abilities/discover", withNotion());
+    const adding = await screen.findByRole("region", { name: term("abilities.discover") });
+    expect((await within(adding).findAllByRole("button")).map((b) => b.textContent)).toEqual([
       termWith("connector.add", { name: "GitHub" }),
       termWith("connector.add", { name: "Gmail" }),
     ]);
@@ -62,14 +72,19 @@ describe("Connectors, a section of Settings", () => {
   it("takes GitHub's OAuth app: shows the redirect, sends the client, never shows it back", async () => {
     const user = userEvent.setup();
     const fake = fakeApi();
-    const { emit } = renderApp("/settings/connectors", fake);
+    const { emit } = renderApp("/system/abilities/discover", fake);
     // The daemon announces a station change after each install.
     const added = () => emit({ type: "station.updated", payload: {} });
     await user.click(
       await screen.findByRole("button", { name: termWith("connector.add", { name: "GitHub" }) }),
     );
     added();
+    // Installing moves to Installed, where the new card is.
     const card = await screen.findByRole("region", { name: "GitHub" });
+    expect(screen.getByRole("link", { name: term("abilities.installed") })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
     const form = within(card).getByRole("form", { name: term("connector.client") });
     expect(form).toHaveTextContent("http://127.0.0.1:4317/oauth/callback/github");
     const secret = within(form).getByLabelText(term("connector.client.secret"));
@@ -83,18 +98,86 @@ describe("Connectors, a section of Settings", () => {
       body: { clientId: "Iv1.abc", clientSecret: "shh" },
     });
     expect(await within(form).findByText(term("connector.client.set"))).toBeInTheDocument();
-    expect(within(form).getByLabelText(term("connector.client.id"))).toHaveValue("");
+    // Saved: the fields give way to a way to replace it, and the sign-in starts at once.
+    expect(within(form).queryByLabelText(term("connector.client.id"))).toBeNull();
+    expect(fake.calls).toContainEqual({
+      method: "POST",
+      path: "/connectors/github/connect",
+      body: undefined,
+    });
     // Notion registers its own clients: no form there.
+    await user.click(screen.getByRole("link", { name: term("abilities.discover") }));
     await user.click(
-      screen.getByRole("button", { name: termWith("connector.add", { name: "Notion" }) }),
+      await screen.findByRole("button", { name: termWith("connector.add", { name: "Notion" }) }),
     );
     added();
     const notion = await screen.findByRole("region", { name: "Notion" });
     expect(within(notion).queryByRole("form")).toBeNull();
   });
 
+  it("walks through Gmail's setup: each step, its console link, the scope, and the redirect", async () => {
+    const user = userEvent.setup();
+    const fake = fakeApi();
+    fake.connectors.push(gmail());
+    renderApp("/system/abilities/installed", fake);
+    const card = await screen.findByRole("region", { name: "Gmail" });
+    const form = within(card).getByRole("form", { name: term("connector.client") });
+    const steps = within(form).getByRole("list", { name: term("connector.client.steps") });
+    const items = within(steps).getAllByRole("listitem");
+    expect(items).toHaveLength(6);
+    expect(items[0]).toHaveTextContent(/Developer Preview Program/);
+    expect(items[1]).toHaveTextContent(/Gmail MCP API/);
+    expect(items[3]).toHaveTextContent("https://www.googleapis.com/auth/gmail.modify");
+    const apis = within(items[1] as HTMLElement).getByRole("link");
+    expect(apis).toHaveAttribute(
+      "href",
+      "https://console.cloud.google.com/apis/library/gmailmcp.googleapis.com",
+    );
+    expect(apis).toHaveAttribute("target", "_blank");
+    expect(apis).toHaveAttribute("rel", "noopener noreferrer");
+    // The redirect URL copies in one click.
+    await user.click(within(form).getByRole("button", { name: term("connector.client.copy") }));
+    expect(await navigator.clipboard.readText()).toBe("http://127.0.0.1:4317/oauth/callback/gmail");
+    expect(within(form).getByText(term("connector.client.copied"))).toBeInTheDocument();
+  });
+
+  it("keeps a saved OAuth app out of the way until the Commander replaces it", async () => {
+    const user = userEvent.setup();
+    const fake = fakeApi();
+    fake.connectors.push(gmail({ set: true }));
+    renderApp("/system/abilities/installed", fake);
+    const card = await screen.findByRole("region", { name: "Gmail" });
+    const form = within(card).getByRole("form", { name: term("connector.client") });
+    expect(within(form).getByText(term("connector.client.set"))).toBeInTheDocument();
+    expect(within(form).queryByLabelText(term("connector.client.id"))).toBeNull();
+    // The setup steps fold away once an app is saved.
+    expect(form.querySelector("details")).not.toHaveAttribute("open");
+    await user.click(within(form).getByRole("button", { name: term("connector.client.replace") }));
+    expect(within(form).getByLabelText(term("connector.client.id"))).toBeInTheDocument();
+    await user.click(within(form).getByRole("button", { name: term("connector.client.cancel") }));
+    expect(within(form).queryByLabelText(term("connector.client.id"))).toBeNull();
+  });
+
+  it("offers the sign-in a connector asks for, without pressing Connect first", async () => {
+    // A tool call found the sign-in refused: the daemon asks for a new one.
+    const fake = fakeApi();
+    fake.connectors.push({
+      ...gmail({ set: true }),
+      status: "needs_auth",
+      authorizationUrl: "https://accounts.example.test/auth?state=s2",
+    });
+    renderApp("/system/abilities/installed", fake);
+    const card = await screen.findByRole("region", { name: "Gmail" });
+    expect(within(card).getByRole("status", { name: "Gmail status" })).toHaveTextContent(
+      term("connectorStatus.needs_auth"),
+    );
+    expect(
+      within(card).getByRole("link", { name: `${term("connector.signIn")} Gmail` }),
+    ).toHaveAttribute("href", "https://accounts.example.test/auth?state=s2");
+  });
+
   it("shows a connected Notion's status, tools with their class, and who is granted it", async () => {
-    renderApp("/settings/connectors", withNotion());
+    renderApp("/system/abilities/installed", withNotion());
     const card = await screen.findByRole("region", { name: "Notion" });
     expect(within(card).getByRole("status", { name: "Notion status" })).toHaveTextContent(
       term("connectorStatus.connected"),
@@ -118,7 +201,7 @@ describe("Connectors, a section of Settings", () => {
     const fake = withNotion("disconnected");
     fake.connectAnswer.status = "needs_auth";
     fake.connectAnswer.authorizationUrl = "https://auth.example.test/authorize?state=s1";
-    renderApp("/settings/connectors", fake);
+    renderApp("/system/abilities/installed", fake);
     const card = await screen.findByRole("region", { name: "Notion" });
     await user.click(within(card).getByRole("button", { name: term("connector.connect") }));
     const link = await within(card).findByRole("link", {
@@ -130,9 +213,35 @@ describe("Connectors, a section of Settings", () => {
     expect(within(card).getByText(term("connector.signInHint"))).toBeInTheDocument();
   });
 
+  it("drops an old sign-in link once a connector signed in and then disconnected", async () => {
+    const user = userEvent.setup();
+    const fake = withNotion("disconnected");
+    fake.connectAnswer.status = "needs_auth";
+    fake.connectAnswer.authorizationUrl = "https://auth.example.test/authorize?state=s1";
+    const { emit } = renderApp("/system/abilities/installed", fake);
+    const card = await screen.findByRole("region", { name: "Notion" });
+    const signIn = { name: `${term("connector.signIn")} Notion` };
+    await user.click(within(card).getByRole("button", { name: term("connector.connect") }));
+    await within(card).findByRole("link", signIn);
+    // The Commander signs in in the other tab; the daemon's callback connects it.
+    const first = fake.connectors[0];
+    if (first) {
+      const { authorizationUrl: _signedIn, ...rest } = first;
+      fake.connectors[0] = { ...rest, status: "connected" };
+    }
+    emit({ type: "connector.status", payload: { connectorId: "notion", status: "connected" } });
+    await user.click(
+      await within(card).findByRole("button", { name: term("connector.disconnect") }),
+    );
+    emit({ type: "connector.status", payload: { connectorId: "notion", status: "disconnected" } });
+    await within(card).findByRole("button", { name: term("connector.connect") });
+    expect(fake.connectors[0]).not.toHaveProperty("authorizationUrl");
+    expect(within(card).queryByRole("link", signIn)).toBeNull();
+  });
+
   it("disconnects, or disconnects and forgets the sign-in", async () => {
     const user = userEvent.setup();
-    const { calls } = renderApp("/settings/connectors", withNotion());
+    const { calls } = renderApp("/system/abilities/installed", withNotion());
     const card = await screen.findByRole("region", { name: "Notion" });
     await user.click(within(card).getByRole("button", { name: term("connector.forget") }));
     expect(calls).toContainEqual({
@@ -144,7 +253,7 @@ describe("Connectors, a section of Settings", () => {
 
   it("saves a new server URL", async () => {
     const user = userEvent.setup();
-    const { calls } = renderApp("/settings/connectors", withNotion("disconnected"));
+    const { calls } = renderApp("/system/abilities/installed", withNotion("disconnected"));
     const card = await screen.findByRole("region", { name: "Notion" });
     const field = within(card).getByLabelText(term("connector.url"));
     await user.clear(field);
@@ -161,28 +270,59 @@ describe("Connectors, a section of Settings", () => {
     const fake = withNotion("disconnected");
     const first = fake.connectors[0];
     if (first) fake.connectors[0] = { ...first, status: "error", detail: "connect ECONNREFUSED" };
-    renderApp("/settings/connectors", fake);
+    renderApp("/system/abilities/installed", fake);
     const card = await screen.findByRole("region", { name: "Notion" });
     expect(within(card).getByRole("status", { name: "Notion status" })).toHaveTextContent(
       `${term("connectorStatus.error")}: connect ECONNREFUSED`,
     );
   });
 
-  it("lives under Settings: no tab of its own, and the old address lands on the section", async () => {
-    renderApp("/connectors", withNotion());
+  it.each(["/connectors", "/system/abilities/installed"])(
+    "lives under Abilities, not Settings: %s lands on Installed",
+    async (path) => {
+      renderApp(path, withNotion());
+      expect(
+        await screen.findByRole("heading", { level: 1, name: term("abilities") }),
+      ).toBeInTheDocument();
+      const section = await screen.findByRole("region", { name: term("abilities.installed") });
+      expect(section).toHaveAttribute("id", "connectors");
+      expect(within(section).getByRole("region", { name: "Notion" })).toBeInTheDocument();
+      const nav = screen.getByRole("navigation", { name: "Primary" });
+      expect(within(nav).queryByRole("link", { name: term("abilities") })).toBeNull();
+    },
+  );
+
+  it("sends an empty Installed to Discover", async () => {
+    renderApp("/system/abilities/installed");
+    const section = await screen.findByRole("region", { name: term("abilities.installed") });
+    expect(await within(section).findByText(term("empty.connectors.title"))).toBeInTheDocument();
+    expect(within(section).getByRole("link", { name: term("abilities.discover") })).toHaveAttribute(
+      "href",
+      "/system/abilities/discover",
+    );
+  });
+
+  it("opens Abilities on Discover in a side menu of Discover and Installed", async () => {
+    renderApp("/system/abilities");
+    const nav = await screen.findByRole("navigation", { name: term("abilities.nav") });
     expect(
-      await screen.findByRole("heading", { level: 1, name: term("settings") }),
-    ).toBeInTheDocument();
-    const section = await screen.findByRole("region", { name: term("connectors") });
-    expect(section).toHaveAttribute("id", "connectors");
-    expect(within(section).getByRole("region", { name: "Notion" })).toBeInTheDocument();
-    const nav = screen.getByRole("navigation", { name: "Primary" });
-    expect(within(nav).queryByRole("link", { name: term("connectors") })).toBeNull();
+      within(nav)
+        .getAllByRole("link")
+        .map((l) => l.textContent),
+    ).toEqual([term("abilities.discover"), term("abilities.installed")]);
+    await waitFor(() =>
+      expect(within(nav).getByRole("link", { name: term("abilities.discover") })).toHaveAttribute(
+        "aria-current",
+        "page",
+      ),
+    );
   });
 
   it("has no axe violations", async () => {
-    const { container } = renderApp("/settings/connectors", withNotion());
-    await screen.findByRole("region", { name: "Notion" });
+    const fake = withNotion();
+    fake.connectors.push(gmail());
+    const { container } = renderApp("/system/abilities/installed", fake);
+    await screen.findByRole("region", { name: "Gmail" });
     expect(await axe(container)).toHaveNoViolations();
   });
 });

@@ -1,4 +1,5 @@
 import { type Notification, term, termWith } from "@darthsaul/outerworld-ai-core";
+import { ROUTES } from "../lib/routes.js";
 
 const reasonWords = (n: Notification) =>
   n.kind === "schedule_missed" && n.reason
@@ -19,9 +20,9 @@ export function linkFor(n: Notification): string | undefined {
       return n.agentId ? `/crew/${encodeURIComponent(n.agentId)}` : undefined;
     case "budget_warning":
     case "budget_blocked":
-      return "/settings/budgets";
+      return ROUTES.budgets;
     case "connector":
-      return "/settings/connectors";
+      return ROUTES.installed;
     case "kill_switch":
     case "kill_switch_cleared":
       return undefined;

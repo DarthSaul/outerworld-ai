@@ -433,7 +433,7 @@ describe("Settings", () => {
   const orCard = () => screen.getByRole("region", { name: term("settings.key.openrouter") });
 
   it("opens on Providers in a side menu of sections", async () => {
-    renderApp("/settings");
+    renderApp("/system/settings");
     const nav = await screen.findByRole("navigation", { name: term("settings.nav") });
     expect(
       within(nav)
@@ -443,7 +443,6 @@ describe("Settings", () => {
       term("settings.providers"),
       term("settings.models"),
       term("budgets"),
-      term("connectors"),
       term("settings.appearance"),
     ]);
     await waitFor(() =>
@@ -460,7 +459,7 @@ describe("Settings", () => {
 
   it("sets the display size on Appearance, for this browser", async () => {
     const user = userEvent.setup();
-    renderApp("/settings/appearance");
+    renderApp("/system/settings/appearance");
     const group = await screen.findByRole("group", { name: term("settings.display") });
     expect(within(group).getByRole("radio", { name: term("display.auto") })).toBeChecked();
     await user.click(within(group).getByRole("radio", { name: term("display.large") }));
@@ -473,7 +472,7 @@ describe("Settings", () => {
 
   it("switches the main panel when another section is chosen", async () => {
     const user = userEvent.setup();
-    renderApp("/settings");
+    renderApp("/system/settings");
     const nav = await screen.findByRole("navigation", { name: term("settings.nav") });
     await user.click(within(nav).getByRole("link", { name: term("budgets") }));
     expect(await screen.findByRole("region", { name: term("budgets") })).toBeInTheDocument();
@@ -484,7 +483,7 @@ describe("Settings", () => {
     const fake = fakeApi();
     fake.settings.modelMode = "live";
     fake.settings.anthropic = { configured: true, source: "keychain" };
-    renderApp("/settings/models", fake);
+    renderApp("/system/settings/models", fake);
     expect(await screen.findByText(term("settings.model.live"))).toBeInTheDocument();
     const row = (id: string) => document.querySelector(`[data-model="${id}"]`);
     await waitFor(() =>
@@ -497,7 +496,7 @@ describe("Settings", () => {
 
   it("saves a key through a password field and then reports it stored, never showing it", async () => {
     const user = userEvent.setup();
-    const { calls, container } = renderApp("/settings/providers");
+    const { calls, container } = renderApp("/system/settings/providers");
     await screen.findByRole("navigation", { name: term("settings.nav") });
     const field = within(orCard()).getByLabelText(term("settings.key.new"));
     expect(field).toHaveAttribute("type", "password");
@@ -515,7 +514,7 @@ describe("Settings", () => {
 
   it("saves an Anthropic key to its own endpoint", async () => {
     const user = userEvent.setup();
-    const { calls } = renderApp("/settings/providers");
+    const { calls } = renderApp("/system/settings/providers");
     const card = await screen.findByRole("region", { name: term("settings.key.anthropic") });
     await user.type(within(card).getByLabelText(term("settings.key.new")), "sk-ant-api03-x");
     await user.click(within(card).getByRole("button", { name: term("settings.key.save") }));
@@ -533,7 +532,7 @@ describe("Settings", () => {
 
   it("shows the daemon's refusal of a bad key", async () => {
     const user = userEvent.setup();
-    renderApp("/settings/providers");
+    renderApp("/system/settings/providers");
     await screen.findByRole("navigation", { name: term("settings.nav") });
     await user.type(within(orCard()).getByLabelText(term("settings.key.new")), "nope");
     await user.click(within(orCard()).getByRole("button", { name: term("settings.key.save") }));
@@ -546,14 +545,14 @@ describe("Settings", () => {
     const user = userEvent.setup();
     const fake = fakeApi();
     fake.settings.openrouter = { configured: true, source: "keychain" };
-    const { calls } = renderApp("/settings/providers", fake);
+    const { calls } = renderApp("/system/settings/providers", fake);
     await screen.findByRole("navigation", { name: term("settings.nav") });
     await user.click(within(orCard()).getByRole("button", { name: term("settings.key.remove") }));
     expect(calls).toContainEqual({ method: "DELETE", path: "/settings/openrouter" });
   });
 
   it("has no axe violations", async () => {
-    const { container } = renderApp("/settings/providers");
+    const { container } = renderApp("/system/settings/providers");
     await screen.findByRole("navigation", { name: term("settings.nav") });
     expect(await axe(container)).toHaveNoViolations();
   });

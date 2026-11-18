@@ -17,6 +17,15 @@ export interface OwnClient {
 }
 
 /**
+ * What a server's sign-in asks for beyond the SDK's defaults (ADR-0019): a scope in place of every
+ * scope the server lists, and extra authorization parameters (Google's offline access).
+ */
+export interface AuthorizationRequest {
+  readonly scope?: string | undefined;
+  readonly params?: Readonly<Record<string, string>> | undefined;
+}
+
+/**
  * The keychain account for a connector's sign-in: the connector id plus a hash of the server URL
  * the sign-in was made for. A sign-in is only ever read back for that same server, so a station
  * whose connector shares an id but points elsewhere (a demo placeholder, a changed URL) never
@@ -43,10 +52,13 @@ export class KeychainOAuthProvider implements OAuthClientProvider {
   readonly #secrets: SecretStore;
   readonly #redirectUrl: string;
   readonly #onAuthorizationUrl: (url: string) => void;
+  readonly #authorization: AuthorizationRequest;
   #verifier = "";
   #state: string | undefined;
   /** Bumped by forget and by a new own client: attempts begun before never write credentials. */
   #epoch = 0;
+  /** Bumped by every attempt: only the newest one sets the verifier, the state, and the URL. */
+  #attempts = 0;
 
   constructor(options: {
     connectorId: string;
@@ -55,12 +67,14 @@ export class KeychainOAuthProvider implements OAuthClientProvider {
     secrets: SecretStore;
     redirectUrl: string;
     onAuthorizationUrl: (url: string) => void;
+    authorization?: AuthorizationRequest | undefined;
   }) {
     this.#connectorId = options.connectorId;
     this.#server = options.server;
     this.#secrets = options.secrets;
     this.#redirectUrl = options.redirectUrl;
     this.#onAuthorizationUrl = options.onAuthorizationUrl;
+    this.#authorization = options.authorization ?? {};
   }
 
   #key(kind: SecretKind) {
@@ -83,6 +97,7 @@ export class KeychainOAuthProvider implements OAuthClientProvider {
       grant_types: ["authorization_code", "refresh_token"],
       response_types: ["code"],
       token_endpoint_auth_method: "none",
+      ...(this.#authorization.scope ? { scope: this.#authorization.scope } : {}),
     };
   }
 
@@ -125,10 +140,16 @@ export class KeychainOAuthProvider implements OAuthClientProvider {
    * or a new own client lands after the attempt began, those writes and clears are dropped, so a
    * superseded attempt never restores what was deleted nor deletes what replaced it. Attempts
    * begun afterwards get a view of their own and write as usual.
+   *
+   * The sign-in in progress (PKCE verifier, `state`, authorization URL) belongs to the newest
+   * attempt alone, even across a disconnect and reconnect that leave the epoch unchanged: an
+   * older attempt that finishes discovery late never replaces them.
    */
   forAttempt(): KeychainOAuthProvider {
     const epoch = this.#epoch;
+    const attempt = ++this.#attempts;
     const current = () => this.#epoch === epoch;
+    const newest = () => this.#attempts === attempt;
     return new Proxy(this, {
       get(target, prop) {
         const value: unknown = Reflect.get(target, prop, target);
@@ -136,6 +157,13 @@ export class KeychainOAuthProvider implements OAuthClientProvider {
         const method = value as (...args: unknown[]) => unknown;
         // Writes and deletes alike: a superseded attempt neither restores credentials nor wipes
         // the ones a newer attempt saved.
+        if (prop === "saveCodeVerifier" || prop === "redirectToAuthorization") {
+          return (...args: unknown[]) => (newest() ? method.apply(target, args) : undefined);
+        }
+        // A superseded attempt gets a state of its own that no callback will ever match.
+        if (prop === "state") {
+          return () => (newest() ? method.apply(target) : randomBytes(24).toString("base64url"));
+        }
         if (
           prop === "saveTokens" ||
           prop === "saveClientInformation" ||
@@ -180,8 +208,17 @@ export class KeychainOAuthProvider implements OAuthClientProvider {
     await this.#secrets.set(this.#key("tokens"), JSON.stringify(tokens));
   }
 
+  /**
+   * Hands the sign-in URL to the daemon. The SDK picks the scope from the server's metadata;
+   * a profiled server's own scope and parameters (ADR-0019) replace what it picked.
+   */
   redirectToAuthorization(url: URL): void {
-    this.#onAuthorizationUrl(url.href);
+    const out = new URL(url.href);
+    if (this.#authorization.scope) out.searchParams.set("scope", this.#authorization.scope);
+    for (const [k, v] of Object.entries(this.#authorization.params ?? {})) {
+      out.searchParams.set(k, v);
+    }
+    this.#onAuthorizationUrl(out.href);
   }
 
   saveCodeVerifier(verifier: string): void {

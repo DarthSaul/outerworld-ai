@@ -1,11 +1,11 @@
 import { routeModel, term } from "@darthsaul/outerworld-ai-core";
 import { useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
-import { Navigate, NavLink, Route, Routes } from "react-router";
 import { ErrorNote } from "../components/ErrorNote.js";
 import { formatUsd } from "../components/format.js";
-import { ScrollArea } from "../components/ScrollArea.js";
+import { type Section, SectionLayout } from "../components/SectionLayout.js";
 import { DISPLAY_SIZES, useDisplay } from "../lib/display.js";
+import { SETTINGS_PATH } from "../lib/routes.js";
 import {
   type KeyProviderName,
   useClearApiKey,
@@ -16,7 +16,6 @@ import {
   useStationView,
   useUpdateBudgets,
 } from "../queries.js";
-import { ConnectorsSection } from "./ConnectorsSection.js";
 
 const button =
   "cursor-pointer border-2 border-line bg-transparent px-2.5 py-1.5 font-display text-d7 text-panel-title uppercase no-underline hover:border-cyan disabled:cursor-not-allowed disabled:opacity-50";
@@ -269,66 +268,27 @@ function AppearanceSection() {
   );
 }
 
-const SECTIONS = [
-  { path: "providers", label: "settings.providers" },
-  { path: "models", label: "settings.models" },
-  { path: "budgets", label: "budgets" },
-  { path: "connectors", label: "connectors" },
-  { path: "appearance", label: "settings.appearance" },
-] as const;
-
-/** A side menu entry: larger than a header tab, full width of the menu on desktop. */
-const sideLink = (active: boolean) =>
-  `block border-2 border-cyan px-4 py-3 font-display text-d10 uppercase no-underline desktop:w-full ${
-    active ? "bg-cyan text-ink" : "bg-transparent text-cyan hover:bg-btn-hover"
-  }`;
+const SECTIONS: readonly Section[] = [
+  { path: "providers", label: "settings.providers", element: <ProvidersSection /> },
+  { path: "models", label: "settings.models", element: <ModelsSection /> },
+  { path: "budgets", label: "budgets", element: <BudgetsSection /> },
+  { path: "appearance", label: "settings.appearance", element: <AppearanceSection /> },
+];
 
 /**
- * Settings (ADR-0015): a side menu of sections, each its own route under `/settings/`, with the
- * chosen one in the main panel. `/settings` opens Providers.
+ * Settings (ADR-0015): a System screen at `/system/settings/`, one route per section. The bare
+ * path opens Providers. Connectors moved to Abilities.
  */
 export function SettingsPage() {
   const settings = useSettings();
   if (settings.isPending) return <p className="m-0 text-b19 text-fg-soft">Loading…</p>;
   if (settings.error) return <ErrorNote error={settings.error} />;
   return (
-    <section
-      aria-labelledby="screen-title"
-      className="flex flex-col gap-3.5 desktop:min-h-0 desktop:flex-1"
-    >
-      <h1
-        id="screen-title"
-        className="m-0 font-display font-normal text-d14 text-title uppercase leading-[1.4] tracking-st-2"
-      >
-        {term("settings")}
-      </h1>
-      <div className="flex flex-col gap-3.5 desktop:grid desktop:min-h-0 desktop:flex-1 desktop:grid-cols-[auto_minmax(0,1fr)] desktop:grid-rows-[minmax(0,1fr)] desktop:items-stretch">
-        <nav aria-label={term("settings.nav")} className="desktop:w-60">
-          <ul className="m-0 flex list-none flex-wrap gap-2 p-0 desktop:flex-col">
-            {SECTIONS.map((s) => (
-              <li key={s.path}>
-                <NavLink
-                  to={`/settings/${s.path}`}
-                  className={({ isActive }) => sideLink(isActive)}
-                >
-                  {term(s.label)}
-                </NavLink>
-              </li>
-            ))}
-          </ul>
-        </nav>
-        <ScrollArea className="min-w-0">
-          <Routes>
-            <Route index element={<Navigate to="/settings/providers" replace />} />
-            <Route path="providers" element={<ProvidersSection />} />
-            <Route path="models" element={<ModelsSection />} />
-            <Route path="budgets" element={<BudgetsSection />} />
-            <Route path="connectors" element={<ConnectorsSection />} />
-            <Route path="appearance" element={<AppearanceSection />} />
-            <Route path="*" element={<Navigate to="/settings/providers" replace />} />
-          </Routes>
-        </ScrollArea>
-      </div>
-    </section>
+    <SectionLayout
+      title="settings"
+      navLabel="settings.nav"
+      base={SETTINGS_PATH}
+      sections={SECTIONS}
+    />
   );
 }

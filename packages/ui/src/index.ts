@@ -49,6 +49,7 @@ export {
   fieldClass,
   inputClass,
 } from "./station/form.js";
+export { MenuButton, type MenuButtonProps, MenuItemBody, menuItemClass } from "./station/Menu.js";
 export {
   type CommsMessage,
   OverseerComms,
@@ -58,6 +59,7 @@ export {
 } from "./station/OverseerComms.js";
 export { Panel, PanelLabel, type PanelProps } from "./station/Panel.js";
 export { type PanelTab, PanelTabs, type PanelTabsProps } from "./station/PanelTabs.js";
+export { PIXEL_ICONS, PixelIcon, type PixelIconName } from "./station/PixelIcon.js";
 export { Popup, type PopupProps } from "./station/Popup.js";
 export {
   RESIZE_KEY_STEP,

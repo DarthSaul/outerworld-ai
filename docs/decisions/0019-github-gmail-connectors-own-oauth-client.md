@@ -47,3 +47,43 @@ Notion. A client has to be registered ahead of time with GitHub or Google, and i
 - Neither server has been smoke-tested from here. They can't be reached in tests, and the URLs
   and auth behaviour come from the providers' docs (checked 2026-11-16). Gmail's server is a
   preview, so its scopes and tools may change.
+
+## Amendment (2026-11-18): sign in before connecting; Gmail's scope and offline access
+
+**What went wrong.** Gmail's server answers `initialize` and `tools/list` without a token and
+refuses only `tools/call` (401). The manager signed in only when the server refused the
+connection, so Gmail showed as connected without a sign-in ever having happened. Every tool call
+then failed with "Unauthorized", and nothing on the card asked the Commander to sign in.
+
+**Decision.**
+- **Sign in first.** A connector that needs the Commander's own client and has no stored sign-in
+  starts one before connecting (the SDK's `auth()`: discovery, then the authorization URL; tests
+  inject a `SignInStarter`). It reports `needs_auth`, never `connected`, until the code exchange.
+- **A refused tool call asks again.** When a tool call fails with `UnauthorizedError` or
+  `InsufficientScopeError` (the SDK could not refresh), the connection is closed, the refused
+  tokens are deleted, and a new sign-in starts. The agent gets an error that says the Commander
+  must sign in again. Connector views carry `authorizationUrl` while `needs_auth`, so the card
+  offers the sign-in whoever started it.
+- **A profile per server.** Core's `ownClientProfile(url)` gives the scope, extra authorization
+  parameters, and the setup steps (glossary keys plus links to the provider's console) for each
+  server that needs the Commander's own client. `needsOwnClient` is derived from it.
+- **Gmail asks for `https://www.googleapis.com/auth/gmail.modify`.** The SDK otherwise asks for
+  every scope the server lists, including full mailbox access (`https://mail.google.com/`).
+  `gmail.modify` covers every tool the server offers: read, draft, label, trash, and spam. It
+  cannot delete permanently, and the server has no send tool. Google's own guide suggests
+  `gmail.readonly` plus `gmail.compose`, but that pair cannot label, and labeling is most of
+  triage.
+- **Gmail asks for offline access.** `access_type=offline` and `prompt=consent` make Google issue
+  a refresh token. Without one, the sign-in lapses after about an hour.
+- GitHub keeps the server's scopes and no extra parameters.
+
+**Consequences.** Saving an OAuth app starts the sign-in straight away. Google's setup has a step
+that is easy to miss, enabling the Gmail MCP API (`gmailmcp.googleapis.com`) as well as the Gmail
+API, so the card lists it first. The sign-in URL was checked against Google's live discovery on
+2026-11-18 (scope, `access_type`, `prompt`, `resource`, PKCE). A full sign-in with a real account
+has not been run from the tests.
+
+Later the same day, the first real sign-in got past OAuth and then hit a project-level refusal on
+every tool call: "Access to this tool requires that your Google Cloud project … is enrolled in the
+Google Workspace Developer Preview Program". The Gmail MCP server is a Developer Preview, so the
+card now lists enrolling in that program as Gmail's first setup step.
