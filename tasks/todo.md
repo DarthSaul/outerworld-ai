@@ -362,6 +362,10 @@ Source: `docs/design/station-dashboard/`. Dark only; sprites replace the rig; ev
   left in place by the owner 2026-09-29; revisit whether to delete them later.
 - **SPA browser/e2e tests:** deferred 2026-09-29 in favor of unit and component tests; revisit
   once COMMS and the map exist (e.g. a Playwright flow per v1 acceptance criterion).
+- **E2E testing in CI (owner, 2026-11-18):** local screenshot verification was dropped from the
+  SDLC; CI's browser job is now the only place `browser:verify` runs. Grow it into real e2e
+  flows there (the item above). `main` has no branch protection yet, so a red browser job does
+  not block a merge; consider requiring it.
 - **Budget limits (owner, 2026-09-30):** the demo and dev budgets were raised from $0.25 per run /
   $1 per agent-day / $3 station-day to $5 / $25 / $50 after a real Notion task via dispatch cost
   $0.39 and hit the per-run cap. Revisit in a later phase: sensible defaults for a new station
