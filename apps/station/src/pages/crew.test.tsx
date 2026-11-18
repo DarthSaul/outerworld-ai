@@ -295,7 +295,12 @@ describe("Brief", () => {
     const name = await screen.findByRole("heading", { level: 2, name: "Quill" });
     const header = name.closest("header") as HTMLElement;
     expect(header.querySelector("[data-room-line]")).toHaveTextContent("Room: Operations");
-    expect(header.querySelector("[data-model-line]")).toHaveTextContent("Model: Claude Sonnet 5.5");
+    // The model as a tag, written as agent.json has it; screen readers hear "Model:" first.
+    const model = header.querySelector("[data-model-line]") as HTMLElement;
+    expect(model).toHaveTextContent("Model: anthropic/claude-sonnet-5.5");
+    expect(model.className).not.toMatch(/\buppercase\b/);
+    expect(model.className).toMatch(/\bpx-2 py-1 text-d7\b/);
+    expect(model).toHaveAttribute("title", "Claude Sonnet 5.5");
     expect(header.querySelector('[data-flag="full-power"]')).toHaveTextContent(
       term("approvalMode.full"),
     );

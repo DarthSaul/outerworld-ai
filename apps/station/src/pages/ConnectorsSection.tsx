@@ -6,7 +6,7 @@ import {
   term,
   termWith,
 } from "@darthsaul/outerworld-ai-core";
-import { EmptyState } from "@darthsaul/outerworld-ai-ui";
+import { EmptyState, Tag } from "@darthsaul/outerworld-ai-ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, type ReactNode, useId, useState } from "react";
 import { Link, useNavigate } from "react-router";
@@ -207,7 +207,6 @@ function OwnClientForm({
 }
 
 const card = "flex min-w-0 flex-col gap-3 border-2 border-line-soft bg-well p-3";
-const chip = "border px-1 font-display text-d6 uppercase";
 
 /**
  * The top of every ability card, on Discover and Installed alike: the service's logo, its name,
@@ -233,9 +232,7 @@ function AbilityHead({
           {shown.title}
         </h3>
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span data-ability-kind={shown.kind} className={`${chip} border-line text-fg-mute`}>
-            {term(`ability.kind.${shown.kind}`)}
-          </span>
+          <Tag data-ability-kind={shown.kind}>{term(`ability.kind.${shown.kind}`)}</Tag>
           {tags}
         </div>
         <p data-ability-description className="m-0 text-b17 text-fg-soft">
@@ -435,9 +432,9 @@ export function ConnectorsDiscover() {
                   titleId={titleId}
                   tags={
                     has ? (
-                      <span data-installed-tag className={`${chip} border-green text-green`}>
+                      <Tag data-installed-tag tone="green">
                         {term("ability.isInstalled")}
-                      </span>
+                      </Tag>
                     ) : null
                   }
                 />

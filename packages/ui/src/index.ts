@@ -95,6 +95,7 @@ export {
   StatusDrawerToggle,
   type StatusDrawerToggleProps,
 } from "./station/StatusDrawer.js";
+export { Tag, type TagProps, type TagSize, type TagTone } from "./station/Tag.js";
 export {
   CREW_STATUS_TONE,
   lampBlink,

@@ -17,6 +17,7 @@ import {
   roomColor,
   Sprite,
   stVar,
+  Tag,
   tabClass,
 } from "@darthsaul/outerworld-ai-ui";
 import { useQueryClient } from "@tanstack/react-query";
@@ -38,8 +39,6 @@ import { useDashboard } from "../station/use-dashboard.js";
 import { AgentDetail } from "./AgentPage.js";
 
 const PROPS: readonly PropKind[] = ["web", "files", "memory"];
-
-const chip = "border px-1.5 font-display text-d6 uppercase";
 
 interface CrewRow {
   readonly id: string;
@@ -92,15 +91,11 @@ function CrewItem({
         {/* The bottom row: tags on the left, today's spend on the right. */}
         {tagged || spendUsd ? (
           <span data-agent-foot className="flex min-w-0 flex-wrap items-center gap-1.5">
-            {row.role === "overseer" ? (
-              <span className={`${chip} shrink-0 border-white text-white`}>
-                {term("overseer.role")}
-              </span>
-            ) : null}
+            {row.role === "overseer" ? <Tag tone="white">{term("overseer.role")}</Tag> : null}
             {row.approvalMode === "full" ? (
-              <span data-flag="full-power" className={`${chip} shrink-0 border-amber text-amber`}>
+              <Tag tone="amber" data-flag="full-power">
                 {term("approvalMode.full")}
-              </span>
+              </Tag>
             ) : null}
             {spendUsd ? (
               <span className="ml-auto text-b15 text-fg-mute" data-agent-spend>
@@ -240,15 +235,11 @@ function RoomSection({
                     <Link to={`/crew/${a.id}`} className="text-b19 uppercase">
                       {a.name}
                     </Link>
-                    {a.role === "overseer" ? (
-                      <span className={`${chip} border-white text-white`}>
-                        {term("overseer.role")}
-                      </span>
-                    ) : null}
+                    {a.role === "overseer" ? <Tag tone="white">{term("overseer.role")}</Tag> : null}
                     {a.approvalMode === "full" ? (
-                      <span data-flag="full-power" className={`${chip} border-amber text-amber`}>
+                      <Tag tone="amber" data-flag="full-power">
                         {term("approvalMode.full")}
-                      </span>
+                      </Tag>
                     ) : null}
                     {spend.data?.agents[a.id] ? (
                       <span className="ml-auto text-b17 text-fg-mute" data-agent-spend>

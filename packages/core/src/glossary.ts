@@ -615,7 +615,6 @@ export const glossary = {
   "agentConnectors.grantName": "Grant {name}",
   "agentConnectors.none": "No connectors installed yet.",
   "agentConnectors.discover": "Find one in Abilities",
-  "brief.model": "Model: {model}",
   "brief.identity.none": "No identity written yet. Write one on Config.",
   "brief.schedules.none": "No schedules for crew member.",
   "chatter.live.one": "1 mission live. {agent} is on “{title}” in {room}.",

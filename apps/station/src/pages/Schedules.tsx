@@ -1,5 +1,5 @@
 import { findModel, type ModelSettings, term } from "@darthsaul/outerworld-ai-core";
-import { Checkbox, Panel } from "@darthsaul/outerworld-ai-ui";
+import { Checkbox, Panel, Tag } from "@darthsaul/outerworld-ai-ui";
 import { type FormEvent, useId, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { ErrorNote } from "../components/ErrorNote.js";
@@ -446,12 +446,9 @@ export function SchedulesBrief({ agentId }: { readonly agentId: string }) {
                 >
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <span className="font-display text-d8 text-fg-hi uppercase">{s.id}</span>
-                    <span
-                      data-schedule-state
-                      className={`border px-1 font-display text-d6 uppercase ${s.enabled ? "border-green text-green" : "border-line text-fg-mute"}`}
-                    >
+                    <Tag data-schedule-state tone={s.enabled ? "green" : "mute"}>
                       {term(s.enabled ? "schedule.enabled" : "schedule.off")}
-                    </span>
+                    </Tag>
                   </div>
                   <p className="m-0 text-b17 text-fg">
                     <span className="text-cyan">{s.cron}</span>

@@ -25,6 +25,7 @@ import {
   roomColorVar,
   Sprite,
   stVar,
+  Tag,
 } from "@darthsaul/outerworld-ai-ui";
 import { type FormEvent, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
@@ -73,15 +74,9 @@ const connectorGroups = (tools: readonly EffectiveTool[]) => {
   return [...groups].map(([id, list]) => ({ id, tools: list }));
 };
 
-/** A tool's class, as a small chip: write is amber, since it waits for consent on Ask first. */
+/** A tool's class, as a tag: write is amber, since it waits for consent on Ask first. */
 function ClassChip({ toolClass }: { readonly toolClass: EffectiveTool["class"] }) {
-  return (
-    <span
-      className={`border px-1 font-display text-d6 uppercase ${toolClass === "write" ? "border-amber text-amber" : "border-line text-fg-mute"}`}
-    >
-      {term(`grant.${toolClass}`)}
-    </span>
-  );
+  return <Tag tone={toolClass === "write" ? "amber" : "mute"}>{term(`grant.${toolClass}`)}</Tag>;
 }
 
 const item = "flex min-w-0 items-start gap-2.5 border-2 border-line-faint bg-well p-2";
@@ -136,9 +131,7 @@ function ConnectorItem({
           <span className="text-b19 text-fg-hi">
             {term("connector")}: {shown.title}
           </span>
-          <span className="border border-cyan px-1 font-display text-cyan text-d6 uppercase">
-            {term("tools.connector.full")}
-          </span>
+          <Tag tone="cyan">{term("tools.connector.full")}</Tag>
         </div>
         <p className="m-0 text-b16 text-fg-soft">
           {termWith("tools.connector.count", {
@@ -274,9 +267,7 @@ function ConnectorGrants({
                       <span className="font-display text-cyan text-d9 uppercase">
                         {shown.title}
                       </span>
-                      <span className="border border-line px-1 font-display text-d6 text-fg-mute uppercase">
-                        {term(`ability.kind.${shown.kind}`)}
-                      </span>
+                      <Tag>{term(`ability.kind.${shown.kind}`)}</Tag>
                       {state ? (
                         <span
                           data-connector-status={state.status}
@@ -571,28 +562,27 @@ function Brief({ agent, station }: { readonly agent: AgentView; readonly station
           <span className="text-b17 text-fg-soft uppercase" data-room-line>
             {termWith("crewPage.roomLine", { room })}
           </span>
-          <span className="text-b17 text-fg-soft" data-model-line>
-            {termWith("brief.model", {
-              model: findModel(agent.config.model)?.label ?? agent.config.model,
-            })}
-          </span>
-          {agent.config.role === "overseer" || agent.config.approvalMode === "full" ? (
-            <div className="flex flex-wrap gap-1.5">
-              {agent.config.role === "overseer" ? (
-                <span className="border border-white px-1 font-display text-d6 text-white uppercase">
-                  {term("overseer.role")}
-                </span>
-              ) : null}
-              {agent.config.approvalMode === "full" ? (
-                <span
-                  data-flag="full-power"
-                  className="border border-amber px-1 font-display text-amber text-d6 uppercase"
-                >
-                  {term("approvalMode.full")}
-                </span>
-              ) : null}
-            </div>
-          ) : null}
+          {/* The model as it is written in agent.json, then the role and mode, all as tags. */}
+          <div className="flex flex-wrap gap-1.5">
+            <Tag
+              tone="cyan"
+              size="md"
+              caps={false}
+              data-model-line
+              title={findModel(agent.config.model)?.label ?? agent.config.model}
+            >
+              <span className="sr-only">{term("model.model")}: </span>
+              {agent.config.model}
+            </Tag>
+            {agent.config.role === "overseer" ? (
+              <Tag tone="white">{term("overseer.role")}</Tag>
+            ) : null}
+            {agent.config.approvalMode === "full" ? (
+              <Tag tone="amber" data-flag="full-power">
+                {term("approvalMode.full")}
+              </Tag>
+            ) : null}
+          </div>
         </div>
       </header>
       <Capabilities agent={agent} station={station} />
