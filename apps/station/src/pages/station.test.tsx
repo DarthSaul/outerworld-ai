@@ -799,6 +799,28 @@ describe("Station split", () => {
     localStorage.removeItem("outerworld.split");
   });
 
+  it("keeps each handle's starting width its own when both are dragged at once", async () => {
+    localStorage.setItem("outerworld.crewSplit", "1.25");
+    localStorage.setItem("outerworld.split", "0.75");
+    const { container } = renderApp("/");
+    await map();
+    vi.spyOn(grid(container) as HTMLElement, "clientWidth", "get").mockReturnValue(1600);
+    const crew = screen.getByRole("separator", { name: term("station.resize.crew") });
+    const comms = screen.getByRole("separator", { name: term("station.resize") });
+    // Two fingers: crew's drag starts, then comms' starts before crew's moves.
+    fireEvent.pointerDown(crew, { button: 0, clientX: 400, pointerId: 1 });
+    fireEvent.pointerDown(comms, { button: 0, clientX: 1200, pointerId: 2 });
+    fireEvent.pointerMove(window, { clientX: 400 + 100, pointerId: 1 });
+    // 1.25 + 0.25: from crew's own start, not from comms' 0.75.
+    expect(localStorage.getItem("outerworld.crewSplit")).toBe("1.5");
+    fireEvent.pointerMove(window, { clientX: 1200 - 100, pointerId: 2 });
+    expect(localStorage.getItem("outerworld.split")).toBe("1");
+    fireEvent.pointerUp(window, { pointerId: 1 });
+    fireEvent.pointerUp(window, { pointerId: 2 });
+    localStorage.removeItem("outerworld.crewSplit");
+    localStorage.removeItem("outerworld.split");
+  });
+
   it("resizes the crew column against the map from its own handle, kept per viewer", async () => {
     localStorage.removeItem("outerworld.crewSplit");
     const user = userEvent.setup();

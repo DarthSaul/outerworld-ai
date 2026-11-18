@@ -67,9 +67,16 @@ const shown = (entry: Entry): ItemDisplay => ({
   icon: entry.icon,
 });
 
+/**
+ * A table's own entry for `key`, never one inherited from Object.prototype: a tool named
+ * `constructor` or `toString` (a connector may offer any name) is just an unknown name.
+ */
+const own = <T>(table: Readonly<Record<string, T>>, key: string): T | undefined =>
+  Object.hasOwn(table, key) ? table[key] : undefined;
+
 /** A tool by its name; a name it does not know (a connector's tool) shows as itself. */
 export function toolDisplay(name: string): ItemDisplay {
-  const entry = (TOOLS as Readonly<Record<string, Entry>>)[name];
+  const entry = own<Entry>(TOOLS, name);
   return entry ? shown(entry) : { title: name, description: "", icon: "tool" };
 }
 
@@ -112,7 +119,7 @@ const ABILITIES = {
  * description; any other connector reads as a plain MCP server.
  */
 export function abilityDisplay(id: string, name: string): AbilityDisplay {
-  const entry = (ABILITIES as Readonly<Record<string, (typeof ABILITIES)[ConnectorPresetId]>>)[id];
+  const entry = own<(typeof ABILITIES)[ConnectorPresetId]>(ABILITIES, id);
   return entry
     ? { title: name, description: term(entry.description), kind: "mcp", brand: entry.brand }
     : { title: name, description: term("item.connector.hint"), kind: "mcp" };

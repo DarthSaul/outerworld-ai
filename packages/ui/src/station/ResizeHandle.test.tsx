@@ -86,6 +86,21 @@ describe("ResizeHandle", () => {
     expect(handle).not.toHaveAttribute("data-dragging");
   });
 
+  it("ignores the arrow keys and Enter while a drag is under way", () => {
+    const { handle, onResize, onReset } = setup();
+    fireEvent.pointerDown(handle, { button: 0, clientX: 100, pointerId: 1 });
+    fireEvent.pointerMove(handle, { clientX: 130, pointerId: 1 });
+    fireEvent.keyDown(handle, { key: "ArrowRight" });
+    fireEvent.keyDown(handle, { key: "Enter" });
+    fireEvent.pointerMove(handle, { clientX: 140, pointerId: 1 });
+    fireEvent.pointerUp(handle, { pointerId: 1 });
+    expect(onResize.mock.calls).toEqual([[30], [40]]);
+    expect(onReset).not.toHaveBeenCalled();
+    // Released: the keys work again.
+    fireEvent.keyDown(handle, { key: "ArrowRight" });
+    expect(onResize.mock.calls.at(-1)).toEqual([RESIZE_KEY_STEP]);
+  });
+
   it("stops listening when unmounted mid-drag", () => {
     const { handle, onResize, unmount } = setup();
     fireEvent.pointerDown(handle, { button: 0, clientX: 100, pointerId: 1 });

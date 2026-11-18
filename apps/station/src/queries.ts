@@ -74,11 +74,20 @@ export function useCreateAgent() {
   });
 }
 
+/**
+ * Saves a crew member's config. The daemon answers with the saved crew member, which replaces the
+ * cached one before the save reports done: the next edit (another connector grant, say) builds on
+ * what was saved, not on a snapshot from before it, even before the refetch arrives.
+ */
 export function useUpdateAgent(id: string) {
   const { api } = useDaemon();
+  const client = useQueryClient();
   return useMutation({
     mutationFn: (input: UpdateAgentInput) =>
       api.send<AgentView>("PATCH", `/agents/${encodeURIComponent(id)}`, input),
+    onSuccess: (saved) => {
+      if (saved) client.setQueryData(["agent", id], saved);
+    },
   });
 }
 

@@ -494,6 +494,38 @@ describe("Config", () => {
     expect(calls.at(-1)?.body).toEqual({ connectorGrants: ["notion"] });
   });
 
+  it("builds each grant on the last one saved, even before the crew member is refetched", async () => {
+    const user = userEvent.setup();
+    const fake = fakeApi();
+    fake.state.station = {
+      ...fake.state.station,
+      connectors: [
+        ...fake.state.station.connectors,
+        {
+          id: "github",
+          name: "GitHub",
+          transport: { type: "http", url: "https://gh.example/mcp" },
+        },
+      ],
+    };
+    const { calls } = renderApp("/crew/quill?tab=config", fake);
+    const panel = await screen.findByRole("region", { name: term("connectors") });
+    const box = (name: string) =>
+      within(panel).getByRole("checkbox", {
+        name: termWith("agentConnectors.grantName", { name }),
+      });
+    await user.click(box("Notion"));
+    // Locked while saving, then live again on the saved grants (no refetch has happened).
+    await waitFor(() => expect(box("GitHub")).toBeEnabled());
+    expect(box("Notion")).toBeChecked();
+    await user.click(box("GitHub"));
+    const patches = calls.filter((c) => c.method === "PATCH");
+    expect(patches.map((c) => c.body)).toEqual([
+      { connectorGrants: ["notion"] },
+      { connectorGrants: ["notion", "github"] },
+    ]);
+  });
+
   it("lists each connector full width, with the Abilities logo, kind, status, and description", async () => {
     const fake = fakeApi();
     fake.connectors.push({

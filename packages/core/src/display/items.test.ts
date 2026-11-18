@@ -59,6 +59,17 @@ describe("item display catalog", () => {
     expect(abilityDisplay("github", "GitHub").title).toBe("GitHub");
   });
 
+  it("treats names inherited from Object.prototype as unknown, not as entries", () => {
+    for (const name of ["constructor", "toString", "hasOwnProperty", "__proto__"]) {
+      expect(toolDisplay(name), name).toEqual({ title: name, description: "", icon: "tool" });
+      expect(abilityDisplay(name, name), name).toEqual({
+        title: name,
+        description: "An MCP server installed on this station.",
+        kind: "mcp",
+      });
+    }
+  });
+
   it("shows a connector with no preset as a plain MCP server without a logo", () => {
     expect(abilityDisplay("acme", "Acme")).toEqual({
       title: "Acme",

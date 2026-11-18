@@ -143,8 +143,12 @@ export function StationPage() {
   const [note, setNote] = useState<string>();
   const [side, setSide] = useSplit();
   const [crewShare, setCrewShare] = useCrewSplit();
-  /** The width a handle's drag (or key press) started from; it reports movement from there. */
-  const dragFrom = useRef(0);
+  /**
+   * The width each handle's drag (or key press) started from; it reports movement from there. One
+   * per handle, so two drags at once (two fingers) never share a starting point.
+   */
+  const crewFrom = useRef(0);
+  const sideFrom = useRef(0);
   const [session, setSession, startedSession] = useOpenSession();
   const [expanded, setExpanded] = useState(false);
   // Folded or open, per viewer (ADR-0013 #19, like the map style). The scanner starts folded.
@@ -290,10 +294,10 @@ export function StationPage() {
           valueMin={percentOf(CREW_LIMITS.min)}
           valueMax={percentOf(CREW_LIMITS.max)}
           onResizeStart={() => {
-            dragFrom.current = crewShare;
+            crewFrom.current = crewShare;
           }}
           onResize={(dx) =>
-            setCrewShare(resizeCrew(dragFrom.current, dx, grid.current?.clientWidth ?? 0))
+            setCrewShare(resizeCrew(crewFrom.current, dx, grid.current?.clientWidth ?? 0))
           }
           onReset={() => setCrewShare(CREW_SHARE)}
           className={expanded ? "hidden" : "hidden desktop:block"}
@@ -337,9 +341,9 @@ export function StationPage() {
         valueMin={percentOf(SIDE_LIMITS.min)}
         valueMax={percentOf(SIDE_LIMITS.max)}
         onResizeStart={() => {
-          dragFrom.current = side;
+          sideFrom.current = side;
         }}
-        onResize={(dx) => setSide(resizeSide(dragFrom.current, dx, grid.current?.clientWidth ?? 0))}
+        onResize={(dx) => setSide(resizeSide(sideFrom.current, dx, grid.current?.clientWidth ?? 0))}
         onReset={() => setSide(DEFAULT_SIDE)}
         className={expanded ? "hidden" : "hidden desktop:block"}
       />

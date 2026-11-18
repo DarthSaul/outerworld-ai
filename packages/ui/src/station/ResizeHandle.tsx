@@ -96,6 +96,11 @@ export function ResizeHandle({
   const key = (e: KeyboardEvent<HTMLHRElement>) => {
     const step =
       e.key === "ArrowLeft" ? -RESIZE_KEY_STEP : e.key === "ArrowRight" ? RESIZE_KEY_STEP : 0;
+    // Mid-drag the pointer owns the width: a key would move the start out from under it.
+    if (stop.current && (step || e.key === "Enter")) {
+      e.preventDefault();
+      return;
+    }
     if (step) {
       onResizeStart?.();
       onResize(step);
