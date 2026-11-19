@@ -5,6 +5,7 @@ import {
   ConnectorManager,
   ConsentStore,
   CrewService,
+  createSkillViewTool,
   DispatchService,
   DispatchStore,
   type EventStore,
@@ -57,6 +58,8 @@ export function testServices(
       throw new Error("no network in tests");
     },
   });
+  // The same library for runs and crew views, with skill_view registered as the daemon does.
+  const skills = options.skills ?? [];
   const runs = new RunService({
     home,
     events,
@@ -65,6 +68,8 @@ export function testServices(
     spend,
     killSwitch: new KillSwitch(db),
     beliefs: (agentId) => memory.beliefsFor(agentId).map((m) => m.text),
+    skills,
+    tools: { skill_view: createSkillViewTool({ home, skills }) },
     models: scriptedModels({ chunkDelayInMs: 0 }),
     titles: options.titles ?? false,
   });
@@ -76,7 +81,7 @@ export function testServices(
       home,
       events,
       connectorTools: () => connectors.catalog(),
-      skills: options.skills ?? [],
+      skills,
     }),
     connectors,
     memory,
