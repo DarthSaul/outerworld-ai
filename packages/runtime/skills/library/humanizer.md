@@ -54,6 +54,6 @@ If the Commander gives a writing **sample**, read it first and match its sentenc
 2. Find every pattern above; rewrite each problem section; preserve meaning and tone.
 3. Produce a draft. Then ask yourself: **"What makes this obviously AI-generated?"** — answer in brief bullets.
 4. Revise once more against those tells. Present the final version.
-5. If it came from a file, show the rewrite as a draft first. Write the whole file back with `write_file` only when the Commander asks for the change or approves the replacement, then show what changed. Being able to write files is never a reason to write one.
+5. If it came from a file, show the rewrite as a draft first. If `read_file` said the result was truncated, never write it back: you saw only part of the file, and `write_file` would replace all of it; tell the Commander so instead. Otherwise write the whole file back with `write_file` only when the Commander asks for the change or approves the replacement, then show what changed. Being able to write files is never a reason to write one.
 
 *Condensed for in-prompt use; the 29 patterns are preserved.*
