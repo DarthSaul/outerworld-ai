@@ -2,6 +2,7 @@ import { cpSync, existsSync, mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { loadSkillLibrary } from "../skills/library.js";
 import { openDatabase } from "../storage/database.js";
 import { EventStore } from "../storage/event-store.js";
 import { stationPaths } from "../storage/station-dir.js";
@@ -381,6 +382,62 @@ describe("CrewService: schedules", () => {
     await expect(crew.updateSchedule("nobody", "x", { enabled: false })).rejects.toBeInstanceOf(
       NotFoundError,
     );
+  });
+});
+
+describe("CrewService: skills", () => {
+  const skillsSetup = async () => {
+    const { skills } = await loadSkillLibrary(
+      join(import.meta.dirname, "..", "..", "..", "..", "fixtures", "skills"),
+    );
+    const t = setup();
+    return { ...t, crew: new CrewService({ home: t.home, events: t.events, skills }) };
+  };
+
+  it("lists the library with each skill's state, and turns one on, off, and back to default", async () => {
+    const { crew, home, types } = await skillsSetup();
+    const before = await crew.skills();
+    expect(before.map((s) => [s.id, s.globallyEnabled, s.offeredTo])).toEqual([
+      ["log-dig", true, []],
+      ["source-check", false, []],
+      ["field-notes", true, ["quill"]],
+      ["tidy-summary", false, []],
+    ]);
+    expect(before[0]?.missing).toEqual(["shell"]);
+
+    expect(await crew.setSkillOverride("tidy-summary", true)).toMatchObject({
+      override: true,
+      globallyEnabled: true,
+      offeredTo: ["quill", "vesper", "wren"],
+    });
+    expect(await crew.setSkillOverride("field-notes", false)).toMatchObject({ offeredTo: [] });
+    const stored = JSON.parse(readFileSync(stationPaths(home).stationJson, "utf8"));
+    expect(stored.skills).toEqual({ enabled: ["tidy-summary"], disabled: ["field-notes"] });
+    expect(await crew.setSkillOverride("field-notes", null)).toMatchObject({ override: null });
+    expect(types()).toEqual(["station.updated", "station.updated", "station.updated"]);
+    await expect(crew.setSkillOverride("ghost", true)).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  it("adds skills to one crew member and shows what it is offered, with skill_view", async () => {
+    const { crew } = await skillsSetup();
+    const wren = await crew.updateAgent("wren", { skills: ["source-check", "log-dig"] });
+    expect(wren.config.skills).toEqual(["source-check", "log-dig"]);
+    expect(wren.skills.offered.map((s) => s.id)).toEqual(["source-check"]);
+    expect(wren.skills.unavailable.map((s) => [s.id, s.missing])).toEqual([
+      ["log-dig", ["shell"]],
+      ["field-notes", ["files"]],
+    ]);
+    expect(wren.tools.at(-1)).toMatchObject({ name: "skill_view", source: { kind: "skill" } });
+    await expect(crew.updateAgent("wren", { skills: ["x", "x"] })).rejects.toBeInstanceOf(
+      ConflictError,
+    );
+  });
+
+  it("has no skills and no skill_view without a library", async () => {
+    const agent = await setup().crew.agent("quill");
+    expect(agent?.skills).toEqual({ offered: [], unavailable: [] });
+    expect(agent?.tools.map((t) => t.name)).not.toContain("skill_view");
+    expect(await setup(false).crew.skills()).toEqual([]);
   });
 });
 

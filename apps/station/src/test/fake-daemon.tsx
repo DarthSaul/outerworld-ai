@@ -3,6 +3,7 @@ import {
   type AgentConfig,
   type AgentDocumentName,
   type AgentView,
+  agentSkillsView,
   type ChatMessage,
   CONNECTOR_PRESETS,
   type ConnectorPresetId,
@@ -14,10 +15,13 @@ import {
   type RuntimeEvent,
   resolveGrants,
   resolveModelSettings,
+  type Skill,
   type StationConfig,
   type StationView,
   SUPPORTED_MODELS,
+  skillsForAgent,
   slugify,
+  withSkillTool,
 } from "@darthsaul/outerworld-ai-core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render } from "@testing-library/react";
@@ -73,6 +77,40 @@ const agent = (over: Partial<AgentConfig>): AgentConfig => ({
   schedules: [],
   ...over,
 });
+
+/**
+ * A small fictional skills library (ADR-0021). Nothing is offered until a test turns a skill on
+ * or adds one to a crew member: the only default needs a shell, which no one has.
+ */
+const skillLibrary: readonly Skill[] = [
+  {
+    id: "tidy-summary",
+    name: "Tidy Summary",
+    description: "Summarise a long thread into five plain bullet points.",
+    category: "Writing",
+    requires: [],
+    default: false,
+    body: "Read the whole thread first.",
+  },
+  {
+    id: "source-check",
+    name: "Source Check",
+    description: "Check a claim against the pages it cites.",
+    category: "Research",
+    requires: ["web"],
+    default: false,
+    body: "Read each cited page.",
+  },
+  {
+    id: "log-dig",
+    name: "Log Dig",
+    description: "Find the first error before a failure.",
+    category: "Engineering",
+    requires: ["shell"],
+    default: true,
+    body: "Read the logs backwards.",
+  },
+];
 
 const emptyDocs = (): Record<AgentDocumentName, string> =>
   Object.fromEntries(AGENT_DOCUMENTS.map((d) => [d, ""])) as Record<AgentDocumentName, string>;
@@ -152,7 +190,14 @@ export function fakeApi() {
   const view = (id: string): AgentView => {
     const a = state.agents.get(id);
     if (!a) throw new ApiError(404, `no agent "${id}"`);
-    return { id, ...a, tools: resolveGrants(a.config, state.station, toolCatalog) };
+    const selection = skillsForAgent(a.config, state.station, skillLibrary);
+    const tools = resolveGrants(a.config, state.station, toolCatalog);
+    return {
+      id,
+      ...a,
+      tools: withSkillTool(tools, selection.offered.length),
+      skills: agentSkillsView(selection),
+    };
   };
   const route = (method: string, path: string, body?: unknown): unknown => {
     calls.push({ method, path, ...(body !== undefined ? { body } : {}) });

@@ -51,6 +51,13 @@ export {
   UpdateRoomInput,
   UpdateScheduleInput,
 } from "./api/crew-api.js";
+// Skills HTTP contract (ADR-0021)
+export {
+  type AgentSkillsView,
+  type SkillListItem,
+  type SkillRef,
+  UpdateSkillInput,
+} from "./api/skills-api.js";
 // Pixel characters an agent can appear as (ADR-0013)
 export {
   ART_BOX,
@@ -377,6 +384,7 @@ export {
   TeamStatus,
 } from "./schema/status.js";
 // Skills library: parsing, enablement, capability gating (ADR-0021)
+export { agentSkillsView, skillCatalog } from "./skills/catalog.js";
 export {
   capabilitiesOf,
   isGloballyEnabled,
@@ -386,6 +394,7 @@ export {
   type SkillSelectionInput,
   selectSkills,
   skillOverride,
+  skillsForAgent,
   type UnavailableSkill,
   withSkillOverride,
 } from "./skills/enablement.js";

@@ -4,6 +4,7 @@ import {
   type AgentDocumentName,
   type AgentSchedule,
   type AgentView,
+  agentSkillsView,
   type Budgets,
   type Connector,
   type ConnectorToolCatalog,
@@ -22,8 +23,12 @@ import {
   parseStationConfig,
   type Room,
   resolveGrants,
+  type Skill,
+  type SkillListItem,
   type StationConfig,
   type StationView,
+  skillCatalog,
+  skillsForAgent,
   slugify,
   stationCrewIssues,
   type TemplateInput,
@@ -31,6 +36,8 @@ import {
   type UpdateBudgetsInput,
   type UpdateRoomInput,
   type UpdateScheduleInput,
+  withSkillOverride,
+  withSkillTool,
 } from "@darthsaul/outerworld-ai-core";
 import { cronIssue } from "../schedule/cron.js";
 import type { EventStore } from "../storage/event-store.js";
@@ -68,6 +75,8 @@ export interface CrewServiceOptions {
   readonly events: EventStore;
   /** Tools each connector exposes; empty until connectors connect (Phase 6). */
   readonly connectorTools?: () => ConnectorToolCatalog;
+  /** The skills library (ADR-0021); empty means no skills anywhere. */
+  readonly skills?: readonly Skill[];
 }
 
 /** An update's fields that were actually given; `undefined` never overwrites a stored value. */
@@ -89,12 +98,35 @@ export class CrewService {
   readonly #home: string;
   readonly #events: EventStore;
   readonly #connectorTools: () => ConnectorToolCatalog;
+  readonly #skills: readonly Skill[];
   #queue: Promise<unknown> = Promise.resolve();
 
   constructor(options: CrewServiceOptions) {
     this.#home = options.home;
     this.#events = options.events;
     this.#connectorTools = options.connectorTools ?? (() => ({}));
+    this.#skills = options.skills ?? [];
+  }
+
+  /** The skills library with each skill's state on this station (ADR-0021). */
+  async skills(): Promise<SkillListItem[]> {
+    const loaded = await loadStationDir(this.#home);
+    return loaded.station ? skillCatalog(this.#skills, loaded.station, loaded.agents) : [];
+  }
+
+  /** Turns a skill on or off for every crew member, or back to its default (`null`). */
+  setSkillOverride(id: string, enabled: boolean | null): Promise<SkillListItem> {
+    return this.#serial(async () => {
+      if (!this.#skills.some((s) => s.id === id)) throw new NotFoundError(`no skill "${id}"`);
+      const loaded = await this.#loadWithStation();
+      const skills = withSkillOverride(loaded.station.skills, id, enabled);
+      await this.#saveStation(loaded, { ...loaded.station, skills });
+      const after = await loadStationDir(this.#home);
+      const row = skillCatalog(this.#skills, after.station ?? loaded.station, after.agents).find(
+        (s) => s.id === id,
+      );
+      return row as SkillListItem;
+    });
   }
 
   async view(): Promise<StationView> {
@@ -609,11 +641,14 @@ export class CrewService {
   }
 
   #agentView(agent: LoadedAgent, station: StationConfig): AgentView {
+    const selection = skillsForAgent(agent.config, station, this.#skills);
+    const tools = resolveGrants(agent.config, station, this.#connectorTools());
     return {
       id: agent.id,
       config: agent.config,
       documents: agent.documents,
-      tools: resolveGrants(agent.config, station, this.#connectorTools()),
+      tools: withSkillTool(tools, selection.offered.length),
+      skills: agentSkillsView(selection),
     };
   }
 }

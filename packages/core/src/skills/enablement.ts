@@ -1,4 +1,6 @@
-import type { EffectiveTool } from "../policy/grants.js";
+import type { AgentConfig } from "../config/agent-config.js";
+import type { StationConfig } from "../config/station-config.js";
+import { type EffectiveTool, resolveGrants } from "../policy/grants.js";
 import { isRequirement, type Requirement, type Skill } from "./skill.js";
 
 /**
@@ -110,4 +112,22 @@ export function selectSkills(input: SkillSelectionInput): SkillSelection {
     else offered.push(skill);
   }
   return { offered, unavailable };
+}
+
+/**
+ * An agent's skills from its config alone: what `skill_view` checks and what its page shows.
+ * Capabilities come from role and props only (connector tools meet no requirement), so this
+ * matches the run's selection whenever the built-in tools are registered, as the daemon does.
+ */
+export function skillsForAgent(
+  agent: AgentConfig,
+  station: StationConfig,
+  skills: readonly Skill[],
+): SkillSelection {
+  return selectSkills({
+    skills,
+    overrides: station.skills,
+    agentSkills: agent.skills,
+    tools: resolveGrants(agent, station, {}),
+  });
 }

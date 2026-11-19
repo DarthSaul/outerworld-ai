@@ -6,6 +6,7 @@ import {
   missingRequirements,
   selectSkills,
   skillOverride,
+  skillsForAgent,
   withSkillOverride,
 } from "./enablement.js";
 import type { Skill } from "./skill.js";
@@ -152,5 +153,34 @@ describe("selectSkills", () => {
       tools: allProps,
     });
     expect(offered).toEqual([]);
+  });
+});
+
+describe("skillsForAgent", () => {
+  it("gates on the agent's room props and reads overrides and its own list from config", () => {
+    const station = {
+      schemaVersion: 1,
+      name: "S",
+      rooms: [{ id: "lab", name: "Lab", props: [{ kind: "web" as const }] }],
+      lanes: [],
+      connectors: [],
+      budgets: {},
+      dispatch: { maxDepth: 1, autoReview: true },
+      skills: { enabled: [], disabled: ["humanizer"] },
+    };
+    const agent = {
+      schemaVersion: 1,
+      name: "A",
+      roomId: "lab",
+      role: "crew" as const,
+      model: "m",
+      approvalMode: "ask" as const,
+      connectorGrants: [],
+      skills: ["web-research", "meal-planning"],
+      schedules: [],
+    };
+    const { offered, unavailable } = skillsForAgent(agent, station, library);
+    expect(offered.map((s) => s.id)).toEqual(["meal-planning", "plan"]);
+    expect(unavailable.map((u) => [u.skill.id, u.missing])).toEqual([["web-research", ["files"]]]);
   });
 });
