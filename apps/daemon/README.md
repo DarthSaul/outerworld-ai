@@ -29,7 +29,7 @@ allowed `Origin` and a `Sec-Fetch-Site` other than `cross-site`. Every `/api/*` 
 |-------|-------------|
 | `GET /api/health` | `{ ok, version, latestSeq, startedAt }`; `startedAt` is when this daemon started (the dashboard's uptime). |
 | `GET /api/events` | SSE: every runtime event as `id: <seq>` + `data: <event JSON>`, replaying after `Last-Event-ID`, then live; a `: ping` comment every 15 s while idle. |
-| `GET /api/station` | `StationView`: station config, crew (`{ id, config }`), every load issue, and `stationExists`. No `station` with `stationExists: true` means station.json is there but does not load: the SPA shows the issues instead of setup. |
+| `GET /api/station` | `StationView`: station config, crew (`{ id, config }`), every load issue, and `stationFile` (`present`, `missing`, or `unknown` when it could not be checked). Setup is offered only for `missing`; no `station` otherwise means station.json is there (or may be) but does not load, and the SPA shows the issues instead. |
 | `GET /api/models` | The supported model list from core. |
 | `GET /api/agents/:id` | `AgentView`: config, the four documents, the effective tools (core `resolveGrants`, plus `skill_view` when a skill is offered), and its skills (`{ offered, unavailable }`, ADR-0023). |
 | `POST /api/agents` | `CreateAgentInput` → 201 `AgentView`; the id comes from the name. |

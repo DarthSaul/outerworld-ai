@@ -200,7 +200,7 @@ describe("crew and room routes", () => {
     writeFileSync(path, "{ not json");
     const view = (await (await call("GET", "/station")).json()) as StationView;
     expect(view.station).toBeUndefined();
-    expect(view.stationExists).toBe(true);
+    expect(view.stationFile).toBe("present");
     const res = await call("POST", "/onboarding", { overseerName: "X", tone: "calm" });
     expect(res.status).toBe(409);
     expect(readFileSync(path, "utf8")).toBe("{ not json");

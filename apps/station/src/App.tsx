@@ -245,15 +245,16 @@ function Page({ children }: { readonly children: ReactNode }) {
 
 /**
  * An empty station (no station.json yet) shows onboarding instead of the screens. One whose file
- * is there but does not load says so instead: setting it up again would replace the file.
+ * is there but does not load, or could not be checked, says so instead: setting it up again could
+ * replace the file.
  */
 function Shell({ children }: { readonly children: ReactNode }) {
   const station = useStationView();
   if (station.isSuccess && !station.data.station) {
-    return station.data.stationExists ? (
-      <StationBrokenPage issues={station.data.issues} />
-    ) : (
+    return station.data.stationFile === "missing" ? (
       <OnboardingPage />
+    ) : (
+      <StationBrokenPage issues={station.data.issues} />
     );
   }
   return children;

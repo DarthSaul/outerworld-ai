@@ -211,19 +211,19 @@ export function fakeApi() {
     if (method === "GET" && path === "/station") {
       const v: StationView = state.broken
         ? {
-            stationExists: true,
+            stationFile: "present",
             agents: [...state.agents].map(([id, a]) => ({ id, config: a.config })),
             issues: state.broken,
           }
         : state.fresh
           ? {
-              stationExists: false,
+              stationFile: "missing",
               agents: [],
               issues: [{ level: "error", path: "station.json", message: "missing" }],
             }
           : {
               station: state.station,
-              stationExists: true,
+              stationFile: "present",
               agents: [...state.agents].map(([id, a]) => ({ id, config: a.config })),
               issues: [],
             };

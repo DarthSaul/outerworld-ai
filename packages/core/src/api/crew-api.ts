@@ -134,14 +134,17 @@ export type UpdateScheduleInput = z.infer<typeof UpdateScheduleInput>;
 export type CreateRoomInput = z.infer<typeof CreateRoomInput>;
 export type UpdateRoomInput = z.infer<typeof UpdateRoomInput>;
 
+export type StationFile = "present" | "missing" | "unknown";
+
 /** `GET /api/station`: the station config, its crew, and every issue found loading them. */
 export interface StationView {
   readonly station?: StationConfig;
   /**
-   * station.json is on disk, valid or not. With no `station`, true means the file does not load
-   * (`issues` says why) and the station must be repaired, never set up again.
+   * Whether station.json is on disk, valid or not: `missing` only when the filesystem says it is
+   * not there, `unknown` when it could not be checked. Only a `missing` file may be set up; with no
+   * `station`, anything else means the station must be repaired (`issues` says why).
    */
-  readonly stationExists: boolean;
+  readonly stationFile: StationFile;
   readonly agents: readonly { readonly id: string; readonly config: AgentConfig }[];
   readonly issues: readonly Issue[];
 }

@@ -1,6 +1,6 @@
-import { cpSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { loadSkillLibrary } from "../skills/library.js";
 import { openDatabase } from "../storage/database.js";
@@ -496,7 +496,7 @@ describe("CrewService: onboarding and templates", () => {
 
     const view = await crew.view();
     expect(view.station).toBeUndefined();
-    expect(view.stationExists).toBe(true);
+    expect(view.stationFile).toBe("present");
     const refused = crew.onboard({ overseerName: "Again", tone: "calm" });
     await expect(refused).rejects.toBeInstanceOf(ConflictError);
     await expect(refused).rejects.toMatchObject({
@@ -506,6 +506,19 @@ describe("CrewService: onboarding and templates", () => {
     });
     expect(readFileSync(path, "utf8")).toBe(written);
     expect(types()).toEqual([]);
+  });
+
+  it("never sets up when it cannot tell whether station.json is there", async () => {
+    const { home, events } = setup(false);
+    // A file where the station folder should be: station.json can be neither found nor ruled out.
+    mkdirSync(dirname(home), { recursive: true });
+    writeFileSync(home, "");
+    const crew = new CrewService({ home, events });
+    expect((await crew.view()).stationFile).toBe("unknown");
+    const refused = crew.onboard({ overseerName: "Again", tone: "calm" });
+    await expect(refused).rejects.toBeInstanceOf(ConflictError);
+    await expect(refused).rejects.toThrow(/cannot tell whether station\.json is there/);
+    expect(readFileSync(home, "utf8")).toBe("");
   });
 
   it("adds a Project Manager with Operations, a hallway, Notion, and a disabled briefing", async () => {
