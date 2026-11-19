@@ -279,6 +279,14 @@ describe("assemblePrompt: installed skills", () => {
     expect(skillsSection({ entries, mode: "index", charBudget: 10 })).toBeUndefined();
   });
 
+  it("takes a complete list that fits exactly, even when a shorter prefix plus its note would not", () => {
+    // The second entry is shorter than "(1 more skill not listed.)".
+    const entries = [skill("a"), { id: "b", name: "B", description: "x", body: "y" }];
+    const full = skillsSection({ entries, mode: "index" }) ?? "";
+    expect(full).not.toContain("not listed");
+    expect(skillsSection({ entries, mode: "index", charBudget: full.length })).toBe(full);
+  });
+
   it("caps the index at the default 12k budget, and counts one skill in the singular", () => {
     const entries = Array.from({ length: 400 }, (_, i) => skill(`skill-${i}`));
     const text = skillsSection({ entries, mode: "index" }) ?? "";

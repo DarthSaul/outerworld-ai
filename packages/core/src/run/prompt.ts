@@ -120,14 +120,16 @@ export function skillsSection(skills: PromptSkills | undefined): string | undefi
       ? `- ${s.name} (id: ${s.id}): ${s.description}`
       : `## ${s.name} (id: ${s.id})\n\n${s.description}\n\n${s.body.trim()}`,
   );
-  // Each kept entry costs its separator (the first follows the head's blank line).
+  // The longest prefix that fits with its own note: none when the whole list fits, so a complete
+  // list may fit even where a shorter prefix plus "N more" would not. Prefixes only, so a later
+  // entry never jumps ahead of one left out. Each entry costs its separator (the first follows
+  // the head's blank line).
   let used = head.length;
   let kept = 0;
   for (const [i, entry] of entries.entries()) {
-    const cost = (i === 0 ? 2 : sep.length) + entry.length;
-    if (used + cost + omittedNote(entries.length - i - 1).length > budget) break;
-    used += cost;
-    kept = i + 1;
+    used += (i === 0 ? 2 : sep.length) + entry.length;
+    if (used > budget) break;
+    if (used + omittedNote(entries.length - i - 1).length <= budget) kept = i + 1;
   }
   if (kept === 0) return undefined;
   return `${head}\n\n${entries.slice(0, kept).join(sep)}${omittedNote(entries.length - kept)}`;
