@@ -8,6 +8,7 @@ import {
   type ConnectorPresetId,
   type CrewActivityEntry,
   DEFAULT_MODEL,
+  isPresetAvailable,
   type Notification,
   needsOwnClient,
   type RuntimeEvent,
@@ -435,12 +436,16 @@ export function fakeApi() {
       // A fresh array, as JSON from the daemon would be.
       if (method === "GET") return [...connectors];
       const preset = CONNECTOR_PRESETS[b.preset as ConnectorPresetId];
-      if (!preset || preset.transport.type !== "http") throw new ApiError(400, "no such preset");
+      const t = preset?.transport;
+      if (!preset || !isPresetAvailable(preset.id as ConnectorPresetId) || t?.type === "stdio") {
+        throw new ApiError(400, "no such preset");
+      }
       if (connectors.some((c) => c.id === preset.id)) throw new ApiError(409, "already installed");
       const added: ConnectorItem = {
         id: preset.id,
         name: preset.name,
-        url: preset.transport.url,
+        ...(t?.type === "http" ? { url: t.url } : {}),
+        ...(t?.type === "builtin" ? { service: t.service } : {}),
         status: "disconnected",
         tools: [],
         grantedTo: [],

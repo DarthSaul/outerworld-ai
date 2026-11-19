@@ -149,6 +149,26 @@
                   "args"
                 ],
                 "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "builtin"
+                  },
+                  "service": {
+                    "type": "string",
+                    "enum": [
+                      "gmail"
+                    ]
+                  }
+                },
+                "required": [
+                  "type",
+                  "service"
+                ],
+                "additionalProperties": false
               }
             ]
           }

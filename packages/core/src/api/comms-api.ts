@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ModelSettings } from "../config/models.js";
-import { CONNECTOR_PRESET_IDS } from "../policy/connector-tools.js";
+import { AVAILABLE_PRESET_IDS } from "../policy/connector-tools.js";
 import { Id } from "../schema/common.js";
 
 /** The HTTP contract for sessions, runs, and settings (Phase 3), shared by daemon and SPA. */
@@ -49,8 +49,11 @@ export interface HealthView {
   readonly startedAt: string;
 }
 
-/** Connectors (ADR-0012, ADR-0019): a preset, a URL change, an own OAuth client, disconnecting. */
-export const AddConnectorInput = z.strictObject({ preset: z.enum(CONNECTOR_PRESET_IDS) });
+/**
+ * Connectors (ADR-0012, ADR-0019, ADR-0021): a preset that can be added today, a URL change, an
+ * own OAuth client, disconnecting.
+ */
+export const AddConnectorInput = z.strictObject({ preset: z.enum(AVAILABLE_PRESET_IDS) });
 /** The Commander's own OAuth client, for a server that registers none (kept in the keychain). */
 export const ConnectorClientInput = z.strictObject({
   clientId: z.string().trim().min(1).max(256),

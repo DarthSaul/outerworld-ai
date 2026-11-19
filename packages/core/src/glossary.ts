@@ -393,6 +393,11 @@ export const glossary = {
   "connector.setup.google.scope": "Under Data Access, add the scope {scope}.",
   "connector.setup.google.client":
     "Create a client of type Web application, tick “Use this client for an AI-powered agent”, and add the redirect URL below as an authorized redirect URI.",
+  "connector.setup.gmailApi.enable": "In your Google Cloud project, enable the Gmail API.",
+  "connector.setup.gmailApi.audience":
+    "Configure the OAuth consent screen. If its audience is External, add your Google account under Test users. While the app is in Testing, Google ends each sign-in after seven days, so you sign in again weekly.",
+  "connector.setup.gmailApi.client":
+    "Create a client of type Web application and add the redirect URL below as an authorized redirect URI. A client you made for Gmail MCP works too.",
   "connector.setup.github.app": "Register a new OAuth app in your GitHub developer settings.",
   "connector.setup.github.callback":
     "Set its authorization callback URL to the redirect URL below.",
@@ -598,8 +603,13 @@ export const glossary = {
   // Abilities as cards (Abilities › Discover and Installed).
   "ability.notion.hint": "Search, read, and edit pages and databases in your Notion workspace.",
   "ability.github.hint": "Work with repositories, issues, and pull requests on GitHub.",
-  "ability.gmail.hint": "Search and read your email, and draft messages in Gmail.",
+  "ability.gmail.hint":
+    "Search and read your email, draft replies, and label or trash threads in Gmail. Never sends.",
+  "ability.gmailMcp.hint":
+    "Gmail through Google's MCP server, a Developer Preview that needs Google's approval first.",
   "ability.kind.mcp": "MCP server",
+  "ability.kind.api": "API",
+  "ability.unavailable": "Not yet available",
   "ability.isInstalled": "Installed",
   "ability.manage": "Manage",
   // A crew member's page (Manifest): Brief, Memory, Config.

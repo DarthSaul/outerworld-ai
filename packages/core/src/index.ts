@@ -105,7 +105,9 @@ export {
   type TokenUsage,
 } from "./config/models.js";
 export {
+  BUILTIN_SERVICES,
   Budgets,
+  type BuiltinService,
   Connector,
   ConnectorTransport,
   DEFAULT_BUDGETS,
@@ -190,6 +192,28 @@ export {
   parseLedger,
   parseLedgerMarkdown,
 } from "./ledger/parse.js";
+// Email for the Gmail service: building drafts, reading threads (ADR-0021)
+export { fromBase64, toBase64, toBase64Url } from "./mail/base64.js";
+export {
+  buildMessage,
+  buildRawMessage,
+  type DraftMessage,
+  encodeHeaderValue,
+  type GmailMessage,
+  type GmailMessagePart,
+  type GmailThread,
+  header,
+  htmlToText,
+  MAX_BODY_CHARS,
+  messageText,
+  type ReadMessage,
+  readMessage,
+  readThread,
+  replyHeaders,
+  replySubject,
+  summarizeThread,
+  type ThreadSummary,
+} from "./mail/message.js";
 // Notifications: a projection of the event log (brief §10)
 export {
   NOTIFICATION_EVENT_TYPES,
@@ -211,18 +235,26 @@ export {
 } from "./policy/budget.js";
 // Connector tool classification and presets (ADR-0012)
 export {
+  AVAILABLE_PRESET_IDS,
   CONNECTOR_PRESET_IDS,
   CONNECTOR_PRESETS,
   type ConnectorPresetId,
   classifyConnectorTool,
   GITHUB_PRESET,
+  GMAIL_MCP_PRESET,
+  GMAIL_MCP_URL,
   GMAIL_PRESET,
+  isPresetAvailable,
   KNOWN_TOOL_CLASSES,
+  migrateLegacyGmail,
   NOTION_PRESET,
   needsOwnClient,
   type OwnClientProfile,
   type OwnClientSetupStep,
   ownClientProfile,
+  ownClientProfileOf,
+  type ProfileSource,
+  profileSource,
   type ToolHints,
 } from "./policy/connector-tools.js";
 // Dispatch (brief §7)

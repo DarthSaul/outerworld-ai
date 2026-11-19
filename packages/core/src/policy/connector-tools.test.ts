@@ -1,15 +1,22 @@
 import { describe, expect, it } from "vitest";
+import type { Connector } from "../config/station-config.js";
 import { GLOSSARY_KEYS } from "../glossary.js";
 import {
+  AVAILABLE_PRESET_IDS,
   CONNECTOR_PRESET_IDS,
   CONNECTOR_PRESETS,
   classifyConnectorTool,
   GITHUB_PRESET,
+  GMAIL_MCP_PRESET,
   GMAIL_PRESET,
+  isPresetAvailable,
   KNOWN_TOOL_CLASSES,
+  migrateLegacyGmail,
   NOTION_PRESET,
   needsOwnClient,
   ownClientProfile,
+  ownClientProfileOf,
+  profileSource,
 } from "./connector-tools.js";
 
 describe("classifyConnectorTool", () => {
@@ -24,19 +31,29 @@ describe("classifyConnectorTool", () => {
     expect(classifyConnectorTool("notion-get-comments")).toBe("read");
   });
 
+  it("classifies the Gmail service's tools: reading is read, anything that changes mail is write", () => {
+    for (const t of ["search_threads", "get_thread", "list_labels"]) {
+      expect(classifyConnectorTool(t, { readOnlyHint: false }), t).toBe("read");
+    }
+    for (const t of ["create_draft", "modify_thread_labels", "trash_thread"]) {
+      expect(classifyConnectorTool(t, { readOnlyHint: true }), t).toBe("write");
+    }
+  });
+
   it("lets a read-only hint seed a tool we do not know", () => {
     expect(classifyConnectorTool("mystery-lookup", { readOnlyHint: true })).toBe("read");
   });
 
-  it("treats every other unknown tool as write", () => {
+  it("treats every other unknown tool as write, including names on Object.prototype", () => {
     expect(classifyConnectorTool("mystery-tool")).toBe("write");
     expect(
       classifyConnectorTool("mystery-tool", { readOnlyHint: true, destructiveHint: true }),
     ).toBe("write");
     expect(classifyConnectorTool("mystery-tool", { readOnlyHint: false })).toBe("write");
+    expect(classifyConnectorTool("toString")).toBe("write");
   });
 
-  it("classifies every Notion tool it names, and names the write ones on purpose", () => {
+  it("classifies every tool it names, and names the write ones on purpose", () => {
     const writes = Object.entries(KNOWN_TOOL_CLASSES)
       .filter(([, c]) => c === "write")
       .map(([t]) => t)
@@ -55,6 +72,9 @@ describe("classifyConnectorTool", () => {
         "notion-update-data-source",
         "notion-update-page",
         "notion-update-view",
+        "create_draft",
+        "modify_thread_labels",
+        "trash_thread",
       ].sort(),
     );
   });
@@ -71,25 +91,39 @@ describe("NOTION_PRESET", () => {
 });
 
 describe("connector presets", () => {
-  it("offers Notion, GitHub, and Gmail, each over HTTP to its hosted MCP server", () => {
-    expect(CONNECTOR_PRESET_IDS).toEqual(["notion", "github", "gmail"]);
+  it("offers Notion, GitHub, Gmail, and Gmail MCP, in that order", () => {
+    expect(CONNECTOR_PRESET_IDS).toEqual(["notion", "github", "gmail", "gmail-mcp"]);
     expect(GITHUB_PRESET).toEqual({
       id: "github",
       name: "GitHub",
       transport: { type: "http", url: "https://api.githubcopilot.com/mcp/" },
     });
+    // Gmail is the station's own service over the REST API (ADR-0021), not an MCP server.
     expect(GMAIL_PRESET).toEqual({
       id: "gmail",
       name: "Gmail",
+      transport: { type: "builtin", service: "gmail" },
+    });
+    expect(GMAIL_MCP_PRESET).toEqual({
+      id: "gmail-mcp",
+      name: "Gmail MCP",
       transport: { type: "http", url: "https://gmailmcp.googleapis.com/mcp/v1" },
     });
     for (const id of CONNECTOR_PRESET_IDS) expect(CONNECTOR_PRESETS[id].id).toBe(id);
+  });
+
+  it("shows Gmail MCP but cannot add it until Google's preview access", () => {
+    expect(isPresetAvailable("gmail-mcp")).toBe(false);
+    for (const id of ["notion", "github", "gmail"] as const)
+      expect(isPresetAvailable(id)).toBe(true);
+    expect(AVAILABLE_PRESET_IDS).toEqual(["notion", "github", "gmail"]);
   });
 
   it("knows which servers need the Commander's own OAuth client (no dynamic registration)", () => {
     expect(needsOwnClient(NOTION_PRESET)).toBe(false);
     expect(needsOwnClient(GITHUB_PRESET)).toBe(true);
     expect(needsOwnClient(GMAIL_PRESET)).toBe(true);
+    expect(needsOwnClient(GMAIL_MCP_PRESET)).toBe(true);
     // The same server however its URL is spelled: default port, host case, trailing slash.
     const at = (url: string) =>
       needsOwnClient({ ...GITHUB_PRESET, transport: { type: "http", url } });
@@ -104,6 +138,10 @@ describe("connector presets", () => {
     expect(
       needsOwnClient({ ...GITHUB_PRESET, transport: { type: "http", url: "https://x.test/mcp" } }),
     ).toBe(false);
+    // A stdio server never does.
+    expect(
+      needsOwnClient({ id: "x", name: "X", transport: { type: "stdio", command: "x", args: [] } }),
+    ).toBe(false);
   });
 });
 
@@ -114,7 +152,7 @@ describe("ownClientProfile", () => {
     expect(ownClientProfile("not a url")).toBeUndefined();
   });
 
-  it("asks Gmail for one scope that covers its tools, and for a refresh token", () => {
+  it("asks Gmail MCP for one scope that covers its tools, and for a refresh token", () => {
     const gmail = ownClientProfile("https://gmailmcp.googleapis.com:443/mcp/v1/");
     // Google offers a refresh token only with access_type=offline (and again only with consent).
     expect(gmail).toMatchObject({
@@ -131,28 +169,89 @@ describe("ownClientProfile", () => {
   });
 
   it("gives setup steps in glossary words, with links only to the provider's own consoles", () => {
-    for (const url of [
-      "https://gmailmcp.googleapis.com/mcp/v1",
-      "https://api.githubcopilot.com/mcp/",
-    ]) {
-      const steps = ownClientProfile(url)?.setup ?? [];
+    const profiles = [
+      ownClientProfile("https://gmailmcp.googleapis.com/mcp/v1"),
+      ownClientProfile("https://api.githubcopilot.com/mcp/"),
+      ownClientProfileOf({ service: "gmail" }),
+    ];
+    for (const profile of profiles) {
+      const steps = profile?.setup ?? [];
       expect(steps.length).toBeGreaterThan(2);
       for (const s of steps) {
         expect(GLOSSARY_KEYS).toContain(s.step);
         if (s.href) expect(new URL(s.href).hostname).toMatch(/(^|\.)(google\.com|github\.com)$/);
       }
     }
-    // Gmail's steps name the scope the sign-in asks for, and the MCP API that is easy to miss.
+    // Gmail MCP's steps name the MCP API that is easy to miss, after the preview program.
     const gmail = ownClientProfile("https://gmailmcp.googleapis.com/mcp/v1");
     expect(gmail?.setup.some((s) => s.href?.includes("gmailmcp.googleapis.com"))).toBe(true);
-    // Before anything else: the server refuses projects outside the Developer Preview Program.
     expect(gmail?.setup[0]?.step).toBe("connector.setup.google.preview");
   });
 
-  it("matches needsOwnClient", () => {
-    for (const preset of [NOTION_PRESET, GITHUB_PRESET, GMAIL_PRESET]) {
-      const url = preset.transport.type === "http" ? preset.transport.url : undefined;
-      expect(ownClientProfile(url) !== undefined).toBe(needsOwnClient(preset));
+  it("matches needsOwnClient for every preset", () => {
+    for (const id of CONNECTOR_PRESET_IDS) {
+      const preset = CONNECTOR_PRESETS[id];
+      expect(ownClientProfileOf(profileSource(preset.transport)) !== undefined, id).toBe(
+        needsOwnClient(preset),
+      );
     }
+  });
+});
+
+describe("ownClientProfileOf", () => {
+  it("asks the Gmail service for gmail.modify and offline access, without the preview program", () => {
+    const gmail = ownClientProfileOf({ service: "gmail" });
+    expect(gmail).toMatchObject({
+      scope: "https://www.googleapis.com/auth/gmail.modify",
+      authorizationParams: { access_type: "offline", prompt: "consent" },
+    });
+    const steps = gmail?.setup.map((s) => s.step) ?? [];
+    expect(steps[0]).toBe("connector.setup.gmailApi.enable");
+    expect(steps).not.toContain("connector.setup.google.preview");
+    expect(steps).toContain("connector.setup.google.scope");
+    expect(gmail?.setup[0]?.href).toBe(
+      "https://console.cloud.google.com/apis/library/gmail.googleapis.com",
+    );
+  });
+
+  it("looks a server up by its URL, and knows no other service", () => {
+    expect(ownClientProfileOf({ url: "https://api.githubcopilot.com/mcp/" })).toBe(
+      ownClientProfile("https://api.githubcopilot.com/mcp/"),
+    );
+    expect(ownClientProfileOf({ service: "outlook" })).toBeUndefined();
+    expect(ownClientProfileOf({ service: "toString" })).toBeUndefined();
+    expect(ownClientProfileOf({})).toBeUndefined();
+  });
+});
+
+describe("migrateLegacyGmail", () => {
+  const legacy: Connector = {
+    id: "gmail",
+    name: "Gmail",
+    transport: { type: "http", url: "https://gmailmcp.googleapis.com/mcp/v1" },
+  };
+
+  it("moves a gmail connector at the MCP server onto the Gmail service, keeping its id", () => {
+    const out = migrateLegacyGmail([NOTION_PRESET, { ...legacy, name: "My mail" }]);
+    expect(out).toEqual([NOTION_PRESET, GMAIL_PRESET]);
+  });
+
+  it("matches the MCP server however its URL is spelled", () => {
+    const spelled = {
+      ...legacy,
+      transport: { type: "http" as const, url: "https://GMAILMCP.googleapis.com:443/mcp/v1/" },
+    };
+    expect(migrateLegacyGmail([spelled])).toEqual([GMAIL_PRESET]);
+  });
+
+  it("leaves everything else alone, returning the same list", () => {
+    const already = [NOTION_PRESET, GMAIL_PRESET, GMAIL_MCP_PRESET];
+    expect(migrateLegacyGmail(already)).toBe(already);
+    // Another server under the gmail id is the Commander's choice.
+    const other = [{ ...legacy, transport: { type: "http" as const, url: "https://x.test/mcp" } }];
+    expect(migrateLegacyGmail(other)).toBe(other);
+    // The MCP server under another id stays where it is.
+    const renamed = [{ ...legacy, id: "mail" }];
+    expect(migrateLegacyGmail(renamed)).toBe(renamed);
   });
 });
