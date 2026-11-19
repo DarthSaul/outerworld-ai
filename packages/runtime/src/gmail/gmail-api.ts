@@ -1,5 +1,6 @@
 import {
   buildRawMessage,
+  type GmailMessagePart,
   type GmailThread,
   header,
   type ReadMessage,
@@ -85,7 +86,9 @@ export class GmailApi {
     let res = await send(false);
     if (res.status === 401) {
       res = await send(true);
-      if (res.status === 401) throw new SignInRequiredError("Gmail refused the sign-in");
+      if (res.status === 401) {
+        throw new SignInRequiredError("Gmail refused the sign-in", { drop: true });
+      }
     }
     const json = (await res.json().catch(() => ({}))) as {
       error?: { message?: string; status?: string };
@@ -127,7 +130,35 @@ export class GmailApi {
 
   /** A whole thread, oldest message first, as text. */
   async getThread(id: string): Promise<{ id: string; messages: ReadMessage[] }> {
-    return readThread(await this.#rawThread(id, "full"));
+    const thread = await this.#rawThread(id, "full");
+    const messages = await Promise.all(
+      (thread.messages ?? []).map(async (m) =>
+        m.payload ? { ...m, payload: await this.#withTextBodies(m.id, m.payload) } : m,
+      ),
+    );
+    return readThread({ ...thread, messages });
+  }
+
+  /**
+   * Gmail leaves a large body part out of `format=full` and gives an `attachmentId` instead.
+   * Loads those for readable text parts (plain or HTML, not a named attachment) so the message
+   * reads whole; binary parts and real attachments are never fetched.
+   */
+  async #withTextBodies(messageId: string, part: GmailMessagePart): Promise<GmailMessagePart> {
+    const type = part.mimeType?.toLowerCase();
+    const textual = type === "text/plain" || type === "text/html";
+    if (textual && !part.filename && part.body?.attachmentId && !part.body.data) {
+      const got = await this.#call<{ data?: string }>(
+        "GET",
+        `messages/${encodeURIComponent(messageId)}/attachments/${encodeURIComponent(part.body.attachmentId)}`,
+      );
+      return got.data ? { ...part, body: { ...part.body, data: got.data } } : part;
+    }
+    if (!part.parts?.length) return part;
+    return {
+      ...part,
+      parts: await Promise.all(part.parts.map((p) => this.#withTextBodies(messageId, p))),
+    };
   }
 
   #rawThread(id: string, format: "full" | "metadata"): Promise<GmailThread> {

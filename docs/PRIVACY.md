@@ -67,10 +67,13 @@ agent you created:
      offline access, so a refresh token is kept in the keychain.
    - A sign-in Google refuses to renew is deleted at once, and you are asked to sign in again.
    - Every granted agent acts as the Google account you signed in with.
-   - **Gmail MCP** (`gmailmcp.googleapis.com`, ADR-0019) is listed but cannot be added until
-     Google's preview access, so it is never contacted. A station that had it as `gmail` is moved
-     to the Gmail API on daemon start: the OAuth app you saved carries over, and the MCP server's
-     tokens are deleted.
+   - **Gmail MCP** (`gmailmcp.googleapis.com`, ADR-0019) is listed in the catalog, but the daemon
+     refuses to install it through the preset endpoint until Google's preview access. That is the
+     only thing that stops it: a `station.json` you edit by hand can still define an HTTP connector
+     at that URL (under any id but `gmail`), and the daemon then contacts that server like any
+     other MCP connector, with the sign-in described in ADR-0019.
+   - A station that had Gmail MCP under the `gmail` id is moved to the Gmail API on daemon start:
+     the OAuth app you saved carries over, and the MCP server's tokens are deleted.
 5. **`web_fetch` requests** to public http(s) URLs an agent with the Web prop chooses. Loopback,
    private-network, and link-local addresses are refused.
 

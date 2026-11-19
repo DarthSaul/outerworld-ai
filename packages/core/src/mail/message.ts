@@ -199,7 +199,8 @@ export function htmlToText(html: string): string {
           ? String.fromCodePoint(code)
           : m;
       }
-      return ENTITIES[e.toLowerCase()] ?? m;
+      const name = e.toLowerCase();
+      return Object.hasOwn(ENTITIES, name) ? (ENTITIES[name] ?? m) : m;
     })
     .replace(/[ \t]+\n/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
@@ -210,13 +211,42 @@ export function htmlToText(html: string): string {
 const leaves = (part: GmailMessagePart | undefined): GmailMessagePart[] =>
   !part ? [] : part.parts?.length ? part.parts.flatMap(leaves) : [part];
 
-/** The text of a message: its plain-text parts, or its HTML ones made readable. */
+/**
+ * The text of a part, following its MIME structure: a `multipart/alternative` gives its
+ * plain-text version when that has text, else its richest other one (the last, RFC 2046 §5.1.4);
+ * any other `multipart/*` (mixed, related) joins the text of every section; a `text/plain` leaf is
+ * decoded and a `text/html` one made readable. Attachments (a filename) and other types add
+ * nothing.
+ */
+function partText(part: GmailMessagePart): string {
+  if (part.filename) return "";
+  const type = (part.mimeType ?? "").toLowerCase();
+  const children = part.parts ?? [];
+  if (type === "multipart/alternative") {
+    const plain = children.find((c) => c.mimeType?.toLowerCase() === "text/plain");
+    const plainText = plain ? partText(plain).trim() : "";
+    if (plainText) return plainText;
+    for (const c of [...children].reverse()) {
+      if (c === plain) continue;
+      const t = partText(c).trim();
+      if (t) return t;
+    }
+    return "";
+  }
+  if (type.startsWith("multipart/") || (children.length > 0 && !type.startsWith("text/"))) {
+    return children
+      .map((c) => partText(c).trim())
+      .filter(Boolean)
+      .join("\n\n");
+  }
+  if (type === "text/plain") return decodeBody(part);
+  if (type === "text/html") return htmlToText(decodeBody(part));
+  return "";
+}
+
+/** The text of a message, by its MIME structure (`partText`). */
 export function messageText(payload: GmailMessagePart | undefined): string {
-  const parts = leaves(payload).filter((p) => !p.filename);
-  const plain = parts.filter((p) => p.mimeType === "text/plain").map(decodeBody);
-  if (plain.some((t) => t.trim())) return plain.join("\n\n").trim();
-  const html = parts.filter((p) => p.mimeType === "text/html").map(decodeBody);
-  return htmlToText(html.join("\n"));
+  return payload ? partText(payload).trim() : "";
 }
 
 /** A message body longer than this is cut, so one long thread does not crowd out the rest. */

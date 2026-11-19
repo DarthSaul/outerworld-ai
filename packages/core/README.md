@@ -54,7 +54,7 @@ from the zod source (regenerate with `pnpm build && node scripts/write-schemas.m
 |--------|-------------|
 | `CONNECTOR_PRESETS`, `CONNECTOR_PRESET_IDS`, `NOTION_PRESET`, `GITHUB_PRESET`, `GMAIL_PRESET`, `GMAIL_MCP_PRESET`, `GMAIL_MCP_URL` | The catalog, in order: Notion and GitHub (hosted MCP), Gmail (`{ type: "builtin", service: "gmail" }`, the Gmail REST API), Gmail MCP (Google's preview MCP server). |
 | `isPresetAvailable(id)`, `AVAILABLE_PRESET_IDS` | Whether a preset can be added today; Gmail MCP cannot until preview access. `AddConnectorInput` takes only these. |
-| `classifyConnectorTool(name, hints)`, `KNOWN_TOOL_CLASSES` | Read or write for a connector tool; our map (Notion's and the Gmail service's tools) wins over annotations. |
+| `classifyConnectorTool(name, hints, service?)`, `KNOWN_TOOL_CLASSES`, `BUILTIN_TOOL_CLASSES` | Read or write for a connector tool: our map wins over annotations (Notion's tools; for a builtin `service`, that service's map alone, so the Gmail service's generic names never class another server's tools). |
 | `ownClientProfile(url)`, `ownClientProfileOf({ url, service })`, `profileSource(transport)`, `needsOwnClient(connector)` | The sign-in profile (scope, extra parameters, setup steps) of a server or builtin service that needs the Commander's own OAuth app. |
 | `migrateLegacyGmail(connectors)` | Moves a `gmail` connector at the Gmail MCP URL onto the Gmail service; the same array when there is nothing to move. |
 | `buildMessage(draft)`, `buildRawMessage(draft)`, `encodeHeaderValue`, `replySubject`, `replyHeaders` | A plain-text RFC 2822 draft (base64 UTF-8 body, RFC 2047 subject, line breaks in headers refused), and as Gmail's base64url `raw`; a reply's subject and `In-Reply-To`/`References`. |

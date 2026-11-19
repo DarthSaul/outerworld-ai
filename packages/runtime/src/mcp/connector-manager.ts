@@ -309,9 +309,12 @@ export class ConnectorManager {
       entry.client = client;
       entry.pending = undefined;
       entry.retries = 0;
+      const t0 = entry.connector.transport;
+      const builtinService = t0.type === "builtin" ? t0.service : undefined;
       entry.tools = listed.tools.map((t) => ({
         name: t.name,
-        class: classifyConnectorTool(t.name, t.annotations ?? {}),
+        // The station's own services' tools are classed by that service's map alone (ADR-0022).
+        class: classifyConnectorTool(t.name, t.annotations ?? {}, builtinService),
         description: t.description ?? t.name,
         inputSchema: t.inputSchema as Record<string, unknown>,
       }));

@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, statSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -56,6 +56,41 @@ describe("startDaemon", () => {
         body: "x",
       });
       expect(form.status).toBe(415);
+    } finally {
+      await daemon.close("shutdown");
+    }
+  });
+
+  it("starts and serves when the Gmail migration fails, warning that it waits for the next start", async () => {
+    const h = home();
+    mkdirSync(h, { recursive: true });
+    const fixture = join(import.meta.dirname, "..", "..", "..", "fixtures", "demo-station");
+    cpSync(fixture, h, { recursive: true });
+    const path = join(h, "station.json");
+    const s = JSON.parse(readFileSync(path, "utf8"));
+    s.connectors.push({
+      id: "gmail",
+      name: "Gmail",
+      transport: { type: "http", url: "https://gmailmcp.googleapis.com/mcp/v1" },
+    });
+    writeFileSync(path, JSON.stringify(s));
+    // A keychain that is locked: every read fails.
+    const locked = new MemorySecretStore();
+    locked.get = async () => {
+      throw new Error("keychain locked");
+    };
+    const warnings: string[] = [];
+    const daemon = await startDaemon(
+      { home: h, port: 0, host: "127.0.0.1", modelMode: "fake" },
+      { quiet: true, secrets: locked, env: {}, warn: (m) => warnings.push(m) },
+    );
+    try {
+      const token = readFileSync(join(h, "daemon.token"), "utf8").trim();
+      const res = await fetch(`${daemon.url}/api/health`, {
+        headers: { authorization: `Bearer ${token}` },
+      });
+      expect(res.status).toBe(200);
+      expect(warnings.some((w) => /gmail connector migration deferred.*locked/.test(w))).toBe(true);
     } finally {
       await daemon.close("shutdown");
     }

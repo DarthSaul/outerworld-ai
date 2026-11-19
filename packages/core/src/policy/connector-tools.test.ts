@@ -33,11 +33,23 @@ describe("classifyConnectorTool", () => {
 
   it("classifies the Gmail service's tools: reading is read, anything that changes mail is write", () => {
     for (const t of ["search_threads", "get_thread", "list_labels"]) {
-      expect(classifyConnectorTool(t, { readOnlyHint: false }), t).toBe("read");
+      expect(classifyConnectorTool(t, { readOnlyHint: false }, "gmail"), t).toBe("read");
     }
     for (const t of ["create_draft", "modify_thread_labels", "trash_thread"]) {
-      expect(classifyConnectorTool(t, { readOnlyHint: true }), t).toBe("write");
+      expect(classifyConnectorTool(t, { readOnlyHint: true }, "gmail"), t).toBe("write");
     }
+  });
+
+  it("applies the Gmail service's classes to that service only, not to a server's same names", () => {
+    // Another MCP server's `get_thread` that says it is destructive stays write.
+    expect(classifyConnectorTool("get_thread", { readOnlyHint: true, destructiveHint: true })).toBe(
+      "write",
+    );
+    expect(classifyConnectorTool("list_labels")).toBe("write");
+    // The service's map stands in for the Notion one, and an unknown service has none.
+    expect(classifyConnectorTool("notion-search", {}, "gmail")).toBe("write");
+    expect(classifyConnectorTool("get_thread", {}, "outlook")).toBe("write");
+    expect(classifyConnectorTool("toString", {}, "gmail")).toBe("write");
   });
 
   it("lets a read-only hint seed a tool we do not know", () => {
@@ -72,9 +84,6 @@ describe("classifyConnectorTool", () => {
         "notion-update-data-source",
         "notion-update-page",
         "notion-update-view",
-        "create_draft",
-        "modify_thread_labels",
-        "trash_thread",
       ].sort(),
     );
   });

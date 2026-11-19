@@ -203,6 +203,29 @@ describe("googleAccessToken", () => {
     expect(await t.p.hasTokens()).toBe(false);
   });
 
+  it("keeps the sign-in when Google refuses the client rather than the grant", async () => {
+    const t = await signedIn({ refresh_token: "rt", expires_at: NOW - 1 });
+    const g = fakeGoogle({}, () => ({ status: 401, json: { error: "invalid_client" } }));
+    const err = await googleAccessToken(t.p, g.fetch, { now: () => NOW }).catch((e) => e);
+    expect(err).not.toBeInstanceOf(SignInRequiredError);
+    expect(String(err)).toMatch(/invalid_client/);
+    expect(await t.p.hasTokens()).toBe(true);
+  });
+
+  it("leaves a sign-in that replaced the refused grant meanwhile", async () => {
+    const t = await signedIn({ refresh_token: "rt", expires_at: NOW - 1 });
+    // While the refresh is in flight, a new sign-in stores another grant.
+    const g = fakeGoogle({}, () => ({ status: 400, json: { error: "invalid_grant" } }));
+    const racing = (async (input: string | URL | Request, init?: RequestInit) => {
+      await t.p.saveTokens({ token_type: "Bearer", access_token: "new", refresh_token: "rt2" });
+      return g.fetch(input, init);
+    }) as typeof fetch;
+    await expect(googleAccessToken(t.p, racing, { now: () => NOW })).rejects.toBeInstanceOf(
+      SignInRequiredError,
+    );
+    expect(await t.p.tokens()).toMatchObject({ refresh_token: "rt2" });
+  });
+
   it("keeps the sign-in through a passing failure at Google", async () => {
     const t = await signedIn({ refresh_token: "rt", expires_at: NOW - 1 });
     const g = fakeGoogle({}, () => ({ status: 503, json: {} }));
@@ -293,6 +316,39 @@ describe("GmailApi", () => {
     const read = await t.gmail.getThread("t1");
     expect(read.messages[0]).toMatchObject({ subject: "Friday", body: "Can we meet on Friday?" });
     expect(t.seen[0]?.url.searchParams.get("format")).toBe("full");
+  });
+
+  it("loads a text body Gmail sent as an attachment id, and never a real attachment", async () => {
+    const t = api({
+      "GET threads/t9": () => ({
+        json: {
+          id: "t9",
+          messages: [
+            {
+              id: "m1",
+              payload: {
+                mimeType: "multipart/mixed",
+                parts: [
+                  { mimeType: "text/plain", body: { attachmentId: "big", size: 900_000 } },
+                  { mimeType: "image/png", body: { attachmentId: "img" } },
+                  { mimeType: "text/plain", filename: "a.txt", body: { attachmentId: "file" } },
+                ],
+              },
+            },
+          ],
+        },
+      }),
+      "GET messages/m1/attachments/big": () => ({
+        json: { data: toBase64Url(new TextEncoder().encode("The long body.")) },
+      }),
+    });
+    const read = await t.gmail.getThread("t9");
+    expect(read.messages[0]?.body).toBe("The long body.");
+    expect(read.messages[0]?.attachments).toEqual(["a.txt"]);
+    expect(t.seen.map((s) => s.url.pathname.split("/users/me/")[1])).toEqual([
+      "threads/t9",
+      "messages/m1/attachments/big",
+    ]);
   });
 
   it("drafts a reply inside the thread, with its subject and threading headers; nothing is sent", async () => {
@@ -502,6 +558,36 @@ describe("migrateLegacyGmailConnector", () => {
     }
     // Once only.
     expect(await migrateLegacyGmailConnector({ home: s.home, secrets })).toBe(false);
+  });
+
+  it("finishes on a later start a keychain cleanup that failed after station.json moved", async () => {
+    const s = station({ id: "gmail", name: "Gmail", transport: { type: "http", url: MCP } });
+    const store = new MemorySecretStore();
+    await store.set(key("own", MCP), JSON.stringify({ clientId: "cid" }));
+    await store.set(key("tokens", MCP), JSON.stringify({ access_token: "mcp" }));
+    // The keychain refuses deletes on the first start.
+    let failing = true;
+    const flaky = {
+      get: (n: string) => store.get(n),
+      set: (n: string, v: string) => store.set(n, v),
+      delete: async (n: string) => {
+        if (failing) throw new Error("keychain locked");
+        await store.delete(n);
+      },
+    };
+    await expect(migrateLegacyGmailConnector({ home: s.home, secrets: flaky })).rejects.toThrow(
+      /locked/,
+    );
+    // station.json moved and the OAuth app was copied before the failure.
+    expect(s.read().connectors.find((c: { id: string }) => c.id === "gmail")).toEqual(GMAIL_PRESET);
+    expect(await store.get(key("own"))).toBe(JSON.stringify({ clientId: "cid" }));
+
+    failing = false;
+    expect(await migrateLegacyGmailConnector({ home: s.home, secrets: flaky })).toBe(false);
+    for (const kind of ["own", "tokens", "client"] as const) {
+      expect(await store.get(key(kind, MCP))).toBeUndefined();
+    }
+    expect(await store.get(key("own"))).toBe(JSON.stringify({ clientId: "cid" }));
   });
 
   it("leaves a station without one untouched", async () => {

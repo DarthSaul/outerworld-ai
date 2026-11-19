@@ -241,4 +241,54 @@ describe("htmlToText", () => {
   it("leaves unknown entities and drops tags", () => {
     expect(htmlToText("a &bogus; <i>b</i><br>c")).toBe("a &bogus; b\nc");
   });
+
+  it("leaves names inherited from Object.prototype as they are", () => {
+    expect(htmlToText("&constructor; &toString; &amp;")).toBe("&constructor; &toString; &");
+  });
+});
+
+describe("messageText by MIME structure", () => {
+  const text = (mimeType: string, s: string, filename?: string) => ({
+    mimeType,
+    body: { data: b64url(s) },
+    ...(filename ? { filename } : {}),
+  });
+
+  it("joins the sections of multipart/mixed, each alternative read on its own", () => {
+    const payload = {
+      mimeType: "multipart/mixed",
+      parts: [
+        {
+          mimeType: "multipart/alternative",
+          parts: [text("text/plain", "First part."), text("text/html", "<p>First part.</p>")],
+        },
+        // An HTML-only section is still read, though another section has plain text.
+        text("text/html", "<p>Forwarded <b>note</b></p>"),
+        text("text/plain", "not this", "notes.txt"),
+      ],
+    };
+    expect(readMessage({ id: "x", payload }).body).toBe("First part.\n\nForwarded note");
+  });
+
+  it("falls back to the HTML of an alternative whose plain text is empty", () => {
+    const payload = {
+      mimeType: "multipart/alternative",
+      parts: [text("text/plain", "  "), text("text/html", "<div>Only here</div>")],
+    };
+    expect(readMessage({ id: "x", payload }).body).toBe("Only here");
+  });
+
+  it("reads an alternative nested inside multipart/related", () => {
+    const payload = {
+      mimeType: "multipart/related",
+      parts: [
+        {
+          mimeType: "multipart/alternative",
+          parts: [text("text/plain", "Inline"), text("text/html", "<p>Inline</p>")],
+        },
+        { mimeType: "image/png", body: { attachmentId: "img" } },
+      ],
+    };
+    expect(readMessage({ id: "x", payload }).body).toBe("Inline");
+  });
 });

@@ -31,14 +31,22 @@ export const KNOWN_TOOL_CLASSES: Readonly<Record<string, ToolClass>> = {
   "notion-create-comment": "write",
   "notion-create-file-upload": "write",
   "notion-create-attachment": "write",
-  // The station's own Gmail service over the Gmail REST API (ADR-0022). Drafting, labeling, and
-  // trashing change the mailbox; nothing sends.
-  search_threads: "read",
-  get_thread: "read",
-  list_labels: "read",
-  create_draft: "write",
-  modify_thread_labels: "write",
-  trash_thread: "write",
+};
+
+/**
+ * The station's own services' tools, by service (ADR-0022). Their names are generic, so they
+ * apply only to that service: another server's `get_thread` is classified from its annotations.
+ * Gmail: drafting, labeling, and trashing change the mailbox; nothing sends.
+ */
+export const BUILTIN_TOOL_CLASSES: Readonly<Record<string, Readonly<Record<string, ToolClass>>>> = {
+  gmail: {
+    search_threads: "read",
+    get_thread: "read",
+    list_labels: "read",
+    create_draft: "write",
+    modify_thread_labels: "write",
+    trash_thread: "write",
+  },
 };
 
 /** The subset of MCP tool annotations classification looks at. They are hints, never trusted alone. */
@@ -47,12 +55,26 @@ export interface ToolHints {
   readonly destructiveHint?: boolean | undefined;
 }
 
+const lookup = (map: Readonly<Record<string, ToolClass>> | undefined, tool: string) =>
+  map && Object.hasOwn(map, tool) ? map[tool] : undefined;
+
 /**
- * Read or write for a connector tool: our map wins; for a tool we do not know, a read-only hint
- * (without a destructive one) seeds `read`; anything else is `write`, so it asks under Ask first.
+ * Read or write for a connector tool: our map wins (for a builtin `service`, that service's map
+ * instead); for a tool we do not know, a read-only hint (without a destructive one) seeds `read`;
+ * anything else is `write`, so it asks under Ask first.
  */
-export function classifyConnectorTool(tool: string, hints: ToolHints = {}): ToolClass {
-  const known = Object.hasOwn(KNOWN_TOOL_CLASSES, tool) ? KNOWN_TOOL_CLASSES[tool] : undefined;
+export function classifyConnectorTool(
+  tool: string,
+  hints: ToolHints = {},
+  service?: string,
+): ToolClass {
+  const map =
+    service === undefined
+      ? KNOWN_TOOL_CLASSES
+      : Object.hasOwn(BUILTIN_TOOL_CLASSES, service)
+        ? BUILTIN_TOOL_CLASSES[service]
+        : undefined;
+  const known = lookup(map, tool);
   if (known) return known;
   return hints.readOnlyHint === true && hints.destructiveHint !== true ? "read" : "write";
 }

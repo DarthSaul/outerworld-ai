@@ -236,6 +236,7 @@ export {
 // Connector tool classification and presets (ADR-0012)
 export {
   AVAILABLE_PRESET_IDS,
+  BUILTIN_TOOL_CLASSES,
   CONNECTOR_PRESET_IDS,
   CONNECTOR_PRESETS,
   type ConnectorPresetId,

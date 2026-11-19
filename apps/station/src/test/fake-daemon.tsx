@@ -487,6 +487,10 @@ export function fakeApi() {
         return undefined;
       }
       if (method === "PATCH") {
+        // As the daemon: the station's own services have no server URL to change.
+        if (b.url !== undefined && c.service !== undefined) {
+          throw new ApiError(409, `${c.name} is not reached through a server URL`);
+        }
         connectors[i] = { ...c, url: String(b.url) };
         return connectors[i];
       }

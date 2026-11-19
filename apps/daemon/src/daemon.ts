@@ -129,9 +129,14 @@ export async function startDaemon(
   });
 
   // Before anything else can write station.json: a Gmail MCP connector from before ADR-0022
-  // moves onto the Gmail API service, keeping its id, grants, and OAuth app.
-  if (await migrateLegacyGmailConnector({ home: config.home, secrets, events })) {
-    log("moved the gmail connector from Gmail MCP to the Gmail API (ADR-0022); sign in again");
+  // moves onto the Gmail API service, keeping its id, grants, and OAuth app. A failure (a locked
+  // keychain, an unwritable station.json) never stops the daemon: it runs again next start.
+  try {
+    if (await migrateLegacyGmailConnector({ home: config.home, secrets, events })) {
+      log("moved the gmail connector from Gmail MCP to the Gmail API (ADR-0022); sign in again");
+    }
+  } catch (error) {
+    warn(`gmail connector migration deferred to the next start: ${String(error)}`);
   }
   const loaded = await loadStationDir(config.home);
   for (const issue of loaded.issues) warn(`${issue.level}: ${issue.path}: ${issue.message}`);

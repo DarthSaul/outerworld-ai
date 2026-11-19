@@ -44,7 +44,8 @@ checked on 2026-11-18 through the Google developer knowledge server:
     `format=metadata`), `get_thread` (text bodies, HTML made readable, 8000 characters per
     message), and `list_labels`.
   - Write: `create_draft`, `modify_thread_labels`, and `trash_thread`. These classes are listed in
-    core's `KNOWN_TOOL_CLASSES`, which is authoritative.
+    core's `BUILTIN_TOOL_CLASSES.gmail`, which is authoritative. It applies to the Gmail service
+    only: another server's `get_thread` is classed from its own annotations.
   - `create_draft` with a `threadId` replies inside the thread. It takes the subject (`Re:` once)
     and `In-Reply-To`/`References` from the last message, which is what Gmail requires to thread
     a message.

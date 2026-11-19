@@ -7,7 +7,7 @@ import { SignInRequiredError } from "./google-oauth.js";
  * The Gmail service's tools as an MCP server that runs in memory inside the daemon (ADR-0022):
  * no port and no process, only an adapter so the connector pipeline (grants, classes, consent,
  * status, sign-in) treats Gmail like any other connector. Each tool makes plain HTTPS calls to
- * the Gmail API. The annotations match core's `KNOWN_TOOL_CLASSES`, which stay authoritative.
+ * the Gmail API. The annotations match core's `BUILTIN_TOOL_CLASSES.gmail`, which stays authoritative.
  */
 export function createGmailServer(
   api: GmailApi,
@@ -23,7 +23,9 @@ export function createGmailServer(
       const value = await work();
       return { content: [{ type: "text" as const, text: JSON.stringify(value, null, 2) }] };
     } catch (error) {
-      if (error instanceof SignInRequiredError) await options.onSignInRequired?.();
+      // Only a refusal nobody has handled yet: the token code drops a refused grant itself, and
+      // leaves a grant that replaced it alone.
+      if (error instanceof SignInRequiredError && error.drop) await options.onSignInRequired?.();
       const text = error instanceof Error ? error.message : String(error);
       return { content: [{ type: "text" as const, text }], isError: true };
     }

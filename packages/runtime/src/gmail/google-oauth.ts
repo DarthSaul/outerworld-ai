@@ -23,12 +23,19 @@ type GoogleTokens = StoredOAuthTokens & { expires_at?: number };
 
 /**
  * The sign-in was refused or is missing: Google will not give a token without the Commander.
- * The stored tokens are gone by the time this is thrown.
+ * `drop` says whether whoever catches it should still delete the stored tokens; it is false when
+ * they are already gone, or when another call has since replaced the refused grant.
  */
 export class SignInRequiredError extends Error {
-  constructor(message = "the Gmail sign-in is missing or was refused; sign in again") {
+  readonly drop: boolean;
+
+  constructor(
+    message = "the Gmail sign-in is missing or was refused; sign in again",
+    options: { drop?: boolean } = {},
+  ) {
     super(message);
     this.name = "SignInRequiredError";
+    this.drop = options.drop ?? false;
   }
 }
 
@@ -112,10 +119,11 @@ export async function finishGoogleSignIn(
 
 /**
  * A current access token: the stored one while it has a minute left, else a refreshed one
- * (Google keeps the refresh token, so the old one is kept). A refusal (`invalid_grant`:
- * revoked, expired after Testing's seven days, password changed) deletes the stored tokens and
- * throws `SignInRequiredError`. `force` refreshes even a token that looks current, after Gmail
- * refused it.
+ * (Google keeps the refresh token, so the old one is kept). A refused grant (`invalid_grant`:
+ * revoked, expired after Testing's seven days, password changed) deletes the stored tokens,
+ * unless another call has replaced them meanwhile, and throws `SignInRequiredError`. Any other
+ * refusal (`invalid_client`, a 5xx) keeps the sign-in and throws a plain error. `force` refreshes
+ * even a token that looks current, after Gmail refused it.
  */
 export async function googleAccessToken(
   provider: KeychainOAuthProvider,
@@ -138,9 +146,15 @@ export async function googleAccessToken(
     fetchFn,
   );
   if (!got.ok) {
-    // A refused grant needs the Commander; anything else (a 5xx, a network hiccup) may pass.
-    if (got.error === "invalid_grant" || got.status === 401) {
-      await provider.invalidateCredentials("tokens");
+    // Only a refused grant needs the Commander to sign in again. A refused client (wrong secret)
+    // or a passing failure keeps the sign-in: deleting it would not help.
+    if (got.error === "invalid_grant") {
+      // Another call may have renewed or replaced the sign-in meanwhile: delete only the grant
+      // that was refused, never its replacement.
+      const stored = (await provider.tokens()) as GoogleTokens | undefined;
+      if (stored?.refresh_token === tokens.refresh_token) {
+        await provider.invalidateCredentials("tokens");
+      }
       throw new SignInRequiredError();
     }
     throw new Error(`Google could not renew the Gmail sign-in (${got.error})`);
