@@ -205,12 +205,17 @@ decisions made, open questions.
   - Index plus `skill_view`, a 12k-character budget, capability gating, and a byte-identical
     empty case are in; task-only injection is not (it would churn the cached prefix).
   - Web research recipes work from sources the agent can name with `web_fetch` (owner's choice;
-    no search tool). The 18 shell skills, plus 2 browser skills and 1 image skill, load and show
+    no search tool). The 18 shell skills, plus 3 browser skills and 1 image skill, load and show
     as unavailable, never offered (owner's choice for the shell ones).
   - StarNet's notebook mapped to workspace files for logs and to `remember` only for lasting
     preferences, since `remember` asks the Commander to approve each proposal.
-  - `skill_view` answers from the agent's config at call time and refuses any skill not offered
-    to it now. A skill the budget left out of the index is still offered, so still viewable.
+  - `skill_view` answers only for skills the calling run listed at setup that are still offered
+    now. A skill the budget left out of the index is still offered, so still viewable.
+  - After review (PR #13): `web_fetch` reads Atom and RSS; arXiv full text comes from its HTML
+    version, and PDF extraction is deferred (owner's choice). `files` needs all three file tools.
+  - Found along the way: the SPA offered setup over a station.json that did not load. The
+    station view now reports `stationFile` (`present`, `missing`, or `unknown` when the folder
+    cannot be checked), and onboarding runs only for `missing`.
 
 ## Phase 0 — Housekeeping and decisions
 

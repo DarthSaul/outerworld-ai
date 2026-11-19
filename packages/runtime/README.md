@@ -30,8 +30,8 @@ imported by core, ui, or the SPA.
 | Export | Description |
 |--------|-------------|
 | `loadSkillLibrary(dir)` → `{ skills, issues }`, `BUNDLED_SKILLS_DIR` | Parses every `.md` skill in a folder; skips a malformed, oversized, misnamed, or symlinked file with an issue. Never throws; a missing folder is an empty library. The bundled library is `skills/library/` in this package, with its `LICENSE` and `NOTICE.md`. |
-| `createSkillViewTool({ home, skills })` | `skill_view` (read): returns `{ id, name, body }` for a skill offered to the calling agent, recomputed from config at call time; refuses any other. |
-| `RunService({ …, skills? })` | Each run gates the library on the tools it can call, adds `skill_view` when a skill is offered, and puts an index (with `skill_view`) or the bodies (without) in the prompt. Without `skills`, prompts are unchanged. |
+| `createSkillViewTool({ home, skills })` | `skill_view` (read): returns `{ id, name, body }` for a skill the calling run listed at setup (the `skills` ids in the tool context) that is still offered to the agent now, recomputed from config; refuses any other. |
+| `RunService({ …, skills? })` | Each run gates the library on the tools it can call, adds `skill_view` when a skill is offered, and puts an index (with `skill_view`) or the bodies (without) in the prompt, and passes the offered ids to every tool call as `skills`. Without `skills`, prompts are unchanged. |
 
 ### Sessions and session titles (ADR-0014)
 | Export | Description |

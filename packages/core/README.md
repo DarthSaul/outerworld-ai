@@ -46,7 +46,7 @@ from the zod source (regenerate with `pnpm build && node scripts/write-schemas.m
 | `capabilitiesOf(tools)`, `missingRequirements(skill, caps)` | What a run's tools let it do (web ← `web_fetch`, files ← the file tools, memory ← `remember`, dispatch ← `dispatch`), and what a skill needs beyond that. |
 | `selectSkills({ skills, overrides, agentSkills, tools })` → `{ offered, unavailable }`, `skillsForAgent(agent, station, skills)` | Enabled (station-wide ∪ the agent's own) and gated on tools; offered in priority order, the agent's own first. `skillsForAgent` derives the tools from config. |
 | `withSkillTool(tools, offeredCount)`, `SKILL_VIEW_TOOL` | The effective tools plus `skill_view` (read, source `skill`) when a skill is offered. |
-| `skillsSection(skills)`, `PromptSkills`, `PromptSkill`, `SKILLS_CHAR_BUDGET` | The `# Installed skills` prompt section: an index pointing at `skill_view`, or inline bodies; whole entries within 12,000 characters, the rest counted; nothing at all when no skill is offered. `assemblePrompt` takes it as `skills`. |
+| `skillsSection(skills)`, `PromptSkills`, `PromptSkill`, `SKILLS_CHAR_BUDGET` | The `# Installed skills` prompt section: an index pointing at `skill_view`, or inline bodies; whole entries within 12,000 characters (the omitted-count note included), the rest counted; nothing at all when no skill is offered or none fits. `assemblePrompt` takes it as `skills`. |
 | `skillCatalog(skills, station, agents)`, `agentSkillsView(selection)`, `SkillListItem`, `AgentSkillsView`, `SkillRef`, `UpdateSkillInput` | The catalog and a crew member's view, never with bodies; the `PUT /api/skills/:id` body. |
 
 ### Server-sent events

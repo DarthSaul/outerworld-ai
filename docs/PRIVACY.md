@@ -41,7 +41,9 @@ agent you created:
 1. **Model calls to Anthropic** (`api.anthropic.com`) **or OpenRouter** (`openrouter.ai`): the
    assembled prompt (the agent's documents, its role briefing, the index of its installed skills,
    approved memories, recent session history, and the new input), tool definitions, and tool
-   results, including any skill recipe the agent reads with `skill_view` (ADR-0023). With an Anthropic key, Claude
+   results, including any skill recipe the agent reads with `skill_view` (ADR-0023). A run
+   that offers skills but cannot call `skill_view` gets their full recipes in the prompt
+   instead of the index. With an Anthropic key, Claude
    models go straight to Anthropic; every other model, and Claude when there is only an OpenRouter
    key, goes to OpenRouter, which forwards to the model provider you picked (ADR-0015). One extra
    call checks a key when you save it (OpenRouter's key endpoint; Anthropic's model list, which
