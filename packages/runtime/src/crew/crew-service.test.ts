@@ -1,4 +1,4 @@
-import { cpSync, existsSync, mkdtempSync, readFileSync } from "node:fs";
+import { cpSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -483,6 +483,29 @@ describe("CrewService: onboarding and templates", () => {
     await expect(crew.onboard({ overseerName: "Again", tone: "calm" })).rejects.toBeInstanceOf(
       ConflictError,
     );
+  });
+
+  it("never sets up over a station.json that is there but does not load", async () => {
+    const { crew, home, types } = setup();
+    const path = stationPaths(home).stationJson;
+    // A connector transport a newer build knows and this one does not.
+    const station = JSON.parse(readFileSync(path, "utf8"));
+    station.connectors.push({ id: "mail", name: "Mail", transport: { type: "builtin" } });
+    const written = JSON.stringify(station);
+    writeFileSync(path, written);
+
+    const view = await crew.view();
+    expect(view.station).toBeUndefined();
+    expect(view.stationExists).toBe(true);
+    const refused = crew.onboard({ overseerName: "Again", tone: "calm" });
+    await expect(refused).rejects.toBeInstanceOf(ConflictError);
+    await expect(refused).rejects.toMatchObject({
+      issues: [
+        expect.objectContaining({ path: expect.stringMatching(/^station\.json\.connectors/) }),
+      ],
+    });
+    expect(readFileSync(path, "utf8")).toBe(written);
+    expect(types()).toEqual([]);
   });
 
   it("adds a Project Manager with Operations, a hallway, Notion, and a disabled briefing", async () => {

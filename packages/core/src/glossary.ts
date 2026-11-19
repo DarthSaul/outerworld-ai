@@ -207,6 +207,12 @@ export const glossary = {
   "runState.interrupted": "interrupted: the daemon stopped mid-run",
   "runState.blocked_budget": "stopped by a budget",
   "onboarding.title": "Set up your station",
+  "stationBroken.title": "Your station needs repair",
+  "stationBroken.body":
+    "station.json is in your station folder, but this version cannot read it. A newer build may have written a field this one does not know, or an edit went wrong.",
+  "stationBroken.safe":
+    "Setup is turned off so nothing replaces your file. Fix station.json, or run the build that wrote it, then check again.",
+  "stationBroken.retry": "Check again",
   "onboarding.key.title": "1. Your model key",
   "onboarding.key.body":
     "Crew members call models with your own key: an Anthropic key runs Claude directly, an OpenRouter key runs any listed model. It goes into your OS keychain and is never shown again.",

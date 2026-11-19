@@ -133,6 +133,7 @@ export class CrewService {
     const loaded = await loadStationDir(this.#home);
     return {
       ...(loaded.station ? { station: loaded.station } : {}),
+      stationExists: loaded.stationExists,
       agents: loaded.agents.map((a) => ({ id: a.id, config: a.config })),
       issues: loaded.issues,
     };
@@ -311,6 +312,14 @@ export class CrewService {
     return this.#serial(async () => {
       const loaded = await loadStationDir(this.#home);
       if (loaded.station) throw new ConflictError("this station is already set up");
+      // A station.json that does not load (a newer build's field, a hand edit) is still the
+      // Commander's station: setting up again would replace it. They fix the file instead.
+      if (loaded.stationExists) {
+        throw new ConflictError(
+          "station.json is there but does not load; fix it rather than set up again",
+          loaded.issues.filter((i) => i.path.startsWith("station.json")),
+        );
+      }
       const station: StationConfig = {
         schemaVersion: 1,
         name: input.stationName ?? "My Station",

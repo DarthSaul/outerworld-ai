@@ -40,6 +40,11 @@ export interface LoadedAgent {
 export interface LoadedStation {
   /** Undefined when station.json is missing or invalid; `issues` says why. */
   readonly station?: StationConfig;
+  /**
+   * Whether station.json is on disk at all, valid or not. A station whose file is there but
+   * unreadable is not a new station: it must never be set up (and so overwritten) again.
+   */
+  readonly stationExists: boolean;
   /** Valid agents only; an invalid agent is skipped with an issue so one bad file blocks nothing. */
   readonly agents: readonly LoadedAgent[];
   readonly issues: readonly Issue[];
@@ -168,7 +173,11 @@ export async function loadStationDir(home: string): Promise<LoadedStation> {
   }
 
   if (station) issues.push(...stationCrewIssues(station, agents));
-  return { ...(station ? { station } : {}), agents, issues };
+  const stationExists = await lstat(paths.stationJson).then(
+    () => true,
+    () => false,
+  );
+  return { ...(station ? { station } : {}), stationExists, agents, issues };
 }
 
 const assertValid = (issues: readonly Issue[], what: string) => {

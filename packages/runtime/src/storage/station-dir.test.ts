@@ -86,13 +86,16 @@ describe("station directory", () => {
   it("reports a missing station.json as an error, not a throw", async () => {
     const loaded = await loadStationDir(home());
     expect(loaded.station).toBeUndefined();
+    expect(loaded.stationExists).toBe(false);
     expect(loaded.issues[0]).toMatchObject({ level: "error", path: "station.json" });
   });
 
-  it("reports unreadable JSON with the file path", async () => {
+  it("reports unreadable JSON with the file path, and that the file is there", async () => {
     const h = home();
     writeFileSync(join(h, "station.json"), "{ nope");
     const loaded = await loadStationDir(h);
+    expect(loaded.station).toBeUndefined();
+    expect(loaded.stationExists).toBe(true);
     expect(loaded.issues[0]).toMatchObject({ level: "error", path: "station.json" });
   });
 

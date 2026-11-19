@@ -9,6 +9,7 @@ import {
   type ConnectorPresetId,
   type CrewActivityEntry,
   DEFAULT_MODEL,
+  type Issue,
   isPresetAvailable,
   type Notification,
   needsOwnClient,
@@ -125,6 +126,8 @@ export function fakeApi() {
   const state = {
     /** True for a station with no station.json yet (onboarding). */
     fresh: false,
+    /** A station.json that is on disk but does not load: the issues the daemon reports. */
+    broken: undefined as Issue[] | undefined,
     station: station(),
     agents: new Map<string, { config: AgentConfig; documents: Record<AgentDocumentName, string> }>([
       [
@@ -206,19 +209,28 @@ export function fakeApi() {
     const parts = path.split("/").filter(Boolean);
     const b = (body ?? {}) as Record<string, unknown>;
     if (method === "GET" && path === "/station") {
-      const v: StationView = state.fresh
+      const v: StationView = state.broken
         ? {
-            agents: [],
-            issues: [{ level: "error", path: "station.json", message: "missing" }],
-          }
-        : {
-            station: state.station,
+            stationExists: true,
             agents: [...state.agents].map(([id, a]) => ({ id, config: a.config })),
-            issues: [],
-          };
+            issues: state.broken,
+          }
+        : state.fresh
+          ? {
+              stationExists: false,
+              agents: [],
+              issues: [{ level: "error", path: "station.json", message: "missing" }],
+            }
+          : {
+              station: state.station,
+              stationExists: true,
+              agents: [...state.agents].map(([id, a]) => ({ id, config: a.config })),
+              issues: [],
+            };
       return v;
     }
     if (path === "/onboarding") {
+      if (state.broken) throw new ApiError(409, "station.json is there but does not load");
       if (!state.fresh) throw new ApiError(409, "this station is already set up");
       state.fresh = false;
       const id = slugify(String(b.overseerName), [...state.agents.keys()]);

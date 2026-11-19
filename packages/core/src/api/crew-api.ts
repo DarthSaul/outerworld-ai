@@ -137,6 +137,11 @@ export type UpdateRoomInput = z.infer<typeof UpdateRoomInput>;
 /** `GET /api/station`: the station config, its crew, and every issue found loading them. */
 export interface StationView {
   readonly station?: StationConfig;
+  /**
+   * station.json is on disk, valid or not. With no `station`, true means the file does not load
+   * (`issues` says why) and the station must be repaired, never set up again.
+   */
+  readonly stationExists: boolean;
   readonly agents: readonly { readonly id: string; readonly config: AgentConfig }[];
   readonly issues: readonly Issue[];
 }
