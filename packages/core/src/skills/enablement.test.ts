@@ -77,6 +77,12 @@ describe("capability gating", () => {
     expect(capabilitiesOf([dispatch]).has("dispatch")).toBe(true);
   });
 
+  it("meets files only with all three file tools", () => {
+    const two = [prop("read_file", "files"), prop("list_files", "files")];
+    expect(capabilitiesOf(two).has("files")).toBe(false);
+    expect(capabilitiesOf([...two, prop("write_file", "files")]).has("files")).toBe(true);
+  });
+
   it("never meets shell, media, browser, or an unknown requirement in v1", () => {
     const caps = capabilitiesOf(allProps);
     expect(

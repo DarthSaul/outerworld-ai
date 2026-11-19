@@ -259,10 +259,24 @@ describe("assemblePrompt: installed skills", () => {
   });
 
   it("never lets a later, shorter entry jump ahead of one that did not fit", () => {
-    const entries = [skill("big", "x".repeat(2_000)), skill("small", "y")];
+    const entries = [skill("first"), skill("big", "x".repeat(2_000)), skill("small", "y")];
     const text = skillsSection({ entries, mode: "inline", charBudget: 1_000 }) ?? "";
+    expect(text).toContain("## FIRST (id: first)");
     expect(text).not.toContain("SMALL");
     expect(text.endsWith("(2 more skills not listed.)")).toBe(true);
+  });
+
+  it("fits exactly one index entry in a small budget, and gives no section below that", () => {
+    const entries = [skill("a"), skill("b")];
+    const head = `# Installed skills\n\n${skillsSection({ entries: [skill("a")], mode: "index" })?.split("\n\n")[1]}`;
+    const line = "- A (id: a): When a is asked for.";
+    const note = "\n\n(1 more skill not listed.)";
+    const exact = head.length + 2 + line.length + note.length;
+    const one = skillsSection({ entries, mode: "index", charBudget: exact });
+    expect(one).toBe(`${head}\n\n${line}${note}`);
+    expect(one?.length).toBe(exact);
+    expect(skillsSection({ entries, mode: "index", charBudget: exact - 1 })).toBeUndefined();
+    expect(skillsSection({ entries, mode: "index", charBudget: 10 })).toBeUndefined();
   });
 
   it("caps the index at the default 12k budget, and counts one skill in the singular", () => {

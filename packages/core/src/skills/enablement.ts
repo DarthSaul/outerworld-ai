@@ -51,12 +51,12 @@ export function withSkillOverride(
 
 const TOOL_CAPABILITY: Readonly<Record<string, Requirement>> = {
   web_fetch: "web",
-  read_file: "files",
-  list_files: "files",
-  write_file: "files",
   remember: "memory",
   dispatch: "dispatch",
 };
+
+/** Recipes needing files read, list, and write: `files` is met only with all three. */
+const FILES_TOOLS = ["read_file", "list_files", "write_file"] as const;
 
 /** What a run's effective tools let it do, in requirement terms. */
 export function capabilitiesOf(tools: readonly EffectiveTool[]): Set<Requirement> {
@@ -65,6 +65,8 @@ export function capabilitiesOf(tools: readonly EffectiveTool[]): Set<Requirement
     const cap = TOOL_CAPABILITY[t.name];
     if (cap) caps.add(cap);
   }
+  const names = new Set(tools.map((t) => t.name));
+  if (FILES_TOOLS.every((n) => names.has(n))) caps.add("files");
   return caps;
 }
 

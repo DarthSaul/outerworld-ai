@@ -76,6 +76,15 @@ describe("parseSkillFile", () => {
     expect(issues[0]?.message).toMatch(/does not match the file name "other"/);
   });
 
+  it("ends frontmatter only at a whole --- line", () => {
+    const text = "---\nname: A\nslug: a\ndescription: d\ncategory: c\n---not-a-delimiter\nbody";
+    const { skill, issues } = parseSkillFile("a.md", text);
+    expect(skill).toBeUndefined();
+    expect(issues[0]?.message).toMatch(/no frontmatter/);
+    const noFinalNewline = "---\nname: A\nslug: a\ndescription: d\ncategory: c\n---\nBody.";
+    expect(parseSkillFile("a.md", noFinalNewline).skill?.body).toBe("Body.");
+  });
+
   it("rejects a skill with no body", () => {
     const text = "---\nname: A\nslug: a\ndescription: d\ncategory: c\n---\n";
     expect(parseSkillFile("a.md", text).issues[0]?.message).toMatch(/no body/);

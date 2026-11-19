@@ -97,7 +97,8 @@ export function parseSkillFile(fileName: string, text: string): ParsedSkill {
     message,
   });
   const normalized = text.replace(/^﻿/, "").replace(/\r\n/g, "\n");
-  const m = /^---\n([\s\S]*?)\n---\n?([\s\S]*)$/.exec(normalized);
+  // The closing --- must be a whole line: "---not-a-delimiter" is frontmatter text, not the end.
+  const m = /^---\n([\s\S]*?)\n---(?:\n|$)([\s\S]*)$/.exec(normalized);
   if (!m) return { issues: [issue("no frontmatter between --- lines")] };
   const fields = parseFrontmatter(m[1] as string);
   if (typeof fields === "string") return { issues: [issue(`malformed frontmatter: ${fields}`)] };

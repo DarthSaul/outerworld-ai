@@ -101,38 +101,36 @@ const SKILLS_INTRO = {
     "These are recipes the Commander installed on this station. When a task matches one, follow that recipe instead of improvising.",
 } as const;
 
+const omittedNote = (n: number) =>
+  n ? `\n\n(${n} more ${n === 1 ? "skill" : "skills"} not listed.)` : "";
+
 /**
  * The `# Installed skills` section, or nothing when no skill is offered (so the prompt is
- * byte-identical to one without skills). Entries are kept in order until the budget runs out;
- * later ones are counted, never cut mid-entry.
+ * byte-identical to one without skills). Entries are kept in order while the whole section,
+ * omitted note included, fits the budget; later ones are counted, never cut mid-entry. A budget
+ * too small for even one entry gives no section at all.
  */
 export function skillsSection(skills: PromptSkills | undefined): string | undefined {
   if (!skills?.entries.length) return undefined;
   const budget = skills.charBudget ?? SKILLS_CHAR_BUDGET;
   const head = `# Installed skills\n\n${SKILLS_INTRO[skills.mode]}`;
-  const parts: string[] = [];
-  let used = head.length;
-  let omitted = 0;
-  for (const s of skills.entries) {
-    const entry =
-      skills.mode === "index"
-        ? `- ${s.name} (id: ${s.id}): ${s.description}`
-        : `## ${s.name} (id: ${s.id})\n\n${s.description}\n\n${s.body.trim()}`;
-    // Reserve room for the omitted note so the whole section stays within budget.
-    const cost = entry.length + 2;
-    if (omitted > 0 || used + cost > budget - 40) {
-      omitted++;
-      continue;
-    }
-    parts.push(entry);
-    used += cost;
-  }
   const sep = skills.mode === "index" ? "\n" : "\n\n";
-  const list = parts.length ? `\n\n${parts.join(sep)}` : "";
-  const note = omitted
-    ? `\n\n(${omitted} more ${omitted === 1 ? "skill" : "skills"} not listed.)`
-    : "";
-  return `${head}${list}${note}`;
+  const entries = skills.entries.map((s) =>
+    skills.mode === "index"
+      ? `- ${s.name} (id: ${s.id}): ${s.description}`
+      : `## ${s.name} (id: ${s.id})\n\n${s.description}\n\n${s.body.trim()}`,
+  );
+  // Each kept entry costs its separator (the first follows the head's blank line).
+  let used = head.length;
+  let kept = 0;
+  for (const [i, entry] of entries.entries()) {
+    const cost = (i === 0 ? 2 : sep.length) + entry.length;
+    if (used + cost + omittedNote(entries.length - i - 1).length > budget) break;
+    used += cost;
+    kept = i + 1;
+  }
+  if (kept === 0) return undefined;
+  return `${head}\n\n${entries.slice(0, kept).join(sep)}${omittedNote(entries.length - kept)}`;
 }
 
 export interface PromptInput {
