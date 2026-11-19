@@ -46,11 +46,11 @@ export const BUILTIN_TOOLS = {
     { name: "write_file", class: "write" },
   ],
   memory: [{ name: "remember", class: "read" }],
-  /** Granted only when at least one skill is offered (`withSkillTool`, ADR-0021). */
+  /** Granted only when at least one skill is offered (`withSkillTool`, ADR-0023). */
   skill: [{ name: "skill_view", class: "read" }],
 } as const satisfies Record<"overseer" | "skill" | PropKind, readonly ToolSpec[]>;
 
-/** Reads one of the agent's offered skills (ADR-0021). */
+/** Reads one of the agent's offered skills (ADR-0023). */
 export const SKILL_VIEW_TOOL = "skill_view";
 
 const PROP_ORDER: readonly PropKind[] = ["web", "files", "memory"];
@@ -116,7 +116,7 @@ export function resolveGrants(
 }
 
 /**
- * `tools` plus `skill_view` when at least one skill is offered (ADR-0021). Separate from
+ * `tools` plus `skill_view` when at least one skill is offered (ADR-0023). Separate from
  * `resolveGrants` because which skills are offered depends on the other tools: base grants →
  * capabilities → offered skills → this.
  */

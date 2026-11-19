@@ -110,7 +110,7 @@ export const glossary = {
     "Services you can connect once for the whole station. Grant each one to crew members on their page.",
   "abilities.installed": "Installed",
   "abilities.discover.none": "Everything on offer is installed.",
-  // Skills (ADR-0021): recipes crew follow instead of improvising.
+  // Skills (ADR-0023): recipes crew follow instead of improvising.
   "abilities.skills": "Skills",
   "abilities.skills.hint":
     "Recipes crew follow instead of improvising. Turn one on here for every crew member, or add it to one crew member on their Config. A skill is only offered to crew who have the tools it needs.",

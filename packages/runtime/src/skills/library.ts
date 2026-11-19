@@ -9,7 +9,7 @@ import {
 } from "@darthsaul/outerworld-ai-core";
 
 /**
- * The bundled skills library (ADR-0021): `packages/runtime/skills/library/*.md`, read-only and
+ * The bundled skills library (ADR-0023): `packages/runtime/skills/library/*.md`, read-only and
  * shipped with the runtime. The same relative path works from `src/` (tests) and `dist/`.
  */
 export const BUNDLED_SKILLS_DIR = fileURLToPath(new URL("../../skills/library", import.meta.url));

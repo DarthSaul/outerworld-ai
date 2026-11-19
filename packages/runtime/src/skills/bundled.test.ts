@@ -2,7 +2,7 @@ import { isRequirement } from "@darthsaul/outerworld-ai-core";
 import { describe, expect, it } from "vitest";
 import { BUNDLED_SKILLS_DIR, loadSkillLibrary } from "./library.js";
 
-/** The library shipped with the runtime (ADR-0021), ported to this station's tools. */
+/** The library shipped with the runtime (ADR-0023), ported to this station's tools. */
 describe("the bundled skills library", () => {
   it("loads all 74 skills with no issues", async () => {
     const { skills, issues } = await loadSkillLibrary(BUNDLED_SKILLS_DIR);

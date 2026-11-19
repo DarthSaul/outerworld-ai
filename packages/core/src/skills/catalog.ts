@@ -13,7 +13,7 @@ import {
 import type { Requirement, Skill } from "./skill.js";
 
 /**
- * What the station shows about skills (ADR-0021): the catalog under Abilities and each crew
+ * What the station shows about skills (ADR-0023): the catalog under Abilities and each crew
  * member's offered and held-back skills. Pure; built from the same selection a run makes.
  */
 

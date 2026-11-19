@@ -4,7 +4,7 @@ import { Hono } from "hono";
 import { jsonApi, readBody } from "./http.js";
 
 /**
- * Skills (ADR-0021): the library with each skill's state, and the Commander's station-wide
+ * Skills (ADR-0023): the library with each skill's state, and the Commander's station-wide
  * on/off. A crew member's own skills change through `PATCH /api/agents/:id` (`skills`).
  */
 export function skillRoutes(crew: CrewService): Hono {

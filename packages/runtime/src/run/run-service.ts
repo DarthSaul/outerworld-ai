@@ -104,7 +104,7 @@ export interface RunServiceOptions {
   /** Approved beliefs to put in each run's prompt (brief §14). */
   readonly beliefs?: (agentId: string) => readonly string[];
   /**
-   * The skills library (ADR-0021). Absent: no skills section, and the prompt is what it was.
+   * The skills library (ADR-0023). Absent: no skills section, and the prompt is what it was.
    * Pair it with a `skill_view` tool in `tools`, or skill bodies are put inline.
    */
   readonly skills?: readonly Skill[];
@@ -702,7 +702,7 @@ export class RunService {
           execute: (input, ctx) => connectors.call(connectorId, name, input, ctx.signal),
         };
       }
-      // Skills (ADR-0021) are gated on the tools this run can actually call; skill_view joins
+      // Skills (ADR-0023) are gated on the tools this run can actually call; skill_view joins
       // only when one is offered. Without skill_view the bodies go inline, so the prompt never
       // points at a tool the agent cannot call.
       const implemented = (t: EffectiveTool) => registry[t.name] !== undefined;

@@ -60,7 +60,7 @@ export const AgentConfig = z.looseObject({
   approvalMode: ApprovalMode.default("ask"),
   /** Connector ids from station.json; granting one grants all of its tools (ADR-0012). */
   connectorGrants: z.array(Id).default([]),
-  /** Skill ids this agent has on top of the station-wide ones; it only adds (ADR-0021). */
+  /** Skill ids this agent has on top of the station-wide ones; it only adds (ADR-0023). */
   skills: z.array(Id).default([]),
   schedules: z.array(Schedule).default([]),
   /** The id of the character this agent appears as, such as `"nova"` (ADR-0013, ADR-0021). */

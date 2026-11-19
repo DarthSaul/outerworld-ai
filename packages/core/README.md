@@ -37,7 +37,7 @@ from the zod source (regenerate with `pnpm build && node scripts/write-schemas.m
 | `DEFAULT_SESSION_TITLE`, `titlePrompt(firstMessage)`, `TITLE_INSTRUCTIONS` | A new session's title, and the short request that asks a model to name it from the first message (cut to 2,000 characters, passed as data). |
 | `cleanTitle(reply)`, `fallbackTitle(message)`, `MAX_TITLE_CHARS` | A model reply as one plain line of at most 60 characters (undefined when nothing usable is left), and the message itself as the title when the model gives none. |
 
-### Skills (ADR-0021)
+### Skills (ADR-0023)
 | Export | Description |
 |--------|-------------|
 | `parseSkillFile(fileName, text)` → `{ skill?, issues }`, `Skill`, `SkillFrontmatter`, `MAX_SKILL_BYTES` | One skill file: strict `key: value` / `key: [a, b]` frontmatter, then the body. Never throws; a malformed file, a slug that is not the file name, or an empty body is `{ issues }` with no skill. An unknown requirement is kept with a warning. |

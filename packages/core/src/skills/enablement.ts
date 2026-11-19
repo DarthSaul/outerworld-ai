@@ -4,7 +4,7 @@ import { type EffectiveTool, resolveGrants } from "../policy/grants.js";
 import { isRequirement, type Requirement, type Skill } from "./skill.js";
 
 /**
- * Which skills a crew member is offered (ADR-0021). A skill is enabled for an agent when it is on
+ * Which skills a crew member is offered (ADR-0023). A skill is enabled for an agent when it is on
  * station-wide (its `default`, unless the Commander overrode it) or the agent's own list names it;
  * an agent's list only adds. An enabled skill is offered only when the run has the tools it needs,
  * so the prompt never points at a recipe the agent cannot follow. Pure.

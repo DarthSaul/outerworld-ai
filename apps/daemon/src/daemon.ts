@@ -102,7 +102,7 @@ export async function startDaemon(
     redirectUrl: (id) => `http://127.0.0.1:${boundPort}/oauth/callback/${encodeURIComponent(id)}`,
   });
   // The bundled skills library is read once: it ships with the runtime and never changes while
-  // running. A bad file is skipped with a warning (ADR-0021).
+  // running. A bad file is skipped with a warning (ADR-0023).
   const library = await loadSkillLibrary(BUNDLED_SKILLS_DIR);
   for (const issue of library.issues)
     warn(`${issue.level}: skills/${issue.path}: ${issue.message}`);

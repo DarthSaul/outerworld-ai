@@ -2,7 +2,7 @@ import { z } from "zod";
 import { Id, type Issue, zodIssues } from "../schema/common.js";
 
 /**
- * A skill (ADR-0021): a Markdown recipe with frontmatter that tells a crew member how to do one
+ * A skill (ADR-0023): a Markdown recipe with frontmatter that tells a crew member how to do one
  * kind of work well. The library is bundled with the runtime and read-only; which skills are on is
  * station config (global overrides) and agent config (per-agent additions).
  */

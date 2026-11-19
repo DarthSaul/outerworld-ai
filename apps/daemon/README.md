@@ -31,7 +31,7 @@ allowed `Origin` and a `Sec-Fetch-Site` other than `cross-site`. Every `/api/*` 
 | `GET /api/events` | SSE: every runtime event as `id: <seq>` + `data: <event JSON>`, replaying after `Last-Event-ID`, then live; a `: ping` comment every 15 s while idle. |
 | `GET /api/station` | `StationView`: station config, crew (`{ id, config }`), every load issue, and `stationExists`. No `station` with `stationExists: true` means station.json is there but does not load: the SPA shows the issues instead of setup. |
 | `GET /api/models` | The supported model list from core. |
-| `GET /api/agents/:id` | `AgentView`: config, the four documents, the effective tools (core `resolveGrants`, plus `skill_view` when a skill is offered), and its skills (`{ offered, unavailable }`, ADR-0021). |
+| `GET /api/agents/:id` | `AgentView`: config, the four documents, the effective tools (core `resolveGrants`, plus `skill_view` when a skill is offered), and its skills (`{ offered, unavailable }`, ADR-0023). |
 | `POST /api/agents` | `CreateAgentInput` → 201 `AgentView`; the id comes from the name. |
 | `PATCH /api/agents/:id` | `UpdateAgentInput` (strict) → `AgentView`. `skills` sets the crew member's own skills. |
 | `GET /api/skills` | `SkillListItem[]`: the bundled library by category, each with its default, the Commander's override, whether it is on for all crew, who added it, who it is offered to, and what no one has (`missing`). Never the bodies. |

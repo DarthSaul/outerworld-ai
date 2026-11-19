@@ -34,7 +34,7 @@ export const UpdateAgentInput = z.strictObject({
   model: z.string().min(1).optional(),
   approvalMode: ApprovalMode.optional(),
   connectorGrants: z.array(Id).optional(),
-  /** The crew member's own skills, on top of the station-wide ones (ADR-0021). */
+  /** The crew member's own skills, on top of the station-wide ones (ADR-0023). */
   skills: z.array(Id).optional(),
   /** Only a character that exists; a stored look may name a deleted one (a warning on load). */
   look: Id.refine((id) => characterById(id) !== undefined, "no such character").optional(),
@@ -152,7 +152,7 @@ export interface AgentView {
   readonly config: AgentConfig;
   readonly documents: Readonly<Record<AgentDocumentName, string>>;
   readonly tools: readonly EffectiveTool[];
-  /** Offered and held-back skills, from the same selection a run makes (ADR-0021). */
+  /** Offered and held-back skills, from the same selection a run makes (ADR-0023). */
   readonly skills: AgentSkillsView;
 }
 

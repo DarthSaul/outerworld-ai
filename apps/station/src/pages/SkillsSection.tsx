@@ -75,7 +75,7 @@ function SkillRow({ skill }: { readonly skill: SkillListItem }) {
 }
 
 /**
- * Abilities › Skills (ADR-0021): the bundled library by category. Each skill turns on or off for
+ * Abilities › Skills (ADR-0023): the bundled library by category. Each skill turns on or off for
  * every crew member here; one crew member gets extra skills on its own Config. A skill that needs
  * a tool no one has says so, and is offered to no one.
  */

@@ -26,7 +26,7 @@ imported by core, ui, or the SPA.
 | `NotFoundError`, `ConflictError` | What the daemon maps to 404 and 409; `ConflictError.issues` says why. |
 | `CrewService({ …, skills? })` | With the skills library: `skills()` → the catalog (core `skillCatalog`), `setSkillOverride(id, enabled \| null)` (writes `station.json`, emits `station.updated`, 404 for an unknown skill), and each `AgentView` carries `skills` and `skill_view` from the same selection a run makes. |
 
-### Skills (ADR-0021)
+### Skills (ADR-0023)
 | Export | Description |
 |--------|-------------|
 | `loadSkillLibrary(dir)` → `{ skills, issues }`, `BUNDLED_SKILLS_DIR` | Parses every `.md` skill in a folder; skips a malformed, oversized, misnamed, or symlinked file with an issue. Never throws; a missing folder is an empty library. The bundled library is `skills/library/` in this package, with its `LICENSE` and `NOTICE.md`. |

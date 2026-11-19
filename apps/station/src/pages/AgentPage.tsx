@@ -557,7 +557,7 @@ function Capabilities({
 }
 
 /**
- * Config's Skills (ADR-0021): every skill in the library, by category, with a box to add it to
+ * Config's Skills (ADR-0023): every skill in the library, by category, with a box to add it to
  * this crew member. Skills on for all crew show as on and are changed in Abilities; one this crew
  * member lacks the tools for says what it needs and is not offered. A change saves at once.
  */

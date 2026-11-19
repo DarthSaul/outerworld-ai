@@ -132,7 +132,7 @@ export {
   type SessionSummary,
   type StoredMessage,
 } from "./sessions/session-store.js";
-// Skills library and skill_view (ADR-0021)
+// Skills library and skill_view (ADR-0023)
 export { BUNDLED_SKILLS_DIR, type LoadedSkills, loadSkillLibrary } from "./skills/library.js";
 export { createSkillViewTool } from "./skills/skill-view.js";
 export { type AtomicWriteOptions, writeFileAtomic } from "./storage/atomic-write.js";

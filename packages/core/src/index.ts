@@ -51,7 +51,7 @@ export {
   UpdateRoomInput,
   UpdateScheduleInput,
 } from "./api/crew-api.js";
-// Skills HTTP contract (ADR-0021)
+// Skills HTTP contract (ADR-0023)
 export {
   type AgentSkillsView,
   type SkillListItem,
@@ -383,7 +383,7 @@ export {
   runRecordIssues,
   TeamStatus,
 } from "./schema/status.js";
-// Skills library: parsing, enablement, capability gating (ADR-0021)
+// Skills library: parsing, enablement, capability gating (ADR-0023)
 export { agentSkillsView, skillCatalog } from "./skills/catalog.js";
 export {
   capabilitiesOf,

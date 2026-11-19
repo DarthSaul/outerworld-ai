@@ -11,7 +11,7 @@ const SECTIONS: readonly Section[] = [
 
 /**
  * Abilities: everything crew members can do, a System screen at `/system/abilities/`. Connectors
- * and skills (ADR-0021); toolsets join them here. The bare path opens Discover.
+ * and skills (ADR-0023); toolsets join them here. The bare path opens Discover.
  */
 export function AbilitiesPage() {
   return (

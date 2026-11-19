@@ -408,7 +408,7 @@ export interface ConnectorItem {
   readonly authorizationUrl?: string;
 }
 
-/** The skills library with each skill's state (ADR-0021). */
+/** The skills library with each skill's state (ADR-0023). */
 export function useSkills() {
   const { api } = useDaemon();
   return useQuery({ queryKey: ["skills"], queryFn: () => api.get<SkillListItem[]>("/skills") });

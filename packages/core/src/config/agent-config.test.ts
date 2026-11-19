@@ -90,7 +90,7 @@ describe("parseAgentConfig", () => {
     expect(p).toContain("error schedules.1.id");
   });
 
-  it("defaults to no skills of its own and rejects a skill listed twice (ADR-0021)", () => {
+  it("defaults to no skills of its own and rejects a skill listed twice (ADR-0023)", () => {
     const parsed = parseAgentConfig({ ...valid(), skills: undefined });
     expect(parsed.ok && parsed.value.skills).toEqual([]);
     const input = valid();

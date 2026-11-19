@@ -1,7 +1,7 @@
 # Third-party notices & credits
 
 The recipes in `library/` were ported from StarNet's skills library (MIT, © 2026 Andrew Sims;
-see `LICENSE` beside this file) and adapted to this station's tools (ADR-0021). The rest of this
+see `LICENSE` beside this file) and adapted to this station's tools (ADR-0023). The rest of this
 notice is StarNet's own attribution for that library, kept as the MIT License requires; it
 covers only the skill recipes.
 

@@ -86,7 +86,7 @@ export const DispatchPolicy = z.looseObject({
 });
 
 /**
- * The Commander's station-wide skill choices (ADR-0021): ids turned on or off against each skill's
+ * The Commander's station-wide skill choices (ADR-0023): ids turned on or off against each skill's
  * own default. A skill in neither list follows its default. Ids not in the library are ignored.
  */
 export const SkillOverrides = z.looseObject({

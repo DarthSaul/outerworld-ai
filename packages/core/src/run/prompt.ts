@@ -5,7 +5,7 @@ import type { CrewMember } from "../config/station-crew.js";
 
 /**
  * Prompt assembly (brief §8): system prompt = documents + role briefing + installed skills
- * (ADR-0021) + approved memories + the untrusted-data notice; then the session history, windowed to a token budget. Pure. The
+ * (ADR-0023) + approved memories + the untrusted-data notice; then the session history, windowed to a token budget. Pure. The
  * message shape is ours, not a provider's; the runtime converts it for the model SDK.
  */
 
@@ -83,7 +83,7 @@ export interface PromptSkill {
 }
 
 /**
- * The skills offered this run (ADR-0021), most important first (the agent's own, then
+ * The skills offered this run (ADR-0023), most important first (the agent's own, then
  * station-wide). `index` lists one line each and relies on `skill_view` for the body; `inline`
  * includes bodies, for a run that cannot call `skill_view`.
  */
@@ -138,7 +138,7 @@ export function skillsSection(skills: PromptSkills | undefined): string | undefi
 export interface PromptInput {
   readonly documents: Readonly<Record<AgentDocumentName, string>>;
   readonly roleBriefing?: string;
-  /** Offered skills (ADR-0021); absent or empty adds nothing. */
+  /** Offered skills (ADR-0023); absent or empty adds nothing. */
   readonly skills?: PromptSkills;
   /** Approved memories, newest first (Phase 7). */
   readonly beliefs?: readonly string[];

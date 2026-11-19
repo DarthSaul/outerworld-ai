@@ -43,7 +43,7 @@ run, so a change takes effect on the next run. Secrets are never here (see below
 | `connectors` | `Connector[]` | `{ id, name, transport }`, where `transport` is `{ type: "http", url }` (http or https), `{ type: "stdio", command, args }`, or `{ type: "builtin", service: "gmail" }` (the Gmail REST API, ADR-0022). There is no field for headers or environment values, so secrets cannot be put here. v1 connects HTTP and builtin connectors only. A `gmail` connector moved off Gmail MCP briefly carries `migratedFrom` (the old URL) until its old keychain entries are deleted. |
 | `budgets` | `{ perRunUsd?, perAgentDailyUsd?, stationDailyUsd? }` | Positive USD. A missing cap means no cap. Onboarding writes `DEFAULT_BUDGETS` (5 / 25 / 50, D22). |
 | `dispatch` | `{ maxDepth: 0 \| 1, autoReview }` | Defaults `{ maxDepth: 1, autoReview: true }`. `0` turns delegation off. |
-| `skills` | `{ enabled: id[], disabled: id[] }`? | The Commander's station-wide skill choices against each skill's own `default` (ADR-0021). Absent until one is changed. An id in both lists is an error; an id not in the library is ignored. |
+| `skills` | `{ enabled: id[], disabled: id[] }`? | The Commander's station-wide skill choices against each skill's own `default` (ADR-0023). Absent until one is changed. An id in both lists is an error; an id not in the library is ignored. |
 
 Cross-file rules (`stationCrewIssues`): agent ids are unique, every room and connector an agent
 names exists, and there is at most one Overseer.
@@ -59,16 +59,16 @@ names exists, and there is at most one Overseer.
 | `model` | string | An OpenRouter model id. One outside `SUPPORTED_MODELS` is a warning. |
 | `approvalMode` | `"ask"` \| `"full"` | *Ask first* (default) pauses `write`-class calls for consent. |
 | `connectorGrants` | connector ids | Granting a connector grants all of its tools (ADR-0012). |
-| `skills` | skill ids, default `[]` | Skills this crew member has on top of the station-wide ones; it only adds (ADR-0021). A duplicate is an error. |
+| `skills` | skill ids, default `[]` | Skills this crew member has on top of the station-wide ones; it only adds (ADR-0023). A duplicate is an error. |
 | `schedules` | `Schedule[]` | `{ id, cron (5 or 6 fields, checked by croner), timezone? (IANA; absent = the machine's), prompt, sessionId?, catchUp (false), enabled (true) }` (D21). |
 | `look` | id? | The pixel character this agent appears as: a character id from core's `CHARACTERS`, such as `"nova"`, set in Appearance. Absent, or naming a deleted character (a warning), means a stable pick from the agent id (`lookFor`). ADR-0013, ADR-0017, ADR-0021. |
 
 **Effective tools** (`resolveGrants`) are the role tools, plus the room's prop tools, plus every
 tool of each granted, connected connector, plus `skill_view` (`read`, source `skill`) when at
-least one skill is offered (`withSkillTool`, ADR-0021). Each tool is `read` or `write` by our
+least one skill is offered (`withSkillTool`, ADR-0023). Each tool is `read` or `write` by our
 classification (D16, `KNOWN_TOOL_CLASSES`); unknown tools are `write`.
 
-### Skill files (`packages/runtime/skills/library/<slug>.md`, ADR-0021)
+### Skill files (`packages/runtime/skills/library/<slug>.md`, ADR-0023)
 
 Bundled with the runtime and read-only; not in the station directory. Frontmatter between `---`
 lines, one `key: value` or `key: [a, b]` per line, then a Markdown body (the recipe).

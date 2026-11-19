@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /**
- * Skills HTTP contract (ADR-0021). The library is read-only; the Commander turns skills on or off
+ * Skills HTTP contract (ADR-0023). The library is read-only; the Commander turns skills on or off
  * station-wide (`PUT /api/skills/:id`) and adds them to one crew member through
  * `PATCH /api/agents/:id` (`skills`).
  */

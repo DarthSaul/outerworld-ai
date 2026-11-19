@@ -6,7 +6,7 @@ import { loadStationDir } from "../storage/station-dir.js";
 const Input = z.strictObject({ id: z.string().trim().min(1).max(200) });
 
 /**
- * `skill_view` (ADR-0021): returns one skill's full recipe. It answers only for a skill offered to
+ * `skill_view` (ADR-0023): returns one skill's full recipe. It answers only for a skill offered to
  * the calling agent, recomputed from the station's config at call time, so a name the agent never
  * saw (or one turned off since) is refused. Read-class: it changes nothing.
  */

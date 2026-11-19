@@ -75,7 +75,7 @@ export interface CrewServiceOptions {
   readonly events: EventStore;
   /** Tools each connector exposes; empty until connectors connect (Phase 6). */
   readonly connectorTools?: () => ConnectorToolCatalog;
-  /** The skills library (ADR-0021); empty means no skills anywhere. */
+  /** The skills library (ADR-0023); empty means no skills anywhere. */
   readonly skills?: readonly Skill[];
 }
 
@@ -108,7 +108,7 @@ export class CrewService {
     this.#skills = options.skills ?? [];
   }
 
-  /** The skills library with each skill's state on this station (ADR-0021). */
+  /** The skills library with each skill's state on this station (ADR-0023). */
   async skills(): Promise<SkillListItem[]> {
     const loaded = await loadStationDir(this.#home);
     return loaded.station ? skillCatalog(this.#skills, loaded.station, loaded.agents) : [];

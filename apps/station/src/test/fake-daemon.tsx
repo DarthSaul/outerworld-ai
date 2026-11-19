@@ -82,7 +82,7 @@ const agent = (over: Partial<AgentConfig>): AgentConfig => ({
 });
 
 /**
- * A small fictional skills library (ADR-0021). Nothing is offered until a test turns a skill on
+ * A small fictional skills library (ADR-0023). Nothing is offered until a test turns a skill on
  * or adds one to a crew member: the only default needs a shell, which no one has.
  */
 const skillLibrary: readonly Skill[] = [
