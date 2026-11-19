@@ -14,7 +14,7 @@ Run all the Commander's message surfaces as ONE desk: a single triage board, rea
 1. **Triage everything into four buckets:** urgent / needs-you / can-wait / noise. Every item gets a one-line why. Sensitive items — money, legal, an upset client — go to the top regardless of age.
 2. **Draft the replies.** Anything in urgent or needs-you gets a ready-to-send draft in the Commander's voice for that relationship. Match the register the thread already has; strip AI-isms.
 3. **Hold, never send.** Drafts wait for the Commander's explicit go-ahead. This is a hard gate with no exceptions.
-4. **Track the threads in `inbox/threads.md` with write_file:** who is owed a reply, promises made, each contact's tone and preferences, and when the thread was last touched.
+4. **Track the threads in `inbox/threads.md`:** who is owed a reply, promises made, each contact's tone and preferences, and when the thread was last touched. Read the file with read_file first (if it does not exist, this is the first run), then write the complete updated file back with write_file, keeping every earlier open thread; write_file replaces the whole file.
 5. **Chase the slipping.** Each pass, surface threads that have gone quiet past their expected rhythm — before they need an apology.
 
 ## Rules

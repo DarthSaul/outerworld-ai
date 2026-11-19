@@ -3,7 +3,7 @@ name: Itinerary Planning
 slug: itinerary-planning
 description: Turn a trip or outing into a verified, day-by-day itinerary with real prices and times.
 category: Planning
-requires: [web, files, memory]
+requires: [web, files]
 license: MIT
 default: false
 ---

@@ -13,7 +13,7 @@ Get usable text out of PDFs and scanned documents. Try the web route first (no i
 Use when the Commander hands you a PDF, a scanned report, or asks to extract text/tables from a document.
 
 ## Step 1 — has a URL? Fetch it first
-If the document is at a URL, `web_fetch("https://.../report.pdf")` often returns clean markdown with no local dependency. Only go local when the file is on disk, the fetch fails, or you need batch/OCR.
+web_fetch refuses PDFs, so extraction always runs locally: save the file to the workspace first. A paper or report often has an HTML version as well; fetch that instead when one exists.
 
 ## Step 2 — pick a local extractor (via shell.exec)
 | Need | Tool | Notes |

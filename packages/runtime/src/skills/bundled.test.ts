@@ -41,6 +41,15 @@ describe("the bundled skills library", () => {
     expect(missing).toEqual([]);
   });
 
+  it("promises only what the station can do", async () => {
+    const { skills } = await loadSkillLibrary(BUNDLED_SKILLS_DIR);
+    // web_fetch refuses PDFs; file contents read in a run go to the model provider.
+    const overpromise = /web_fetch\([^)]*\/pdf\/|keep (it|them) local|never send anything/i;
+    expect(skills.filter((s) => overpromise.test(s.body)).map((s) => s.id)).toEqual([]);
+    // Checking keyboard, focus, and rendered colour needs a real browser, not fetched text.
+    expect(skills.find((s) => s.id === "accessibility-audit")?.requires).toContain("browser");
+  });
+
   it("turns five skills on by default, none of which needs a tool", async () => {
     const { skills } = await loadSkillLibrary(BUNDLED_SKILLS_DIR);
     const defaults = skills.filter((s) => s.default);

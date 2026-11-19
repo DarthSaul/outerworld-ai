@@ -3,7 +3,7 @@ name: Content Calendar
 slug: content-calendar
 description: Keep a living publish calendar — what ships where and when, adapted per platform, checked before staging.
 category: Marketing
-requires: [files]
+requires: [web, files]
 license: MIT
 default: false
 ---
@@ -13,7 +13,7 @@ Run the Commander's publishing pipeline as a living calendar: every piece has a 
 ## Method
 1. **Keep ONE master calendar in `content-calendar.md`** (write_file). Each row: piece · platform · date · status (idea / drafted / staged / published). Update it every pass — the calendar is the source of truth, not the chat history.
 2. **Adapt per platform.** Reshape each piece to the platform's native form — length, hook placement, links, formatting. Never post one blob everywhere; note what changed per adaptation.
-3. **Run the pre-publish checklist on every staged piece:** links resolve, names/dates/numbers correct, media noted, CTA present, platform limits met.
+3. **Run the pre-publish checklist on every staged piece:** links resolve (open each with web_fetch), names/dates/numbers correct, media noted, CTA present, platform limits met.
 4. **Batch the queue.** Prepare the whole week's staged pieces in one pass with write_file so the Commander approves everything in one sitting.
 5. **Report the gaps.** Empty slots, pieces stuck in draft, and platforms going quiet get flagged, not ignored.
 

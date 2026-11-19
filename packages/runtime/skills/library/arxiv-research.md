@@ -8,12 +8,12 @@ license: MIT
 default: false
 ---
 
-Find and read academic papers on arXiv. The API is free and keyless; the paper pages and PDFs are fetchable with web_fetch.
+Find and read academic papers on arXiv. The API is free and keyless and answers in Atom XML, which web_fetch returns as text; the abstract pages and, for most papers since late 2023, an HTML full text are fetchable too. PDFs are not: web_fetch refuses them.
 
 Use when the Commander wants recent papers on a topic, a specific paper's abstract, or an author's/category's output.
 
 ## Search
-Hit the query API through the browser/fetch layer and read the returned Atom XML:
+Call the query API with web_fetch and read the Atom XML it returns as text:
 ```
 web_fetch("https://export.arxiv.org/api/query?search_query=all:diffusion+transformer&max_results=5&sortBy=submittedDate&sortOrder=descending")
 ```
@@ -31,10 +31,10 @@ Each `<entry>` has the title, `<id>` (the arXiv id after `/abs/`), `<published>`
 Combine with `+AND+`, `+OR+`, `+ANDNOT+`; exact phrase with quotes (`ti:"chain of thought"`). Sort with `&sortBy=submittedDate&sortOrder=descending` for the latest.
 
 ## Get a specific paper
-- Metadata: `web_fetch("https://export.arxiv.org/api/query?id_list=2402.03300")`
+- Metadata (Atom XML): `web_fetch("https://export.arxiv.org/api/query?id_list=2402.03300")`
 - Abstract page: `web_fetch("https://arxiv.org/abs/2402.03300")`
-- Full PDF text: `web_fetch("https://arxiv.org/pdf/2402.03300")`
+- Full text, when arXiv has an HTML version: `web_fetch("https://arxiv.org/html/2402.03300")`. If that is not found, the paper exists only as a PDF; say that reading its full text needs a PDF text extractor this station does not have, and work from the abstract.
 
 ## Present it
-For each result: `[id] Title — Authors — date — categories`, a two-line summary, and the PDF link. When the Commander picks one, fetch the PDF and pull the specific claims they need, citing the id.
+For each result: `[id] Title — Authors — date — categories`, a two-line summary, and the abstract link. When the Commander picks one, fetch its abstract page (and the HTML full text when there is one) and pull the specific claims they need, citing the id and saying whether each claim came from the abstract or the full text.
 

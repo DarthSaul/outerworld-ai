@@ -3,7 +3,7 @@ name: Accessibility Audit
 slug: accessibility-audit
 description: Check a live page against the barriers that actually lock people out — keyboard, contrast, labels, focus — each with the fix.
 category: Engineering
-requires: [web, files]
+requires: [web, files, browser]
 license: MIT
 default: false
 ---

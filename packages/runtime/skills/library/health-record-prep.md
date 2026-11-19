@@ -23,7 +23,7 @@ This skill does clerical work, not clinical work. It exists because people walk 
 - **If anything described sounds urgent or severe, say so plainly and tell them to seek medical care now** — then stop. This overrides everything else here.
 - **State clearly in the output that this is not medical advice**, and name what needs a professional.
 - **Never guess a medication, dose, or date** — an unreadable or missing value stays blank and gets flagged.
-- Health records are sensitive: keep them local, never restate identifiers unnecessarily, and never send anything anywhere.
+- Health records are sensitive. Anything you read with read_file goes to the station's configured model provider as part of this run, so say so if the Commander asks where their records go. Never restate identifiers unnecessarily, and never put records anywhere the Commander did not ask for.
 
 ## Output
 The timeline, the standing facts, the dated symptom log, then the appointment sheet with the most important question first — under an explicit "this is not medical advice" line.

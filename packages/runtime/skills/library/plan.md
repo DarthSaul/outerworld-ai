@@ -15,13 +15,13 @@ Anything that spans more than one file or a handful of lines, anything with unkn
 
 ## The plan (keep it to a screen)
 1. **Goal** — one sentence: what does "done" look like, observably?
-2. **Context** — which files/components are involved? Read them first (read_file / list_files); never plan against assumptions. List what you actually found.
+2. **Context** — which files/components are involved? If you have file tools (read_file / list_files), read them first and list what you actually found. If you cannot read them, ask the Commander for the context you need; never plan against assumptions.
 3. **Approach** — the 3–7 concrete steps, in order. Each step should be independently checkable.
 4. **Risks & unknowns** — what might break, what you're unsure about, and how you'll verify it.
 5. **Out of scope** — what you are deliberately NOT doing, so scope can't creep silently.
 
 ## Rules
-- **Read before you plan.** Ground every step in real files, not guesses.
+- **Read before you plan.** Ground every step in real files or context the Commander gave you, not guesses.
 - **Smallest viable slice first.** A thin end-to-end path that works beats a wide half-built one.
 - **Surface the plan.** Show the Commander the plan before a big change, so they can redirect cheaply before code exists.
 - **One step at a time.** Finish and verify a step before starting the next; update the plan as reality teaches you.
