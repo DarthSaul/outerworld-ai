@@ -31,9 +31,11 @@ allowed `Origin` and a `Sec-Fetch-Site` other than `cross-site`. Every `/api/*` 
 | `GET /api/events` | SSE: every runtime event as `id: <seq>` + `data: <event JSON>`, replaying after `Last-Event-ID`, then live; a `: ping` comment every 15 s while idle. |
 | `GET /api/station` | `StationView`: station config, crew (`{ id, config }`), and every load issue. |
 | `GET /api/models` | The supported model list from core. |
-| `GET /api/agents/:id` | `AgentView`: config, the four documents, and the effective tools (core `resolveGrants`). |
+| `GET /api/agents/:id` | `AgentView`: config, the four documents, the effective tools (core `resolveGrants`, plus `skill_view` when a skill is offered), and its skills (`{ offered, unavailable }`, ADR-0021). |
 | `POST /api/agents` | `CreateAgentInput` → 201 `AgentView`; the id comes from the name. |
-| `PATCH /api/agents/:id` | `UpdateAgentInput` (strict) → `AgentView`. |
+| `PATCH /api/agents/:id` | `UpdateAgentInput` (strict) → `AgentView`. `skills` sets the crew member's own skills. |
+| `GET /api/skills` | `SkillListItem[]`: the bundled library by category, each with its default, the Commander's override, whether it is on for all crew, who added it, who it is offered to, and what no one has (`missing`). Never the bodies. |
+| `PUT /api/skills/:id` | `{ enabled: boolean \| null }`: on or off for all crew in `station.json`, or `null` for the skill's default → the updated `SkillListItem`. 404 for a skill not in the library. Emits `station.updated`. |
 | `PUT /api/agents/:id/documents/:name` | `{ text }` for `identity`, `purpose`, `standing-orders`, or `context` → 204. |
 | `DELETE /api/agents/:id` | 204; the agent's workspace files stay. |
 | `POST /api/rooms`, `PATCH /api/rooms/:id`, `DELETE /api/rooms/:id` | Rooms and their props; deleting a room with crew or hallways is 409. |
