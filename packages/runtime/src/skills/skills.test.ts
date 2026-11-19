@@ -1,4 +1,4 @@
-import { cpSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, cpSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -7,12 +7,17 @@ import { loadSkillLibrary } from "./library.js";
 import { createSkillViewTool } from "./skill-view.js";
 
 const fixtures = join(import.meta.dirname, "..", "..", "..", "..", "fixtures", "skills");
-const ctx = (agentId: string) => ({
+/** A tool call's context; `skills` is what the run offered at setup (every fixture skill by default). */
+const ctx = (
+  agentId: string,
+  skills: readonly string[] = ["field-notes", "log-dig", "source-check", "tidy-summary"],
+) => ({
   agentId,
   sessionId: "s",
   runId: "r",
   depth: 0,
   signal: new AbortController().signal,
+  skills,
 });
 
 /** Edits one fixture agent's agent.json in a test home. */
@@ -57,6 +62,23 @@ describe("loadSkillLibrary", () => {
       ["huge.md", "longer than 65536 bytes; skipped"],
     ]);
   });
+
+  it("skips a file it cannot read and keeps loading the rest", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "ow-skills-"));
+    cpSync(join(fixtures, "field-notes.md"), join(dir, "field-notes.md"));
+    cpSync(join(fixtures, "tidy-summary.md"), join(dir, "locked.md"));
+    cpSync(join(fixtures, "tidy-summary.md"), join(dir, "tidy-summary.md"));
+    chmodSync(join(dir, "locked.md"), 0o000);
+    try {
+      const { skills, issues } = await loadSkillLibrary(dir);
+      expect(skills.map((s) => s.id)).toEqual(["field-notes", "tidy-summary"]);
+      expect(issues).toHaveLength(1);
+      expect(issues[0]).toMatchObject({ level: "warn", path: "locked.md" });
+      expect(issues[0]?.message).toMatch(/^could not read: /);
+    } finally {
+      chmodSync(join(dir, "locked.md"), 0o644);
+    }
+  });
 });
 
 describe("skill_view", () => {
@@ -94,6 +116,20 @@ describe("skill_view", () => {
     editStation(t.home, { skills: { disabled: ["field-notes"] } });
     const view = createSkillViewTool({ home: t.home, skills });
     await expect(view.execute({ id: "field-notes" }, ctx("quill"))).rejects.toThrow(/yours: none/);
+  });
+
+  it("refuses a skill offered now that the calling run was not offered at setup", async () => {
+    const { skills } = await loadSkillLibrary(fixtures);
+    const t = setup(scripted([]));
+    editAgent(t.home, "quill", { skills: ["tidy-summary"] });
+    const view = createSkillViewTool({ home: t.home, skills });
+    // The run started before tidy-summary was added: only field-notes was in its list.
+    await expect(
+      view.execute({ id: "tidy-summary" }, ctx("quill", ["field-notes"])),
+    ).rejects.toThrow(/yours: field-notes\)/);
+    await expect(view.execute({ id: "tidy-summary" }, ctx("quill", []))).rejects.toThrow(
+      /yours: none/,
+    );
   });
 });
 

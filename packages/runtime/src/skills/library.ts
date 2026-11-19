@@ -43,7 +43,17 @@ export async function loadSkillLibrary(dir: string): Promise<LoadedSkills> {
   for (const name of names) {
     if (!name.endsWith(".md")) continue;
     const path = join(dir, name);
-    const info = await lstat(path);
+    let info: Awaited<ReturnType<typeof lstat>>;
+    let text: string;
+    try {
+      info = await lstat(path);
+      text = info.isFile() && info.size <= MAX_SKILL_BYTES ? await readFile(path, "utf8") : "";
+    } catch (error) {
+      // One unreadable entry is skipped; the skills loaded so far and the rest still count.
+      const reason = (error as NodeJS.ErrnoException).code ?? String(error);
+      issues.push({ level: "warn", path: name, message: `could not read: ${reason}` });
+      continue;
+    }
     if (!info.isFile()) {
       issues.push({ level: "warn", path: name, message: "not a regular file; skipped" });
       continue;
@@ -56,7 +66,7 @@ export async function loadSkillLibrary(dir: string): Promise<LoadedSkills> {
       });
       continue;
     }
-    const parsed = parseSkillFile(name, await readFile(path, "utf8"));
+    const parsed = parseSkillFile(name, text);
     issues.push(...parsed.issues);
     if (parsed.skill) byId.set(parsed.skill.id, parsed.skill);
   }

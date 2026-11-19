@@ -6,9 +6,10 @@ import { loadStationDir } from "../storage/station-dir.js";
 const Input = z.strictObject({ id: z.string().trim().min(1).max(200) });
 
 /**
- * `skill_view` (ADR-0023): returns one skill's full recipe. It answers only for a skill offered to
- * the calling agent, recomputed from the station's config at call time, so a name the agent never
- * saw (or one turned off since) is refused. Read-class: it changes nothing.
+ * `skill_view` (ADR-0023): returns one skill's full recipe. It answers only for a skill the calling
+ * run was offered when it was set up (`ctx.skills`) that is still offered now, recomputed from the
+ * station's config, so a skill the run never listed, or one turned off since, is refused.
+ * Read-class: it changes nothing.
  */
 export function createSkillViewTool(deps: {
   readonly home: string;
@@ -31,7 +32,10 @@ export function createSkillViewTool(deps: {
       const loaded = await loadStationDir(deps.home);
       const agent = loaded.agents.find((a) => a.id === ctx.agentId);
       if (!agent || !loaded.station) throw new Error("no station config to check skills against");
-      const { offered } = skillsForAgent(agent.config, loaded.station, deps.skills);
+      const atSetup = new Set(ctx.skills ?? []);
+      const offered = skillsForAgent(agent.config, loaded.station, deps.skills).offered.filter(
+        (s) => atSetup.has(s.id),
+      );
       const skill = offered.find((s) => s.id === id);
       if (!skill) {
         const ids = offered.map((s) => s.id).join(", ") || "none";

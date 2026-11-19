@@ -61,6 +61,8 @@ export interface ToolImpl {
       /** 0 for a top-level run, 1 for a dispatched worker's run. */
       depth: number;
       signal: AbortSignal;
+      /** Ids of the skills this run offered when it was set up (ADR-0023); `skill_view` stays inside them. */
+      skills?: readonly string[];
     },
   ): Promise<unknown>;
 }
@@ -715,6 +717,7 @@ export class RunService {
           }).offered
         : [];
       const offered = withSkillTool(base, skills.length).filter(implemented);
+      const skillIds = skills.map((s) => s.id);
       const promptSkills: PromptSkills = {
         entries: skills,
         mode: offered.some((t) => t.name === SKILL_VIEW_TOOL) ? "index" : "inline",
@@ -781,7 +784,16 @@ export class RunService {
         }
         for (const call of result.toolCalls) {
           signal.throwIfAborted();
-          await this.#runTool(call, offered, registry, ids, agent.config, run.depth, signal);
+          await this.#runTool(
+            call,
+            offered,
+            registry,
+            ids,
+            agent.config,
+            run.depth,
+            signal,
+            skillIds,
+          );
         }
       }
       sessions.transition(run.id, "complete");
@@ -917,6 +929,7 @@ export class RunService {
     agent: AgentConfig,
     depth: number,
     signal: AbortSignal,
+    skills: readonly string[],
   ) {
     const { events, sessions } = this.#o;
     const grant = offered.find((t) => t.name === call.name);
@@ -967,7 +980,7 @@ export class RunService {
       }
     }
     try {
-      const output = await impl.execute(call.input, { ...ids, depth, signal });
+      const output = await impl.execute(call.input, { ...ids, depth, signal, skills });
       events.append({
         type: "run.tool_result",
         ...ids,
