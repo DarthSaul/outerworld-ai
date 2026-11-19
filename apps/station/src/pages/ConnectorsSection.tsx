@@ -1,14 +1,16 @@
 import {
+  abilityDisplay,
   CONNECTOR_PRESET_IDS,
   CONNECTOR_PRESETS,
   ownClientProfile,
   term,
   termWith,
 } from "@darthsaul/outerworld-ai-core";
-import { EmptyState } from "@darthsaul/outerworld-ai-ui";
+import { EmptyState, Tag } from "@darthsaul/outerworld-ai-ui";
 import { useQueryClient } from "@tanstack/react-query";
-import { type FormEvent, useId, useState } from "react";
+import { type FormEvent, type ReactNode, useId, useState } from "react";
 import { Link, useNavigate } from "react-router";
+import { AbilityLogo } from "../components/AbilityLogo.js";
 import { ErrorNote } from "../components/ErrorNote.js";
 import { ROUTES } from "../lib/routes.js";
 import {
@@ -19,7 +21,6 @@ import {
   useDisconnect,
   useRemoveConnector,
   useSetConnectorClient,
-  useStationView,
   useUpdateConnector,
 } from "../queries.js";
 
@@ -205,13 +206,44 @@ function OwnClientForm({
   );
 }
 
-function ConnectorCard({
-  connector,
-  nameOf,
+const card = "flex min-w-0 flex-col gap-3 border-2 border-line-soft bg-well p-3";
+
+/**
+ * The top of every ability card, on Discover and Installed alike: the service's logo, its name,
+ * what kind of ability it is, any tags the page adds, and what it lets crew members do.
+ */
+function AbilityHead({
+  id,
+  name,
+  titleId,
+  tags,
 }: {
-  readonly connector: ConnectorItem;
-  readonly nameOf: (id: string) => string;
+  readonly id: string;
+  readonly name: string;
+  readonly titleId: string;
+  readonly tags?: ReactNode;
 }) {
+  const shown = abilityDisplay(id, name);
+  return (
+    <div className="flex min-w-0 items-start gap-3">
+      <AbilityLogo brand={shown.brand} />
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <h3 id={titleId} className="m-0 font-display font-normal text-d10 text-cyan uppercase">
+          {shown.title}
+        </h3>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <Tag data-ability-kind={shown.kind}>{term(`ability.kind.${shown.kind}`)}</Tag>
+          {tags}
+        </div>
+        <p data-ability-description className="m-0 text-b17 text-fg-soft">
+          {shown.description}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ConnectorCard({ connector }: { readonly connector: ConnectorItem }) {
   const connect = useConnect();
   const disconnect = useDisconnect();
   const update = useUpdateConnector();
@@ -236,21 +268,23 @@ function ConnectorCard({
       aria-labelledby={titleId}
       data-connector={connector.id}
       data-connector-status={connector.status}
-      className="flex flex-col gap-3 border-2 border-line-soft bg-well p-3"
+      className={card}
     >
-      <header className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 id={titleId} className="m-0 font-display font-normal text-d10 text-cyan uppercase">
-          {connector.name}
-        </h3>
-        <span
-          role="status"
-          aria-label={`${connector.name} status`}
-          className="text-b17 text-fg-mute"
-        >
-          {term(`connectorStatus.${connector.status}`)}
-          {connector.detail && connector.status === "error" ? `: ${connector.detail}` : ""}
-        </span>
-      </header>
+      <AbilityHead
+        id={connector.id}
+        name={connector.name}
+        titleId={titleId}
+        tags={
+          <span
+            role="status"
+            aria-label={`${connector.name} status`}
+            className="text-b17 text-fg-mute"
+          >
+            {term(`connectorStatus.${connector.status}`)}
+            {connector.detail && connector.status === "error" ? `: ${connector.detail}` : ""}
+          </span>
+        }
+      />
       <form onSubmit={save} className="flex flex-wrap items-end gap-2">
         <label className="flex min-w-0 flex-1 flex-col gap-1 font-display text-d7 text-fg-mute uppercase">
           {term("connector.url")}
@@ -332,12 +366,6 @@ function ConnectorCard({
       </div>
       {signIn ? <p className="m-0 text-b17 text-fg-mute">{term("connector.signInHint")}</p> : null}
       <ErrorNote error={connect.error ?? disconnect.error ?? update.error ?? remove.error} />
-      <p className="m-0 text-b17 text-fg-soft">
-        {term("connector.grantedTo")}:{" "}
-        {connector.grantedTo.length
-          ? connector.grantedTo.map(nameOf).join(", ")
-          : term("connector.nobody")}
-      </p>
       {connector.tools.length > 0 ? (
         <section aria-labelledby={`${titleId}-tools`} className="flex flex-col gap-1">
           <h4
@@ -364,30 +392,22 @@ function ConnectorCard({
   );
 }
 
-/** The presets not on the station yet, each one click from installed. */
-function useAddable() {
-  const connectors = useConnectors();
-  const list = connectors.data ?? [];
-  return {
-    connectors,
-    list,
-    presets: connectors.isSuccess
-      ? CONNECTOR_PRESET_IDS.filter((p) => !list.some((c) => c.id === p))
-      : [],
-  };
-}
-
 const panel = "flex scroll-mt-3.5 flex-col gap-3 border-2 border-line bg-panel p-3 shadow-panel";
 const panelTitle = "m-0 font-display font-normal text-d9 text-panel-title uppercase tracking-st-1";
+/** Discover's cards: side by side on desktop, one column on a phone. */
+const grid = "m-0 grid list-none grid-cols-1 items-start gap-3 p-0 desktop:grid-cols-2";
 
 /**
- * Abilities › Discover: the connector presets (brief §12) not installed yet; the server and its
- * name come from core. Adding one moves it to Installed.
+ * Abilities › Discover: every connector preset (brief §12) as a card; the server and its name come
+ * from core. One not installed yet adds in a click and moves to Installed; one already installed
+ * says so and links there.
  */
 export function ConnectorsDiscover() {
-  const { connectors, presets } = useAddable();
+  const connectors = useConnectors();
+  const list = connectors.data ?? [];
   const add = useAddConnector();
   const navigate = useNavigate();
+  const installed = (id: string) => list.some((c) => c.id === id);
   return (
     <section aria-labelledby="discover-title" className={panel}>
       <h2 id="discover-title" className={panelTitle}>
@@ -395,35 +415,61 @@ export function ConnectorsDiscover() {
       </h2>
       <p className="m-0 text-b17 text-fg-soft">{term("abilities.discover.hint")}</p>
       <ErrorNote error={connectors.error ?? add.error} />
-      {connectors.isSuccess && presets.length === 0 ? (
+      {connectors.isSuccess && CONNECTOR_PRESET_IDS.every(installed) ? (
         <p className="m-0 text-b19 text-fg">{term("abilities.discover.none")}</p>
-      ) : (
-        <div className="flex flex-wrap gap-2">
-          {presets.map((p) => (
-            <button
-              key={p}
-              type="button"
-              className={button}
-              disabled={add.isPending}
-              onClick={() => add.mutate(p, { onSuccess: () => navigate(ROUTES.installed) })}
-            >
-              {termWith("connector.add", { name: CONNECTOR_PRESETS[p].name })}
-            </button>
-          ))}
-        </div>
-      )}
+      ) : null}
+      {connectors.isSuccess ? (
+        <ul data-ability-grid className={grid}>
+          {CONNECTOR_PRESET_IDS.map((p) => {
+            const titleId = `discover-${p}`;
+            const name = CONNECTOR_PRESETS[p].name;
+            const has = installed(p);
+            return (
+              <li key={p} data-ability={p} data-installed={has} className={card}>
+                <AbilityHead
+                  id={p}
+                  name={name}
+                  titleId={titleId}
+                  tags={
+                    has ? (
+                      <Tag data-installed-tag tone="green">
+                        {term("ability.isInstalled")}
+                      </Tag>
+                    ) : null
+                  }
+                />
+                <div className="flex flex-wrap gap-2">
+                  {has ? (
+                    <Link to={ROUTES.installed} aria-describedby={titleId} className={button}>
+                      {term("ability.manage")}
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      className={button}
+                      disabled={add.isPending}
+                      onClick={() => add.mutate(p, { onSuccess: () => navigate(ROUTES.installed) })}
+                    >
+                      {termWith("connector.add", { name })}
+                    </button>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
     </section>
   );
 }
 
 /**
- * Abilities › Installed: the connectors installed once for the station (brief §12); crew members
- * are granted them on their own page.
+ * Abilities › Installed: the connectors installed once for the station (brief §12), as cards the
+ * column's full width, one per row; crew members are granted them on their own page.
  */
 export function ConnectorsInstalled() {
-  const { connectors, list } = useAddable();
-  const station = useStationView();
-  const nameOf = (id: string) => station.data?.agents.find((a) => a.id === id)?.config.name ?? id;
+  const connectors = useConnectors();
+  const list = connectors.data ?? [];
   return (
     <section id="connectors" aria-labelledby="installed-title" className={panel}>
       <h2 id="installed-title" className={panelTitle}>
@@ -442,7 +488,13 @@ export function ConnectorsInstalled() {
           }
         />
       ) : (
-        list.map((c) => <ConnectorCard key={c.id} connector={c} nameOf={nameOf} />)
+        // One card per row, each the column's full width: an installed card holds forms and setup
+        // steps that need the room.
+        <div data-ability-list className="flex flex-col gap-3">
+          {list.map((c) => (
+            <ConnectorCard key={c.id} connector={c} />
+          ))}
+        </div>
       )}
     </section>
   );

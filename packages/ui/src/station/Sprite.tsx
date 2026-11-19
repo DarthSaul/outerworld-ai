@@ -1,9 +1,9 @@
 import {
   ART_BOX,
-  CHARACTERS,
   type Character,
   characterById,
   characterGrid,
+  DRAWN_CHARACTERS,
   gridRuns,
   isArtCharacter,
   type PixelRun,
@@ -12,13 +12,14 @@ import {
 } from "@darthsaul/outerworld-ai-core";
 
 export interface SpriteProps {
-  /** A character id from core's CHARACTERS, such as `"nova"`; an unknown id draws the first one. */
+  /** A character id from core's CHARACTERS, such as `"nova"`; an unknown id draws the first drawn one. */
   readonly look: string;
   /**
    * Scale: 1 (20×26), 2, 3, 4 (80×104), 8 (160×208). 1.5 (30×39, the Overseer's comms portrait) is
-   * whole device pixels on a 2× display; on a 1× display its pixels are slightly uneven.
+   * whole device pixels on a 2× display; on a 1× display its pixels are slightly uneven. 2.4
+   * (48×62.4, a crew member's Brief) is 2 grown by a fifth; its pixels are slightly uneven too.
    */
-  readonly scale?: 1 | 1.5 | 2 | 3 | 4 | 8;
+  readonly scale?: 1 | 1.5 | 2 | 2.4 | 3 | 4 | 8;
   /** Accessible name; without one the sprite is decorative. */
   readonly label?: string;
   readonly className?: string;
@@ -41,7 +42,7 @@ function runsFor(character: Character): PixelRun[] {
  * same grid the design exported. Colors are the character's own, from core.
  */
 export function Sprite({ look, scale = 1, label, className = "" }: SpriteProps) {
-  const character = characterById(look) ?? CHARACTERS[0];
+  const character = characterById(look) ?? DRAWN_CHARACTERS[0];
   if (!character) return null;
   if (isArtCharacter(character)) {
     // A painted character (ADR-0017): its art in a 32×32 box per scale step, still pixelated.

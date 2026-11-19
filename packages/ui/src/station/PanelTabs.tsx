@@ -17,6 +17,11 @@ export interface PanelTabsProps {
   /** Right side of the strip, as on a `Panel`. */
   readonly meta?: ReactNode;
   readonly className?: string;
+  /**
+   * `false` drops the panel's border, fill, and shadow: tabs that head a column which is already
+   * inside a panel (a crew member's page), so panels never nest. The strip keeps its rule.
+   */
+  readonly framed?: boolean;
 }
 
 /**
@@ -24,7 +29,15 @@ export interface PanelTabsProps {
  * outlined. The region is named by the active tab. ← → Home End move between tabs and show them;
  * every tab's content stays mounted, hidden when not shown, so switching back keeps its place.
  */
-export function PanelTabs({ label, tabs, active, onChange, meta, className = "" }: PanelTabsProps) {
+export function PanelTabs({
+  label,
+  tabs,
+  active,
+  onChange,
+  meta,
+  className = "",
+  framed = true,
+}: PanelTabsProps) {
   const id = useId();
   const refs = useRef<Array<HTMLButtonElement | null>>([]);
   const tabId = (tab: string) => `${id}-tab-${tab}`;
@@ -57,9 +70,11 @@ export function PanelTabs({ label, tabs, active, onChange, meta, className = "" 
   return (
     <section
       aria-labelledby={shown ? tabId(shown) : undefined}
-      className={`flex min-w-0 flex-col border-2 border-line bg-panel shadow-panel ${className}`}
+      className={`flex min-w-0 flex-col ${framed ? "border-2 border-line bg-panel shadow-panel" : ""} ${className}`}
     >
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-line border-b-2 bg-panel-head px-2.5 py-1.5">
+      <div
+        className={`flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-line border-b-2 ${framed ? "bg-panel-head px-2.5 py-1.5" : "pb-2"}`}
+      >
         <div role="tablist" aria-label={label} className="flex flex-wrap gap-1.5">
           {tabs.map((tab, i) => {
             const selected = tab.id === shown;

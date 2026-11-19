@@ -88,6 +88,18 @@ describe("OverseerComms", () => {
     expect(onNext).toHaveBeenCalled();
   });
 
+  it("keeps the buttons inside the message's scroll box, pinned to its foot", () => {
+    const { container, rerender } = render(<OverseerComms message={approval} />);
+    const box = container.querySelector("[data-comms-message]") as HTMLElement;
+    expect(box.className).toMatch(/\boverflow-y-auto\b/);
+    // Something a keyboard can reach is always in the box, so the box can be scrolled.
+    expect(box.contains(screen.getByRole("button", { name: "Approve" }))).toBe(true);
+    const actions = box.querySelector("[data-comms-actions]") as HTMLElement;
+    expect(actions.className).toMatch(/\bsticky bottom-0\b/);
+    rerender(<OverseerComms message={chatter} />);
+    expect(box.contains(screen.getByRole("button", { name: "Next ▶" }))).toBe(true);
+  });
+
   it("sends an order on Enter and clears the line; ignores an empty one", () => {
     const onOrder = vi.fn();
     render(<OverseerComms message={chatter} onOrder={onOrder} />);

@@ -73,6 +73,21 @@ describe("CrewSelect", () => {
     expect(screen.queryByRole("button", { name: "Assign" })).toBeNull();
   });
 
+  it("puts the stage beside the pick's name, role, and status, and the character grid below", () => {
+    const { container } = render(<Harness />);
+    const layout = container.querySelector("[data-crew-select-layout]") as HTMLElement;
+    const [stage, pick, picker] = Array.from(layout.children) as HTMLElement[];
+    expect(stage).toHaveAttribute("data-stage");
+    expect(pick).toHaveAttribute("data-pick");
+    expect(Array.from(pick?.children ?? []).map((c) => c.textContent)).toEqual([
+      "FENNEC",
+      "Pathfinder",
+      "Equipped on Quill",
+    ]);
+    expect(picker?.className).toMatch(/col-span-2/);
+    expect(picker?.contains(grid())).toBe(true);
+  });
+
   it("enables Save only when another character is picked, and saves it", () => {
     const onSave = vi.fn();
     render(<Harness onSave={onSave} />);
@@ -85,18 +100,34 @@ describe("CrewSelect", () => {
     expect(save()).toBeDisabled();
   });
 
-  it("lays every character, drawn and painted, in two rows that scroll sideways", () => {
+  it("lays every character, drawn and painted, in three rows that scroll sideways", () => {
     render(<Harness />);
     expect(within(grid()).getAllByRole("listitem")).toHaveLength(CHARACTER_COUNT);
     expect(grid().className).toMatch(/overflow-x-auto/);
     expect(grid().style.gridTemplateColumns).toBe(
-      `repeat(${Math.ceil(CHARACTER_COUNT / 2)}, max-content)`,
+      `repeat(${Math.ceil(CHARACTER_COUNT / 3)}, max-content)`,
     );
     const painted = ART_CHARACTERS[0];
     const tile = within(grid()).getByRole("button", {
       name: `${painted?.name}, ${painted?.role}`,
     });
     expect(tile.querySelector("img")?.getAttribute("src")).toMatch(/^data:image\/png;base64,/);
+    // The painted nine, RAZOR through SHADE, lead the grid, then the drawn characters.
+    const names = within(grid())
+      .getAllByRole("button")
+      .map((b) => b.getAttribute("aria-label")?.split(",")[0]);
+    expect(names.slice(0, 10)).toEqual([
+      "RAZOR",
+      "UMBRA",
+      "ASHA",
+      "TALI",
+      "BLIP",
+      "PATCH",
+      "DUSTY",
+      "MERLO",
+      "SHADE",
+      "NOVA",
+    ]);
   });
 
   it("moves with the arrow keys (wrapping across, rows up and down) and saves on Enter", () => {
@@ -105,23 +136,24 @@ describe("CrewSelect", () => {
     fireEvent.keyDown(grid(), { key: "Enter" });
     expect(onSave).not.toHaveBeenCalled();
     fireEvent.keyDown(grid(), { key: "ArrowRight" });
+    // The keys follow the tiles as shown: FENNEC, the last tile, wraps round to RAZOR, the first.
     expect(cursorName()).toBe("RAZOR, Captain");
     expect(within(grid()).getByRole("button", { name: "RAZOR, Captain" })).toHaveFocus();
     fireEvent.keyDown(grid(), { key: "Home" });
-    expect(cursorName()).toBe("NOVA, Pilot");
+    expect(cursorName()).toBe("RAZOR, Captain");
     fireEvent.keyDown(grid(), { key: "ArrowDown" });
-    expect(cursorName()).not.toBe("NOVA, Pilot");
+    expect(cursorName()).not.toBe("RAZOR, Captain");
     fireEvent.keyDown(grid(), { key: "ArrowUp" });
-    expect(cursorName()).toBe("NOVA, Pilot");
+    expect(cursorName()).toBe("RAZOR, Captain");
     fireEvent.keyDown(grid(), { key: "ArrowUp" });
-    expect(cursorName()).toBe("NOVA, Pilot");
+    expect(cursorName()).toBe("RAZOR, Captain");
     fireEvent.keyDown(grid(), { key: "ArrowLeft" });
-    const last = ART_CHARACTERS[ART_CHARACTERS.length - 1];
-    expect(cursorName()).toBe(`${last?.name}, ${last?.role}`);
+    expect(cursorName()).toBe("FENNEC, Pathfinder");
     fireEvent.keyDown(grid(), { key: "ArrowRight" });
-    expect(cursorName()).toBe("NOVA, Pilot");
+    expect(cursorName()).toBe("RAZOR, Captain");
     fireEvent.keyDown(grid(), { key: "Enter" });
-    expect(onSave).toHaveBeenCalledWith("quill", "nova");
+    // What is saved is the character's id, whatever order the grid shows.
+    expect(onSave).toHaveBeenCalledWith("quill", "razor");
   });
 
   it("leaves the arrow keys alone outside the grid", () => {

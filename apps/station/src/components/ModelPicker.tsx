@@ -47,8 +47,8 @@ export function ModelPicker({
   readonly onChange: (next: ModelSettings | null) => void;
   readonly legend?: string;
   /**
-   * A narrow panel: one line, and the route note only when it is a warning (a missing key);
-   * otherwise screen readers still hear it as the group's description.
+   * A narrow panel: the route note only when it is a warning (a missing key); otherwise screen
+   * readers still hear it as the group's description. The menus wrap only when they don't fit.
    */
   readonly compact?: boolean;
 }) {
@@ -112,7 +112,7 @@ export function ModelPicker({
   return (
     <fieldset
       aria-describedby={`${id}-route`}
-      className={`m-0 flex min-w-0 items-center justify-between gap-x-3 gap-y-1 border-0 p-0 ${compact ? "flex-nowrap" : "flex-wrap"}`}
+      className="m-0 flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1 border-0 p-0"
       data-model-picker
     >
       <legend className="sr-only">{legend}</legend>
@@ -123,8 +123,11 @@ export function ModelPicker({
       >
         {route?.text ?? ""}
       </span>
+      {/* Model and reasoning, then the key, on one line while they fit; in a narrow panel the key
+          drops below, so the menus stack into a column instead of running off the edge. */}
       <div
-        className={`ml-auto flex items-center justify-end gap-1 ${compact ? "shrink-0 flex-nowrap" : "flex-wrap"}`}
+        data-model-menus
+        className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-1"
       >
         <span id={`${id}-model`} className="sr-only">
           {term("model.model")}

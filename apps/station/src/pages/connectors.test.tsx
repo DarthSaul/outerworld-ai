@@ -60,13 +60,60 @@ describe("Abilities: connectors under Discover and Installed", () => {
     });
   });
 
-  it("discovers only the presets not installed yet", async () => {
+  it("adds only the presets not installed yet, and marks the installed one", async () => {
     renderApp("/system/abilities/discover", withNotion());
     const adding = await screen.findByRole("region", { name: term("abilities.discover") });
     expect((await within(adding).findAllByRole("button")).map((b) => b.textContent)).toEqual([
       termWith("connector.add", { name: "GitHub" }),
       termWith("connector.add", { name: "Gmail" }),
     ]);
+    // Notion stays in the grid, tagged installed, with a way to its card under Installed.
+    const notion = adding.querySelector('[data-ability="notion"]') as HTMLElement;
+    expect(notion).toHaveAttribute("data-installed", "true");
+    expect(within(notion).getByText(term("ability.isInstalled"))).toBeInTheDocument();
+    const manage = within(notion).getByRole("link", { name: term("ability.manage") });
+    expect(manage).toHaveAttribute("href", "/system/abilities/installed");
+    expect(manage).toHaveAccessibleDescription("Notion");
+    expect(adding.querySelector('[data-ability="github"]')).toHaveAttribute(
+      "data-installed",
+      "false",
+    );
+  });
+
+  it("shows Discover as a grid of cards: logo, name, kind, and a description of each", async () => {
+    renderApp("/system/abilities/discover");
+    const adding = await screen.findByRole("region", { name: term("abilities.discover") });
+    const grid = await within(adding).findByRole("list");
+    expect(grid).toHaveAttribute("data-ability-grid");
+    expect(grid.className).toMatch(/desktop:grid-cols-2/);
+    const cards = within(grid).getAllByRole("listitem");
+    expect(cards.map((c) => c.dataset.ability)).toEqual(["notion", "github", "gmail"]);
+    for (const c of cards) {
+      const id = c.dataset.ability as "notion" | "github" | "gmail";
+      expect(c.querySelector(`svg[data-brand="${id}"]`), id).not.toBeNull();
+      expect(within(c).getByText(term("ability.kind.mcp"))).toBeInTheDocument();
+      expect(within(c).getByText(term(`ability.${id}.hint`))).toBeInTheDocument();
+    }
+    expect(within(cards[0] as HTMLElement).getByRole("heading", { level: 3 })).toHaveTextContent(
+      "Notion",
+    );
+  });
+
+  it("shows Installed as full-width cards, one per row, each marked as an MCP server", async () => {
+    const fake = withNotion();
+    fake.connectors.push(gmail());
+    renderApp("/system/abilities/installed", fake);
+    const section = await screen.findByRole("region", { name: term("abilities.installed") });
+    expect(within(section).getByText(term("connectors.hint"))).toHaveTextContent(
+      /^Abilities installed once/,
+    );
+    const notion = await within(section).findByRole("region", { name: "Notion" });
+    const list = notion.parentElement as HTMLElement;
+    expect(list).toHaveAttribute("data-ability-list");
+    expect(list.className).not.toMatch(/grid-cols/);
+    expect(within(list).getAllByText(term("ability.kind.mcp"))).toHaveLength(2);
+    expect(notion.querySelector('svg[data-brand="notion"]')).not.toBeNull();
+    expect(within(notion).getByText(term("ability.notion.hint"))).toBeInTheDocument();
   });
 
   it("takes GitHub's OAuth app: shows the redirect, sends the client, never shows it back", async () => {
@@ -176,7 +223,7 @@ describe("Abilities: connectors under Discover and Installed", () => {
     ).toHaveAttribute("href", "https://accounts.example.test/auth?state=s2");
   });
 
-  it("shows a connected Notion's status, tools with their class, and who is granted it", async () => {
+  it("shows a connected Notion's status and tools with their class, without who is granted it", async () => {
     renderApp("/system/abilities/installed", withNotion());
     const card = await screen.findByRole("region", { name: "Notion" });
     expect(within(card).getByRole("status", { name: "Notion status" })).toHaveTextContent(
@@ -190,7 +237,8 @@ describe("Abilities: connectors under Discover and Installed", () => {
     const list = within(card).getByRole("list", { name: term("connector.tools") });
     expect(list.className).toMatch(/max-h-/);
     expect(list.className).toMatch(/overflow-y-auto/);
-    expect(within(card).getByText(`${term("connector.grantedTo")}: Quill`)).toBeInTheDocument();
+    // Grants are made and shown on each crew member's page, not here.
+    expect(within(card).queryByText(/Granted to/)).toBeNull();
     expect(
       within(card).queryByRole("button", { name: term("connector.remove") }),
     ).not.toBeInTheDocument();

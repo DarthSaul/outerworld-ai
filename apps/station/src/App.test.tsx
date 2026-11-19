@@ -143,11 +143,14 @@ describe("App shell", () => {
     expect(shell.className).toMatch(/desktop:h-dvh/);
     expect(shell.className).toMatch(/desktop:overflow-hidden/);
     expect(main.className).toMatch(/desktop:overflow-hidden/);
-    // The page itself holds still; its body is an interior window that scrolls.
-    const area = main.querySelector("[data-scroll-area]") as HTMLElement;
+    // The page itself holds still; its body is an interior window that scrolls. On a crew
+    // member's page the tab strip stays put and each tab scrolls.
+    const area = main.querySelector('[role="tabpanel"] [data-scroll-area]') as HTMLElement;
     expect(area.className).toMatch(/desktop:overflow-y-auto/);
-    expect(within(area).getByRole("region", { name: term("crewSelect.appearance") })).toBeTruthy();
-    expect(area.contains(screen.getByRole("heading", { level: 2, name: "Vesper" }))).toBe(false);
+    expect(within(area).getByRole("region", { name: term("tools.effective") })).toBeTruthy();
+    expect(area.contains(screen.getByRole("tablist", { name: term("agentTabs.label") }))).toBe(
+      false,
+    );
   });
 
   it("links every v1 screen by its glossary name and marks the current one", () => {

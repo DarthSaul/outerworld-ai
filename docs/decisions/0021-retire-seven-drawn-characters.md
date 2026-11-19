@@ -22,7 +22,9 @@ editing sprites.
   adept), as `sprites/art/merlo.png` and `shade.png`.
 - **`look` is a character id** (`"nova"`, `"dusty"`), the `id` every character already has.
   This replaces ADR-0013's index. Order in `CHARACTERS` is only the picker's order, so adding,
-  removing, or reordering sprites never changes anyone's look.
+  removing, or reordering sprites never changes anyone's look. The picker shows the painted
+  characters first (RAZOR through SHADE), then the drawn ones; `CHARACTERS` is in that order, so
+  the separate `CHARACTER_ORDER` index list is gone.
 - **Writes** (`PATCH /api/agents/:id`) accept only an id that names a character. **Reads** never
   drop an agent over its look: an id naming a deleted character is a warning, and the agent shows
   its default (`lookFor`); a numeric look from before this ADR is dropped on load with a warning,

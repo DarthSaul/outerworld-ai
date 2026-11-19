@@ -1,10 +1,10 @@
 import { CHARACTER_ART } from "./character-art.js";
 
 /**
- * The pixel characters an agent can appear as (ADR-0013): 17 drawn characters, generated on a
- * 20×26 grid (the design exports 24; 7 are retired, ADR-0021), then painted characters shipped as
- * art (ADR-0017). An agent stores its character's `id`, so order here is only the picker's order. The generator draws the drawn
- * ones. Ported from docs/design/station-dashboard/src/characterSprites.ts; the
+ * The pixel characters an agent can appear as (ADR-0013): painted characters shipped as art
+ * (ADR-0017), and 17 drawn characters generated on a 20×26 grid (the design exports 24; 7 are
+ * retired, ADR-0021). An agent stores its character's `id`, so order is only the picker's order.
+ * The generator draws the drawn ones. Ported from docs/design/station-dashboard/src/characterSprites.ts; the
  * exported PNGs in docs/design/station-dashboard/sprites/1x are the reference, and
  * characters.test.ts checks every grid against them pixel for pixel. Pure: no DOM, no canvas.
  */
@@ -307,7 +307,7 @@ const art = (id: string, name: string, role: string, size: 64 | 96 = 64): ArtCha
   art: { src: CHARACTER_ART[id] ?? "", size },
 });
 
-/** The painted characters, after the drawn ones in the picker. */
+/** The painted characters, first in the picker. */
 export const ART_CHARACTERS: readonly ArtCharacter[] = [
   art("razor", "RAZOR", "Captain"),
   art("umbra", "UMBRA", "Shadow knight", 96),
@@ -322,8 +322,11 @@ export const ART_CHARACTERS: readonly ArtCharacter[] = [
 
 export type Character = CharacterSpec | ArtCharacter;
 
-/** Every character an agent can wear, in picker order: the drawn ones, then the painted ones. */
-export const CHARACTERS: readonly Character[] = [...DRAWN_CHARACTERS, ...ART_CHARACTERS];
+/**
+ * Every character an agent can wear, in the picker's order: the painted ones first (RAZOR through
+ * SHADE), then the drawn ones. A saved `look` is a character id, so this order is display only.
+ */
+export const CHARACTERS: readonly Character[] = [...ART_CHARACTERS, ...DRAWN_CHARACTERS];
 
 export const isArtCharacter = (c: Character): c is ArtCharacter => "art" in c;
 

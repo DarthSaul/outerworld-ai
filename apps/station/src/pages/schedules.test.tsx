@@ -49,7 +49,7 @@ const card = async () => screen.findByRole("region", { name: "briefing" });
 
 describe("Schedules on a crew member's page", () => {
   it("shows each schedule's timing, next run in its own zone, and what it did lately", async () => {
-    const { container } = renderApp("/crew/quill", withBriefing());
+    const { container } = renderApp("/crew/quill?tab=schedules", withBriefing());
     const c = await card();
     expect(within(c).getByText("0 8 * * 1-5")).toBeInTheDocument();
     expect(within(c).getByText(/At 8:00 AM, Monday through Friday/)).toBeInTheDocument();
@@ -73,7 +73,7 @@ describe("Schedules on a crew member's page", () => {
 
   it("turns a schedule on or off, runs it now, and removes it", async () => {
     const user = userEvent.setup();
-    const { calls } = renderApp("/crew/quill", withBriefing(false));
+    const { calls } = renderApp("/crew/quill?tab=schedules", withBriefing(false));
     const c = await card();
     expect(within(c).getByText(term("schedule.off"))).toBeInTheDocument();
     await user.click(within(c).getByRole("checkbox", { name: term("schedule.enabled") }));
@@ -90,7 +90,7 @@ describe("Schedules on a crew member's page", () => {
 
   it("adds a schedule; an empty time zone means this computer's", async () => {
     const user = userEvent.setup();
-    const { calls } = renderApp("/crew/vesper");
+    const { calls } = renderApp("/crew/vesper?tab=schedules");
     expect(await screen.findByText(term("schedule.none"))).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: term("schedule.add") }));
     const form = screen.getByRole("form", { name: term("schedule.add") });
@@ -107,7 +107,7 @@ describe("Schedules on a crew member's page", () => {
 
   it("edits a schedule, clearing its zone back to this computer's", async () => {
     const user = userEvent.setup();
-    const { calls } = renderApp("/crew/quill", withBriefing());
+    const { calls } = renderApp("/crew/quill?tab=schedules", withBriefing());
     const c = await card();
     await user.click(within(c).getByRole("button", { name: term("schedule.edit") }));
     const form = within(c).getByRole("form", { name: term("schedule.edit") });
@@ -129,7 +129,7 @@ describe("Schedules on a crew member's page", () => {
 
   it("gives a new job its own model, key, and reasoning level (ADR-0016)", async () => {
     const user = userEvent.setup();
-    const { calls } = renderApp("/crew/vesper");
+    const { calls } = renderApp("/crew/vesper?tab=schedules");
     await screen.findByText(term("schedule.none"));
     await user.click(screen.getByRole("button", { name: term("schedule.add") }));
     const form = screen.getByRole("form", { name: term("schedule.add") });
@@ -164,7 +164,7 @@ describe("Schedules on a crew member's page", () => {
         })),
       };
     }
-    const { calls } = renderApp("/crew/quill", fake);
+    const { calls } = renderApp("/crew/quill?tab=schedules", fake);
     const c = await card();
     expect(within(c).getByText(/Claude Opus 5\.5 via OpenRouter/)).toBeInTheDocument();
     await user.click(within(c).getByRole("button", { name: term("schedule.edit") }));
@@ -177,7 +177,7 @@ describe("Schedules on a crew member's page", () => {
 
   it("says what a cron means and when it runs next, as it is typed", async () => {
     const user = userEvent.setup();
-    renderApp("/crew/vesper");
+    renderApp("/crew/vesper?tab=schedules");
     await user.click(await screen.findByRole("button", { name: term("schedule.add") }));
     const form = screen.getByRole("form", { name: term("schedule.add") });
     const cron = within(form).getByLabelText(term("schedule.cron"));
@@ -196,7 +196,7 @@ describe("Schedules on a crew member's page", () => {
 
   it("picks a time zone from a grouped list; the first choice is this computer's", async () => {
     const user = userEvent.setup();
-    const { calls } = renderApp("/crew/vesper");
+    const { calls } = renderApp("/crew/vesper?tab=schedules");
     await user.click(await screen.findByRole("button", { name: term("schedule.add") }));
     const form = screen.getByRole("form", { name: term("schedule.add") });
     const zone = within(form).getByLabelText(term("schedule.timezone"));
@@ -217,7 +217,7 @@ describe("Schedules on a crew member's page", () => {
 
   it("shows why the daemon refused a cron", async () => {
     const user = userEvent.setup();
-    renderApp("/crew/vesper");
+    renderApp("/crew/vesper?tab=schedules");
     await user.click(await screen.findByRole("button", { name: term("schedule.add") }));
     const form = screen.getByRole("form", { name: term("schedule.add") });
     await user.type(within(form).getByLabelText(term("schedule.cron")), "61 * * * *");
@@ -228,7 +228,7 @@ describe("Schedules on a crew member's page", () => {
 
   it("refreshes when a schedule fires", async () => {
     const fake = withBriefing();
-    const { emit, calls } = renderApp("/crew/quill", fake);
+    const { emit, calls } = renderApp("/crew/quill?tab=schedules", fake);
     await card();
     const before = calls.filter((c) => c.path === "/agents/quill/schedules").length;
     emit({

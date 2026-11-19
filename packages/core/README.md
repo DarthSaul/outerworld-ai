@@ -46,6 +46,8 @@ from the zod source (regenerate with `pnpm build && node scripts/write-schemas.m
 | Export | Description |
 |--------|-------------|
 | `glossary`, `term(key)`, `GLOSSARY_KEYS` | The only place on-screen words live (brief §4): Room, Crew, Hallway, Prop, COMMS, Commander, Ask first, Full power, … Keys are the neutral code identifiers. |
+| `toolDisplay(name)`, `propDisplay(kind)`, `connectorDisplay(name)`, `ItemDisplay`, `ITEM_ICONS`, `ItemIconName` | How a capability reads to people: a title (`web_fetch` → "Web & Browser"), a one-line description, and an icon id, from glossary `item.*` keys. Every built-in tool and prop has an entry; an unknown tool (a connector's own) shows as its name with the `tool` icon. |
+| `abilityDisplay(id, name)`, `AbilityDisplay`, `AbilityKind`, `ABILITY_BRANDS`, `AbilityBrand` | An ability as its card shows it: title, one-line description (glossary `ability.*`), kind (`mcp` for now), and the service's logo id. Every connector preset has a logo and description; any other connector reads as a plain MCP server with no logo. |
 
 ## Public API: milestone 1 map model
 
@@ -78,8 +80,9 @@ from the zod source (regenerate with `pnpm build && node scripts/write-schemas.m
 | `dashboardModel(input)` | The dashboard as one projection of runtime state. Input is the station config, agents, folded crew activity, recent runs, running dispatches, the active run count and pending proposals. Output is placed rooms (crew, grants as placed objects, alert), routed hallways (label, tag point, traffic), the roster, sorted missions, `liveCount` and `alerts`. |
 | `placeRooms(roomIds, bridgeId)`, `routeBetween(a, b, others)`, `pointAlong`, `tagPoint`, `routeLength`, `laneLabel`, `sectorFor` | Layout in percent of the map. The Bridge (the Overseer's room) sits in the middle with the other rooms in slots around it. Hallways route orthogonally (straight, L, Z, then a U detour) around other rooms. |
 | `runDisplayStatus`, `crewDisplayStatus`, `sortRuns`, `isLive`, `alertCount`, `initials` | The dashboard's status words, mapped from run states and crew activity. |
+| `overseerFirst(crew)` | The crew in listing order: the Overseer first, everyone else in the order given. |
 | `chatterLines(snapshot)` | The Overseer's ambient lines: glossary keys filled only from proven state, plus tips. |
-| `CHARACTERS`, `characterById(id)`, `characterGrid(spec)`, `gridRuns`, `lookFor(id, look)`, `SPRITE_W`, `SPRITE_H` | The 26 characters (17 drawn 20×26 grids, then 9 painted, `ART_CHARACTERS`) in picker order, checked pixel for pixel against the exported sprites; lookup by id; and the character id an agent appears as (its `look` if that names a character, else a stable drawn one). |
+| `CHARACTERS`, `characterById(id)`, `characterGrid(spec)`, `gridRuns`, `lookFor(id, look)`, `SPRITE_W`, `SPRITE_H` | The 26 characters in the picker's order (9 painted, `ART_CHARACTERS`, then 17 drawn 20×26 grids, `DRAWN_CHARACTERS`), checked pixel for pixel against the exported sprites; lookup by id; and the character id an agent appears as (its `look` if that names a character, else a stable drawn one). Order is display only: a saved look is an id. |
 
 ### Glossary
 | Export | Description |

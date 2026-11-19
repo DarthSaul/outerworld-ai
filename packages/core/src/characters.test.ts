@@ -163,8 +163,21 @@ describe("lookFor", () => {
     },
   );
 
-  it("keeps painted characters after the drawn ones, with unique ids and names", () => {
-    expect(CHARACTERS.slice(DRAWN_CHARACTERS.length)).toEqual(ART_CHARACTERS);
+  it("shows RAZOR through SHADE first in the picker, then the drawn ones, ids and names unique", () => {
+    expect(CHARACTERS.slice(0, 9).map((c) => c.id)).toEqual([
+      "razor",
+      "umbra",
+      "asha",
+      "tali",
+      "blip",
+      "patch",
+      "dusty",
+      "merlo",
+      "shade",
+    ]);
+    expect(CHARACTERS.slice(0, ART_CHARACTERS.length)).toEqual(ART_CHARACTERS);
+    expect(CHARACTERS.slice(ART_CHARACTERS.length)).toEqual(DRAWN_CHARACTERS);
+    expect(CHARACTERS[ART_CHARACTERS.length]?.name).toBe("NOVA");
     expect(new Set(CHARACTERS.map((c) => c.id)).size).toBe(CHARACTER_COUNT);
     expect(new Set(CHARACTERS.map((c) => c.name)).size).toBe(CHARACTER_COUNT);
     expect(DRAWN_CHARACTERS.some(isArtCharacter)).toBe(false);

@@ -153,11 +153,26 @@ export {
   crewDisplayStatus,
   initials,
   isLive,
+  overseerFirst,
   RUN_DISPLAY_STATUSES,
   type RunDisplayStatus,
   runDisplayStatus,
   sortRuns,
 } from "./dashboard/status.js";
+// Glossary
+export {
+  ABILITY_BRANDS,
+  type AbilityBrand,
+  type AbilityDisplay,
+  type AbilityKind,
+  abilityDisplay,
+  connectorDisplay,
+  ITEM_ICONS,
+  type ItemDisplay,
+  type ItemIconName,
+  propDisplay,
+  toolDisplay,
+} from "./display/items.js";
 // Events
 export {
   applyEvent,
@@ -165,7 +180,6 @@ export {
   emptyState,
   type StationEvent,
 } from "./events.js";
-// Glossary
 export { GLOSSARY_KEYS, type GlossaryKey, glossary, term, termWith } from "./glossary.js";
 export { deriveHealth, type HealthInputs } from "./health.js";
 // Ledger

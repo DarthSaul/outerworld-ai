@@ -1,5 +1,5 @@
 import { findModel, type ModelSettings, term } from "@darthsaul/outerworld-ai-core";
-import { Checkbox } from "@darthsaul/outerworld-ai-ui";
+import { Checkbox, Panel, Tag } from "@darthsaul/outerworld-ai-ui";
 import { type FormEvent, useId, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { ErrorNote } from "../components/ErrorNote.js";
@@ -362,9 +362,11 @@ export function SchedulesSection({ agentId }: { readonly agentId: string }) {
   const agentModel = station.data?.agents.find((a) => a.id === agentId)?.config.model ?? "";
   const [adding, setAdding] = useState(false);
   const list = schedules.data ?? [];
+  // No landmark name of its own: it fills the Schedules tab, which is already the "Schedules"
+  // region; a second one by the same name would make two landmarks nobody can tell apart.
   return (
     <section
-      aria-labelledby="schedules-title"
+      data-schedules-editor
       className="flex flex-col gap-2 border-2 border-line bg-panel p-3 shadow-panel"
     >
       <h2
@@ -415,5 +417,57 @@ export function SchedulesSection({ agentId }: { readonly agentId: string }) {
         </button>
       )}
     </section>
+  );
+}
+
+/**
+ * A crew member's schedules, read only (the Brief tab): when each runs, what it sends, and when it
+ * runs next. Editing lives on Config.
+ */
+export function SchedulesBrief({ agentId }: { readonly agentId: string }) {
+  const schedules = useSchedules(agentId);
+  const list = schedules.data ?? [];
+  return (
+    <Panel title={term("schedules")}>
+      <div className="flex flex-col gap-2 p-3">
+        <ErrorNote error={schedules.error} />
+        {schedules.isSuccess && list.length === 0 ? (
+          <p className="m-0 text-b17 text-fg-mute">{term("brief.schedules.none")}</p>
+        ) : null}
+        {list.length > 0 ? (
+          <ul className="m-0 flex list-none flex-col gap-2 p-0">
+            {list.map((s) => {
+              const preview = previewCron(s.cron, s.timezone);
+              return (
+                <li
+                  key={s.id}
+                  data-schedule={s.id}
+                  className="flex flex-col gap-1 border-2 border-line-faint bg-well p-2"
+                >
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <span className="font-display text-d8 text-fg-hi uppercase">{s.id}</span>
+                    <Tag data-schedule-state tone={s.enabled ? "green" : "mute"}>
+                      {term(s.enabled ? "schedule.enabled" : "schedule.off")}
+                    </Tag>
+                  </div>
+                  <p className="m-0 text-b17 text-fg">
+                    <span className="text-cyan">{s.cron}</span>
+                    {preview?.ok ? ` · ${preview.description}` : ""}
+                  </p>
+                  <p className="m-0 text-b17 text-fg-soft">{s.prompt}</p>
+                  <p className="m-0 text-b16 text-fg-mute">
+                    {s.error
+                      ? s.error
+                      : s.nextRunAt
+                        ? `${term("schedule.next")}: ${formatWhen(s.nextRunAt, s.timezone)} (${s.timezone})`
+                        : term("schedule.off")}
+                  </p>
+                </li>
+              );
+            })}
+          </ul>
+        ) : null}
+      </div>
+    </Panel>
   );
 }

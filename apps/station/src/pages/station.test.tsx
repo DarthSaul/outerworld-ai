@@ -1,5 +1,5 @@
 import { term } from "@darthsaul/outerworld-ai-core";
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { axe } from "vitest-axe";
@@ -730,7 +730,25 @@ describe("Crew column", () => {
     await map();
     await user.click(screen.getByRole("button", { name: term("station.crew.expand") }));
     expect(grid(again.container)?.style.getPropertyValue("--st-station-cols")).toBe(
-      "minmax(0,1.000fr) minmax(0,2.000fr) auto minmax(0,1.000fr)",
+      "minmax(0,1.000fr) auto minmax(0,2.000fr) auto minmax(0,1.000fr)",
+    );
+  });
+
+  it("lists the Overseer first, wherever the station keeps them", async () => {
+    const fake = fakeApi();
+    // The daemon lists Quill before the Overseer.
+    const entries = [...fake.state.agents.entries()].reverse();
+    fake.state.agents.clear();
+    for (const [k, v] of entries) fake.state.agents.set(k, v);
+    renderApp("/", fake);
+    await map();
+    const roster = within(crewColumn()).getByRole("list", { name: term("agents") });
+    await waitFor(() =>
+      expect(
+        within(roster)
+          .getAllByRole("button")
+          .map((b) => b.getAttribute("aria-label")),
+      ).toEqual(["Vesper", "Quill"]),
     );
   });
 });
@@ -772,12 +790,65 @@ describe("Station split", () => {
     await user.keyboard("{ArrowLeft}");
     expect(Number(handle.getAttribute("aria-valuenow"))).toBeGreaterThan(25);
     expect(grid(container)?.style.getPropertyValue("--st-station-cols")).toBe(
-      "minmax(0,1.000fr) minmax(0,1.940fr) auto minmax(0,1.060fr)",
+      "minmax(0,1.000fr) auto minmax(0,1.940fr) auto minmax(0,1.060fr)",
     );
     expect(localStorage.getItem("outerworld.split")).toBe("1.06");
     await user.keyboard("{Enter}");
     expect(handle).toHaveAttribute("aria-valuenow", "25");
     expect(await axe(container)).toHaveNoViolations();
     localStorage.removeItem("outerworld.split");
+  });
+
+  it("keeps each handle's starting width its own when both are dragged at once", async () => {
+    localStorage.setItem("outerworld.crewSplit", "1.25");
+    localStorage.setItem("outerworld.split", "0.75");
+    const { container } = renderApp("/");
+    await map();
+    vi.spyOn(grid(container) as HTMLElement, "clientWidth", "get").mockReturnValue(1600);
+    const crew = screen.getByRole("separator", { name: term("station.resize.crew") });
+    const comms = screen.getByRole("separator", { name: term("station.resize") });
+    // Two fingers: crew's drag starts, then comms' starts before crew's moves.
+    fireEvent.pointerDown(crew, { button: 0, clientX: 400, pointerId: 1 });
+    fireEvent.pointerDown(comms, { button: 0, clientX: 1200, pointerId: 2 });
+    fireEvent.pointerMove(window, { clientX: 400 + 100, pointerId: 1 });
+    // 1.25 + 0.25: from crew's own start, not from comms' 0.75.
+    expect(localStorage.getItem("outerworld.crewSplit")).toBe("1.5");
+    fireEvent.pointerMove(window, { clientX: 1200 - 100, pointerId: 2 });
+    expect(localStorage.getItem("outerworld.split")).toBe("1");
+    fireEvent.pointerUp(window, { pointerId: 1 });
+    fireEvent.pointerUp(window, { pointerId: 2 });
+    localStorage.removeItem("outerworld.crewSplit");
+    localStorage.removeItem("outerworld.split");
+  });
+
+  it("resizes the crew column against the map from its own handle, kept per viewer", async () => {
+    localStorage.removeItem("outerworld.crewSplit");
+    const user = userEvent.setup();
+    const { container } = renderApp("/");
+    await map();
+    const handle = screen.getByRole("separator", { name: term("station.resize.crew") });
+    expect(handle).toHaveAttribute("aria-valuenow", "25");
+    vi.spyOn(grid(container) as HTMLElement, "clientWidth", "get").mockReturnValue(1600);
+    // Dragged from where it began: 100px right is a quarter fr, wherever the pointer went between.
+    fireEvent.pointerDown(handle, { button: 0, clientX: 400, pointerId: 1 });
+    fireEvent.pointerMove(handle, { clientX: 450, pointerId: 1 });
+    fireEvent.pointerMove(handle, { clientX: 500, pointerId: 1 });
+    fireEvent.pointerUp(handle, { pointerId: 1 });
+    expect(grid(container)?.style.getPropertyValue("--st-station-cols")).toBe(
+      "minmax(0,1.250fr) auto minmax(0,1.750fr) auto minmax(0,1.000fr)",
+    );
+    expect(localStorage.getItem("outerworld.crewSplit")).toBe("1.25");
+    // Released: moving on changes nothing.
+    fireEvent.pointerMove(window, { clientX: 900, pointerId: 1 });
+    expect(localStorage.getItem("outerworld.crewSplit")).toBe("1.25");
+    handle.focus();
+    await user.keyboard("{Enter}");
+    expect(handle).toHaveAttribute("aria-valuenow", "25");
+    // A folded crew column has no handle.
+    await user.click(
+      within(crewColumn()).getByRole("button", { name: term("station.crew.collapse") }),
+    );
+    expect(screen.queryByRole("separator", { name: term("station.resize.crew") })).toBeNull();
+    localStorage.removeItem("outerworld.crewSplit");
   });
 });
