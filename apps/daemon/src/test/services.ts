@@ -1,3 +1,4 @@
+import type { Skill } from "@darthsaul/outerworld-ai-core";
 import {
   ANTHROPIC_PROVIDER,
   ApiKeyService,
@@ -38,7 +39,7 @@ export function testServices(
   home: string,
   events: EventStore,
   secrets = new MemorySecretStore(),
-  options: { titles?: boolean } = {},
+  options: { titles?: boolean; skills?: readonly Skill[] } = {},
 ): TestServices {
   const db = openDatabase(":memory:");
   const sessions = new SessionStore(db);
@@ -71,7 +72,12 @@ export function testServices(
   // Not started: tests read views and run now; timing is covered in the runtime's tests.
   const scheduler = new Scheduler({ home, runs, sessions, events, store: new ScheduleStore(db) });
   return {
-    crew: new CrewService({ home, events, connectorTools: () => connectors.catalog() }),
+    crew: new CrewService({
+      home,
+      events,
+      connectorTools: () => connectors.catalog(),
+      skills: options.skills ?? [],
+    }),
     connectors,
     memory,
     memoryStore,
