@@ -247,6 +247,7 @@ export {
   GMAIL_PRESET,
   isPresetAvailable,
   KNOWN_TOOL_CLASSES,
+  legacyGmailServer,
   migrateLegacyGmail,
   NOTION_PRESET,
   needsOwnClient,

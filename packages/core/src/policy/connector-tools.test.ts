@@ -11,6 +11,7 @@ import {
   GMAIL_PRESET,
   isPresetAvailable,
   KNOWN_TOOL_CLASSES,
+  legacyGmailServer,
   migrateLegacyGmail,
   NOTION_PRESET,
   needsOwnClient,
@@ -242,15 +243,19 @@ describe("migrateLegacyGmail", () => {
 
   it("moves a gmail connector at the MCP server onto the Gmail service, keeping its id", () => {
     const out = migrateLegacyGmail([NOTION_PRESET, { ...legacy, name: "My mail" }]);
-    expect(out).toEqual([NOTION_PRESET, GMAIL_PRESET]);
+    expect(out).toEqual([
+      NOTION_PRESET,
+      { ...GMAIL_PRESET, migratedFrom: "https://gmailmcp.googleapis.com/mcp/v1" },
+    ]);
   });
 
-  it("matches the MCP server however its URL is spelled", () => {
-    const spelled = {
-      ...legacy,
-      transport: { type: "http" as const, url: "https://GMAILMCP.googleapis.com:443/mcp/v1/" },
-    };
-    expect(migrateLegacyGmail([spelled])).toEqual([GMAIL_PRESET]);
+  it("matches the MCP server however its URL is spelled, and keeps that exact spelling", () => {
+    const url = "https://GMAILMCP.googleapis.com:443/mcp/v1/";
+    const spelled = { ...legacy, transport: { type: "http" as const, url } };
+    const [moved] = migrateLegacyGmail([spelled]);
+    expect(moved).toEqual({ ...GMAIL_PRESET, migratedFrom: url });
+    expect(moved && legacyGmailServer(moved)).toBe(url);
+    expect(legacyGmailServer(GMAIL_PRESET)).toBeUndefined();
   });
 
   it("leaves everything else alone, returning the same list", () => {

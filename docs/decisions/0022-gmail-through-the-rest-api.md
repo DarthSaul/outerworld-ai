@@ -78,7 +78,11 @@ checked on 2026-11-18 through the Google developer knowledge server:
   - the MCP server's tokens and registration are deleted;
   - the Commander only signs in again.
 
-  It runs before the HTTP app exists, so nothing else writes station.json at the same time.
+  It runs before the HTTP app exists, so nothing else writes station.json at the same time. The
+  old sign-in is keyed by the URL exactly as it was spelled, so the moved connector keeps that
+  URL as `migratedFrom` until every old keychain entry is deleted. A later start retries the
+  cleanup under it. A failed migration never stops the daemon; it warns and retries on the next
+  start.
 - A builtin connector has no server URL. `PATCH /api/connectors/:id` with a `url` returns 409 for
   it, and its card has no URL field. Its view reports `service: "gmail"` in place of `url`. The SPA
   finds its setup steps with `ownClientProfileOf({ url, service })`.

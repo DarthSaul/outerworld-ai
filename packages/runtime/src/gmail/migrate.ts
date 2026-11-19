@@ -1,6 +1,7 @@
 import {
   GMAIL_MCP_URL,
   GMAIL_PRESET,
+  legacyGmailServer,
   migrateLegacyGmail,
   parseStationConfig,
 } from "@darthsaul/outerworld-ai-core";
@@ -28,24 +29,41 @@ async function moveLegacySecrets(secrets: SecretStore, legacyServer: string): Pr
   }
 }
 
+interface Options {
+  home: string;
+  secrets: SecretStore;
+  events?: EventStore;
+}
+
+/** Drops the `migratedFrom` record from the `gmail` connector once its old sign-in is gone. */
+async function clearRecord(options: Options): Promise<void> {
+  const station = (await loadStationDir(options.home)).station;
+  if (!station) return;
+  const connectors = station.connectors.map((c) => {
+    if (c.id !== GMAIL_PRESET.id || legacyGmailServer(c) === undefined) return c;
+    const { migratedFrom: _done, ...rest } = c;
+    return rest;
+  });
+  const next = parseStationConfig({ ...station, connectors });
+  if (!next.ok) return;
+  await saveStationConfig(options.home, next.value);
+  options.events?.append({ type: "station.updated", payload: {} });
+}
+
 /**
  * Before ADR-0022, the `gmail` connector was Google's Gmail MCP server. Moves such a station onto
  * the Gmail API service, at daemon start before anything else writes station.json:
  * - station.json: the connector keeps its id (crew grants and the registered redirect URL hold)
- *   and gets the service's transport;
+ *   and gets the service's transport, with the exact old URL recorded as `migratedFrom`;
  * - keychain: the Commander's own OAuth app moves over, so they only sign in again, and the MCP
- *   server's entries are deleted.
+ *   server's entries (keyed by that exact URL) are deleted;
+ * - then the `migratedFrom` record is dropped.
  *
- * The keychain step also runs on later starts once station.json is moved, so a cleanup that
- * failed part-way is finished next time (for the MCP server's usual URL; station.json no longer
- * records another spelling). Returns whether station.json was moved. Matches the MCP server
- * however its URL was spelled.
+ * A cleanup that fails part-way is finished on a later start under the recorded URL. A station
+ * moved before the record existed is cleaned under the MCP server's usual URL. Returns whether
+ * station.json was moved.
  */
-export async function migrateLegacyGmailConnector(options: {
-  home: string;
-  secrets: SecretStore;
-  events?: EventStore;
-}): Promise<boolean> {
+export async function migrateLegacyGmailConnector(options: Options): Promise<boolean> {
   const loaded = await loadStationDir(options.home);
   const station = loaded.station;
   if (!station) return false;
@@ -54,8 +72,10 @@ export async function migrateLegacyGmailConnector(options: {
 
   if (connectors === station.connectors) {
     // Already moved (or never there): finish any keychain cleanup an earlier start left behind.
-    if (gmail?.transport.type === "builtin")
-      await moveLegacySecrets(options.secrets, GMAIL_MCP_URL);
+    if (gmail?.transport.type !== "builtin") return false;
+    const recorded = legacyGmailServer(gmail);
+    await moveLegacySecrets(options.secrets, recorded ?? GMAIL_MCP_URL);
+    if (recorded !== undefined) await clearRecord(options);
     return false;
   }
 
@@ -67,8 +87,10 @@ export async function migrateLegacyGmailConnector(options: {
   if (own && !(await options.secrets.get(key(NEW_SERVER, "own")))) {
     await options.secrets.set(key(NEW_SERVER, "own"), own);
   }
+  // Saved with `migratedFrom`, so a later start can retry the cleanup under this exact URL.
   await saveStationConfig(options.home, next.value);
   options.events?.append({ type: "station.updated", payload: {} });
   await moveLegacySecrets(options.secrets, legacyServer);
+  await clearRecord(options);
   return true;
 }

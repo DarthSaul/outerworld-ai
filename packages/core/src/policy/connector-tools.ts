@@ -305,8 +305,10 @@ export function needsOwnClient(connector: Connector): boolean {
 /**
  * A station installed before ADR-0022 has a `gmail` connector that points at the Gmail MCP
  * server. The `gmail` id now names the Gmail API service, so that connector is moved onto it:
- * same id, so crew grants and the registered redirect URL still hold. Returns the connector list
- * unchanged (the same array) when there is nothing to move.
+ * same id, so crew grants and the registered redirect URL still hold. The exact URL it had is
+ * kept as `migratedFrom`, so the runtime can find (and retry deleting) the old sign-in, which is
+ * keyed by that spelling; the runtime drops the field once that is done. Returns the connector
+ * list unchanged (the same array) when there is nothing to move.
  */
 export function migrateLegacyGmail(connectors: readonly Connector[]): readonly Connector[] {
   const legacy = (c: Connector) =>
@@ -315,6 +317,22 @@ export function migrateLegacyGmail(connectors: readonly Connector[]): readonly C
     serverKey(c.transport.url) === serverKey(GMAIL_MCP_URL);
   if (!connectors.some(legacy)) return connectors;
   return connectors.map((c) =>
-    legacy(c) ? { ...c, name: GMAIL_PRESET.name, transport: GMAIL_PRESET.transport } : c,
+    legacy(c) && c.transport.type === "http"
+      ? {
+          ...c,
+          name: GMAIL_PRESET.name,
+          transport: GMAIL_PRESET.transport,
+          migratedFrom: c.transport.url,
+        }
+      : c,
   );
+}
+
+/**
+ * The Gmail MCP URL a `gmail` connector was moved from, while its old sign-in may still be in the
+ * keychain; undefined once cleaned up (or never moved).
+ */
+export function legacyGmailServer(connector: Connector): string | undefined {
+  const from = connector.migratedFrom;
+  return typeof from === "string" ? from : undefined;
 }

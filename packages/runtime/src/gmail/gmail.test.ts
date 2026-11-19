@@ -560,11 +560,13 @@ describe("migrateLegacyGmailConnector", () => {
     expect(await migrateLegacyGmailConnector({ home: s.home, secrets })).toBe(false);
   });
 
-  it("finishes on a later start a keychain cleanup that failed after station.json moved", async () => {
-    const s = station({ id: "gmail", name: "Gmail", transport: { type: "http", url: MCP } });
+  it("finishes on a later start a keychain cleanup that failed, under the exact old URL", async () => {
+    // Spelled otherwise than usual: its sign-in is keyed by this spelling, not the usual one.
+    const SPELLED = "https://gmailmcp.googleapis.com:443/mcp/v1/";
+    const s = station({ id: "gmail", name: "Gmail", transport: { type: "http", url: SPELLED } });
     const store = new MemorySecretStore();
-    await store.set(key("own", MCP), JSON.stringify({ clientId: "cid" }));
-    await store.set(key("tokens", MCP), JSON.stringify({ access_token: "mcp" }));
+    await store.set(key("own", SPELLED), JSON.stringify({ clientId: "cid" }));
+    await store.set(key("tokens", SPELLED), JSON.stringify({ access_token: "mcp" }));
     // The keychain refuses deletes on the first start.
     let failing = true;
     const flaky = {
@@ -578,16 +580,27 @@ describe("migrateLegacyGmailConnector", () => {
     await expect(migrateLegacyGmailConnector({ home: s.home, secrets: flaky })).rejects.toThrow(
       /locked/,
     );
-    // station.json moved and the OAuth app was copied before the failure.
-    expect(s.read().connectors.find((c: { id: string }) => c.id === "gmail")).toEqual(GMAIL_PRESET);
+    // station.json moved, recording the exact old URL; the OAuth app was copied before the failure.
+    const gmail = () => s.read().connectors.find((c: { id: string }) => c.id === "gmail");
+    expect(gmail()).toEqual({ ...GMAIL_PRESET, migratedFrom: SPELLED });
     expect(await store.get(key("own"))).toBe(JSON.stringify({ clientId: "cid" }));
 
     failing = false;
     expect(await migrateLegacyGmailConnector({ home: s.home, secrets: flaky })).toBe(false);
     for (const kind of ["own", "tokens", "client"] as const) {
-      expect(await store.get(key(kind, MCP))).toBeUndefined();
+      expect(await store.get(key(kind, SPELLED))).toBeUndefined();
     }
     expect(await store.get(key("own"))).toBe(JSON.stringify({ clientId: "cid" }));
+    // Done: the record goes.
+    expect(gmail()).toEqual(GMAIL_PRESET);
+  });
+
+  it("cleans a station moved before the record existed under the usual URL", async () => {
+    const s = station(GMAIL_PRESET);
+    const secrets = new MemorySecretStore();
+    await secrets.set(key("tokens", MCP), JSON.stringify({ access_token: "mcp" }));
+    expect(await migrateLegacyGmailConnector({ home: s.home, secrets })).toBe(false);
+    expect(await secrets.get(key("tokens", MCP))).toBeUndefined();
   });
 
   it("leaves a station without one untouched", async () => {
