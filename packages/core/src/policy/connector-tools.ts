@@ -31,7 +31,7 @@ export const KNOWN_TOOL_CLASSES: Readonly<Record<string, ToolClass>> = {
   "notion-create-comment": "write",
   "notion-create-file-upload": "write",
   "notion-create-attachment": "write",
-  // The station's own Gmail service over the Gmail REST API (ADR-0021). Drafting, labeling, and
+  // The station's own Gmail service over the Gmail REST API (ADR-0022). Drafting, labeling, and
   // trashing change the mailbox; nothing sends.
   search_threads: "read",
   get_thread: "read",
@@ -65,7 +65,7 @@ export const NOTION_PRESET: Connector = {
 };
 
 const GITHUB_URL = "https://api.githubcopilot.com/mcp/";
-/** Google's Gmail MCP server, a Developer Preview (ADR-0019, ADR-0021). */
+/** Google's Gmail MCP server, a Developer Preview (ADR-0019, ADR-0022). */
 export const GMAIL_MCP_URL = "https://gmailmcp.googleapis.com/mcp/v1";
 
 /**
@@ -81,7 +81,7 @@ export const GITHUB_PRESET: Connector = {
 
 /**
  * Gmail through the Gmail REST API (https://developers.google.com/workspace/gmail/api, checked
- * 2026-11-18), which the runtime calls itself (ADR-0021). Sign-in goes through the Commander's
+ * 2026-11-18), which the runtime calls itself (ADR-0022). Sign-in goes through the Commander's
  * own OAuth client, like GitHub.
  */
 export const GMAIL_PRESET: Connector = {
@@ -93,7 +93,7 @@ export const GMAIL_PRESET: Connector = {
 /**
  * Google's Gmail MCP server (https://developers.google.com/workspace/gmail/api/reference/mcp,
  * checked 2026-11-16). A Developer Preview that refuses projects outside the program, so the
- * catalog shows it but cannot add it yet (ADR-0021).
+ * catalog shows it but cannot add it yet (ADR-0022).
  */
 export const GMAIL_MCP_PRESET: Connector = {
   id: "gmail-mcp",
@@ -112,7 +112,7 @@ export const CONNECTOR_PRESETS = {
 export type ConnectorPresetId = keyof typeof CONNECTOR_PRESETS;
 export const CONNECTOR_PRESET_IDS = Object.keys(CONNECTOR_PRESETS) as ConnectorPresetId[];
 
-/** Presets the catalog shows but cannot add yet (ADR-0021): Gmail MCP, until preview access. */
+/** Presets the catalog shows but cannot add yet (ADR-0022): Gmail MCP, until preview access. */
 const UNAVAILABLE_PRESETS: ReadonlySet<ConnectorPresetId> = new Set<ConnectorPresetId>([
   "gmail-mcp",
 ]);
@@ -192,7 +192,7 @@ const GMAIL_MCP_PROFILE: OwnClientProfile = {
 };
 
 /**
- * Gmail through the REST API (ADR-0021): the same scope and offline access as the MCP server,
+ * Gmail through the REST API (ADR-0022): the same scope and offline access as the MCP server,
  * without the preview program or the MCP API. A consent screen left in Testing gets refresh
  * tokens that lapse after seven days, and the audience step says so.
  */
@@ -235,7 +235,7 @@ const OWN_CLIENT_SERVERS: ReadonlyMap<string, OwnClientProfile> = new Map(
   ].map(([u, p]) => [serverKey(u as string) ?? (u as string), p as OwnClientProfile]),
 );
 
-/** Builtin services that sign in with the Commander's own OAuth client (ADR-0021). */
+/** Builtin services that sign in with the Commander's own OAuth client (ADR-0022). */
 const OWN_CLIENT_SERVICES: Readonly<Record<string, OwnClientProfile>> = {
   gmail: GMAIL_API_PROFILE,
 };
@@ -258,7 +258,7 @@ export interface ProfileSource {
   readonly service?: string | undefined;
 }
 
-/** The sign-in profile for a server URL or a builtin service (ADR-0019, ADR-0021). */
+/** The sign-in profile for a server URL or a builtin service (ADR-0019, ADR-0022). */
 export function ownClientProfileOf(source: ProfileSource): OwnClientProfile | undefined {
   if (source.service !== undefined) {
     return Object.hasOwn(OWN_CLIENT_SERVICES, source.service)
@@ -281,7 +281,7 @@ export function needsOwnClient(connector: Connector): boolean {
 }
 
 /**
- * A station installed before ADR-0021 has a `gmail` connector that points at the Gmail MCP
+ * A station installed before ADR-0022 has a `gmail` connector that points at the Gmail MCP
  * server. The `gmail` id now names the Gmail API service, so that connector is moved onto it:
  * same id, so crew grants and the registered redirect URL still hold. Returns the connector list
  * unchanged (the same array) when there is nothing to move.

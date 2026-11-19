@@ -52,6 +52,16 @@ imported by core, ui, or the SPA.
 |--------|-------------|
 | `NotificationService({ events, db })` | `page({ before?, limit? })` → `{ items, unread, readSeq, nextBefore? }`: the event log projected through core's `notificationFor`, newest first; `markRead(seq)` moves one persisted read marker forward (never back); `unread()` counts up to 999. |
 
+### Connectors and the Gmail service (ADR-0012, ADR-0019, ADR-0022)
+| Export | Description |
+|--------|-------------|
+| `ConnectorManager({ home, events, secrets, redirectUrl, transports?, signIn?, fetch? })` | Connects the station's connectors, keeps them up, signs in (OAuth in the keychain, the Commander's own client where needed), classifies tools, and reports `connector.status` events. HTTP connectors go over streamable HTTP; the Gmail service (`builtin`) goes over an in-memory MCP adapter, with `fetch` for Google. |
+| `KeychainOAuthProvider`, `connectorSecretKey(id, server, kind)` | One connector's sign-in: own client, tokens, registration in the keychain; verifier and `state` in memory. |
+| `GmailApi({ fetch, token })` | Gmail REST API v1 as `users/me`: `searchThreads`, `getThread`, `listLabels`, `createDraft` (a reply goes in its thread with the threading headers; nothing sends), `modifyThreadLabels`, `trashThread`. A 401 is retried once with a renewed token. |
+| `createGmailServer(api, { onSignInRequired? })`, `gmailTransport(provider, fetch)` | The six Gmail tools as an in-process MCP server, and the transport the manager connects to it (with `finishAuth` for the callback's code). |
+| `startGoogleSignIn`, `finishGoogleSignIn`, `googleAccessToken`, `SignInRequiredError` | Google's OAuth with the Commander's client: PKCE S256 authorization URL; code exchange storing `expires_at`; a current access token, renewed a minute early, with a refused renewal deleting the tokens. |
+| `migrateLegacyGmailConnector({ home, secrets, events? })` | Once at daemon start: a `gmail` connector at the Gmail MCP URL becomes the Gmail service; the saved OAuth app moves over, the MCP tokens are deleted. |
+
 ### Database and event log
 | Export | Description |
 |--------|-------------|

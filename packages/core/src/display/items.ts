@@ -96,7 +96,7 @@ export type AbilityBrand = (typeof ABILITY_BRANDS)[number];
 
 /**
  * What an ability is underneath: an MCP server, or a service's API the runtime calls itself
- * (ADR-0021). Toolsets and skills join later.
+ * (ADR-0022). Toolsets and skills join later.
  */
 export type AbilityKind = "mcp" | "api";
 

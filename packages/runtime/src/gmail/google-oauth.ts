@@ -3,7 +3,7 @@ import type { StoredOAuthTokens } from "@modelcontextprotocol/client";
 import type { KeychainOAuthProvider } from "../mcp/oauth-provider.js";
 
 /**
- * Google's OAuth 2.0 for the Gmail service (ADR-0021), with the Commander's own client: the
+ * Google's OAuth 2.0 for the Gmail service (ADR-0022), with the Commander's own client: the
  * authorization-code flow with PKCE (S256) and a loopback redirect, per
  * https://developers.google.com/identity/protocols/oauth2/native-app (checked 2026-11-18). The
  * endpoints are fixed, so there is no discovery. Credentials go through the connector's

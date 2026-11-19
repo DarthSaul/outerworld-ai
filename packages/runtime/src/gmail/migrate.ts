@@ -10,7 +10,7 @@ import type { EventStore } from "../storage/event-store.js";
 import { loadStationDir, saveStationConfig } from "../storage/station-dir.js";
 
 /**
- * Before ADR-0021, the `gmail` connector was Google's Gmail MCP server. Moves such a station onto
+ * Before ADR-0022, the `gmail` connector was Google's Gmail MCP server. Moves such a station onto
  * the Gmail API service, once, at daemon start before anything else writes station.json:
  * - station.json: the connector keeps its id (crew grants and the registered redirect URL hold)
  *   and gets the service's transport;

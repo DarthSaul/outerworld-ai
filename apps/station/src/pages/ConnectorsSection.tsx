@@ -34,7 +34,7 @@ const link = "text-cyan underline hover:text-fg-hi";
 
 /**
  * The provider's setup steps for this server or service, each with its console link (ADR-0019,
- * ADR-0021).
+ * ADR-0022).
  */
 function SetupSteps({
   connector,
@@ -289,7 +289,7 @@ function ConnectorCard({ connector }: { readonly connector: ConnectorItem }) {
           </span>
         }
       />
-      {/* The station's own services (Gmail, ADR-0021) have no server URL to change. */}
+      {/* The station's own services (Gmail, ADR-0022) have no server URL to change. */}
       {connector.service === undefined ? (
         <form onSubmit={save} className="flex flex-wrap items-end gap-2">
           <label className="flex min-w-0 flex-1 flex-col gap-1 font-display text-d7 text-fg-mute uppercase">
@@ -407,7 +407,7 @@ const grid = "m-0 grid list-none grid-cols-1 items-start gap-3 p-0 desktop:grid-
 /**
  * Abilities › Discover: every connector preset (brief §12) as a card; the server and its name come
  * from core. One not installed yet adds in a click and moves to Installed; one already installed
- * says so and links there; one not available yet (Gmail MCP, ADR-0021) says that and offers
+ * says so and links there; one not available yet (Gmail MCP, ADR-0022) says that and offers
  * nothing.
  */
 export function ConnectorsDiscover() {

@@ -26,7 +26,7 @@ export {
   type DispatchStatus,
   DispatchStore,
 } from "./dispatch/dispatch-store.js";
-// Gmail through the Gmail REST API, as the station's own connector service (ADR-0021)
+// Gmail through the Gmail REST API, as the station's own connector service (ADR-0022)
 export {
   type AccessToken,
   GMAIL_API_BASE,

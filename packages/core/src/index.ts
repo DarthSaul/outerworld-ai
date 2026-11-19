@@ -192,7 +192,7 @@ export {
   parseLedger,
   parseLedgerMarkdown,
 } from "./ledger/parse.js";
-// Email for the Gmail service: building drafts, reading threads (ADR-0021)
+// Email for the Gmail service: building drafts, reading threads (ADR-0022)
 export { fromBase64, toBase64, toBase64Url } from "./mail/base64.js";
 export {
   buildMessage,

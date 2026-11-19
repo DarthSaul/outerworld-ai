@@ -26,7 +26,7 @@ const withNotion = (status: "connected" | "disconnected" = "connected") => {
 };
 
 /**
- * Gmail as the daemon lists it: the station's own service over the Gmail API (ADR-0021), signed
+ * Gmail as the daemon lists it: the station's own service over the Gmail API (ADR-0022), signed
  * in with the Commander's own OAuth app.
  */
 const gmail = (ownClient: { set: boolean } = { set: false }): ConnectorItem => ({

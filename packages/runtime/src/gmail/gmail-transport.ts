@@ -8,7 +8,7 @@ import { type Fetch, finishGoogleSignIn, googleAccessToken } from "./google-oaut
 export type SignInTransport = Transport & { finishAuth(code: string): Promise<void> };
 
 /**
- * The Gmail service as a connector transport (ADR-0021): the client end of an in-memory pair
+ * The Gmail service as a connector transport (ADR-0022): the client end of an in-memory pair
  * whose other end is the Gmail MCP adapter, calling Google with the connector's keychain sign-in.
  * `finishAuth` exchanges the callback's code with Google.
  */

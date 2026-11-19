@@ -128,10 +128,10 @@ export async function startDaemon(
     store: new ScheduleStore(db),
   });
 
-  // Before anything else can write station.json: a Gmail MCP connector from before ADR-0021
+  // Before anything else can write station.json: a Gmail MCP connector from before ADR-0022
   // moves onto the Gmail API service, keeping its id, grants, and OAuth app.
   if (await migrateLegacyGmailConnector({ home: config.home, secrets, events })) {
-    log("moved the gmail connector from Gmail MCP to the Gmail API (ADR-0021); sign in again");
+    log("moved the gmail connector from Gmail MCP to the Gmail API (ADR-0022); sign in again");
   }
   const loaded = await loadStationDir(config.home);
   for (const issue of loaded.issues) warn(`${issue.level}: ${issue.path}: ${issue.message}`);

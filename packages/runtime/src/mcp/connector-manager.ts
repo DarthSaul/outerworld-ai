@@ -37,7 +37,7 @@ export interface ConnectorView {
   readonly id: string;
   readonly name: string;
   readonly url?: string;
-  /** For a service the runtime reaches itself (ADR-0021): which one. */
+  /** For a service the runtime reaches itself (ADR-0022): which one. */
   readonly service?: string;
   readonly status: ConnectorStatus;
   readonly detail?: string;
@@ -99,7 +99,7 @@ interface Entry {
   authQueued: number;
 }
 
-/** HTTP connectors over streamable HTTP; the Gmail service in memory (ADR-0021). */
+/** HTTP connectors over streamable HTTP; the Gmail service in memory (ADR-0022). */
 const defaultTransports =
   (fetchFn: Fetch): TransportFactory =>
   (connector, provider) => {
@@ -156,7 +156,7 @@ export class ConnectorManager {
     transports?: TransportFactory;
     signIn?: SignInStarter;
     reconnect?: { baseMs: number; maxMs: number };
-    /** For the station's own services' calls to their APIs (ADR-0021); tests pass a fake. */
+    /** For the station's own services' calls to their APIs (ADR-0022); tests pass a fake. */
     fetch?: Fetch;
   }) {
     this.#home = options.home;
@@ -520,7 +520,7 @@ export class ConnectorManager {
       .join("\n")
       .slice(0, MAX_RESULT_CHARS);
     if (result.isError) {
-      // The station's own services report a refused sign-in by dropping its tokens (ADR-0021):
+      // The station's own services report a refused sign-in by dropping its tokens (ADR-0022):
       // ask the Commander, as for a server that refused it.
       if (needsOwnClient(entry.connector) && !(await entry.provider.hasTokens())) {
         await this.#signInAgain(entry, client);

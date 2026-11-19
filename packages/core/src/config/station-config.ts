@@ -36,7 +36,7 @@ export const Lane = z.looseObject({
 
 const HttpUrl = z.url({ protocol: /^https?$/ });
 
-/** Services the runtime connects to itself rather than through an MCP server (ADR-0021). */
+/** Services the runtime connects to itself rather than through an MCP server (ADR-0022). */
 export const BUILTIN_SERVICES = ["gmail"] as const;
 export type BuiltinService = (typeof BUILTIN_SERVICES)[number];
 
@@ -51,7 +51,7 @@ export const ConnectorTransport = z.discriminatedUnion("type", [
     command: z.string().min(1),
     args: z.array(z.string()).default([]),
   }),
-  // A service the runtime reaches itself, over its own REST API (ADR-0021).
+  // A service the runtime reaches itself, over its own REST API (ADR-0022).
   z.strictObject({ type: z.literal("builtin"), service: z.enum(BUILTIN_SERVICES) }),
 ]);
 

@@ -495,7 +495,7 @@ export class CrewService {
       const station = loaded.station;
       const current = station.connectors.find((c) => c.id === id);
       if (!current) throw new NotFoundError(`no connector "${id}"`);
-      // The station's own services have no server URL to change (ADR-0021).
+      // The station's own services have no server URL to change (ADR-0022).
       if (input.url !== undefined && current.transport.type === "builtin") {
         throw new ConflictError(`${current.name} is not reached through a server URL`);
       }

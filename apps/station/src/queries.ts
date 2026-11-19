@@ -395,7 +395,7 @@ export interface ConnectorItem {
   readonly id: string;
   readonly name: string;
   readonly url?: string;
-  /** For the station's own services (ADR-0021), in place of a URL: which one, e.g. `gmail`. */
+  /** For the station's own services (ADR-0022), in place of a URL: which one, e.g. `gmail`. */
   readonly service?: string;
   readonly status: "disconnected" | "needs_auth" | "connected" | "error";
   readonly detail?: string;

@@ -98,7 +98,7 @@ describe("connector presets", () => {
       name: "GitHub",
       transport: { type: "http", url: "https://api.githubcopilot.com/mcp/" },
     });
-    // Gmail is the station's own service over the REST API (ADR-0021), not an MCP server.
+    // Gmail is the station's own service over the REST API (ADR-0022), not an MCP server.
     expect(GMAIL_PRESET).toEqual({
       id: "gmail",
       name: "Gmail",

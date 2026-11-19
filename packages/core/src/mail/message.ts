@@ -1,7 +1,7 @@
 import { fromBase64, toBase64, toBase64Url, utf8 } from "./base64.js";
 
 /**
- * Email for the Gmail service (ADR-0021): building a draft as Gmail's `raw` RFC 2822 message,
+ * Email for the Gmail service (ADR-0022): building a draft as Gmail's `raw` RFC 2822 message,
  * and reading Gmail's parsed threads back as plain text for the model. Pure; no IO.
  */
 

@@ -50,7 +50,7 @@ export interface HealthView {
 }
 
 /**
- * Connectors (ADR-0012, ADR-0019, ADR-0021): a preset that can be added today, a URL change, an
+ * Connectors (ADR-0012, ADR-0019, ADR-0022): a preset that can be added today, a URL change, an
  * own OAuth client, disconnecting.
  */
 export const AddConnectorInput = z.strictObject({ preset: z.enum(AVAILABLE_PRESET_IDS) });

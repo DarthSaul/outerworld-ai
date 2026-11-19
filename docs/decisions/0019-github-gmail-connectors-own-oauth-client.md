@@ -87,3 +87,7 @@ Later the same day, the first real sign-in got past OAuth and then hit a project
 every tool call: "Access to this tool requires that your Google Cloud project … is enrolled in the
 Google Workspace Developer Preview Program". The Gmail MCP server is a Developer Preview, so the
 card now lists enrolling in that program as Gmail's first setup step.
+
+**Superseded in part by ADR-0022 (2026-11-18).** The `gmail` id is now the Gmail REST API
+service. This server stays in the catalog as **Gmail MCP** (`gmail-mcp`), shown but not
+available until the preview access comes through.

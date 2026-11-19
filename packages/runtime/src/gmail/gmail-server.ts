@@ -4,7 +4,7 @@ import type { GmailApi } from "./gmail-api.js";
 import { SignInRequiredError } from "./google-oauth.js";
 
 /**
- * The Gmail service's tools as an MCP server that runs in memory inside the daemon (ADR-0021):
+ * The Gmail service's tools as an MCP server that runs in memory inside the daemon (ADR-0022):
  * no port and no process, only an adapter so the connector pipeline (grants, classes, consent,
  * status, sign-in) treats Gmail like any other connector. Each tool makes plain HTTPS calls to
  * the Gmail API. The annotations match core's `KNOWN_TOOL_CLASSES`, which stay authoritative.
