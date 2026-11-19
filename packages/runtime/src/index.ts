@@ -26,6 +26,28 @@ export {
   type DispatchStatus,
   DispatchStore,
 } from "./dispatch/dispatch-store.js";
+// Gmail through the Gmail REST API, as the station's own connector service (ADR-0022)
+export {
+  type AccessToken,
+  GMAIL_API_BASE,
+  GmailApi,
+  GmailApiError,
+  type Label,
+  MAX_SEARCH_RESULTS,
+  type NewDraft,
+} from "./gmail/gmail-api.js";
+export { createGmailServer } from "./gmail/gmail-server.js";
+export { gmailTransport, type SignInTransport } from "./gmail/gmail-transport.js";
+export {
+  type Fetch,
+  finishGoogleSignIn,
+  GOOGLE_AUTHORIZATION_URL,
+  GOOGLE_TOKEN_URL,
+  googleAccessToken,
+  SignInRequiredError,
+  startGoogleSignIn,
+} from "./gmail/google-oauth.js";
+export { migrateLegacyGmailConnector } from "./gmail/migrate.js";
 export {
   ConnectorManager,
   type ConnectorStatus,

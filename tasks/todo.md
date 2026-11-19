@@ -186,6 +186,17 @@ decisions made, open questions.
   (`outerworld.crewSplit`). A resize handle now measures each drag from where it began and listens
   on the window, so a release anywhere (or a lost capture, a blur, a move with the button up) ends
   it. COMMS' model menus wrap into a column only when the column is too narrow.
+- **D30 Gmail through the REST API (owner 2026-11-18, ADR-0022).** Google's Gmail MCP server
+  refuses every tool call until the Cloud project is in the Workspace Developer Preview Program.
+  Until then:
+  - Gmail (`gmail`) is the Gmail REST API, reached by an in-process MCP adapter on a new `builtin`
+    transport. It has the same tools as the MCP (search, read, labels, drafts including replies,
+    label, trash) under `gmail.modify`, and it never sends.
+  - Gmail MCP (`gmail-mcp`) stays in Discover as "Not yet available".
+  - A station with the old `gmail` connector at the MCP URL is moved over at daemon start. Its
+    OAuth app is kept and the Commander signs in again.
+  - Open: make Gmail MCP available once access comes through (`UNAVAILABLE_PRESETS` in core).
+    Also, a Testing consent screen means a weekly Google sign-in.
 
 ## Phase 0 — Housekeeping and decisions
 

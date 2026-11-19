@@ -3,7 +3,8 @@ import {
   type ConnectorToolCatalog,
   classifyConnectorTool,
   needsOwnClient,
-  ownClientProfile,
+  ownClientProfileOf,
+  profileSource,
   type ToolClass,
 } from "@darthsaul/outerworld-ai-core";
 import {
@@ -16,6 +17,8 @@ import {
   UnauthorizedError,
 } from "@modelcontextprotocol/client";
 import { ConflictError, NotFoundError } from "../crew/crew-service.js";
+import { gmailTransport } from "../gmail/gmail-transport.js";
+import { type Fetch, startGoogleSignIn } from "../gmail/google-oauth.js";
 import type { SecretStore } from "../secrets/store.js";
 import type { EventStore } from "../storage/event-store.js";
 import { loadStationDir } from "../storage/station-dir.js";
@@ -34,6 +37,8 @@ export interface ConnectorView {
   readonly id: string;
   readonly name: string;
   readonly url?: string;
+  /** For a service the runtime reaches itself (ADR-0022): which one. */
+  readonly service?: string;
   readonly status: ConnectorStatus;
   readonly detail?: string;
   readonly tools: readonly ConnectorTool[];
@@ -94,20 +99,29 @@ interface Entry {
   authQueued: number;
 }
 
-const httpTransport: TransportFactory = (connector, provider) => {
-  if (connector.transport.type !== "http") {
-    throw new Error("only HTTP connectors are supported in v1 (ADR-0012)");
-  }
-  return new StreamableHTTPClientTransport(new URL(connector.transport.url), {
-    authProvider: provider,
-  });
-};
+/** HTTP connectors over streamable HTTP; the Gmail service in memory (ADR-0022). */
+const defaultTransports =
+  (fetchFn: Fetch): TransportFactory =>
+  (connector, provider) => {
+    const t = connector.transport;
+    if (t.type === "http") {
+      return new StreamableHTTPClientTransport(new URL(t.url), { authProvider: provider });
+    }
+    if (t.type === "builtin" && t.service === "gmail") return gmailTransport(provider, fetchFn);
+    throw new Error("only HTTP connectors and the station's own services are supported in v1");
+  };
 
-const sdkSignIn: SignInStarter = async (connector, provider) => {
-  if (connector.transport.type !== "http") {
-    throw new Error("only HTTP connectors are supported in v1 (ADR-0012)");
+const defaultSignIn: SignInStarter = async (connector, provider) => {
+  const t = connector.transport;
+  if (t.type === "http") {
+    await auth(provider, { serverUrl: new URL(t.url) });
+    return;
   }
-  await auth(provider, { serverUrl: new URL(connector.transport.url) });
+  if (t.type === "builtin" && t.service === "gmail") {
+    await startGoogleSignIn(provider);
+    return;
+  }
+  throw new Error("only HTTP connectors and the station's own services are supported in v1");
 };
 
 /** What a sign-in is tied to: the server URL, or the whole transport for a non-HTTP one. */
@@ -142,13 +156,15 @@ export class ConnectorManager {
     transports?: TransportFactory;
     signIn?: SignInStarter;
     reconnect?: { baseMs: number; maxMs: number };
+    /** For the station's own services' calls to their APIs (ADR-0022); tests pass a fake. */
+    fetch?: Fetch;
   }) {
     this.#home = options.home;
     this.#events = options.events;
     this.#secrets = options.secrets;
     this.#redirectUrl = options.redirectUrl;
-    this.#transports = options.transports ?? httpTransport;
-    this.#signIn = options.signIn ?? sdkSignIn;
+    this.#transports = options.transports ?? defaultTransports(options.fetch ?? fetch);
+    this.#signIn = options.signIn ?? defaultSignIn;
     this.#reconnect = options.reconnect ?? { baseMs: 1000, maxMs: 60_000 };
   }
 
@@ -181,9 +197,7 @@ export class ConnectorManager {
         existing.connector = connector;
         continue;
       }
-      const profile = ownClientProfile(
-        connector.transport.type === "http" ? connector.transport.url : undefined,
-      );
+      const profile = ownClientProfileOf(profileSource(connector.transport));
       const entry: Entry = {
         connector,
         status: "disconnected",
@@ -216,6 +230,9 @@ export class ConnectorManager {
       id: e.connector.id,
       name: e.connector.name,
       ...(e.connector.transport.type === "http" ? { url: e.connector.transport.url } : {}),
+      ...(e.connector.transport.type === "builtin"
+        ? { service: e.connector.transport.service }
+        : {}),
       status: e.status,
       ...(e.detail !== undefined ? { detail: e.detail } : {}),
       tools: e.tools,
@@ -292,9 +309,12 @@ export class ConnectorManager {
       entry.client = client;
       entry.pending = undefined;
       entry.retries = 0;
+      const t0 = entry.connector.transport;
+      const builtinService = t0.type === "builtin" ? t0.service : undefined;
       entry.tools = listed.tools.map((t) => ({
         name: t.name,
-        class: classifyConnectorTool(t.name, t.annotations ?? {}),
+        // The station's own services' tools are classed by that service's map alone (ADR-0022).
+        class: classifyConnectorTool(t.name, t.annotations ?? {}, builtinService),
         description: t.description ?? t.name,
         inputSchema: t.inputSchema as Record<string, unknown>,
       }));
@@ -502,7 +522,17 @@ export class ConnectorManager {
       .filter(Boolean)
       .join("\n")
       .slice(0, MAX_RESULT_CHARS);
-    if (result.isError) throw new Error(text || `${tool} failed`);
+    if (result.isError) {
+      // The station's own services report a refused sign-in by dropping its tokens (ADR-0022):
+      // ask the Commander, as for a server that refused it.
+      if (needsOwnClient(entry.connector) && !(await entry.provider.hasTokens())) {
+        await this.#signInAgain(entry, client);
+        throw new Error(
+          `${entry.connector.name} refused the sign-in. The Commander must sign in again from the connector's card under Abilities › Installed; nothing was done.`,
+        );
+      }
+      throw new Error(text || `${tool} failed`);
+    }
     return text || (result.structuredContent ?? null);
   }
 

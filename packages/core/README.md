@@ -47,7 +47,19 @@ from the zod source (regenerate with `pnpm build && node scripts/write-schemas.m
 |--------|-------------|
 | `glossary`, `term(key)`, `GLOSSARY_KEYS` | The only place on-screen words live (brief §4): Room, Crew, Hallway, Prop, COMMS, Commander, Ask first, Full power, … Keys are the neutral code identifiers. |
 | `toolDisplay(name)`, `propDisplay(kind)`, `connectorDisplay(name)`, `ItemDisplay`, `ITEM_ICONS`, `ItemIconName` | How a capability reads to people: a title (`web_fetch` → "Web & Browser"), a one-line description, and an icon id, from glossary `item.*` keys. Every built-in tool and prop has an entry; an unknown tool (a connector's own) shows as its name with the `tool` icon. |
-| `abilityDisplay(id, name)`, `AbilityDisplay`, `AbilityKind`, `ABILITY_BRANDS`, `AbilityBrand` | An ability as its card shows it: title, one-line description (glossary `ability.*`), kind (`mcp` for now), and the service's logo id. Every connector preset has a logo and description; any other connector reads as a plain MCP server with no logo. |
+| `abilityDisplay(id, name)`, `AbilityDisplay`, `AbilityKind`, `ABILITY_BRANDS`, `AbilityBrand` | An ability as its card shows it: title, one-line description (glossary `ability.*`), kind (`mcp`, or `api` for the Gmail service the runtime calls itself), and the service's logo id. Every connector preset has a logo and description; both Gmail abilities draw Gmail's logo; any other connector reads as a plain MCP server with no logo. |
+
+### Connectors and mail (ADR-0012, ADR-0019, ADR-0022)
+| Export | Description |
+|--------|-------------|
+| `CONNECTOR_PRESETS`, `CONNECTOR_PRESET_IDS`, `NOTION_PRESET`, `GITHUB_PRESET`, `GMAIL_PRESET`, `GMAIL_MCP_PRESET`, `GMAIL_MCP_URL` | The catalog, in order: Notion and GitHub (hosted MCP), Gmail (`{ type: "builtin", service: "gmail" }`, the Gmail REST API), Gmail MCP (Google's preview MCP server). |
+| `isPresetAvailable(id)`, `AVAILABLE_PRESET_IDS` | Whether a preset can be added today; Gmail MCP cannot until preview access. `AddConnectorInput` takes only these. |
+| `classifyConnectorTool(name, hints, service?)`, `KNOWN_TOOL_CLASSES`, `BUILTIN_TOOL_CLASSES` | Read or write for a connector tool: our map wins over annotations (Notion's tools; for a builtin `service`, that service's map alone, so the Gmail service's generic names never class another server's tools). |
+| `ownClientProfile(url)`, `ownClientProfileOf({ url, service })`, `profileSource(transport)`, `needsOwnClient(connector)` | The sign-in profile (scope, extra parameters, setup steps) of a server or builtin service that needs the Commander's own OAuth app. |
+| `migrateLegacyGmail(connectors)` | Moves a `gmail` connector at the Gmail MCP URL onto the Gmail service; the same array when there is nothing to move. |
+| `buildMessage(draft)`, `buildRawMessage(draft)`, `encodeHeaderValue`, `replySubject`, `replyHeaders` | A plain-text RFC 2822 draft (base64 UTF-8 body, RFC 2047 subject, line breaks in headers refused), and as Gmail's base64url `raw`; a reply's subject and `In-Reply-To`/`References`. |
+| `readThread`, `readMessage`, `summarizeThread`, `messageText`, `htmlToText`, `header`, `MAX_BODY_CHARS` | Gmail's parsed messages as text for the model: headers, plain-text body (HTML made readable, decoded in its charset, capped), labels, attachment names; a one-line thread summary. |
+| `toBase64`, `toBase64Url`, `fromBase64` | Base64 without Buffer or the DOM. |
 
 ## Public API: milestone 1 map model
 

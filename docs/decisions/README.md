@@ -23,3 +23,4 @@ supersedes the old one. Template: `0000-template.md`.
 | [0019](0019-github-gmail-connectors-own-oauth-client.md) | GitHub and Gmail connector presets, signed in with the Commander's own OAuth app | Accepted |
 | [0020](0020-system-menu-settings-and-abilities.md) | System menu in the footer; Settings and Abilities under `/system` | Accepted |
 | [0021](0021-retire-seven-drawn-characters.md) | Retire seven drawn characters; add MERLO and SHADE as painted art; `look` is a character id | Accepted |
+| [0022](0022-gmail-through-the-rest-api.md) | Gmail through the Gmail REST API; Gmail MCP shown but not available yet | Accepted |

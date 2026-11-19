@@ -2,7 +2,8 @@ import {
   abilityDisplay,
   CONNECTOR_PRESET_IDS,
   CONNECTOR_PRESETS,
-  ownClientProfile,
+  isPresetAvailable,
+  ownClientProfileOf,
   term,
   termWith,
 } from "@darthsaul/outerworld-ai-core";
@@ -31,7 +32,10 @@ const input =
 
 const link = "text-cyan underline hover:text-fg-hi";
 
-/** The provider's setup steps for this server, each with its console link (ADR-0019). */
+/**
+ * The provider's setup steps for this server or service, each with its console link (ADR-0019,
+ * ADR-0022).
+ */
 function SetupSteps({
   connector,
   open,
@@ -39,7 +43,7 @@ function SetupSteps({
   readonly connector: ConnectorItem;
   readonly open: boolean;
 }) {
-  const profile = ownClientProfile(connector.url);
+  const profile = ownClientProfileOf({ url: connector.url, service: connector.service });
   const listId = useId();
   if (!profile) return null;
   const words = { name: connector.name, scope: profile.scope ?? "" };
@@ -285,19 +289,22 @@ function ConnectorCard({ connector }: { readonly connector: ConnectorItem }) {
           </span>
         }
       />
-      <form onSubmit={save} className="flex flex-wrap items-end gap-2">
-        <label className="flex min-w-0 flex-1 flex-col gap-1 font-display text-d7 text-fg-mute uppercase">
-          {term("connector.url")}
-          <input
-            className={input}
-            value={url ?? connector.url ?? ""}
-            onChange={(e) => setUrl(e.target.value)}
-          />
-        </label>
-        <button type="submit" className={button} disabled={url === null || update.isPending}>
-          {term("connector.save")}
-        </button>
-      </form>
+      {/* The station's own services (Gmail, ADR-0022) have no server URL to change. */}
+      {connector.service === undefined ? (
+        <form onSubmit={save} className="flex flex-wrap items-end gap-2">
+          <label className="flex min-w-0 flex-1 flex-col gap-1 font-display text-d7 text-fg-mute uppercase">
+            {term("connector.url")}
+            <input
+              className={input}
+              value={url ?? connector.url ?? ""}
+              onChange={(e) => setUrl(e.target.value)}
+            />
+          </label>
+          <button type="submit" className={button} disabled={url === null || update.isPending}>
+            {term("connector.save")}
+          </button>
+        </form>
+      ) : null}
       {connector.ownClient ? (
         <OwnClientForm
           connector={connector}
@@ -400,7 +407,8 @@ const grid = "m-0 grid list-none grid-cols-1 items-start gap-3 p-0 desktop:grid-
 /**
  * Abilities › Discover: every connector preset (brief §12) as a card; the server and its name come
  * from core. One not installed yet adds in a click and moves to Installed; one already installed
- * says so and links there.
+ * says so and links there; one not available yet (Gmail MCP, ADR-0022) says that and offers
+ * nothing.
  */
 export function ConnectorsDiscover() {
   const connectors = useConnectors();
@@ -415,7 +423,7 @@ export function ConnectorsDiscover() {
       </h2>
       <p className="m-0 text-b17 text-fg-soft">{term("abilities.discover.hint")}</p>
       <ErrorNote error={connectors.error ?? add.error} />
-      {connectors.isSuccess && CONNECTOR_PRESET_IDS.every(installed) ? (
+      {connectors.isSuccess && CONNECTOR_PRESET_IDS.filter(isPresetAvailable).every(installed) ? (
         <p className="m-0 text-b19 text-fg">{term("abilities.discover.none")}</p>
       ) : null}
       {connectors.isSuccess ? (
@@ -424,8 +432,15 @@ export function ConnectorsDiscover() {
             const titleId = `discover-${p}`;
             const name = CONNECTOR_PRESETS[p].name;
             const has = installed(p);
+            const available = isPresetAvailable(p);
             return (
-              <li key={p} data-ability={p} data-installed={has} className={card}>
+              <li
+                key={p}
+                data-ability={p}
+                data-installed={has}
+                data-available={available}
+                className={card}
+              >
                 <AbilityHead
                   id={p}
                   name={name}
@@ -435,11 +450,15 @@ export function ConnectorsDiscover() {
                       <Tag data-installed-tag tone="green">
                         {term("ability.isInstalled")}
                       </Tag>
+                    ) : !available ? (
+                      <Tag data-unavailable-tag tone="amber">
+                        {term("ability.unavailable")}
+                      </Tag>
                     ) : null
                   }
                 />
                 <div className="flex flex-wrap gap-2">
-                  {has ? (
+                  {!has && !available ? null : has ? (
                     <Link to={ROUTES.installed} aria-describedby={titleId} className={button}>
                       {term("ability.manage")}
                     </Link>

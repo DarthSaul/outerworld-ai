@@ -125,6 +125,19 @@ describe("parseStationConfig", () => {
     expect(p).toContain("error connectors.1.transport.url");
   });
 
+  it("accepts a builtin service connector and rejects a service it does not know", () => {
+    const input = valid();
+    input.connectors = [
+      { id: "gmail", name: "Gmail", transport: { type: "builtin", service: "gmail" } },
+      { id: "other", name: "Other", transport: { type: "builtin", service: "outlook" } },
+      { id: "keyed", name: "Keyed", transport: { type: "builtin", service: "gmail", token: "x" } },
+    ];
+    const p = paths(input);
+    expect(p).not.toContain("error connectors.0.transport");
+    expect(p.some((x) => x.startsWith("error connectors.1.transport"))).toBe(true);
+    expect(p.some((x) => x.startsWith("error connectors.2.transport"))).toBe(true);
+  });
+
   it("rejects secrets-shaped connector fields: no headers or env values in station.json", () => {
     const input = valid();
     input.connectors = [

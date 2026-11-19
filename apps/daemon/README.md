@@ -53,10 +53,10 @@ allowed `Origin` and a `Sec-Fetch-Site` other than `cross-site`. Every `/api/*` 
 | `GET /api/kill-switch`, `PUT /api/kill-switch` | `{ engaged }`. Engaging is persisted first, then cancels every queued, running, or waiting run; sends are 409 until cleared. |
 | `GET /api/spend?day=YYYY-MM-DD` | USD spent that UTC day (default today), station-wide and per agent, and `tokens` (input plus output) for the day. Session detail carries `spend` and `runSpend`. |
 | `GET /api/runs?limit=1..200` | The station's latest runs (default 40), newest first, each with a `title`: the task for a dispatch, else the session title. The dashboard's missions. |
-| `GET /api/connectors` | Each connector: status (`disconnected`, `needs_auth`, `connected`, `error`), its classified tools, and `grantedTo`. |
-| `POST /api/connectors` | `{ preset: "notion" \| "github" \| "gmail" }` installs that hosted MCP server (ADR-0012, ADR-0019). |
+| `GET /api/connectors` | Each connector: status (`disconnected`, `needs_auth`, `connected`, `error`), its classified tools, `grantedTo`, and `url` for a server or `service` for the station's own (`gmail`, ADR-0022). |
+| `POST /api/connectors` | `{ preset: "notion" \| "github" \| "gmail" }` installs that preset: Notion's or GitHub's hosted MCP server (ADR-0012, ADR-0019), or the Gmail API service the daemon calls itself (`transport: { type: "builtin", service: "gmail" }`, ADR-0022). `gmail-mcp` is listed in the catalog but not available yet: 400. |
 | `PUT /api/connectors/:id/client` | `{ clientId, clientSecret? }`: your own OAuth app, for a server with no dynamic registration (GitHub, Gmail). Kept in the keychain, never returned; the list shows `ownClient: { set, redirectUrl }`. 409 for a server that registers its own. |
-| `PATCH /api/connectors/:id` | `{ url?, name? }`; `DELETE` removes it (409 while any crew member is granted it). |
+| `PATCH /api/connectors/:id` | `{ url?, name? }` (a `url` for the Gmail service is 409: it has none); `DELETE` removes it (409 while any crew member is granted it). |
 | `POST /api/connectors/:id/connect` | `{ status, authorizationUrl? }`: when the server needs sign-in, open `authorizationUrl`; Notion returns to the callback below. |
 | `POST /api/connectors/:id/disconnect` | `{ forget? }`: `forget: true` also removes the stored sign-in from the keychain. |
 | `GET /api/agents/:id/schedules` | Each schedule: cron, the zone it runs in (`timezoneSet: false` means the machine's), prompt, `enabled`, `catchUp`, `nextRunAt`, its session, a cron `error`, and the last 10 fires (`fired` with the run's state, or `missed` with `down`, `busy`, `stopped`, `error`). |

@@ -40,7 +40,7 @@ run, so a change takes effect on the next run. Secrets are never here (see below
 | `name` | string | |
 | `rooms` | `Room[]`, at least 1 | `{ id, name, description?, props: [{ kind: "web" \| "files" \| "memory" }] }`. Props grant the room's crew built-in tools. |
 | `lanes` | `Lane[]` | Hallways: `{ id, from, to, note? }` between room ids. Drawn on the map; enforced in v2. |
-| `connectors` | `Connector[]` | `{ id, name, transport }`, where `transport` is `{ type: "http", url }` (http or https) or `{ type: "stdio", command, args }`. There is no field for headers or environment values, so secrets cannot be put here. v1 connects HTTP connectors only and ships the Notion preset (ADR-0012). |
+| `connectors` | `Connector[]` | `{ id, name, transport }`, where `transport` is `{ type: "http", url }` (http or https), `{ type: "stdio", command, args }`, or `{ type: "builtin", service: "gmail" }` (the Gmail REST API, ADR-0022). There is no field for headers or environment values, so secrets cannot be put here. v1 connects HTTP and builtin connectors only. A `gmail` connector moved off Gmail MCP briefly carries `migratedFrom` (the old URL) until its old keychain entries are deleted. |
 | `budgets` | `{ perRunUsd?, perAgentDailyUsd?, stationDailyUsd? }` | Positive USD. A missing cap means no cap. Onboarding writes `DEFAULT_BUDGETS` (5 / 25 / 50, D22). |
 | `dispatch` | `{ maxDepth: 0 \| 1, autoReview }` | Defaults `{ maxDepth: 1, autoReview: true }`. `0` turns delegation off. |
 

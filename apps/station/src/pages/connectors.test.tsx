@@ -25,11 +25,14 @@ const withNotion = (status: "connected" | "disconnected" = "connected") => {
   return fake;
 };
 
-/** Gmail as the daemon lists it: a server that needs the Commander's own OAuth app. */
+/**
+ * Gmail as the daemon lists it: the station's own service over the Gmail API (ADR-0022), signed
+ * in with the Commander's own OAuth app.
+ */
 const gmail = (ownClient: { set: boolean } = { set: false }): ConnectorItem => ({
   id: "gmail",
   name: "Gmail",
-  url: "https://gmailmcp.googleapis.com/mcp/v1",
+  service: "gmail",
   status: "disconnected",
   tools: [],
   grantedTo: [],
@@ -52,6 +55,8 @@ describe("Abilities: connectors under Discover and Installed", () => {
     // All three while Discover still shows them: installing one moves to Installed.
     expect(screen.getByRole("button", { name: add("GitHub") })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: add("Gmail") })).toBeInTheDocument();
+    // Gmail MCP is not available yet: no way to add it.
+    expect(screen.queryByRole("button", { name: add("Gmail MCP") })).toBeNull();
     await user.click(notion);
     expect(calls).toContainEqual({
       method: "POST",
@@ -80,6 +85,39 @@ describe("Abilities: connectors under Discover and Installed", () => {
     );
   });
 
+  it("shows Gmail MCP as not yet available, with nothing to press", async () => {
+    renderApp("/system/abilities/discover");
+    const adding = await screen.findByRole("region", { name: term("abilities.discover") });
+    const card = (await within(adding).findByRole("heading", { name: "Gmail MCP" })).closest(
+      "li",
+    ) as HTMLElement;
+    expect(card).toHaveAttribute("data-available", "false");
+    expect(within(card).getByText(term("ability.unavailable"))).toHaveTextContent(
+      "Not yet available",
+    );
+    expect(within(card).queryByRole("button")).toBeNull();
+    expect(within(card).queryByRole("link")).toBeNull();
+    // Every other preset can be added.
+    for (const id of ["notion", "github", "gmail"]) {
+      expect(adding.querySelector(`[data-ability="${id}"]`)).toHaveAttribute(
+        "data-available",
+        "true",
+      );
+    }
+  });
+
+  it("says everything is installed once the available presets are, despite Gmail MCP", async () => {
+    const fake = withNotion();
+    for (const [id, name] of [
+      ["github", "GitHub"],
+      ["gmail", "Gmail"],
+    ] as const) {
+      fake.connectors.push({ id, name, status: "disconnected", tools: [], grantedTo: [] });
+    }
+    renderApp("/system/abilities/discover", fake);
+    expect(await screen.findByText(term("abilities.discover.none"))).toBeInTheDocument();
+  });
+
   it("shows Discover as a grid of cards: logo, name, kind, and a description of each", async () => {
     renderApp("/system/abilities/discover");
     const adding = await screen.findByRole("region", { name: term("abilities.discover") });
@@ -87,19 +125,26 @@ describe("Abilities: connectors under Discover and Installed", () => {
     expect(grid).toHaveAttribute("data-ability-grid");
     expect(grid.className).toMatch(/desktop:grid-cols-2/);
     const cards = within(grid).getAllByRole("listitem");
-    expect(cards.map((c) => c.dataset.ability)).toEqual(["notion", "github", "gmail"]);
+    expect(cards.map((c) => c.dataset.ability)).toEqual(["notion", "github", "gmail", "gmail-mcp"]);
+    const expected = {
+      notion: { brand: "notion", kind: "mcp", hint: "ability.notion.hint" },
+      github: { brand: "github", kind: "mcp", hint: "ability.github.hint" },
+      gmail: { brand: "gmail", kind: "api", hint: "ability.gmail.hint" },
+      "gmail-mcp": { brand: "gmail", kind: "mcp", hint: "ability.gmailMcp.hint" },
+    } as const;
     for (const c of cards) {
-      const id = c.dataset.ability as "notion" | "github" | "gmail";
-      expect(c.querySelector(`svg[data-brand="${id}"]`), id).not.toBeNull();
-      expect(within(c).getByText(term("ability.kind.mcp"))).toBeInTheDocument();
-      expect(within(c).getByText(term(`ability.${id}.hint`))).toBeInTheDocument();
+      const id = c.dataset.ability as keyof typeof expected;
+      const want = expected[id];
+      expect(c.querySelector(`svg[data-brand="${want.brand}"]`), id).not.toBeNull();
+      expect(within(c).getByText(term(`ability.kind.${want.kind}`))).toBeInTheDocument();
+      expect(within(c).getByText(term(want.hint))).toBeInTheDocument();
     }
     expect(within(cards[0] as HTMLElement).getByRole("heading", { level: 3 })).toHaveTextContent(
       "Notion",
     );
   });
 
-  it("shows Installed as full-width cards, one per row, each marked as an MCP server", async () => {
+  it("shows Installed as full-width cards, one per row, each marked with its kind", async () => {
     const fake = withNotion();
     fake.connectors.push(gmail());
     renderApp("/system/abilities/installed", fake);
@@ -111,7 +156,12 @@ describe("Abilities: connectors under Discover and Installed", () => {
     const list = notion.parentElement as HTMLElement;
     expect(list).toHaveAttribute("data-ability-list");
     expect(list.className).not.toMatch(/grid-cols/);
-    expect(within(list).getAllByText(term("ability.kind.mcp"))).toHaveLength(2);
+    expect(within(notion).getByText(term("ability.kind.mcp"))).toBeInTheDocument();
+    const mail = within(section).getByRole("region", { name: "Gmail" });
+    expect(within(mail).getByText(term("ability.kind.api"))).toBeInTheDocument();
+    // The Gmail API service has no server URL to edit; Notion's MCP server does.
+    expect(within(mail).queryByLabelText(term("connector.url"))).toBeNull();
+    expect(within(notion).getByLabelText(term("connector.url"))).toBeInTheDocument();
     expect(notion.querySelector('svg[data-brand="notion"]')).not.toBeNull();
     expect(within(notion).getByText(term("ability.notion.hint"))).toBeInTheDocument();
   });
@@ -171,14 +221,16 @@ describe("Abilities: connectors under Discover and Installed", () => {
     const form = within(card).getByRole("form", { name: term("connector.client") });
     const steps = within(form).getByRole("list", { name: term("connector.client.steps") });
     const items = within(steps).getAllByRole("listitem");
-    expect(items).toHaveLength(6);
-    expect(items[0]).toHaveTextContent(/Developer Preview Program/);
-    expect(items[1]).toHaveTextContent(/Gmail MCP API/);
-    expect(items[3]).toHaveTextContent("https://www.googleapis.com/auth/gmail.modify");
-    const apis = within(items[1] as HTMLElement).getByRole("link");
+    // The Gmail API alone: no preview program, no MCP API.
+    expect(items).toHaveLength(5);
+    expect(items[0]).toHaveTextContent(/enable the Gmail API/);
+    expect(steps).not.toHaveTextContent(/Developer Preview|MCP API|gmailmcp/);
+    expect(items[1]).toHaveTextContent(/seven days/);
+    expect(items[2]).toHaveTextContent("https://www.googleapis.com/auth/gmail.modify");
+    const apis = within(items[0] as HTMLElement).getByRole("link");
     expect(apis).toHaveAttribute(
       "href",
-      "https://console.cloud.google.com/apis/library/gmailmcp.googleapis.com",
+      "https://console.cloud.google.com/apis/library/gmail.googleapis.com",
     );
     expect(apis).toHaveAttribute("target", "_blank");
     expect(apis).toHaveAttribute("rel", "noopener noreferrer");

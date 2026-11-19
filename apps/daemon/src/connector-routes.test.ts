@@ -170,9 +170,15 @@ describe("connector routes", () => {
       type: "http",
       url: "https://api.githubcopilot.com/mcp/",
     });
-    expect((await call("POST", "/api/connectors", { preset: "gmail" })).status).toBe(201);
+    // Gmail is the station's own service over the Gmail API; Gmail MCP is not available yet.
+    const gmail = await call("POST", "/api/connectors", { preset: "gmail" });
+    expect(gmail.status).toBe(201);
+    expect(gmail.json.transport).toEqual({ type: "builtin", service: "gmail" });
+    expect((await call("POST", "/api/connectors", { preset: "gmail-mcp" })).status).toBe(400);
     const listed = (await call("GET", "/api/connectors")).json as unknown as Array<{
       id: string;
+      url?: string;
+      service?: string;
       ownClient?: { set: boolean; redirectUrl: string };
     }>;
     expect(listed.map((c) => c.id)).toEqual(["notion", "github", "gmail"]);
@@ -180,6 +186,15 @@ describe("connector routes", () => {
       set: false,
       redirectUrl: "http://127.0.0.1:4317/oauth/callback/github",
     });
+    expect(listed.find((c) => c.id === "gmail")).toMatchObject({
+      service: "gmail",
+      ownClient: { set: false, redirectUrl: "http://127.0.0.1:4317/oauth/callback/gmail" },
+    });
+    expect(listed.find((c) => c.id === "gmail")?.url).toBeUndefined();
+    // It has no server URL to change.
+    expect(
+      (await call("PATCH", "/api/connectors/gmail", { url: "https://x.test/mcp" })).status,
+    ).toBe(409);
     expect((await call("PUT", "/api/connectors/github/client", { clientId: "" })).status).toBe(400);
     expect((await call("PUT", "/api/connectors/notion/client", { clientId: "x" })).status).toBe(
       409,

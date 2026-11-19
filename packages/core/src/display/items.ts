@@ -90,12 +90,15 @@ export function connectorDisplay(name: string): ItemDisplay {
   return { title: name, description: term("item.connector.hint"), icon: "connector" };
 }
 
-/** The services whose logos the ui draws (`BrandIcon`), one per connector preset. */
+/** The services whose logos the ui draws (`BrandIcon`); both Gmail abilities share one. */
 export const ABILITY_BRANDS = ["notion", "github", "gmail"] as const;
 export type AbilityBrand = (typeof ABILITY_BRANDS)[number];
 
-/** What an ability is underneath; only MCP servers so far, toolsets and skills join later. */
-export type AbilityKind = "mcp";
+/**
+ * What an ability is underneath: an MCP server, or a service's API the runtime calls itself
+ * (ADR-0022). Toolsets and skills join later.
+ */
+export type AbilityKind = "mcp" | "api";
 
 export interface AbilityDisplay {
   readonly title: string;
@@ -106,21 +109,22 @@ export interface AbilityDisplay {
 }
 
 const ABILITIES = {
-  notion: { description: "ability.notion.hint", brand: "notion" },
-  github: { description: "ability.github.hint", brand: "github" },
-  gmail: { description: "ability.gmail.hint", brand: "gmail" },
+  notion: { description: "ability.notion.hint", brand: "notion", kind: "mcp" },
+  github: { description: "ability.github.hint", brand: "github", kind: "mcp" },
+  gmail: { description: "ability.gmail.hint", brand: "gmail", kind: "api" },
+  "gmail-mcp": { description: "ability.gmailMcp.hint", brand: "gmail", kind: "mcp" },
 } as const satisfies Record<
   ConnectorPresetId,
-  { readonly description: GlossaryKey; readonly brand: AbilityBrand }
+  { readonly description: GlossaryKey; readonly brand: AbilityBrand; readonly kind: AbilityKind }
 >;
 
 /**
- * An ability as a card shows it, by its id and display name: a preset gets its logo and its own
- * description; any other connector reads as a plain MCP server.
+ * An ability as a card shows it, by its id and display name: a preset gets its logo, its kind,
+ * and its own description; any other connector reads as a plain MCP server.
  */
 export function abilityDisplay(id: string, name: string): AbilityDisplay {
   const entry = own<(typeof ABILITIES)[ConnectorPresetId]>(ABILITIES, id);
   return entry
-    ? { title: name, description: term(entry.description), kind: "mcp", brand: entry.brand }
+    ? { title: name, description: term(entry.description), kind: entry.kind, brand: entry.brand }
     : { title: name, description: term("item.connector.hint"), kind: "mcp" };
 }

@@ -19,7 +19,7 @@ no telemetry, no analytics, and no error reporting.
 | OpenRouter API key | OS keychain (account `openrouter-api-key`) | Never | Sent only to OpenRouter. `OPENROUTER_API_KEY` in the environment is a development fallback. Never written to the station directory. |
 | Anthropic API key | OS keychain (account `anthropic-api-key`) | Never | Sent only to Anthropic. `ANTHROPIC_API_KEY` in the environment is a development fallback. Never written to the station directory (ADR-0015). |
 | Connector OAuth client you registered yourself (GitHub, Gmail; ADR-0019) | OS keychain (account `mcp.<id>.<server hash>.own`) | Never | The client id and optional secret you pasted. Sent only to that server's authorization server during sign-in. The API never returns them, only whether one is saved. Removing the connector deletes them; "Disconnect and forget sign-in" keeps them. |
-| Connector OAuth tokens and client registration (Notion, GitHub, Gmail) | OS keychain (service `outerworld-ai`, accounts `mcp.<id>.<server hash>.tokens` / `.client`, the hash being the first 16 hex characters of SHA-256 of the server URL) | Never | Sent only to the server they were issued by. Refreshed by the daemon; "Disconnect and forget sign-in" deletes them (and any older `mcp.<id>.tokens` / `mcp.<id>.client` entry). The PKCE verifier and sign-in `state` exist only in memory. Keychain entries belong to your OS user, not to one station directory: stations whose connector has the same id **and the same server URL** share a sign-in; a connector pointing at any other URL never sees it, and no connection is attempted at startup without a sign-in for its own server. `OUTERWORLD_SECRETS=memory` keeps a daemon off the keychain entirely (`browser:verify` uses it). |
+| Connector OAuth tokens and client registration (Notion, GitHub, Gmail) | OS keychain (service `outerworld-ai`, accounts `mcp.<id>.<server hash>.tokens` / `.client`, the hash being the first 16 hex characters of SHA-256 of the server URL, or of the transport JSON for the Gmail API service, ADR-0022) | Never | Sent only to the server they were issued by. Refreshed by the daemon; "Disconnect and forget sign-in" deletes them (and any older `mcp.<id>.tokens` / `mcp.<id>.client` entry). The PKCE verifier and sign-in `state` exist only in memory. Keychain entries belong to your OS user, not to one station directory: stations whose connector has the same id **and the same server URL** share a sign-in; a connector pointing at any other URL never sees it, and no connection is attempted at startup without a sign-in for its own server. `OUTERWORLD_SECRETS=memory` keeps a daemon off the keychain entirely (`browser:verify` uses it). |
 | The demo station | `fixtures/demo-station/` | Yes | A fictional station. Every test, screenshot, and example uses it. |
 | Local scratch (`.outerworld/` in this checkout) | Your machine | Never (gitignored) | `pnpm dev`'s working copy of the fixture, `pnpm dev:fresh`'s empty station, and `browser:verify`'s seeded copy and screenshots (of the fixture, with history the fake model made), which CI uploads as a build artifact. |
 | Display preferences, and the open Overseer order | Your browser's `localStorage` (`outerworld.*` keys) | n/a | Per-viewer conveniences: display size, map style, CRT overlay, map/comms split, scanner folded or not, and the session id of the Overseer order open on the Station. No message text; the SPA stores nothing else in the browser. |
@@ -56,13 +56,24 @@ agent you created:
    requests and results can carry your repository data. The OAuth flow goes to GitHub
    (`github.com`) with the OAuth app you registered (ADR-0019): discovery, token exchange and
    refresh. Every granted agent acts as the GitHub account you signed in with.
-4. **Connector calls to Gmail** (`gmailmcp.googleapis.com`) for agents granted Gmail, if you added
-   it: the mail searches, reads, drafts, and label changes the agent requests, so requests and
-   results can carry your email. The OAuth flow goes to Google (`accounts.google.com`,
-   `oauth2.googleapis.com`) with the OAuth client you registered, asking only for
-   `gmail.modify` (read, draft, label, trash; no permanent delete) and for offline access, so a
-   refresh token is kept in the keychain. A token Gmail refuses is deleted at once and you are asked
-   to sign in again. Every granted agent acts as the Google account you signed in with.
+4. **Gmail API calls** (`gmail.googleapis.com`) for agents granted Gmail, if you added it
+   (ADR-0022). The daemon calls Google's REST API itself through an in-memory adapter; no MCP
+   server is involved. The calls are the mail searches, thread reads, label listings, drafts,
+   label changes, and moves to trash the agent requests, so requests and results carry your email.
+   Nothing is ever sent: drafts wait in Gmail for you.
+   - The OAuth flow goes to Google (`accounts.google.com`, `oauth2.googleapis.com`) with the OAuth
+     client you registered.
+   - It asks only for `gmail.modify` (read, draft, label, trash; no permanent delete) and for
+     offline access, so a refresh token is kept in the keychain.
+   - A sign-in Google refuses to renew is deleted at once, and you are asked to sign in again.
+   - Every granted agent acts as the Google account you signed in with.
+   - **Gmail MCP** (`gmailmcp.googleapis.com`, ADR-0019) is listed in the catalog, but the daemon
+     refuses to install it through the preset endpoint until Google's preview access. That is the
+     only thing that stops it: a `station.json` you edit by hand can still define an HTTP connector
+     at that URL (under any id but `gmail`), and the daemon then contacts that server like any
+     other MCP connector, with the sign-in described in ADR-0019.
+   - A station that had Gmail MCP under the `gmail` id is moved to the Gmail API on daemon start:
+     the OAuth app you saved carries over, and the MCP server's tokens are deleted.
 5. **`web_fetch` requests** to public http(s) URLs an agent with the Web prop chooses. Loopback,
    private-network, and link-local addresses are refused.
 

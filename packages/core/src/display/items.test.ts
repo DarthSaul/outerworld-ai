@@ -48,14 +48,19 @@ describe("item display catalog", () => {
     });
   });
 
-  it("gives every connector preset a logo and a description of its own, as an MCP server", () => {
+  it("gives every connector preset a logo, a kind, and a description of its own", () => {
     for (const id of CONNECTOR_PRESET_IDS) {
       const shown = abilityDisplay(id, CONNECTOR_PRESETS[id].name);
-      expect(shown.brand, id).toBe(id);
       expect(ABILITY_BRANDS).toContain(shown.brand);
-      expect(shown.kind).toBe("mcp");
       expect(shown.description, id).not.toBe(connectorDisplay(id).description);
     }
+    const kinds = Object.fromEntries(
+      CONNECTOR_PRESET_IDS.map((id) => [id, abilityDisplay(id, id).kind]),
+    );
+    expect(kinds).toEqual({ notion: "mcp", github: "mcp", gmail: "api", "gmail-mcp": "mcp" });
+    // Both Gmail abilities draw Gmail's logo.
+    expect(abilityDisplay("gmail", "Gmail").brand).toBe("gmail");
+    expect(abilityDisplay("gmail-mcp", "Gmail MCP").brand).toBe("gmail");
     expect(abilityDisplay("github", "GitHub").title).toBe("GitHub");
   });
 
