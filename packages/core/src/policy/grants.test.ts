@@ -7,6 +7,8 @@ import {
   connectorToolName,
   type EffectiveTool,
   resolveGrants,
+  SKILL_VIEW_TOOL,
+  withSkillTool,
 } from "./grants.js";
 
 const station = (props: Record<string, PropKind[]>, maxDepth = 1): StationConfig => ({
@@ -34,6 +36,7 @@ const agent = (over: Partial<AgentConfig> = {}): AgentConfig => ({
   model: "anthropic/claude-sonnet-5.5",
   approvalMode: "ask",
   connectorGrants: [],
+  skills: [],
   schedules: [],
   ...over,
 });
@@ -156,6 +159,18 @@ describe("resolveGrants", () => {
       .filter((t) => t.class === "write")
       .map((t) => t.name);
     expect(writes).toEqual(["write_file"]);
+  });
+
+  it("adds skill_view, as a read tool, only when a skill is offered", () => {
+    const base = resolveGrants(agent(), station({ ops: ["web"] }), catalog);
+    expect(withSkillTool(base, 0)).toEqual(base);
+    const withSkills = withSkillTool(base, 2);
+    expect(withSkills.slice(0, -1)).toEqual(base);
+    expect(withSkills.at(-1)).toEqual({
+      name: SKILL_VIEW_TOOL,
+      class: "read",
+      source: { kind: "skill" },
+    });
   });
 
   it("builds connector tool names that fit provider limits even for long names", () => {

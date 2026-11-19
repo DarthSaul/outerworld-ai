@@ -57,12 +57,18 @@ const label = "font-display text-d7 text-fg-mute uppercase";
 /** A panel around one part of the page. */
 const panel = "flex flex-col gap-3 border-2 border-line bg-panel p-3 shadow-panel";
 
-const sourceLabel = (t: EffectiveTool) =>
-  t.source.kind === "role"
-    ? term("tools.source.role")
-    : t.source.kind === "prop"
-      ? `${term("grant")}: ${term(`prop.${t.source.prop}`)}`
-      : `${term("connector")}: ${t.source.connectorId}`;
+const sourceLabel = (t: EffectiveTool) => {
+  switch (t.source.kind) {
+    case "role":
+      return term("tools.source.role");
+    case "prop":
+      return `${term("grant")}: ${term(`prop.${t.source.prop}`)}`;
+    case "connector":
+      return `${term("connector")}: ${t.source.connectorId}`;
+    case "skill":
+      return term("tools.source.skill");
+  }
+};
 
 /** A granted connector's tools, together: a grant is all of a connector's tools (ADR-0012). */
 const connectorGroups = (tools: readonly EffectiveTool[]) => {

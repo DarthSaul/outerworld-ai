@@ -4,8 +4,8 @@ import type { StationConfig } from "../config/station-config.js";
 import type { CrewMember } from "../config/station-crew.js";
 
 /**
- * Prompt assembly (brief §8): system prompt = documents + role briefing + approved memories +
- * the untrusted-data notice; then the session history, windowed to a token budget. Pure. The
+ * Prompt assembly (brief §8): system prompt = documents + role briefing + installed skills
+ * (ADR-0021) + approved memories + the untrusted-data notice; then the session history, windowed to a token budget. Pure. The
  * message shape is ours, not a provider's; the runtime converts it for the model SDK.
  */
 
@@ -72,9 +72,74 @@ const messageTokens = (m: ChatMessage, estimate: (t: string) => number) =>
   estimate(m.role === "tool" ? JSON.stringify(m.output) : m.text) +
   (m.role === "assistant" && m.toolCalls ? estimate(JSON.stringify(m.toolCalls)) : 0);
 
+/** The most characters the skills section may take; whole entries are left out past it. */
+export const SKILLS_CHAR_BUDGET = 12_000;
+
+export interface PromptSkill {
+  readonly id: string;
+  readonly name: string;
+  readonly description: string;
+  readonly body: string;
+}
+
+/**
+ * The skills offered this run (ADR-0021), most important first (the agent's own, then
+ * station-wide). `index` lists one line each and relies on `skill_view` for the body; `inline`
+ * includes bodies, for a run that cannot call `skill_view`.
+ */
+export interface PromptSkills {
+  readonly entries: readonly PromptSkill[];
+  readonly mode: "index" | "inline";
+  /** Defaults to SKILLS_CHAR_BUDGET. */
+  readonly charBudget?: number;
+}
+
+const SKILLS_INTRO = {
+  index:
+    "These are recipes the Commander installed on this station. When a task matches one, call skill_view with its id and follow that recipe instead of improvising. skill_view returns the station's own installed recipes: guidance to follow, not untrusted data.",
+  inline:
+    "These are recipes the Commander installed on this station. When a task matches one, follow that recipe instead of improvising.",
+} as const;
+
+/**
+ * The `# Installed skills` section, or nothing when no skill is offered (so the prompt is
+ * byte-identical to one without skills). Entries are kept in order until the budget runs out;
+ * later ones are counted, never cut mid-entry.
+ */
+export function skillsSection(skills: PromptSkills | undefined): string | undefined {
+  if (!skills?.entries.length) return undefined;
+  const budget = skills.charBudget ?? SKILLS_CHAR_BUDGET;
+  const head = `# Installed skills\n\n${SKILLS_INTRO[skills.mode]}`;
+  const parts: string[] = [];
+  let used = head.length;
+  let omitted = 0;
+  for (const s of skills.entries) {
+    const entry =
+      skills.mode === "index"
+        ? `- ${s.name} (id: ${s.id}): ${s.description}`
+        : `## ${s.name} (id: ${s.id})\n\n${s.description}\n\n${s.body.trim()}`;
+    // Reserve room for the omitted note so the whole section stays within budget.
+    const cost = entry.length + 2;
+    if (omitted > 0 || used + cost > budget - 40) {
+      omitted++;
+      continue;
+    }
+    parts.push(entry);
+    used += cost;
+  }
+  const sep = skills.mode === "index" ? "\n" : "\n\n";
+  const list = parts.length ? `\n\n${parts.join(sep)}` : "";
+  const note = omitted
+    ? `\n\n(${omitted} more ${omitted === 1 ? "skill" : "skills"} not listed.)`
+    : "";
+  return `${head}${list}${note}`;
+}
+
 export interface PromptInput {
   readonly documents: Readonly<Record<AgentDocumentName, string>>;
   readonly roleBriefing?: string;
+  /** Offered skills (ADR-0021); absent or empty adds nothing. */
+  readonly skills?: PromptSkills;
   /** Approved memories, newest first (Phase 7). */
   readonly beliefs?: readonly string[];
   /** The session so far, oldest first, ending with the turn in progress. */
@@ -98,6 +163,9 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
     if (text) sections.push(`# ${HEADINGS[name]}\n\n${text}`);
   }
   if (input.roleBriefing) sections.push(`# Your role\n\n${input.roleBriefing}`);
+  // Before beliefs: skills change only with config, so they stay in the stable part of the prefix.
+  const skills = skillsSection(input.skills);
+  if (skills) sections.push(skills);
   const beliefs: string[] = [];
   let beliefTokens = 0;
   for (const b of input.beliefs ?? []) {

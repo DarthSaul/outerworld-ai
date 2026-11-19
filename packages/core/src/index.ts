@@ -117,6 +117,8 @@ export {
   PropKind,
   parseStationConfig,
   Room,
+  SkillOverrides,
+  type SkillOverridesConfig,
   StationConfig,
   stationConfigIssues,
 } from "./config/station-config.js";
@@ -268,9 +270,11 @@ export {
   connectorToolName,
   type EffectiveTool,
   resolveGrants,
+  SKILL_VIEW_TOOL,
   type ToolClass,
   type ToolSource,
   type ToolSpec,
+  withSkillTool,
 } from "./policy/grants.js";
 // Live crew state and the station map from runtime state (Phase 9, D24)
 export {
@@ -289,7 +293,11 @@ export {
   estimateTokens,
   historyBudget,
   type PromptInput,
+  type PromptSkill,
+  type PromptSkills,
   roleBriefing,
+  SKILLS_CHAR_BUDGET,
+  skillsSection,
   ToolCallRecord,
   UNTRUSTED_DATA_NOTICE,
 } from "./run/prompt.js";
@@ -368,5 +376,28 @@ export {
   runRecordIssues,
   TeamStatus,
 } from "./schema/status.js";
+// Skills library: parsing, enablement, capability gating (ADR-0021)
+export {
+  capabilitiesOf,
+  isGloballyEnabled,
+  missingRequirements,
+  type SkillOverrideLists,
+  type SkillSelection,
+  type SkillSelectionInput,
+  selectSkills,
+  skillOverride,
+  type UnavailableSkill,
+  withSkillOverride,
+} from "./skills/enablement.js";
+export {
+  isRequirement,
+  MAX_SKILL_BYTES,
+  type ParsedSkill,
+  parseSkillFile,
+  REQUIREMENTS,
+  type Requirement,
+  type Skill,
+  SkillFrontmatter,
+} from "./skills/skill.js";
 // Server-sent events over fetch (the SPA sends the bearer token, so it cannot use EventSource)
 export { createSseParser, type SseMessage, type SseParser } from "./sse.js";

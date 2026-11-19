@@ -127,6 +127,7 @@ export class CrewService {
         model: input.model ?? DEFAULT_MODEL,
         approvalMode: input.approvalMode ?? "ask",
         connectorGrants: [],
+        skills: [],
         schedules: [],
       };
       this.#checkCrew(loaded, { id, config });
@@ -301,6 +302,7 @@ export class CrewService {
         model: DEFAULT_MODEL,
         approvalMode: "ask",
         connectorGrants: [],
+        skills: [],
         schedules: [],
       };
       await saveStationConfig(this.#home, parsed.value);

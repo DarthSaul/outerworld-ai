@@ -64,6 +64,7 @@ export const projectManagerConfig = (name: string, model: string): AgentConfig =
   role: "crew",
   approvalMode: "ask",
   connectorGrants: ["notion"],
+  skills: [],
   schedules: [
     {
       id: "daily-briefing",

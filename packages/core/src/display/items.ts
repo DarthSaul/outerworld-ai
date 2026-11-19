@@ -17,6 +17,7 @@ export const ITEM_ICONS = [
   "file-list",
   "file-write",
   "memory",
+  "skill",
   "connector",
   "tool",
 ] as const;
@@ -53,6 +54,7 @@ const TOOLS = {
     icon: "file-write",
   },
   remember: { title: "item.remember", description: "item.remember.hint", icon: "memory" },
+  skill_view: { title: "item.skill_view", description: "item.skill_view.hint", icon: "skill" },
 } as const satisfies Record<BuiltinToolName, Entry>;
 
 const PROPS = {

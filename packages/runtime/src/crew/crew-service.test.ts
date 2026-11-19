@@ -61,6 +61,7 @@ describe("CrewService: agents", () => {
       model: "anthropic/claude-sonnet-5.5",
       approvalMode: "ask",
       connectorGrants: [],
+      skills: [],
     });
     expect(created.documents).toEqual({
       identity: "# Scout Two\n",
@@ -436,6 +437,7 @@ describe("CrewService: onboarding and templates", () => {
       name: "Project Manager",
       roomId: "operations",
       connectorGrants: ["notion"],
+      skills: [],
       schedules: [{ id: "daily-briefing", cron: "0 8 * * 1-5", enabled: false, catchUp: false }],
     });
     expect(pm.config.schedules[0]?.timezone).toBeUndefined();

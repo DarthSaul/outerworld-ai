@@ -60,6 +60,8 @@ export const AgentConfig = z.looseObject({
   approvalMode: ApprovalMode.default("ask"),
   /** Connector ids from station.json; granting one grants all of its tools (ADR-0012). */
   connectorGrants: z.array(Id).default([]),
+  /** Skill ids this agent has on top of the station-wide ones; it only adds (ADR-0021). */
+  skills: z.array(Id).default([]),
   schedules: z.array(Schedule).default([]),
   /** The id of the character this agent appears as, such as `"nova"` (ADR-0013, ADR-0021). */
   look: Id.optional(),
@@ -90,17 +92,15 @@ export function agentConfigIssues(agent: AgentConfig): Issue[] {
       message: `no character "${agent.look}"; the agent appears as its default character`,
     });
   }
-  const seen = new Set<string>();
-  agent.connectorGrants.forEach((id, i) => {
-    if (seen.has(id)) {
-      issues.push({
-        level: "error",
-        path: `connectorGrants.${i}`,
-        message: `connector "${id}" is granted twice`,
-      });
-    }
-    seen.add(id);
-  });
+  const twice = (ids: readonly string[], path: string, message: (id: string) => string) => {
+    const seen = new Set<string>();
+    ids.forEach((id, i) => {
+      if (seen.has(id)) issues.push({ level: "error", path: `${path}.${i}`, message: message(id) });
+      seen.add(id);
+    });
+  };
+  twice(agent.connectorGrants, "connectorGrants", (id) => `connector "${id}" is granted twice`);
+  twice(agent.skills, "skills", (id) => `skill "${id}" is listed twice`);
   return issues;
 }
 
