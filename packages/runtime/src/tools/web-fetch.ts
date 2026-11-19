@@ -1,5 +1,6 @@
 import { lookup as dnsLookup } from "node:dns/promises";
 import { BlockList, isIP } from "node:net";
+import { TextDecoder } from "node:util";
 import { z } from "zod";
 import type { ToolImpl } from "../run/run-service.js";
 
@@ -73,6 +74,44 @@ export function htmlToText(html: string): string {
 }
 
 const Input = z.strictObject({ url: z.string().min(1) });
+
+/** Text types web_fetch returns; anything else (images, PDFs, archives) is refused. */
+const TEXTUAL =
+  /^(text\/[\w.+-]+|application\/(json|json-seq|xml|xml-dtd|[\w.-]+\+(xml|json)))\s*(;|$)/i;
+
+const decoderFor = (label: string | undefined): TextDecoder | undefined => {
+  if (!label) return undefined;
+  try {
+    return new TextDecoder(label.trim().replace(/^["']|["']$/g, ""));
+  } catch {
+    return undefined; // An unknown label falls back to UTF-8.
+  }
+};
+
+/**
+ * Bytes to text in the encoding the response declares: a byte-order mark first, then the
+ * Content-Type charset, then (for XML) the `<?xml encoding?>` declaration; UTF-8 otherwise.
+ */
+export function decodeBody(bytes: Uint8Array, contentType: string): string {
+  const [a, b, c] = bytes;
+  const bom =
+    a === 0xef && b === 0xbb && c === 0xbf
+      ? "utf-8"
+      : a === 0xff && b === 0xfe
+        ? "utf-16le"
+        : a === 0xfe && b === 0xff
+          ? "utf-16be"
+          : undefined;
+  const charset = /;\s*charset\s*=\s*([^;]+)/i.exec(contentType)?.[1];
+  // The declaration is ASCII in any ASCII-compatible encoding, so a latin1 peek finds it.
+  const declared = /xml/i.test(contentType)
+    ? /^<\?xml[^>]*\bencoding\s*=\s*["']([\w.:-]+)["']/.exec(
+        Buffer.from(bytes.subarray(0, 200)).toString("latin1"),
+      )?.[1]
+    : undefined;
+  const decoder = decoderFor(bom) ?? decoderFor(charset) ?? decoderFor(declared);
+  return (decoder ?? new TextDecoder("utf-8")).decode(bytes);
+}
 
 export interface WebFetchOptions {
   readonly fetch?: typeof globalThis.fetch;
@@ -155,10 +194,9 @@ export function createWebFetch(options: WebFetchOptions = {}): ToolImpl {
           continue;
         }
         const contentType = res.headers.get("content-type") ?? "";
-        // Structured text too: any +xml or +json type (Atom and RSS feeds, problem+json, ld+json).
-        const textual =
-          /^(text\/|application\/(json|xml|[\w.-]+\+(xml|json))\s*(;|$))/i.test(contentType) ||
-          contentType === "";
+        // Structured text too: json-seq, xml-dtd, and any +xml or +json type (Atom and RSS feeds,
+        // problem+json, ld+json).
+        const textual = TEXTUAL.test(contentType) || contentType === "";
         if (!textual) {
           await res.body?.cancel();
           throw new Error(`the response is not text (${contentType})`);
@@ -178,7 +216,7 @@ export function createWebFetch(options: WebFetchOptions = {}): ToolImpl {
             break;
           }
         }
-        const raw = Buffer.concat(chunks).subarray(0, maxBytes).toString("utf8");
+        const raw = decodeBody(Buffer.concat(chunks).subarray(0, maxBytes), contentType);
         const text = /html/i.test(contentType) ? htmlToText(raw) : raw;
         return { url: url.href, status: res.status, contentType, text, truncated };
       }
