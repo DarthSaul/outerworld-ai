@@ -40,10 +40,13 @@ export function invalidateFor(event: RuntimeEvent, client: QueryClient): void {
     void client.invalidateQueries({ queryKey: ["station"] });
     void client.invalidateQueries({ queryKey: ["agent", event.agentId] });
     void client.invalidateQueries({ queryKey: ["schedules", event.agentId] });
+    // Who has a skill, and who it is offered to, follow each crew member's config.
+    void client.invalidateQueries({ queryKey: ["skills"] });
   } else if (event.type === "station.updated") {
     void client.invalidateQueries({ queryKey: ["station"] });
     void client.invalidateQueries({ queryKey: ["agent"] });
     void client.invalidateQueries({ queryKey: ["connectors"] });
+    void client.invalidateQueries({ queryKey: ["skills"] });
   } else if (event.type === "connector.status") {
     // A connector's tools change what granted crew members can use.
     void client.invalidateQueries({ queryKey: ["connectors"] });

@@ -19,8 +19,10 @@ import {
   type StationConfig,
   type StationView,
   SUPPORTED_MODELS,
+  skillCatalog,
   skillsForAgent,
   slugify,
+  withSkillOverride,
   withSkillTool,
 } from "@darthsaul/outerworld-ai-core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -477,6 +479,21 @@ export function fakeApi() {
         entry.messages.push({ role: "user", text: String(b.text) });
         return { runId: run.id };
       }
+    }
+    if (path === "/skills" && method === "GET") {
+      const agents = [...state.agents].map(([id, a]) => ({ id, config: a.config }));
+      return skillCatalog(skillLibrary, state.station, agents);
+    }
+    if (parts[0] === "skills" && parts[1] && method === "PUT") {
+      const id = parts[1];
+      if (!skillLibrary.some((s) => s.id === id)) throw new ApiError(404, `no skill "${id}"`);
+      const enabled = b.enabled as boolean | null;
+      state.station = {
+        ...state.station,
+        skills: withSkillOverride(state.station.skills, id, enabled),
+      };
+      const agents = [...state.agents].map(([aid, a]) => ({ id: aid, config: a.config }));
+      return skillCatalog(skillLibrary, state.station, agents).find((s) => s.id === id);
     }
     if (path === "/connectors") {
       // A fresh array, as JSON from the daemon would be.

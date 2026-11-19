@@ -402,14 +402,14 @@ describe("Abilities: connectors under Discover and Installed", () => {
     );
   });
 
-  it("opens Abilities on Discover in a side menu of Discover and Installed", async () => {
+  it("opens Abilities on Discover in a side menu of Discover, Installed, and Skills", async () => {
     renderApp("/system/abilities");
     const nav = await screen.findByRole("navigation", { name: term("abilities.nav") });
     expect(
       within(nav)
         .getAllByRole("link")
         .map((l) => l.textContent),
-    ).toEqual([term("abilities.discover"), term("abilities.installed")]);
+    ).toEqual([term("abilities.discover"), term("abilities.installed"), term("abilities.skills")]);
     await waitFor(() =>
       expect(within(nav).getByRole("link", { name: term("abilities.discover") })).toHaveAttribute(
         "aria-current",

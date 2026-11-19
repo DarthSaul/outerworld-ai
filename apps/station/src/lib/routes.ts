@@ -8,4 +8,5 @@ export const ROUTES = {
   budgets: `${SETTINGS_PATH}/budgets`,
   discover: `${ABILITIES_PATH}/discover`,
   installed: `${ABILITIES_PATH}/installed`,
+  skills: `${ABILITIES_PATH}/skills`,
 } as const;

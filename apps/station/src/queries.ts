@@ -20,6 +20,7 @@ import {
   type Room,
   type RunState,
   type SettingsView,
+  type SkillListItem,
   type SpendView,
   type StationView,
   type SupportedModel,
@@ -405,6 +406,21 @@ export interface ConnectorItem {
   readonly ownClient?: { readonly set: boolean; readonly redirectUrl: string };
   /** While it needs sign-in: where to sign in. */
   readonly authorizationUrl?: string;
+}
+
+/** The skills library with each skill's state (ADR-0021). */
+export function useSkills() {
+  const { api } = useDaemon();
+  return useQuery({ queryKey: ["skills"], queryFn: () => api.get<SkillListItem[]>("/skills") });
+}
+
+/** On or off for every crew member, or `null` for the skill's own default. */
+export function useSetSkill() {
+  const { api } = useDaemon();
+  return useMutation({
+    mutationFn: ({ id, enabled }: { id: string; enabled: boolean | null }) =>
+      api.send<SkillListItem>("PUT", `/skills/${encodeURIComponent(id)}`, { enabled }),
+  });
 }
 
 export function useConnectors() {
