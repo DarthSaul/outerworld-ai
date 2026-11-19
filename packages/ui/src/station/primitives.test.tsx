@@ -121,23 +121,22 @@ describe("Avatar", () => {
 
 describe("Sprite", () => {
   it("draws every filled cell of the character, at an integer scale", () => {
-    const { container } = render(<Sprite look={5} scale={4} label="Rivet" />);
-    const svg = screen.getByRole("img", { name: "Rivet" });
+    const { container } = render(<Sprite look="zephyr" scale={4} label="Zephyr" />);
+    const svg = screen.getByRole("img", { name: "Zephyr" });
     expect(svg).toHaveAttribute("width", "80");
     expect(svg).toHaveAttribute("height", "104");
     const covered = [...container.querySelectorAll("rect")].reduce(
       (n, r) => n + Number(r.getAttribute("width")),
       0,
     );
-    const character = DRAWN_CHARACTERS[5];
+    const character = DRAWN_CHARACTERS.find((c) => c.id === "zephyr");
     if (!character) throw new Error("no character");
     expect(covered).toBe(characterGrid(character).flat().filter(Boolean).length);
   });
 
   it("draws a painted character as its pixelated art in a 32×32 box per scale step (ADR-0017)", () => {
-    const look = DRAWN_CHARACTERS.length;
     const painted = ART_CHARACTERS[0];
-    render(<Sprite look={look} scale={2} label={painted?.name ?? ""} />);
+    render(<Sprite look={painted?.id ?? ""} scale={2} label={painted?.name ?? ""} />);
     const img = screen.getByRole("img", { name: painted?.name ?? "" });
     expect(img.tagName).toBe("IMG");
     expect(img).toHaveAttribute("src", painted?.art.src ?? "");
@@ -146,7 +145,7 @@ describe("Sprite", () => {
   });
 
   it("is decorative without a label and falls back for an unknown look", () => {
-    const { container } = render(<Sprite look={99} />);
+    const { container } = render(<Sprite look="no-such-character" />);
     expect(container.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
     expect(container.querySelectorAll("rect").length).toBeGreaterThan(0);
   });
@@ -197,7 +196,7 @@ describe("accessibility", () => {
         <StatBox label="Tasks live" value={3} tone="green" />
         <SegmentBar color={stVar("amber")} percent={40} label="Fuel" />
         <Avatar name="Wren" color={stVar("room-0")} />
-        <Sprite look={1} scale={2} label="Bolt" />
+        <Sprite look="bolt" scale={2} label="Bolt" />
         <OutlineButton>Demolish</OutlineButton>
         <ChoiceButton glyph="B" tone="red">
           Deny

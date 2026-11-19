@@ -1,6 +1,5 @@
 import {
   CHARACTER_COUNT,
-  CHARACTER_ORDER,
   CHARACTERS,
   initials,
   term,
@@ -20,8 +19,8 @@ export interface CrewSelectAgent {
   readonly roomName: string;
   /** Room color: a var() reference. */
   readonly color: string;
-  /** Current look (CHARACTERS index). */
-  readonly look: number;
+  /** Current look: a character id. */
+  readonly look: string;
 }
 
 export interface CrewSelectProps {
@@ -29,9 +28,9 @@ export interface CrewSelectProps {
   readonly agent: CrewSelectAgent;
   /** Everyone else on the station, to say who else wears a character. */
   readonly others: readonly CrewSelectAgent[];
-  /** The character under the P1 cursor. */
-  readonly cursor: number;
-  readonly onCursor: (index: number) => void;
+  /** The id of the character under the P1 cursor. */
+  readonly cursor: string;
+  readonly onCursor: (id: string) => void;
   /** Saves the character under the cursor as the crew member's look. */
   readonly onSave: () => void;
   readonly busy?: boolean;
@@ -52,11 +51,16 @@ const COLS = Math.ceil(CHARACTER_COUNT / ROWS);
 export function CrewSelect(props: CrewSelectProps) {
   const { agent, others, cursor, onCursor, onSave, busy } = props;
   const grid = useRef<HTMLUListElement>(null);
-  const pick = CHARACTERS[cursor] ?? CHARACTERS[0];
+  // Arrow keys move through the tiles as shown (CHARACTERS' order); what is saved is the id.
+  const at = Math.max(
+    0,
+    CHARACTERS.findIndex((c) => c.id === cursor),
+  );
+  const pick = CHARACTERS[at];
   if (!pick) return null;
-  const changed = cursor !== agent.look;
-  const wearing = (index: number) => others.filter((a) => a.look === index && a.id !== agent.id);
-  const wornBy = wearing(cursor);
+  const changed = pick.id !== agent.look;
+  const wearing = (id: string) => others.filter((a) => a.look === id && a.id !== agent.id);
+  const wornBy = wearing(pick.id);
   const status = !changed
     ? { text: termWith("crewSelect.equipped", { agent: agent.name }), color: stVar("green") }
     : wornBy.length
@@ -68,14 +72,12 @@ export function CrewSelect(props: CrewSelectProps) {
   const heading = termWith("crewSelect.choose", { agent: agent.name });
 
   const moveTo = (index: number) => {
-    onCursor(index);
+    const next = CHARACTERS[index];
+    if (next) onCursor(next.id);
     const tile = grid.current?.querySelector<HTMLElement>(`[data-character-index="${index}"]`);
     tile?.focus();
     tile?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
   };
-  // The keys move through the tiles as shown (CHARACTER_ORDER), not through look indexes.
-  const at = Math.max(0, CHARACTER_ORDER.indexOf(cursor));
-  const lookAt = (position: number) => CHARACTER_ORDER[position] ?? cursor;
   const onKeyDown = (e: KeyboardEvent<HTMLUListElement>) => {
     const wrap = (i: number) => (i + CHARACTER_COUNT) % CHARACTER_COUNT;
     const steps: Readonly<Record<string, number>> = {
@@ -90,15 +92,11 @@ export function CrewSelect(props: CrewSelectProps) {
       const next = at + step;
       // Up or down off the grid stays in the same column; left or right wraps around.
       moveTo(
-        Math.abs(step) === COLS
-          ? next >= 0 && next < CHARACTER_COUNT
-            ? lookAt(next)
-            : cursor
-          : lookAt(wrap(next)),
+        Math.abs(step) === COLS ? (next >= 0 && next < CHARACTER_COUNT ? next : at) : wrap(next),
       );
     } else if (e.key === "Home" || e.key === "End") {
       e.preventDefault();
-      moveTo(lookAt(e.key === "Home" ? 0 : CHARACTER_COUNT - 1));
+      moveTo(e.key === "Home" ? 0 : CHARACTER_COUNT - 1);
     } else if (e.key === "Enter") {
       e.preventDefault();
       if (changed && !busy) onSave();
@@ -126,7 +124,7 @@ export function CrewSelect(props: CrewSelectProps) {
           style={{ background: "var(--st-stage-bg)" }}
         >
           <div className="relative z-10 -mb-2.5">
-            <Sprite look={cursor} scale={3} label={pick.name} />
+            <Sprite look={pick.id} scale={3} label={pick.name} />
           </div>
           <div
             aria-hidden="true"
@@ -156,12 +154,10 @@ export function CrewSelect(props: CrewSelectProps) {
             className="m-0 grid list-none gap-2.5 overflow-x-auto overscroll-x-contain p-1 pb-2.5"
             style={{ gridTemplateColumns: `repeat(${COLS}, max-content)` }}
           >
-            {CHARACTER_ORDER.map((i) => {
-              const c = CHARACTERS[i];
-              if (!c) return null;
-              const isCursor = i === cursor;
-              const mine = agent.look === i;
-              const owners = wearing(i);
+            {CHARACTERS.map((c, i) => {
+              const isCursor = i === at;
+              const mine = agent.look === c.id;
+              const owners = wearing(c.id);
               const style = {
                 borderColor: isCursor ? undefined : mine ? stVar("green") : stVar("tile-line"),
                 boxShadow: isCursor
@@ -178,11 +174,11 @@ export function CrewSelect(props: CrewSelectProps) {
                     aria-label={`${c.name}, ${c.role}`}
                     data-character-index={i}
                     tabIndex={isCursor ? 0 : -1}
-                    onClick={() => onCursor(i)}
+                    onClick={() => onCursor(c.id)}
                     className={`relative flex h-full w-20 cursor-pointer flex-col items-center justify-end gap-1 border-3 bg-tile px-1 pt-2 pb-1.5 hover:bg-tile-hover ${isCursor ? "st-blink-border border-amber" : ""}`}
                     style={style}
                   >
-                    <Sprite look={i} scale={2} />
+                    <Sprite look={c.id} scale={2} />
                     <span className="text-center font-display text-d6 text-fg-hi leading-[1.4]">
                       {c.name}
                     </span>

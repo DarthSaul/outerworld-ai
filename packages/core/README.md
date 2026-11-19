@@ -15,7 +15,7 @@ from the zod source (regenerate with `pnpm build && node scripts/write-schemas.m
 | Export | Description |
 |--------|-------------|
 | `parseStationConfig(input)` | `Result<StationConfig>` for `station.json`: rooms with props (`web`, `files`, `memory`), lanes between rooms, connectors (http or stdio transport, no secrets: headers and env are rejected), budgets in USD, dispatch policy (`maxDepth` 0 or 1, `autoReview`). Defaults filled; unknown fields kept. Never throws. |
-| `parseAgentConfig(input)` | `Result<AgentConfig>` for `agents/<id>/agent.json`: name, `roomId`, `role` (`overseer` \| `crew`), `model`, `approvalMode` (`ask` \| `full`), `connectorGrants`, `schedules` (cron with 5 or 6 fields, IANA time zone, prompt, `catchUp`, `enabled`), optional `look` (0–30, a character index: 24 drawn, then 7 painted). |
+| `parseAgentConfig(input)` | `Result<AgentConfig>` for `agents/<id>/agent.json`: name, `roomId`, `role` (`overseer` \| `crew`), `model`, `approvalMode` (`ask` \| `full`), `connectorGrants`, `schedules` (cron with 5 or 6 fields, IANA time zone, prompt, `catchUp`, `enabled`), optional `look` (a character id such as `"nova"`; an unknown one is a warning). |
 | `stationCrewIssues(station, crew)` | Cross-file rules: agent ids, known rooms, installed connectors, at most one overseer. |
 | `StationConfig`, `Room`, `Prop`, `PropKind`, `Lane`, `Connector`, `ConnectorTransport`, `Budgets`, `DispatchPolicy`, `AgentConfig`, `AgentRole`, `ApprovalMode`, `AgentSchedule` | zod schemas and inferred types. |
 
@@ -82,7 +82,7 @@ from the zod source (regenerate with `pnpm build && node scripts/write-schemas.m
 | `runDisplayStatus`, `crewDisplayStatus`, `sortRuns`, `isLive`, `alertCount`, `initials` | The dashboard's status words, mapped from run states and crew activity. |
 | `overseerFirst(crew)` | The crew in listing order: the Overseer first, everyone else in the order given. |
 | `chatterLines(snapshot)` | The Overseer's ambient lines: glossary keys filled only from proven state, plus tips. |
-| `CHARACTERS`, `characterGrid(spec)`, `gridRuns`, `lookFor(id, look)`, `SPRITE_W`, `SPRITE_H` | The 31 characters (24 drawn 20×26 grids, then 7 painted, `ART_CHARACTERS`), checked pixel for pixel against the exported sprites, and a stable look for an agent without one. `CHARACTER_ORDER` is the picker's display order (painted first); a saved look stays an index into `CHARACTERS`. |
+| `CHARACTERS`, `characterById(id)`, `characterGrid(spec)`, `gridRuns`, `lookFor(id, look)`, `SPRITE_W`, `SPRITE_H` | The 26 characters in the picker's order (9 painted, `ART_CHARACTERS`, then 17 drawn 20×26 grids, `DRAWN_CHARACTERS`), checked pixel for pixel against the exported sprites; lookup by id; and the character id an agent appears as (its `look` if that names a character, else a stable drawn one). Order is display only: a saved look is an id. |
 
 ### Glossary
 | Export | Description |

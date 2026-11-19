@@ -105,6 +105,31 @@ describe("station directory", () => {
     expect(loaded.issues.some((i) => i.path.startsWith("agents/broken/agent.json"))).toBe(true);
   });
 
+  const scout = (look: unknown) => ({
+    ...overseer,
+    name: "Scout",
+    role: "crew",
+    look,
+    schedules: [{ id: "daily", cron: "0 9 * * *", prompt: "Go.", catchUp: false, enabled: true }],
+  });
+
+  it.each([
+    ["a numeric look from before ADR-0021", 30, undefined],
+    ["a look naming a deleted character", "rivet", "rivet"],
+  ])("still loads an agent with %s, schedules intact, with a warning", async (_, look, kept) => {
+    const h = home();
+    await seed(h);
+    mkdirSync(join(h, "agents", "scout"), { recursive: true });
+    writeFileSync(join(h, "agents", "scout", "agent.json"), JSON.stringify(scout(look)));
+    const loaded = await loadStationDir(h);
+    const agent = loaded.agents.find((a) => a.id === "scout");
+    expect(agent?.config.look).toBe(kept);
+    expect(agent?.config.schedules.map((s) => s.id)).toEqual(["daily"]);
+    expect(loaded.issues).toContainEqual(
+      expect.objectContaining({ level: "warn", path: "agents/scout/agent.json.look" }),
+    );
+  });
+
   it("reports cross-file problems (an agent in an unknown room)", async () => {
     const h = home();
     await seed(h);

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CHARACTER_COUNT } from "../characters.js";
+import { characterById } from "../characters.js";
 import {
   duplicateIdIssues,
   Id,
@@ -61,13 +61,8 @@ export const AgentConfig = z.looseObject({
   /** Connector ids from station.json; granting one grants all of its tools (ADR-0012). */
   connectorGrants: z.array(Id).default([]),
   schedules: z.array(Schedule).default([]),
-  /** Index into core's CHARACTERS: the pixel character this agent appears as (ADR-0013). */
-  look: z
-    .number()
-    .int()
-    .min(0)
-    .max(CHARACTER_COUNT - 1)
-    .optional(),
+  /** The id of the character this agent appears as, such as `"nova"` (ADR-0013, ADR-0021). */
+  look: Id.optional(),
 });
 
 export type AgentRole = z.infer<typeof AgentRole>;
@@ -86,6 +81,13 @@ export function agentConfigIssues(agent: AgentConfig): Issue[] {
       level: "warn",
       path: "model",
       message: `"${agent.model}" is not on the supported model list; tool calling may not work`,
+    });
+  }
+  if (agent.look !== undefined && !characterById(agent.look)) {
+    issues.push({
+      level: "warn",
+      path: "look",
+      message: `no character "${agent.look}"; the agent appears as its default character`,
     });
   }
   const seen = new Set<string>();

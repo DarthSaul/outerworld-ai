@@ -13,7 +13,7 @@ const agents: CrewSelectAgent[] = [
     role: "Overseer",
     roomName: "Command",
     color: stVar("cyan"),
-    look: 3,
+    look: "kestrel",
   },
   {
     id: "quill",
@@ -21,7 +21,7 @@ const agents: CrewSelectAgent[] = [
     role: "Crew member",
     roomName: "Operations",
     color: stVar("room-0"),
-    look: 21,
+    look: "fennec",
   },
   {
     id: "wren",
@@ -29,7 +29,7 @@ const agents: CrewSelectAgent[] = [
     role: "Crew member",
     roomName: "Research",
     color: stVar("room-1"),
-    look: 3,
+    look: "kestrel",
   },
 ];
 
@@ -38,7 +38,7 @@ function Harness({
   onSave = vi.fn(),
 }: {
   readonly who?: string;
-  readonly onSave?: (id: string, look: number) => void;
+  readonly onSave?: (id: string, look: string) => void;
 }) {
   const agent = agents.find((a) => a.id === who) ?? (agents[1] as CrewSelectAgent);
   const [cursor, setCursor] = useState(agent.look);
@@ -66,9 +66,9 @@ describe("CrewSelect", () => {
     const title = within(panel).getByRole("heading", { name: "Appearance" });
     expect(title.parentElement?.parentElement).toBe(save().parentElement);
     expect(panel).not.toHaveTextContent("Operations");
-    expect(screen.getByRole("img", { name: "QUILL" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "FENNEC" })).toBeInTheDocument();
     expect(screen.getByText("Equipped on Quill")).toBeInTheDocument();
-    expect(cursorName()).toBe("QUILL, Scribe");
+    expect(cursorName()).toBe("FENNEC, Pathfinder");
     expect(screen.queryByRole("button", { name: "Random" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Assign" })).toBeNull();
   });
@@ -80,8 +80,8 @@ describe("CrewSelect", () => {
     expect(stage).toHaveAttribute("data-stage");
     expect(pick).toHaveAttribute("data-pick");
     expect(Array.from(pick?.children ?? []).map((c) => c.textContent)).toEqual([
-      "QUILL",
-      "Scribe",
+      "FENNEC",
+      "Pathfinder",
       "Equipped on Quill",
     ]);
     expect(picker?.className).toMatch(/col-span-2/);
@@ -95,8 +95,8 @@ describe("CrewSelect", () => {
     fireEvent.click(within(grid()).getByRole("button", { name: "NOVA, Pilot" }));
     expect(save()).toBeEnabled();
     fireEvent.click(save());
-    expect(onSave).toHaveBeenCalledWith("quill", 0);
-    fireEvent.click(within(grid()).getByRole("button", { name: "QUILL, Scribe" }));
+    expect(onSave).toHaveBeenCalledWith("quill", "nova");
+    fireEvent.click(within(grid()).getByRole("button", { name: "FENNEC, Pathfinder" }));
     expect(save()).toBeDisabled();
   });
 
@@ -112,11 +112,11 @@ describe("CrewSelect", () => {
       name: `${painted?.name}, ${painted?.role}`,
     });
     expect(tile.querySelector("img")?.getAttribute("src")).toMatch(/^data:image\/png;base64,/);
-    // The painted seven lead the grid, then the drawn characters.
+    // The painted nine, RAZOR through SHADE, lead the grid, then the drawn characters.
     const names = within(grid())
       .getAllByRole("button")
       .map((b) => b.getAttribute("aria-label")?.split(",")[0]);
-    expect(names.slice(0, 8)).toEqual([
+    expect(names.slice(0, 10)).toEqual([
       "RAZOR",
       "UMBRA",
       "ASHA",
@@ -124,6 +124,8 @@ describe("CrewSelect", () => {
       "BLIP",
       "PATCH",
       "DUSTY",
+      "MERLO",
+      "SHADE",
       "NOVA",
     ]);
   });
@@ -134,9 +136,9 @@ describe("CrewSelect", () => {
     fireEvent.keyDown(grid(), { key: "Enter" });
     expect(onSave).not.toHaveBeenCalled();
     fireEvent.keyDown(grid(), { key: "ArrowRight" });
-    expect(cursorName()).toBe("ATLAS, Heavy Lifter");
-    expect(within(grid()).getByRole("button", { name: "ATLAS, Heavy Lifter" })).toHaveFocus();
-    // The keys follow the tiles as shown: the painted characters first, the drawn ones after.
+    // The keys follow the tiles as shown: FENNEC, the last tile, wraps round to RAZOR, the first.
+    expect(cursorName()).toBe("RAZOR, Captain");
+    expect(within(grid()).getByRole("button", { name: "RAZOR, Captain" })).toHaveFocus();
     fireEvent.keyDown(grid(), { key: "Home" });
     expect(cursorName()).toBe("RAZOR, Captain");
     fireEvent.keyDown(grid(), { key: "ArrowDown" });
@@ -146,18 +148,18 @@ describe("CrewSelect", () => {
     fireEvent.keyDown(grid(), { key: "ArrowUp" });
     expect(cursorName()).toBe("RAZOR, Captain");
     fireEvent.keyDown(grid(), { key: "ArrowLeft" });
-    expect(cursorName()).toBe("JUNO, Dispatcher");
+    expect(cursorName()).toBe("FENNEC, Pathfinder");
     fireEvent.keyDown(grid(), { key: "ArrowRight" });
     expect(cursorName()).toBe("RAZOR, Captain");
     fireEvent.keyDown(grid(), { key: "Enter" });
-    // RAZOR keeps its look index (the first painted one), whatever order the grid shows.
-    expect(onSave).toHaveBeenCalledWith("quill", CHARACTER_COUNT - ART_CHARACTERS.length);
+    // What is saved is the character's id, whatever order the grid shows.
+    expect(onSave).toHaveBeenCalledWith("quill", "razor");
   });
 
   it("leaves the arrow keys alone outside the grid", () => {
     render(<Harness />);
     fireEvent.keyDown(window, { key: "ArrowRight" });
-    expect(cursorName()).toBe("QUILL, Scribe");
+    expect(cursorName()).toBe("FENNEC, Pathfinder");
   });
 
   it("says who else wears a look, and badges those tiles", () => {
@@ -166,7 +168,7 @@ describe("CrewSelect", () => {
     expect(
       within(grid("Wren")).getByRole("button", { name: "KESTREL, Commander" }),
     ).toHaveTextContent("VE");
-    fireEvent.click(within(grid("Wren")).getByRole("button", { name: "QUILL, Scribe" }));
+    fireEvent.click(within(grid("Wren")).getByRole("button", { name: "FENNEC, Pathfinder" }));
     expect(screen.getByText("Also worn by Quill")).toBeInTheDocument();
     fireEvent.click(within(grid("Wren")).getByRole("button", { name: "NOVA, Pilot" }));
     expect(screen.getByText("Available")).toBeInTheDocument();

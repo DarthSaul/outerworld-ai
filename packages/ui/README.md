@@ -36,7 +36,7 @@ the glossary.
 | `StatBox` | A labelled value in a well. `alert` blinks its border. |
 | `SegmentBar` | A segmented bar. It is a meter when it has a percent; with no proven amount it marches while `active`. |
 | `Avatar`, `overseerAvatarProps` | A square initials chip, or with `look` the crew member's character in a frame of the chip color; an optional double ring and status lamp. |
-| `Sprite` | One of core's characters: a drawn one as SVG rects, a painted one as its art. Scale 1, 1.5, 2, 2.4 (a crew member's Brief), 3, 4, or 8. |
+| `Sprite` | One of core's characters by id: a drawn one as SVG rects, a painted one as its art. Scale 1, 1.5, 2, 2.4 (a crew member's Brief), 3, 4, or 8. |
 | `Tag` | The outlined pixel-face label for roles, modes, classes, states, and values (OVERSEER, FULL POWER, a model id). `tone` (`white`, `amber`, `cyan`, `green`, `mute`), `size` (`sm`, or `md` one step larger), and `caps` (off for a value shown as written). |
 | `OutlineButton`, `ChoiceButton`, `tabClass`, `Diamond` | Outline buttons (also `type="submit"`), the (A)/(B) buttons, tab classes for router links, and the placed-object diamond. |
 | `ResizeHandle`, `RESIZE_KEY_STEP` | A vertical column splitter (an `<hr>` separator with aria values): drag, arrow keys, Enter or double-click to reset (ADR-0014). `onResizeStart` marks where a resize begins; `onResize(dx)` reports movement since then. A drag listens on the window, so any release ends it. |

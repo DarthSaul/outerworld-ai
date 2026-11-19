@@ -13,7 +13,7 @@ describe("Appearance on a crew member's page", () => {
   it("is the last panel on Config, opening on the crew member's look", async () => {
     const fake = fakeApi();
     const vesper = fake.state.agents.get("vesper");
-    if (vesper) vesper.config = { ...vesper.config, look: 3 };
+    if (vesper) vesper.config = { ...vesper.config, look: "kestrel" };
     const { container } = renderApp("/crew/vesper?tab=config", fake);
     const appearance = await region();
     const config = screen.getByRole("tabpanel", { name: term("agentTabs.config") });
@@ -42,7 +42,11 @@ describe("Appearance on a crew member's page", () => {
     fireEvent.keyDown(strip(), { key: "ArrowRight" });
     fireEvent.keyDown(strip(), { key: "Enter" });
     await waitFor(() =>
-      expect(calls).toContainEqual({ method: "PATCH", path: "/agents/quill", body: { look: 1 } }),
+      expect(calls).toContainEqual({
+        method: "PATCH",
+        path: "/agents/quill",
+        body: { look: "bolt" },
+      }),
     );
     expect(await screen.findByText("Quill now appears as BOLT")).toBeInTheDocument();
   });
@@ -60,7 +64,7 @@ describe("Appearance on a crew member's page", () => {
     expect(screen.getByText("Quill now appears as BOLT")).toBeInTheDocument();
     // Another tab picks a different look: the note would now be false.
     const quill = fake.state.agents.get("quill");
-    if (quill) quill.config = { ...quill.config, look: 7 };
+    if (quill) quill.config = { ...quill.config, look: "moss" };
     await act(() => client.invalidateQueries());
     await waitFor(() => expect(screen.queryByText("Quill now appears as BOLT")).toBeNull());
   });
@@ -76,13 +80,13 @@ describe("Appearance on a crew member's page", () => {
     await userEvent.click(save);
     const patch = calls.find((c) => c.method === "PATCH");
     expect(patch?.path).toBe("/agents/vesper");
-    expect((patch?.body as { look?: number } | undefined)?.look).toBe(0);
+    expect((patch?.body as { look?: string } | undefined)?.look).toBe("nova");
   });
 
   it("shows the saved look on Brief beside the name and room, with Delete in the tab strip", async () => {
     const fake = fakeApi();
     const quill = fake.state.agents.get("quill");
-    if (quill) quill.config = { ...quill.config, look: 3 };
+    if (quill) quill.config = { ...quill.config, look: "kestrel" };
     renderApp("/crew/quill", fake);
     const name = await screen.findByRole("heading", { level: 2, name: "Quill" });
     const header = name.closest("header") as HTMLElement;

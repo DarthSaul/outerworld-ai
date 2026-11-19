@@ -133,7 +133,7 @@ describe("OverseerComms", () => {
   });
 
   it("shows the Overseer's sprite, small, in the portrait slot beside the words", () => {
-    const { container } = render(<OverseerComms message={chatter} overseerLook={3} />);
+    const { container } = render(<OverseerComms message={chatter} overseerLook="kestrel" />);
     const portrait = screen.getByRole("img", { name: "Overseer portrait" });
     expect(container.querySelectorAll("rect").length).toBeGreaterThan(0);
     // 1.5× (30px wide): smaller than the old 2× portrait, with a tight gap to the text.
@@ -152,7 +152,7 @@ describe("OverseerComms", () => {
 
   it("has no axe violations", async () => {
     vi.useRealTimers();
-    const { container } = render(<OverseerComms message={approval} overseerLook={3} />);
+    const { container } = render(<OverseerComms message={approval} overseerLook="kestrel" />);
     expect(await axe(container)).toHaveNoViolations();
   });
 });

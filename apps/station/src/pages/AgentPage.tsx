@@ -5,7 +5,7 @@ import {
   type AgentView,
   type ApprovalMode,
   abilityDisplay,
-  CHARACTERS,
+  characterById,
   connectorDisplay,
   type EffectiveTool,
   findModel,
@@ -432,10 +432,10 @@ function ConfigForm({
 function AppearanceRow({ agentId }: { readonly agentId: string }) {
   const { dashboard } = useDashboard();
   const setLook = useSetLook();
-  const [cursor, setCursor] = useState<number>();
+  const [cursor, setCursor] = useState<string>();
   // The look just saved, the one it replaced, and what to say. The note holds while the crew member
   // shows either (the refresh may not be in yet); a different look, saved elsewhere, ends it.
-  const [assigned, setAssigned] = useState<{ look: number; before: number; text: string }>();
+  const [assigned, setAssigned] = useState<{ look: string; before: string; text: string }>();
   if (!dashboard) return null;
   const toAgent = (c: (typeof dashboard.crew)[number]): CrewSelectAgent => {
     const room = dashboard.rooms.find((r) => r.id === c.roomId);
@@ -477,7 +477,7 @@ function AppearanceRow({ agentId }: { readonly agentId: string }) {
                   before: agent.look,
                   text: termWith("crewSelect.assigned", {
                     agent: agent.name,
-                    character: CHARACTERS[at]?.name ?? "",
+                    character: characterById(at)?.name ?? "",
                   }),
                 }),
             },
@@ -553,7 +553,7 @@ function Brief({ agent, station }: { readonly agent: AgentView; readonly station
       <header className="flex items-center gap-3">
         {/* A fifth larger than the scale-2 portrait: the box's padding and the character alike. */}
         <span data-brief-avatar className="flex border-2 border-cyan bg-tile p-1.25">
-          <Sprite look={look} scale={2.4} label={CHARACTERS[look]?.name ?? ""} />
+          <Sprite look={look} scale={2.4} label={characterById(look)?.name ?? ""} />
         </span>
         <div className="flex min-w-0 flex-col gap-1.5">
           <h2 className="m-0 font-display font-normal text-d14 text-title uppercase tracking-st-2">

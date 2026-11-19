@@ -183,9 +183,9 @@ export function Gallery({ input }: { readonly input: DashboardInput }) {
 
       <Panel title="Characters">
         <ul className="m-0 flex list-none flex-wrap gap-3 p-3">
-          {CHARACTERS.map((c, i) => (
+          {CHARACTERS.map((c) => (
             <li key={c.id} className="flex flex-col items-center gap-1 bg-tile p-2">
-              <Sprite look={i} scale={2} label={c.name} />
+              <Sprite look={c.id} scale={2} label={c.name} />
               <span className="font-display text-d6 text-fg-hi">{c.name}</span>
             </li>
           ))}
@@ -216,7 +216,7 @@ export function Gallery({ input }: { readonly input: DashboardInput }) {
             text: "Quill wants to use write_file. Approve?",
             kind: "approval",
           }}
-          overseerLook={live.overseer?.look ?? 0}
+          overseerLook={live.overseer?.look ?? "nova"}
         />
         <Scanner dashboard={live} selection={{ type: "room", id: "command" }} onSelect={() => {}} />
         <Scanner
