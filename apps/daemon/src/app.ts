@@ -17,6 +17,7 @@ import { apiRequestRules } from "./http.js";
 import { memoryRoutes } from "./memory-routes.js";
 import { notificationRoutes } from "./notification-routes.js";
 import { scheduleRoutes } from "./schedule-routes.js";
+import { skillRoutes } from "./skill-routes.js";
 import { tokensMatch } from "./token.js";
 
 export interface AppOptions extends CommsDeps {
@@ -155,6 +156,7 @@ export function createApp(options: AppOptions): Hono {
   app.route("/api", memoryRoutes(options.memory));
   app.route("/api", scheduleRoutes(options));
   app.route("/api", notificationRoutes(options.notifications));
+  app.route("/api", skillRoutes(options.crew));
   app.route("/", oauthCallback(options.connectors));
 
   app.all("/api/*", (c) => c.json({ error: "not found" }, 404));

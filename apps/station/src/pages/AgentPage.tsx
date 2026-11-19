@@ -41,12 +41,14 @@ import {
   useModels,
   useSaveDocument,
   useSetLook,
+  useSkills,
   useStationView,
   useUpdateAgent,
 } from "../queries.js";
 import { useDashboard } from "../station/use-dashboard.js";
 import { AgentMemory } from "./MemoryPage.js";
 import { SchedulesBrief, SchedulesSection } from "./Schedules.js";
+import { needsWords } from "./SkillsSection.js";
 
 /** The design's quiet outline button, as a class so submit buttons can use it too. */
 const button =
@@ -57,12 +59,18 @@ const label = "font-display text-d7 text-fg-mute uppercase";
 /** A panel around one part of the page. */
 const panel = "flex flex-col gap-3 border-2 border-line bg-panel p-3 shadow-panel";
 
-const sourceLabel = (t: EffectiveTool) =>
-  t.source.kind === "role"
-    ? term("tools.source.role")
-    : t.source.kind === "prop"
-      ? `${term("grant")}: ${term(`prop.${t.source.prop}`)}`
-      : `${term("connector")}: ${t.source.connectorId}`;
+const sourceLabel = (t: EffectiveTool) => {
+  switch (t.source.kind) {
+    case "role":
+      return term("tools.source.role");
+    case "prop":
+      return `${term("grant")}: ${term(`prop.${t.source.prop}`)}`;
+    case "connector":
+      return `${term("connector")}: ${t.source.connectorId}`;
+    case "skill":
+      return term("tools.source.skill");
+  }
+};
 
 /** A granted connector's tools, together: a grant is all of a connector's tools (ADR-0012). */
 const connectorGroups = (tools: readonly EffectiveTool[]) => {
@@ -535,6 +543,94 @@ function Capabilities({
             ))}
           </ul>
         )}
+        {agent.skills.offered.length ? (
+          <p className="m-0 text-b17 text-fg-soft" data-skills-offered>
+            <span className="font-display text-d7 text-fg-mute uppercase">
+              {term("agentSkills.offered")}:
+            </span>{" "}
+            {agent.skills.offered.map((s) => s.name).join(", ")}
+          </p>
+        ) : null}
+      </div>
+    </Panel>
+  );
+}
+
+/**
+ * Config's Skills (ADR-0023): every skill in the library, by category, with a box to add it to
+ * this crew member. Skills on for all crew show as on and are changed in Abilities; one this crew
+ * member lacks the tools for says what it needs and is not offered. A change saves at once.
+ */
+function SkillGrants({ agent }: { readonly agent: AgentView }) {
+  const update = useUpdateAgent(agent.id);
+  const library = useSkills();
+  const own = new Set(agent.config.skills);
+  const held = new Map(agent.skills.unavailable.map((s) => [s.id, s.missing]));
+  const toggle = (id: string) =>
+    update.mutate({
+      skills: own.has(id)
+        ? agent.config.skills.filter((s) => s !== id)
+        : [...agent.config.skills, id],
+    });
+  const list = library.data ?? [];
+  const categories = [...new Set(list.map((s) => s.category))];
+  return (
+    <Panel title={term("skills")}>
+      <div className="flex flex-col gap-3 p-3">
+        <p className="m-0 text-b17 text-fg-soft">
+          {term("agentSkills.hint")}{" "}
+          <Link to={ROUTES.skills} className="text-cyan underline hover:text-fg-hi">
+            {term("agentSkills.manage")}
+          </Link>
+        </p>
+        <ErrorNote error={library.error ?? update.error} />
+        {categories.map((category) => {
+          const skills = list.filter((s) => s.category === category);
+          const mine = skills.filter((s) => own.has(s.id) || s.globallyEnabled).length;
+          return (
+            <details key={category} open={mine > 0} data-skill-category={category}>
+              <summary className="cursor-pointer font-display text-d7 text-fg-mute uppercase">
+                {category} ({mine}/{skills.length})
+              </summary>
+              <ul className="m-0 mt-2 flex list-none flex-col gap-2 p-0">
+                {skills.map((s) => {
+                  const forAll = s.globallyEnabled;
+                  const on = forAll || own.has(s.id);
+                  const missing = held.get(s.id);
+                  return (
+                    <li
+                      key={s.id}
+                      data-skill-grant={s.id}
+                      data-on={on}
+                      className={`flex min-w-0 items-start gap-3 border-2 p-2.5 ${on ? "border-cyan bg-active-bg" : "border-line-faint bg-well"}`}
+                    >
+                      <div className="flex min-w-0 flex-1 flex-col gap-1">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <span className="font-display text-cyan text-d9 uppercase">{s.name}</span>
+                          {forAll ? <Tag>{term("agentSkills.forAll")}</Tag> : null}
+                          {missing ? (
+                            <Tag tone="amber" data-skill-held>
+                              {needsWords(missing)}
+                            </Tag>
+                          ) : null}
+                        </div>
+                        <p className="m-0 text-b17 text-fg-soft">{s.description}</p>
+                      </div>
+                      <Checkbox
+                        label={term("agentSkills.add")}
+                        aria-label={termWith("agentSkills.addName", { name: s.name })}
+                        checked={on}
+                        disabled={forAll || update.isPending}
+                        onChange={() => toggle(s.id)}
+                        className="shrink-0 self-center"
+                      />
+                    </li>
+                  );
+                })}
+              </ul>
+            </details>
+          );
+        })}
       </div>
     </Panel>
   );
@@ -660,6 +756,7 @@ export function AgentDetail({ id }: { readonly id: string }) {
           <>
             <ConfigForm agent={a} station={stationConfig} />
             <ConnectorGrants agent={a} station={stationConfig} />
+            <SkillGrants agent={a} />
             <section aria-label="Documents" className={panel}>
               {AGENT_DOCUMENTS.map((name) => (
                 <DocumentEditor key={name} agentId={a.id} name={name} saved={a.documents[name]} />

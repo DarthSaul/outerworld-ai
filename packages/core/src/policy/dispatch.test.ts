@@ -25,6 +25,7 @@ const agent = (role: "overseer" | "crew", roomId = "ops"): AgentConfig => ({
   model: "m",
   approvalMode: "ask",
   connectorGrants: [],
+  skills: [],
   schedules: [],
 });
 

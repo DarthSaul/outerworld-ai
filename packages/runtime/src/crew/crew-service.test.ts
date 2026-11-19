@@ -1,7 +1,8 @@
-import { cpSync, existsSync, mkdtempSync, readFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { loadSkillLibrary } from "../skills/library.js";
 import { openDatabase } from "../storage/database.js";
 import { EventStore } from "../storage/event-store.js";
 import { stationPaths } from "../storage/station-dir.js";
@@ -61,6 +62,7 @@ describe("CrewService: agents", () => {
       model: "anthropic/claude-sonnet-5.5",
       approvalMode: "ask",
       connectorGrants: [],
+      skills: [],
     });
     expect(created.documents).toEqual({
       identity: "# Scout Two\n",
@@ -383,6 +385,62 @@ describe("CrewService: schedules", () => {
   });
 });
 
+describe("CrewService: skills", () => {
+  const skillsSetup = async () => {
+    const { skills } = await loadSkillLibrary(
+      join(import.meta.dirname, "..", "..", "..", "..", "fixtures", "skills"),
+    );
+    const t = setup();
+    return { ...t, crew: new CrewService({ home: t.home, events: t.events, skills }) };
+  };
+
+  it("lists the library with each skill's state, and turns one on, off, and back to default", async () => {
+    const { crew, home, types } = await skillsSetup();
+    const before = await crew.skills();
+    expect(before.map((s) => [s.id, s.globallyEnabled, s.offeredTo])).toEqual([
+      ["log-dig", true, []],
+      ["source-check", false, []],
+      ["field-notes", true, ["quill"]],
+      ["tidy-summary", false, []],
+    ]);
+    expect(before[0]?.missing).toEqual(["shell"]);
+
+    expect(await crew.setSkillOverride("tidy-summary", true)).toMatchObject({
+      override: true,
+      globallyEnabled: true,
+      offeredTo: ["quill", "vesper", "wren"],
+    });
+    expect(await crew.setSkillOverride("field-notes", false)).toMatchObject({ offeredTo: [] });
+    const stored = JSON.parse(readFileSync(stationPaths(home).stationJson, "utf8"));
+    expect(stored.skills).toEqual({ enabled: ["tidy-summary"], disabled: ["field-notes"] });
+    expect(await crew.setSkillOverride("field-notes", null)).toMatchObject({ override: null });
+    expect(types()).toEqual(["station.updated", "station.updated", "station.updated"]);
+    await expect(crew.setSkillOverride("ghost", true)).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  it("adds skills to one crew member and shows what it is offered, with skill_view", async () => {
+    const { crew } = await skillsSetup();
+    const wren = await crew.updateAgent("wren", { skills: ["source-check", "log-dig"] });
+    expect(wren.config.skills).toEqual(["source-check", "log-dig"]);
+    expect(wren.skills.offered.map((s) => s.id)).toEqual(["source-check"]);
+    expect(wren.skills.unavailable.map((s) => [s.id, s.missing])).toEqual([
+      ["log-dig", ["shell"]],
+      ["field-notes", ["files"]],
+    ]);
+    expect(wren.tools.at(-1)).toMatchObject({ name: "skill_view", source: { kind: "skill" } });
+    await expect(crew.updateAgent("wren", { skills: ["x", "x"] })).rejects.toBeInstanceOf(
+      ConflictError,
+    );
+  });
+
+  it("has no skills and no skill_view without a library", async () => {
+    const agent = await setup().crew.agent("quill");
+    expect(agent?.skills).toEqual({ offered: [], unavailable: [] });
+    expect(agent?.tools.map((t) => t.name)).not.toContain("skill_view");
+    expect(await setup(false).crew.skills()).toEqual([]);
+  });
+});
+
 describe("CrewService: budgets", () => {
   it("sets and clears caps in station.json, keeping the ones not given", async () => {
     const { crew, types } = setup();
@@ -427,6 +485,42 @@ describe("CrewService: onboarding and templates", () => {
     );
   });
 
+  it("never sets up over a station.json that is there but does not load", async () => {
+    const { crew, home, types } = setup();
+    const path = stationPaths(home).stationJson;
+    // A connector transport a newer build knows and this one does not.
+    const station = JSON.parse(readFileSync(path, "utf8"));
+    station.connectors.push({ id: "mail", name: "Mail", transport: { type: "builtin" } });
+    const written = JSON.stringify(station);
+    writeFileSync(path, written);
+
+    const view = await crew.view();
+    expect(view.station).toBeUndefined();
+    expect(view.stationFile).toBe("present");
+    const refused = crew.onboard({ overseerName: "Again", tone: "calm" });
+    await expect(refused).rejects.toBeInstanceOf(ConflictError);
+    await expect(refused).rejects.toMatchObject({
+      issues: [
+        expect.objectContaining({ path: expect.stringMatching(/^station\.json\.connectors/) }),
+      ],
+    });
+    expect(readFileSync(path, "utf8")).toBe(written);
+    expect(types()).toEqual([]);
+  });
+
+  it("never sets up when it cannot tell whether station.json is there", async () => {
+    const { home, events } = setup(false);
+    // A file where the station folder should be: station.json can be neither found nor ruled out.
+    mkdirSync(dirname(home), { recursive: true });
+    writeFileSync(home, "");
+    const crew = new CrewService({ home, events });
+    expect((await crew.view()).stationFile).toBe("unknown");
+    const refused = crew.onboard({ overseerName: "Again", tone: "calm" });
+    await expect(refused).rejects.toBeInstanceOf(ConflictError);
+    await expect(refused).rejects.toThrow(/cannot tell whether station\.json is there/);
+    expect(readFileSync(home, "utf8")).toBe("");
+  });
+
   it("adds a Project Manager with Operations, a hallway, Notion, and a disabled briefing", async () => {
     const { crew } = setup(false);
     await crew.onboard({ overseerName: "Lodestar", tone: "calm", stationName: "Home Base" });
@@ -436,6 +530,7 @@ describe("CrewService: onboarding and templates", () => {
       name: "Project Manager",
       roomId: "operations",
       connectorGrants: ["notion"],
+      skills: [],
       schedules: [{ id: "daily-briefing", cron: "0 8 * * 1-5", enabled: false, catchUp: false }],
     });
     expect(pm.config.schedules[0]?.timezone).toBeUndefined();

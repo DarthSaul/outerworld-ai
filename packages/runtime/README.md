@@ -24,6 +24,14 @@ imported by core, ui, or the SPA.
 |--------|-------------|
 | `CrewService({ home, events, connectorTools? })` | `view()`, `agent(id)` (config, documents, effective tools from core's `resolveGrants`), `createAgent`, `updateAgent`, `putDocument`, `deleteAgent` (keeps the workspace), `createRoom`, `updateRoom`, `deleteRoom` (refused while crew or hallways use it), `addSchedule` / `updateSchedule` / `removeSchedule` (every cron checked with croner), `updateBudgets`, `onboard({ overseerName, tone, stationName? })` (an empty station only: station.json with the Command room and `DEFAULT_BUDGETS`, and the Overseer), `addFromTemplate("project-manager", { name? })` (adds the Operations room, a hallway to Command, and the Notion connector when missing; daily briefing disabled). Reads from disk every call; writes run one at a time, are validated across the whole station, and emit `agent.updated` / `station.updated`. Refuses only errors a change would introduce. |
 | `NotFoundError`, `ConflictError` | What the daemon maps to 404 and 409; `ConflictError.issues` says why. |
+| `CrewService({ …, skills? })` | With the skills library: `skills()` → the catalog (core `skillCatalog`), `setSkillOverride(id, enabled \| null)` (writes `station.json`, emits `station.updated`, 404 for an unknown skill), and each `AgentView` carries `skills` and `skill_view` from the same selection a run makes. |
+
+### Skills (ADR-0023)
+| Export | Description |
+|--------|-------------|
+| `loadSkillLibrary(dir)` → `{ skills, issues }`, `BUNDLED_SKILLS_DIR` | Parses every `.md` skill in a folder; skips a malformed, oversized, misnamed, or symlinked file with an issue. Never throws; a missing folder is an empty library. The bundled library is `skills/library/` in this package, with its `LICENSE` and `NOTICE.md`. |
+| `createSkillViewTool({ home, skills })` | `skill_view` (read): returns `{ id, name, body }` for a skill the calling run listed at setup (the `skills` ids in the tool context) that is still offered to the agent now, recomputed from config; refuses any other. |
+| `RunService({ …, skills? })` | Each run gates the library on the tools it can call, adds `skill_view` when a skill is offered, and puts an index (with `skill_view`) or the bodies (without) in the prompt, and passes the offered ids to every tool call as `skills`. Without `skills`, prompts are unchanged. |
 
 ### Sessions and session titles (ADR-0014)
 | Export | Description |

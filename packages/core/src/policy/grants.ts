@@ -18,7 +18,8 @@ export interface ToolSpec {
 export type ToolSource =
   | { readonly kind: "role"; readonly role: AgentRole }
   | { readonly kind: "prop"; readonly prop: PropKind }
-  | { readonly kind: "connector"; readonly connectorId: string; readonly tool: string };
+  | { readonly kind: "connector"; readonly connectorId: string; readonly tool: string }
+  | { readonly kind: "skill" };
 
 export interface EffectiveTool extends ToolSpec {
   readonly source: ToolSource;
@@ -45,7 +46,12 @@ export const BUILTIN_TOOLS = {
     { name: "write_file", class: "write" },
   ],
   memory: [{ name: "remember", class: "read" }],
-} as const satisfies Record<"overseer" | PropKind, readonly ToolSpec[]>;
+  /** Granted only when at least one skill is offered (`withSkillTool`, ADR-0023). */
+  skill: [{ name: "skill_view", class: "read" }],
+} as const satisfies Record<"overseer" | "skill" | PropKind, readonly ToolSpec[]>;
+
+/** Reads one of the agent's offered skills (ADR-0023). */
+export const SKILL_VIEW_TOOL = "skill_view";
 
 const PROP_ORDER: readonly PropKind[] = ["web", "files", "memory"];
 const MAX_TOOL_NAME = 64;
@@ -107,4 +113,18 @@ export function resolveGrants(
     }
   }
   return tools;
+}
+
+/**
+ * `tools` plus `skill_view` when at least one skill is offered (ADR-0023). Separate from
+ * `resolveGrants` because which skills are offered depends on the other tools: base grants →
+ * capabilities → offered skills → this.
+ */
+export function withSkillTool(
+  tools: readonly EffectiveTool[],
+  offeredSkills: number,
+): EffectiveTool[] {
+  if (offeredSkills === 0) return [...tools];
+  const skillTools = BUILTIN_TOOLS.skill.map((t) => ({ ...t, source: { kind: "skill" } as const }));
+  return [...tools, ...skillTools];
 }

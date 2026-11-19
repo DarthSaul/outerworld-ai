@@ -26,6 +26,7 @@ const agent = (over: Partial<AgentConfig> = {}): AgentConfig => ({
   model: "anthropic/claude-sonnet-5.5",
   approvalMode: "ask",
   connectorGrants: [],
+  skills: [],
   schedules: [],
   ...over,
 });

@@ -151,6 +151,15 @@ describe("parseStationConfig", () => {
     expect(issue?.message).toMatch(/headers/);
   });
 
+  it("keeps skill overrides optional, fills their lists, and rejects a skill both on and off", () => {
+    const plain = parseStationConfig(valid());
+    expect(plain.ok && plain.value.skills).toBeUndefined();
+    const some = parseStationConfig({ ...valid(), skills: { enabled: ["plan"] } });
+    expect(some.ok && some.value.skills).toEqual({ enabled: ["plan"], disabled: [] });
+    const both = { ...valid(), skills: { enabled: ["plan"], disabled: ["humanizer", "plan"] } };
+    expect(paths(both)).toContain("error skills.disabled.1");
+  });
+
   it("rejects non-positive budgets", () => {
     const input = { ...valid(), budgets: { perRunUsd: 0, stationDailyUsd: -1 } };
     const p = paths(input);

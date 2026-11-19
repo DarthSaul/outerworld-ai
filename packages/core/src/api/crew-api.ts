@@ -4,6 +4,7 @@ import { type AgentConfig, AgentRole, ApprovalMode, Schedule } from "../config/a
 import { Prop, type StationConfig } from "../config/station-config.js";
 import type { EffectiveTool } from "../policy/grants.js";
 import { Id, type Issue } from "../schema/common.js";
+import type { AgentSkillsView } from "./skills-api.js";
 
 /**
  * The HTTP contract for crew and rooms (Phase 2), shared by the daemon (validation) and the SPA
@@ -33,6 +34,8 @@ export const UpdateAgentInput = z.strictObject({
   model: z.string().min(1).optional(),
   approvalMode: ApprovalMode.optional(),
   connectorGrants: z.array(Id).optional(),
+  /** The crew member's own skills, on top of the station-wide ones (ADR-0023). */
+  skills: z.array(Id).optional(),
   /** Only a character that exists; a stored look may name a deleted one (a warning on load). */
   look: Id.refine((id) => characterById(id) !== undefined, "no such character").optional(),
 });
@@ -131,9 +134,17 @@ export type UpdateScheduleInput = z.infer<typeof UpdateScheduleInput>;
 export type CreateRoomInput = z.infer<typeof CreateRoomInput>;
 export type UpdateRoomInput = z.infer<typeof UpdateRoomInput>;
 
+export type StationFile = "present" | "missing" | "unknown";
+
 /** `GET /api/station`: the station config, its crew, and every issue found loading them. */
 export interface StationView {
   readonly station?: StationConfig;
+  /**
+   * Whether station.json is on disk, valid or not: `missing` only when the filesystem says it is
+   * not there, `unknown` when it could not be checked. Only a `missing` file may be set up; with no
+   * `station`, anything else means the station must be repaired (`issues` says why).
+   */
+  readonly stationFile: StationFile;
   readonly agents: readonly { readonly id: string; readonly config: AgentConfig }[];
   readonly issues: readonly Issue[];
 }
@@ -144,6 +155,8 @@ export interface AgentView {
   readonly config: AgentConfig;
   readonly documents: Readonly<Record<AgentDocumentName, string>>;
   readonly tools: readonly EffectiveTool[];
+  /** Offered and held-back skills, from the same selection a run makes (ADR-0023). */
+  readonly skills: AgentSkillsView;
 }
 
 /**

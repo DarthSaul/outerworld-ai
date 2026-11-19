@@ -37,6 +37,18 @@ from the zod source (regenerate with `pnpm build && node scripts/write-schemas.m
 | `DEFAULT_SESSION_TITLE`, `titlePrompt(firstMessage)`, `TITLE_INSTRUCTIONS` | A new session's title, and the short request that asks a model to name it from the first message (cut to 2,000 characters, passed as data). |
 | `cleanTitle(reply)`, `fallbackTitle(message)`, `MAX_TITLE_CHARS` | A model reply as one plain line of at most 60 characters (undefined when nothing usable is left), and the message itself as the title when the model gives none. |
 
+### Skills (ADR-0023)
+| Export | Description |
+|--------|-------------|
+| `parseSkillFile(fileName, text)` → `{ skill?, issues }`, `Skill`, `SkillFrontmatter`, `MAX_SKILL_BYTES` | One skill file: strict `key: value` / `key: [a, b]` frontmatter, then the body. Never throws; a malformed file, a slug that is not the file name, or an empty body is `{ issues }` with no skill. An unknown requirement is kept with a warning. |
+| `REQUIREMENTS`, `Requirement`, `isRequirement(value)` | `web`, `files`, `memory`, `dispatch`, `shell`, `media`, `browser`. |
+| `isGloballyEnabled(skill, overrides)`, `skillOverride(id, overrides)`, `withSkillOverride(overrides, id, enabled \| null)` | Station-wide on/off: the Commander's override wins over the skill's `default`; `null` clears it. |
+| `capabilitiesOf(tools)`, `missingRequirements(skill, caps)` | What a run's tools let it do (web ← `web_fetch`, files ← the file tools, memory ← `remember`, dispatch ← `dispatch`), and what a skill needs beyond that. |
+| `selectSkills({ skills, overrides, agentSkills, tools })` → `{ offered, unavailable }`, `skillsForAgent(agent, station, skills)` | Enabled (station-wide ∪ the agent's own) and gated on tools; offered in priority order, the agent's own first. `skillsForAgent` derives the tools from config. |
+| `withSkillTool(tools, offeredCount)`, `SKILL_VIEW_TOOL` | The effective tools plus `skill_view` (read, source `skill`) when a skill is offered. |
+| `skillsSection(skills)`, `PromptSkills`, `PromptSkill`, `SKILLS_CHAR_BUDGET` | The `# Installed skills` prompt section: an index pointing at `skill_view`, or inline bodies; whole entries within 12,000 characters (the omitted-count note included), the rest counted; nothing at all when no skill is offered or none fits. `assemblePrompt` takes it as `skills`. |
+| `skillCatalog(skills, station, agents)`, `agentSkillsView(selection)`, `SkillListItem`, `AgentSkillsView`, `SkillRef`, `UpdateSkillInput` | The catalog and a crew member's view, never with bodies; the `PUT /api/skills/:id` body. |
+
 ### Server-sent events
 | Export | Description |
 |--------|-------------|

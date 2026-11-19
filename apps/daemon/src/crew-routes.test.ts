@@ -1,4 +1,4 @@
-import { cpSync, mkdtempSync } from "node:fs";
+import { cpSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type AgentView, type StationView, SUPPORTED_MODELS } from "@darthsaul/outerworld-ai-core";
@@ -39,7 +39,7 @@ const setup = () => {
         ? { body: typeof body === "string" ? body : JSON.stringify(body) }
         : {}),
     });
-  return { call, events };
+  return { call, events, home };
 };
 
 describe("crew and room routes", () => {
@@ -192,6 +192,18 @@ describe("crew and room routes", () => {
     expect((await call("POST", "/onboarding", { overseerName: "X", tone: "rude" })).status).toBe(
       400,
     );
+  });
+
+  it("reports a station.json that does not load, and refuses to set up over it", async () => {
+    const { call, home } = setup();
+    const path = join(home, "station.json");
+    writeFileSync(path, "{ not json");
+    const view = (await (await call("GET", "/station")).json()) as StationView;
+    expect(view.station).toBeUndefined();
+    expect(view.stationFile).toBe("present");
+    const res = await call("POST", "/onboarding", { overseerName: "X", tone: "calm" });
+    expect(res.status).toBe(409);
+    expect(readFileSync(path, "utf8")).toBe("{ not json");
   });
 
   it("still needs the token", async () => {

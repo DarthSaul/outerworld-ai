@@ -3,12 +3,14 @@ import type { AddressInfo } from "node:net";
 import {
   ANTHROPIC_PROVIDER,
   ApiKeyService,
+  BUNDLED_SKILLS_DIR,
   ConnectorManager,
   ConsentStore,
   CrewService,
   createFileTools,
   createRedactor,
   createRememberTool,
+  createSkillViewTool,
   createWebFetch,
   DispatchService,
   DispatchStore,
@@ -16,6 +18,7 @@ import {
   KeychainSecretStore,
   KillSwitch,
   liveModels,
+  loadSkillLibrary,
   loadStationDir,
   MemorySecretStore,
   MemoryService,
@@ -98,6 +101,12 @@ export async function startDaemon(
     secrets,
     redirectUrl: (id) => `http://127.0.0.1:${boundPort}/oauth/callback/${encodeURIComponent(id)}`,
   });
+  // The bundled skills library is read once: it ships with the runtime and never changes while
+  // running. A bad file is skipped with a warning (ADR-0023).
+  const library = await loadSkillLibrary(BUNDLED_SKILLS_DIR);
+  for (const issue of library.issues)
+    warn(`${issue.level}: skills/${issue.path}: ${issue.message}`);
+  const skills = library.skills;
   const runs = new RunService({
     home: config.home,
     events,
@@ -107,10 +116,12 @@ export async function startDaemon(
     killSwitch: new KillSwitch(db),
     connectors,
     beliefs: (agentId) => memory.beliefsFor(agentId).map((m) => m.text),
+    skills,
     tools: {
       ...createFileTools({ workspacesDir: paths.workspacesDir }),
       web_fetch: createWebFetch(),
       remember: createRememberTool({ memories, events }),
+      skill_view: createSkillViewTool({ home: config.home, skills }),
     },
     models:
       config.modelMode === "fake"
@@ -165,6 +176,7 @@ export async function startDaemon(
       home: config.home,
       events,
       connectorTools: () => connectors.catalog(),
+      skills,
     }),
     connectors,
     memory,

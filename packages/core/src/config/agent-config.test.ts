@@ -90,6 +90,16 @@ describe("parseAgentConfig", () => {
     expect(p).toContain("error schedules.1.id");
   });
 
+  it("defaults to no skills of its own and rejects a skill listed twice (ADR-0023)", () => {
+    const parsed = parseAgentConfig({ ...valid(), skills: undefined });
+    expect(parsed.ok && parsed.value.skills).toEqual([]);
+    const input = valid();
+    input.skills = ["plan", "plan"];
+    expect(paths(input)).toContain("error skills.1");
+    input.skills = ["Not An Id"];
+    expect(paths(input)).toContain("error skills.0");
+  });
+
   it("rejects an unknown time zone and a cron without five or six fields", () => {
     const input = valid();
     input.schedules = [

@@ -21,6 +21,7 @@ no telemetry, no analytics, and no error reporting.
 | Connector OAuth client you registered yourself (GitHub, Gmail; ADR-0019) | OS keychain (account `mcp.<id>.<server hash>.own`) | Never | The client id and optional secret you pasted. Sent only to that server's authorization server during sign-in. The API never returns them, only whether one is saved. Removing the connector deletes them; "Disconnect and forget sign-in" keeps them. |
 | Connector OAuth tokens and client registration (Notion, GitHub, Gmail) | OS keychain (service `outerworld-ai`, accounts `mcp.<id>.<server hash>.tokens` / `.client`, the hash being the first 16 hex characters of SHA-256 of the server URL, or of the transport JSON for the Gmail API service, ADR-0022) | Never | Sent only to the server they were issued by. Refreshed by the daemon; "Disconnect and forget sign-in" deletes them (and any older `mcp.<id>.tokens` / `mcp.<id>.client` entry). The PKCE verifier and sign-in `state` exist only in memory. Keychain entries belong to your OS user, not to one station directory: stations whose connector has the same id **and the same server URL** share a sign-in; a connector pointing at any other URL never sees it, and no connection is attempted at startup without a sign-in for its own server. `OUTERWORLD_SECRETS=memory` keeps a daemon off the keychain entirely (`browser:verify` uses it). |
 | The demo station | `fixtures/demo-station/` | Yes | A fictional station. Every test, screenshot, and example uses it. |
+| The skills library | `packages/runtime/skills/library/` | Yes | Recipes shipped with the runtime, read-only (ADR-0023); no station data. Which skills are on lives in `station.json` (`skills`) and each `agent.json` (`skills`). A fictional test library is in `fixtures/skills/`. |
 | Local scratch (`.outerworld/` in this checkout) | Your machine | Never (gitignored) | `pnpm dev`'s working copy of the fixture, `pnpm dev:fresh`'s empty station, and `browser:verify`'s seeded copy and screenshots (of the fixture, with history the fake model made), which CI uploads as a build artifact. |
 | Display preferences, and the open Overseer order | Your browser's `localStorage` (`outerworld.*` keys) | n/a | Per-viewer conveniences: display size, map style, CRT overlay, map/comms split, scanner folded or not, and the session id of the Overseer order open on the Station. No message text; the SPA stores nothing else in the browser. |
 
@@ -38,8 +39,11 @@ Exactly these kinds of request, all made by the daemon, all caused by your confi
 agent you created:
 
 1. **Model calls to Anthropic** (`api.anthropic.com`) **or OpenRouter** (`openrouter.ai`): the
-   assembled prompt (the agent's documents, its role briefing, approved memories, recent session
-   history, and the new input), tool definitions, and tool results. With an Anthropic key, Claude
+   assembled prompt (the agent's documents, its role briefing, the index of its installed skills,
+   approved memories, recent session history, and the new input), tool definitions, and tool
+   results, including any skill recipe the agent reads with `skill_view` (ADR-0023). A run
+   that offers skills but cannot call `skill_view` gets their full recipes in the prompt
+   instead of the index. With an Anthropic key, Claude
    models go straight to Anthropic; every other model, and Claude when there is only an OpenRouter
    key, goes to OpenRouter, which forwards to the model provider you picked (ADR-0015). One extra
    call checks a key when you save it (OpenRouter's key endpoint; Anthropic's model list, which
@@ -75,7 +79,8 @@ agent you created:
    - A station that had Gmail MCP under the `gmail` id is moved to the Gmail API on daemon start:
      the OAuth app you saved carries over, and the MCP server's tokens are deleted.
 5. **`web_fetch` requests** to public http(s) URLs an agent with the Web prop chooses. Loopback,
-   private-network, and link-local addresses are refused.
+   private-network, and link-local addresses are refused. Only text comes back: pages, plain
+   text, JSON, and XML, including Atom and RSS feeds; images, PDFs, and other binaries are refused.
 
 Nothing else: no connector you have not added is ever contacted. The SPA talks only to the daemon on `127.0.0.1`. Fonts are self-hosted. Tests and CI
 make no network calls: they use a scripted fake model and a fake MCP server; a real-network smoke

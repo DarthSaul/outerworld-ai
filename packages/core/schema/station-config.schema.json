@@ -223,6 +223,32 @@
         "autoReview"
       ],
       "additionalProperties": {}
+    },
+    "skills": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          }
+        },
+        "disabled": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          }
+        }
+      },
+      "required": [
+        "enabled",
+        "disabled"
+      ],
+      "additionalProperties": {}
     }
   },
   "required": [

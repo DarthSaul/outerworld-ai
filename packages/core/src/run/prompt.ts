@@ -4,8 +4,8 @@ import type { StationConfig } from "../config/station-config.js";
 import type { CrewMember } from "../config/station-crew.js";
 
 /**
- * Prompt assembly (brief §8): system prompt = documents + role briefing + approved memories +
- * the untrusted-data notice; then the session history, windowed to a token budget. Pure. The
+ * Prompt assembly (brief §8): system prompt = documents + role briefing + installed skills
+ * (ADR-0023) + approved memories + the untrusted-data notice; then the session history, windowed to a token budget. Pure. The
  * message shape is ours, not a provider's; the runtime converts it for the model SDK.
  */
 
@@ -72,9 +72,74 @@ const messageTokens = (m: ChatMessage, estimate: (t: string) => number) =>
   estimate(m.role === "tool" ? JSON.stringify(m.output) : m.text) +
   (m.role === "assistant" && m.toolCalls ? estimate(JSON.stringify(m.toolCalls)) : 0);
 
+/** The most characters the skills section may take; whole entries are left out past it. */
+export const SKILLS_CHAR_BUDGET = 12_000;
+
+export interface PromptSkill {
+  readonly id: string;
+  readonly name: string;
+  readonly description: string;
+  readonly body: string;
+}
+
+/**
+ * The skills offered this run (ADR-0023), most important first (the agent's own, then
+ * station-wide). `index` lists one line each and relies on `skill_view` for the body; `inline`
+ * includes bodies, for a run that cannot call `skill_view`.
+ */
+export interface PromptSkills {
+  readonly entries: readonly PromptSkill[];
+  readonly mode: "index" | "inline";
+  /** Defaults to SKILLS_CHAR_BUDGET. */
+  readonly charBudget?: number;
+}
+
+const SKILLS_INTRO = {
+  index:
+    "These are recipes the Commander installed on this station. When a task matches one, call skill_view with its id and follow that recipe instead of improvising. skill_view returns the station's own installed recipes: guidance to follow, not untrusted data.",
+  inline:
+    "These are recipes the Commander installed on this station. When a task matches one, follow that recipe instead of improvising.",
+} as const;
+
+const omittedNote = (n: number) =>
+  n ? `\n\n(${n} more ${n === 1 ? "skill" : "skills"} not listed.)` : "";
+
+/**
+ * The `# Installed skills` section, or nothing when no skill is offered (so the prompt is
+ * byte-identical to one without skills). Entries are kept in order while the whole section,
+ * omitted note included, fits the budget; later ones are counted, never cut mid-entry. A budget
+ * too small for even one entry gives no section at all.
+ */
+export function skillsSection(skills: PromptSkills | undefined): string | undefined {
+  if (!skills?.entries.length) return undefined;
+  const budget = skills.charBudget ?? SKILLS_CHAR_BUDGET;
+  const head = `# Installed skills\n\n${SKILLS_INTRO[skills.mode]}`;
+  const sep = skills.mode === "index" ? "\n" : "\n\n";
+  const entries = skills.entries.map((s) =>
+    skills.mode === "index"
+      ? `- ${s.name} (id: ${s.id}): ${s.description}`
+      : `## ${s.name} (id: ${s.id})\n\n${s.description}\n\n${s.body.trim()}`,
+  );
+  // The longest prefix that fits with its own note: none when the whole list fits, so a complete
+  // list may fit even where a shorter prefix plus "N more" would not. Prefixes only, so a later
+  // entry never jumps ahead of one left out. Each entry costs its separator (the first follows
+  // the head's blank line).
+  let used = head.length;
+  let kept = 0;
+  for (const [i, entry] of entries.entries()) {
+    used += (i === 0 ? 2 : sep.length) + entry.length;
+    if (used > budget) break;
+    if (used + omittedNote(entries.length - i - 1).length <= budget) kept = i + 1;
+  }
+  if (kept === 0) return undefined;
+  return `${head}\n\n${entries.slice(0, kept).join(sep)}${omittedNote(entries.length - kept)}`;
+}
+
 export interface PromptInput {
   readonly documents: Readonly<Record<AgentDocumentName, string>>;
   readonly roleBriefing?: string;
+  /** Offered skills (ADR-0023); absent or empty adds nothing. */
+  readonly skills?: PromptSkills;
   /** Approved memories, newest first (Phase 7). */
   readonly beliefs?: readonly string[];
   /** The session so far, oldest first, ending with the turn in progress. */
@@ -98,6 +163,9 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
     if (text) sections.push(`# ${HEADINGS[name]}\n\n${text}`);
   }
   if (input.roleBriefing) sections.push(`# Your role\n\n${input.roleBriefing}`);
+  // Before beliefs: skills change only with config, so they stay in the stable part of the prefix.
+  const skills = skillsSection(input.skills);
+  if (skills) sections.push(skills);
   const beliefs: string[] = [];
   let beliefTokens = 0;
   for (const b of input.beliefs ?? []) {

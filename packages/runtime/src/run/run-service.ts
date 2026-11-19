@@ -8,6 +8,7 @@ import {
   checkBudget,
   cleanTitle,
   DEFAULT_SESSION_TITLE,
+  type EffectiveTool,
   estimateCostUsd,
   fallbackTitle,
   findModel,
@@ -15,15 +16,20 @@ import {
   isTerminal,
   type ModelSettings,
   needsConsent,
+  type PromptSkills,
   type ProviderChoice,
   type ReasoningLevel,
   resolveGrants,
   resolveModelSettings,
   roleBriefing,
+  SKILL_VIEW_TOOL,
+  type Skill,
+  selectSkills,
   type ToolCallRecord,
   type ToolClass,
   titlePrompt,
   utcDay,
+  withSkillTool,
 } from "@darthsaul/outerworld-ai-core";
 import { APICallError, jsonSchema, type LanguageModel, streamText, type ToolSet, tool } from "ai";
 import type { ConsentRecord, ConsentStore } from "../controls/consent-store.js";
@@ -55,6 +61,8 @@ export interface ToolImpl {
       /** 0 for a top-level run, 1 for a dispatched worker's run. */
       depth: number;
       signal: AbortSignal;
+      /** Ids of the skills this run offered when it was set up (ADR-0023); `skill_view` stays inside them. */
+      skills?: readonly string[];
     },
   ): Promise<unknown>;
 }
@@ -97,6 +105,11 @@ export interface RunServiceOptions {
   readonly tools?: Readonly<Record<string, ToolImpl>>;
   /** Approved beliefs to put in each run's prompt (brief §14). */
   readonly beliefs?: (agentId: string) => readonly string[];
+  /**
+   * The skills library (ADR-0023). Absent: no skills section, and the prompt is what it was.
+   * Pair it with a `skill_view` tool in `tools`, or skill bodies are put inline.
+   */
+  readonly skills?: readonly Skill[];
   /** Connected connectors; their tools are offered to agents granted the connector. */
   readonly connectors?: ConnectorBridge;
   readonly maxSteps?: number;
@@ -677,10 +690,10 @@ export class RunService {
       }
 
       const connectors = this.#o.connectors;
-      const granted = resolveGrants(agent.config, station, connectors?.catalog() ?? {});
+      const base = resolveGrants(agent.config, station, connectors?.catalog() ?? {});
       // Connector tools are implemented by calling through to the connector.
       const registry: Record<string, ToolImpl> = { ...this.#tools };
-      for (const t of granted) {
+      for (const t of base) {
         if (t.source.kind !== "connector" || !connectors) continue;
         const { connectorId, tool: name } = t.source;
         const described = connectors.describe(connectorId, name);
@@ -691,7 +704,24 @@ export class RunService {
           execute: (input, ctx) => connectors.call(connectorId, name, input, ctx.signal),
         };
       }
-      const offered = granted.filter((t) => registry[t.name] !== undefined);
+      // Skills (ADR-0023) are gated on the tools this run can actually call; skill_view joins
+      // only when one is offered. Without skill_view the bodies go inline, so the prompt never
+      // points at a tool the agent cannot call.
+      const implemented = (t: EffectiveTool) => registry[t.name] !== undefined;
+      const skills = this.#o.skills
+        ? selectSkills({
+            skills: this.#o.skills,
+            overrides: station.skills,
+            agentSkills: agent.config.skills,
+            tools: base.filter(implemented),
+          }).offered
+        : [];
+      const offered = withSkillTool(base, skills.length).filter(implemented);
+      const skillIds = skills.map((s) => s.id);
+      const promptSkills: PromptSkills = {
+        entries: skills,
+        mode: offered.some((t) => t.name === SKILL_VIEW_TOOL) ? "index" : "inline",
+      };
       const tools: ToolSet = Object.fromEntries(
         offered.map((t) => [
           t.name,
@@ -723,6 +753,7 @@ export class RunService {
         const prompt = assemblePrompt({
           documents: agent.documents,
           roleBriefing: briefing,
+          skills: promptSkills,
           beliefs: this.#o.beliefs?.(agent.id) ?? [],
           history,
           budgetTokens: historyBudget(context),
@@ -753,7 +784,16 @@ export class RunService {
         }
         for (const call of result.toolCalls) {
           signal.throwIfAborted();
-          await this.#runTool(call, offered, registry, ids, agent.config, run.depth, signal);
+          await this.#runTool(
+            call,
+            offered,
+            registry,
+            ids,
+            agent.config,
+            run.depth,
+            signal,
+            skillIds,
+          );
         }
       }
       sessions.transition(run.id, "complete");
@@ -889,6 +929,7 @@ export class RunService {
     agent: AgentConfig,
     depth: number,
     signal: AbortSignal,
+    skills: readonly string[],
   ) {
     const { events, sessions } = this.#o;
     const grant = offered.find((t) => t.name === call.name);
@@ -939,7 +980,7 @@ export class RunService {
       }
     }
     try {
-      const output = await impl.execute(call.input, { ...ids, depth, signal });
+      const output = await impl.execute(call.input, { ...ids, depth, signal, skills });
       events.append({
         type: "run.tool_result",
         ...ids,

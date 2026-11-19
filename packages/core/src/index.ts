@@ -43,6 +43,7 @@ export {
   OnboardInput,
   OVERSEER_TONES,
   OverseerTone,
+  type StationFile,
   type StationView,
   slugify,
   TemplateInput,
@@ -51,6 +52,13 @@ export {
   UpdateRoomInput,
   UpdateScheduleInput,
 } from "./api/crew-api.js";
+// Skills HTTP contract (ADR-0023)
+export {
+  type AgentSkillsView,
+  type SkillListItem,
+  type SkillRef,
+  UpdateSkillInput,
+} from "./api/skills-api.js";
 // Pixel characters an agent can appear as (ADR-0013)
 export {
   ART_BOX,
@@ -117,6 +125,8 @@ export {
   PropKind,
   parseStationConfig,
   Room,
+  SkillOverrides,
+  type SkillOverridesConfig,
   StationConfig,
   stationConfigIssues,
 } from "./config/station-config.js";
@@ -268,9 +278,11 @@ export {
   connectorToolName,
   type EffectiveTool,
   resolveGrants,
+  SKILL_VIEW_TOOL,
   type ToolClass,
   type ToolSource,
   type ToolSpec,
+  withSkillTool,
 } from "./policy/grants.js";
 // Live crew state and the station map from runtime state (Phase 9, D24)
 export {
@@ -289,7 +301,11 @@ export {
   estimateTokens,
   historyBudget,
   type PromptInput,
+  type PromptSkill,
+  type PromptSkills,
   roleBriefing,
+  SKILLS_CHAR_BUDGET,
+  skillsSection,
   ToolCallRecord,
   UNTRUSTED_DATA_NOTICE,
 } from "./run/prompt.js";
@@ -368,5 +384,30 @@ export {
   runRecordIssues,
   TeamStatus,
 } from "./schema/status.js";
+// Skills library: parsing, enablement, capability gating (ADR-0023)
+export { agentSkillsView, skillCatalog } from "./skills/catalog.js";
+export {
+  capabilitiesOf,
+  isGloballyEnabled,
+  missingRequirements,
+  type SkillOverrideLists,
+  type SkillSelection,
+  type SkillSelectionInput,
+  selectSkills,
+  skillOverride,
+  skillsForAgent,
+  type UnavailableSkill,
+  withSkillOverride,
+} from "./skills/enablement.js";
+export {
+  isRequirement,
+  MAX_SKILL_BYTES,
+  type ParsedSkill,
+  parseSkillFile,
+  REQUIREMENTS,
+  type Requirement,
+  type Skill,
+  SkillFrontmatter,
+} from "./skills/skill.js";
 // Server-sent events over fetch (the SPA sends the bearer token, so it cannot use EventSource)
 export { createSseParser, type SseMessage, type SseParser } from "./sse.js";

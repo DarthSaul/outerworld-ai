@@ -13,6 +13,46 @@ const fresh = (mode: "fake" | "live" = "fake") => {
   return fake;
 };
 
+describe("A station.json that is there but does not load", () => {
+  const broken = () => {
+    const fake = fakeApi();
+    fake.state.broken = [
+      {
+        level: "error",
+        path: "station.json.connectors.1.transport.type",
+        message: "Invalid discriminator value. Expected 'http' | 'stdio'",
+      },
+      { level: "warn", path: "agents/quill/agent.json.model", message: "not on the list" },
+    ];
+    return fake;
+  };
+
+  it("says the station needs repair, lists what is wrong, and never offers setup", async () => {
+    const { container, calls } = renderApp("/", broken());
+    expect(
+      await screen.findByRole("heading", { level: 1, name: term("stationBroken.title") }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: term("onboarding.title") }),
+    ).not.toBeInTheDocument();
+    const list = container.querySelector("[data-station-issues]") as HTMLElement;
+    expect(within(list).getAllByRole("listitem")).toHaveLength(1);
+    expect(list.textContent).toContain("station.json.connectors.1.transport.type");
+    expect(calls.some((c) => c.path === "/onboarding")).toBe(false);
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it("checks again and opens the station once the file loads", async () => {
+    const user = userEvent.setup();
+    const fake = broken();
+    renderApp("/crew", fake);
+    const retry = await screen.findByRole("button", { name: term("stationBroken.retry") });
+    fake.state.broken = undefined;
+    await user.click(retry);
+    expect(await screen.findByRole("navigation", { name: "Primary" })).toBeInTheDocument();
+  });
+});
+
 describe("Onboarding", () => {
   it("replaces the screens on an empty station; with the fake model no key is needed", async () => {
     const { container } = renderApp("/crew", fresh());

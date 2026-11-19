@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createWebFetch, htmlToText, isPublicAddress } from "./web-fetch.js";
+import { createWebFetch, decodeBody, htmlToText, isPublicAddress } from "./web-fetch.js";
 
 const ctx = {
   agentId: "a",
@@ -9,7 +9,7 @@ const ctx = {
   signal: new AbortController().signal,
 };
 
-type Route = { status?: number; body?: string; type?: string; location?: string };
+type Route = { status?: number; body?: string | Uint8Array; type?: string; location?: string };
 
 /** A fake network: fetch answers from `routes`; DNS answers from `dns`. Nothing leaves the test. */
 const setup = (routes: Record<string, Route>, dns: Record<string, string[]> = {}, limits = {}) => {
@@ -126,9 +126,81 @@ describe("web_fetch", () => {
     expect(r.text).toHaveLength(1000);
   });
 
+  it("reads Atom and RSS feeds as text", async () => {
+    const atom = '<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom"><entry/></feed>';
+    const { tool } = setup({
+      "https://feeds.test/atom": { type: "application/atom+xml; charset=utf-8", body: atom },
+      "https://feeds.test/rss": { type: "application/rss+xml", body: "<rss><channel/></rss>" },
+    });
+    expect(await tool.execute({ url: "https://feeds.test/atom" }, ctx)).toMatchObject({
+      text: atom,
+    });
+    expect(await tool.execute({ url: "https://feeds.test/rss" }, ctx)).toMatchObject({
+      text: "<rss><channel/></rss>",
+    });
+  });
+
+  it("accepts json-seq and xml-dtd, and still refuses lookalikes", async () => {
+    const { tool } = setup({
+      "https://api.test/seq": { type: "application/json-seq", body: '\x1e{"a":1}\n' },
+      "https://api.test/dtd": { type: "application/xml-dtd", body: "<!ELEMENT a (#PCDATA)>" },
+      "https://api.test/odd": { type: "application/jsonx", body: "{}" },
+    });
+    expect(await tool.execute({ url: "https://api.test/seq" }, ctx)).toMatchObject({
+      text: '\x1e{"a":1}\n',
+    });
+    expect(await tool.execute({ url: "https://api.test/dtd" }, ctx)).toMatchObject({
+      text: "<!ELEMENT a (#PCDATA)>",
+    });
+    await expect(tool.execute({ url: "https://api.test/odd" }, ctx)).rejects.toThrow(/not text/);
+  });
+
+  it("decodes a feed in the encoding it declares", async () => {
+    const latin1 = Buffer.from(
+      '<?xml version="1.0" encoding="ISO-8859-1"?><t>caf\xe9</t>',
+      "latin1",
+    );
+    const { tool } = setup({
+      "https://feeds.test/latin1": { type: "application/rss+xml", body: latin1 },
+      "https://feeds.test/charset": {
+        type: "text/xml; charset=iso-8859-1",
+        body: Buffer.from("<t>na\xefve</t>", "latin1"),
+      },
+      "https://feeds.test/utf8": { type: "application/atom+xml", body: "<t>café</t>" },
+    });
+    expect(await tool.execute({ url: "https://feeds.test/latin1" }, ctx)).toMatchObject({
+      text: '<?xml version="1.0" encoding="ISO-8859-1"?><t>café</t>',
+    });
+    expect(await tool.execute({ url: "https://feeds.test/charset" }, ctx)).toMatchObject({
+      text: "<t>naïve</t>",
+    });
+    expect(await tool.execute({ url: "https://feeds.test/utf8" }, ctx)).toMatchObject({
+      text: "<t>café</t>",
+    });
+  });
+
+  it("decodes by byte-order mark first, then charset, then the XML declaration, else UTF-8", () => {
+    const utf16 = Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from("<t>ü</t>", "utf16le")]);
+    expect(decodeBody(utf16, "application/xml; charset=iso-8859-1")).toBe("<t>ü</t>");
+    const declared = Buffer.from('<?xml version="1.0" encoding="windows-1252"?>\x80', "latin1");
+    expect(decodeBody(declared, "application/xml; charset=utf-8")).toBe(
+      '<?xml version="1.0" encoding="windows-1252"?>\ufffd',
+    );
+    expect(decodeBody(declared, "application/xml")).toBe(
+      '<?xml version="1.0" encoding="windows-1252"?>€',
+    );
+    expect(decodeBody(Buffer.from("plain é"), "text/plain; charset=no-such-thing")).toBe("plain é");
+  });
+
   it("refuses binary content", async () => {
-    const { tool } = setup({ "https://img.test/a.png": { type: "image/png", body: "\x89PNG" } });
+    const { tool } = setup({
+      "https://img.test/a.png": { type: "image/png", body: "\x89PNG" },
+      "https://docs.test/a.pdf": { type: "application/pdf", body: "%PDF-1.7" },
+      "https://docs.test/a.zip": { type: "application/zip+xmlish", body: "PK" },
+    });
     await expect(tool.execute({ url: "https://img.test/a.png" }, ctx)).rejects.toThrow(/not text/);
+    await expect(tool.execute({ url: "https://docs.test/a.pdf" }, ctx)).rejects.toThrow(/not text/);
+    await expect(tool.execute({ url: "https://docs.test/a.zip" }, ctx)).rejects.toThrow(/not text/);
   });
 
   it("reports an HTTP error status without failing the call", async () => {

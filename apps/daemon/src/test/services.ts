@@ -1,9 +1,11 @@
+import type { Skill } from "@darthsaul/outerworld-ai-core";
 import {
   ANTHROPIC_PROVIDER,
   ApiKeyService,
   ConnectorManager,
   ConsentStore,
   CrewService,
+  createSkillViewTool,
   DispatchService,
   DispatchStore,
   type EventStore,
@@ -38,7 +40,7 @@ export function testServices(
   home: string,
   events: EventStore,
   secrets = new MemorySecretStore(),
-  options: { titles?: boolean } = {},
+  options: { titles?: boolean; skills?: readonly Skill[] } = {},
 ): TestServices {
   const db = openDatabase(":memory:");
   const sessions = new SessionStore(db);
@@ -56,6 +58,8 @@ export function testServices(
       throw new Error("no network in tests");
     },
   });
+  // The same library for runs and crew views, with skill_view registered as the daemon does.
+  const skills = options.skills ?? [];
   const runs = new RunService({
     home,
     events,
@@ -64,6 +68,8 @@ export function testServices(
     spend,
     killSwitch: new KillSwitch(db),
     beliefs: (agentId) => memory.beliefsFor(agentId).map((m) => m.text),
+    skills,
+    tools: { skill_view: createSkillViewTool({ home, skills }) },
     models: scriptedModels({ chunkDelayInMs: 0 }),
     titles: options.titles ?? false,
   });
@@ -71,7 +77,12 @@ export function testServices(
   // Not started: tests read views and run now; timing is covered in the runtime's tests.
   const scheduler = new Scheduler({ home, runs, sessions, events, store: new ScheduleStore(db) });
   return {
-    crew: new CrewService({ home, events, connectorTools: () => connectors.catalog() }),
+    crew: new CrewService({
+      home,
+      events,
+      connectorTools: () => connectors.catalog(),
+      skills,
+    }),
     connectors,
     memory,
     memoryStore,

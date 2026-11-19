@@ -3,21 +3,28 @@ import {
   type AgentConfig,
   type AgentDocumentName,
   type AgentView,
+  agentSkillsView,
   type ChatMessage,
   CONNECTOR_PRESETS,
   type ConnectorPresetId,
   type CrewActivityEntry,
   DEFAULT_MODEL,
+  type Issue,
   isPresetAvailable,
   type Notification,
   needsOwnClient,
   type RuntimeEvent,
   resolveGrants,
   resolveModelSettings,
+  type Skill,
   type StationConfig,
   type StationView,
   SUPPORTED_MODELS,
+  skillCatalog,
+  skillsForAgent,
   slugify,
+  withSkillOverride,
+  withSkillTool,
 } from "@darthsaul/outerworld-ai-core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render } from "@testing-library/react";
@@ -69,9 +76,44 @@ const agent = (over: Partial<AgentConfig>): AgentConfig => ({
   model: "anthropic/claude-sonnet-5.5",
   approvalMode: "ask",
   connectorGrants: [],
+  skills: [],
   schedules: [],
   ...over,
 });
+
+/**
+ * A small fictional skills library (ADR-0023). Nothing is offered until a test turns a skill on
+ * or adds one to a crew member: the only default needs a shell, which no one has.
+ */
+const skillLibrary: readonly Skill[] = [
+  {
+    id: "tidy-summary",
+    name: "Tidy Summary",
+    description: "Summarise a long thread into five plain bullet points.",
+    category: "Writing",
+    requires: [],
+    default: false,
+    body: "Read the whole thread first.",
+  },
+  {
+    id: "source-check",
+    name: "Source Check",
+    description: "Check a claim against the pages it cites.",
+    category: "Research",
+    requires: ["web"],
+    default: false,
+    body: "Read each cited page.",
+  },
+  {
+    id: "log-dig",
+    name: "Log Dig",
+    description: "Find the first error before a failure.",
+    category: "Engineering",
+    requires: ["shell"],
+    default: true,
+    body: "Read the logs backwards.",
+  },
+];
 
 const emptyDocs = (): Record<AgentDocumentName, string> =>
   Object.fromEntries(AGENT_DOCUMENTS.map((d) => [d, ""])) as Record<AgentDocumentName, string>;
@@ -84,6 +126,8 @@ export function fakeApi() {
   const state = {
     /** True for a station with no station.json yet (onboarding). */
     fresh: false,
+    /** A station.json that is on disk but does not load: the issues the daemon reports. */
+    broken: undefined as Issue[] | undefined,
     station: station(),
     agents: new Map<string, { config: AgentConfig; documents: Record<AgentDocumentName, string> }>([
       [
@@ -151,26 +195,42 @@ export function fakeApi() {
   const view = (id: string): AgentView => {
     const a = state.agents.get(id);
     if (!a) throw new ApiError(404, `no agent "${id}"`);
-    return { id, ...a, tools: resolveGrants(a.config, state.station, toolCatalog) };
+    const selection = skillsForAgent(a.config, state.station, skillLibrary);
+    const tools = resolveGrants(a.config, state.station, toolCatalog);
+    return {
+      id,
+      ...a,
+      tools: withSkillTool(tools, selection.offered.length),
+      skills: agentSkillsView(selection),
+    };
   };
   const route = (method: string, path: string, body?: unknown): unknown => {
     calls.push({ method, path, ...(body !== undefined ? { body } : {}) });
     const parts = path.split("/").filter(Boolean);
     const b = (body ?? {}) as Record<string, unknown>;
     if (method === "GET" && path === "/station") {
-      const v: StationView = state.fresh
+      const v: StationView = state.broken
         ? {
-            agents: [],
-            issues: [{ level: "error", path: "station.json", message: "missing" }],
-          }
-        : {
-            station: state.station,
+            stationFile: "present",
             agents: [...state.agents].map(([id, a]) => ({ id, config: a.config })),
-            issues: [],
-          };
+            issues: state.broken,
+          }
+        : state.fresh
+          ? {
+              stationFile: "missing",
+              agents: [],
+              issues: [{ level: "error", path: "station.json", message: "missing" }],
+            }
+          : {
+              station: state.station,
+              stationFile: "present",
+              agents: [...state.agents].map(([id, a]) => ({ id, config: a.config })),
+              issues: [],
+            };
       return v;
     }
     if (path === "/onboarding") {
+      if (state.broken) throw new ApiError(409, "station.json is there but does not load");
       if (!state.fresh) throw new ApiError(409, "this station is already set up");
       state.fresh = false;
       const id = slugify(String(b.overseerName), [...state.agents.keys()]);
@@ -431,6 +491,21 @@ export function fakeApi() {
         entry.messages.push({ role: "user", text: String(b.text) });
         return { runId: run.id };
       }
+    }
+    if (path === "/skills" && method === "GET") {
+      const agents = [...state.agents].map(([id, a]) => ({ id, config: a.config }));
+      return skillCatalog(skillLibrary, state.station, agents);
+    }
+    if (parts[0] === "skills" && parts[1] && method === "PUT") {
+      const id = parts[1];
+      if (!skillLibrary.some((s) => s.id === id)) throw new ApiError(404, `no skill "${id}"`);
+      const enabled = b.enabled as boolean | null;
+      state.station = {
+        ...state.station,
+        skills: withSkillOverride(state.station.skills, id, enabled),
+      };
+      const agents = [...state.agents].map(([aid, a]) => ({ id: aid, config: a.config }));
+      return skillCatalog(skillLibrary, state.station, agents).find((s) => s.id === id);
     }
     if (path === "/connectors") {
       // A fresh array, as JSON from the daemon would be.

@@ -9,6 +9,7 @@ import {
   parseAgentConfig,
   parseStationConfig,
   type StationConfig,
+  type StationFile,
   stationCrewIssues,
 } from "@darthsaul/outerworld-ai-core";
 import { writeFileAtomic } from "./atomic-write.js";
@@ -40,6 +41,12 @@ export interface LoadedAgent {
 export interface LoadedStation {
   /** Undefined when station.json is missing or invalid; `issues` says why. */
   readonly station?: StationConfig;
+  /**
+   * Whether station.json is on disk at all, valid or not: `missing` only on ENOENT, `unknown`
+   * when the check itself failed. A station whose file is there, or may be, is not a new station:
+   * it must never be set up (and so overwritten) again.
+   */
+  readonly stationFile: StationFile;
   /** Valid agents only; an invalid agent is skipped with an issue so one bad file blocks nothing. */
   readonly agents: readonly LoadedAgent[];
   readonly issues: readonly Issue[];
@@ -168,7 +175,21 @@ export async function loadStationDir(home: string): Promise<LoadedStation> {
   }
 
   if (station) issues.push(...stationCrewIssues(station, agents));
-  return { ...(station ? { station } : {}), agents, issues };
+  let stationFile: StationFile = "present";
+  try {
+    await lstat(paths.stationJson);
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    stationFile = code === "ENOENT" ? "missing" : "unknown";
+    if (stationFile === "unknown") {
+      issues.push({
+        level: "error",
+        path: "station.json",
+        message: `cannot tell whether it is there: ${code ?? String(error)}`,
+      });
+    }
+  }
+  return { ...(station ? { station } : {}), stationFile, agents, issues };
 }
 
 const assertValid = (issues: readonly Issue[], what: string) => {

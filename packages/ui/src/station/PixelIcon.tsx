@@ -96,6 +96,17 @@ const ICONS = {
     "X.....X.",
     "XXXXXXX.",
   ],
+  /** Skills: an open book. */
+  skill: [
+    "........",
+    "XXX..XXX",
+    "X.XXXX.X",
+    "X.X..X.X",
+    "X.X..X.X",
+    "X.XXXX.X",
+    "XXX..XXX",
+    "........",
+  ],
   /** List files: a bulleted list. */
   "file-list": [
     "........",

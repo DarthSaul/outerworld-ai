@@ -32,7 +32,39 @@ const DaemonContext = createContext<DaemonState | null>(null);
  */
 const NOTIFYING = new Set<string>(NOTIFICATION_EVENT_TYPES);
 
-export function invalidateFor(event: RuntimeEvent, client: QueryClient): void {
+/** The one QueryClient method `invalidateFor` uses, so a batch can stand in for the client. */
+export interface Invalidator {
+  invalidateQueries(filters: { readonly queryKey: readonly unknown[] }): unknown;
+}
+
+/**
+ * Collects invalidations and applies each distinct query key once, on the next `schedule`d flush.
+ * The event stream replays the whole log when a page connects, and a busy run emits events in
+ * quick runs; invalidating per event started a refetch per event (and cancelled the one before),
+ * which exhausted the browser's connections on a station with a long history.
+ */
+export function batchInvalidations(
+  client: Pick<QueryClient, "invalidateQueries">,
+  schedule: (flush: () => void) => void = (flush) => setTimeout(flush),
+): Invalidator {
+  let pending: Map<string, readonly unknown[]> | undefined;
+  const flush = () => {
+    const keys = pending;
+    pending = undefined;
+    for (const queryKey of keys?.values() ?? []) void client.invalidateQueries({ queryKey });
+  };
+  return {
+    invalidateQueries({ queryKey }) {
+      if (!pending) {
+        pending = new Map();
+        schedule(flush);
+      }
+      pending.set(JSON.stringify(queryKey), queryKey);
+    },
+  };
+}
+
+export function invalidateFor(event: RuntimeEvent, client: Invalidator): void {
   if (!event.ephemeral && NOTIFYING.has(event.type)) {
     void client.invalidateQueries({ queryKey: ["notifications"] });
   }
@@ -40,10 +72,13 @@ export function invalidateFor(event: RuntimeEvent, client: QueryClient): void {
     void client.invalidateQueries({ queryKey: ["station"] });
     void client.invalidateQueries({ queryKey: ["agent", event.agentId] });
     void client.invalidateQueries({ queryKey: ["schedules", event.agentId] });
+    // Who has a skill, and who it is offered to, follow each crew member's config.
+    void client.invalidateQueries({ queryKey: ["skills"] });
   } else if (event.type === "station.updated") {
     void client.invalidateQueries({ queryKey: ["station"] });
     void client.invalidateQueries({ queryKey: ["agent"] });
     void client.invalidateQueries({ queryKey: ["connectors"] });
+    void client.invalidateQueries({ queryKey: ["skills"] });
   } else if (event.type === "connector.status") {
     // A connector's tools change what granted crew members can use.
     void client.invalidateQueries({ queryKey: ["connectors"] });
@@ -122,6 +157,7 @@ export function DaemonProvider({
   const [listeners] = useState(() => new Set<EventListener>());
 
   useEffect(() => {
+    const invalidator = batchInvalidations(queryClient);
     const conn = connect({
       url: "/api/events",
       token,
@@ -130,7 +166,7 @@ export function DaemonProvider({
         for (const l of listeners) l(e);
         if (e.ephemeral) return;
         setRecent((prev) => [e, ...prev].slice(0, RECENT));
-        invalidateFor(e, queryClient);
+        invalidateFor(e, invalidator);
       },
     });
     return () => conn.close();

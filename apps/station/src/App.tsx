@@ -33,6 +33,7 @@ import { MemoryPage } from "./pages/MemoryPage.js";
 import { NotificationsPage } from "./pages/NotificationsPage.js";
 import { OnboardingPage } from "./pages/OnboardingPage.js";
 import { SettingsPage } from "./pages/SettingsPage.js";
+import { StationBrokenPage } from "./pages/StationBrokenPage.js";
 import { StationPage } from "./pages/StationPage.js";
 import {
   useHealth,
@@ -242,10 +243,20 @@ function Page({ children }: { readonly children: ReactNode }) {
   return <div className="flex flex-1 flex-col py-3.5 desktop:min-h-0">{children}</div>;
 }
 
-/** An empty station (no station.json yet) shows onboarding instead of the screens. */
+/**
+ * An empty station (no station.json yet) shows onboarding instead of the screens. One whose file
+ * is there but does not load, or could not be checked, says so instead: setting it up again could
+ * replace the file.
+ */
 function Shell({ children }: { readonly children: ReactNode }) {
   const station = useStationView();
-  if (station.isSuccess && !station.data.station) return <OnboardingPage />;
+  if (station.isSuccess && !station.data.station) {
+    return station.data.stationFile === "missing" ? (
+      <OnboardingPage />
+    ) : (
+      <StationBrokenPage issues={station.data.issues} />
+    );
+  }
   return children;
 }
 

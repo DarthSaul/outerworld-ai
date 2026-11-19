@@ -7,7 +7,10 @@ import {
   ChatMessage as ChatMessageSchema,
   estimateTokens,
   historyBudget,
+  type PromptSkill,
   roleBriefing,
+  SKILLS_CHAR_BUDGET,
+  skillsSection,
   UNTRUSTED_DATA_NOTICE,
 } from "./prompt.js";
 
@@ -148,6 +151,7 @@ describe("roleBriefing", () => {
     model: "m",
     approvalMode: "ask",
     connectorGrants: [],
+    skills: [],
     schedules: [],
   });
   const crew = [
@@ -184,5 +188,115 @@ describe("helpers", () => {
   it("validates stored messages", () => {
     expect(ChatMessageSchema.safeParse({ role: "user", text: "hi" }).success).toBe(true);
     expect(ChatMessageSchema.safeParse({ role: "system", text: "hi" }).success).toBe(false);
+  });
+});
+
+describe("assemblePrompt: installed skills", () => {
+  const skill = (id: string, body = `Steps for ${id}.`): PromptSkill => ({
+    id,
+    name: id.toUpperCase(),
+    description: `When ${id} is asked for.`,
+    body,
+  });
+  const base = {
+    documents: docs,
+    roleBriefing: "Crew.",
+    history: [user("hi")],
+    budgetTokens: 10_000,
+  };
+
+  it("is byte-identical to a skill-less prompt when no skill is offered", () => {
+    const without = assemblePrompt(base).system;
+    expect(assemblePrompt({ ...base, skills: { entries: [], mode: "index" } }).system).toBe(
+      without,
+    );
+    expect(skillsSection({ entries: [], mode: "inline" })).toBeUndefined();
+    expect(skillsSection(undefined)).toBeUndefined();
+  });
+
+  it("lists one line per skill in index mode, pointing at skill_view, between role and beliefs", () => {
+    const { system } = assemblePrompt({
+      ...base,
+      beliefs: ["Works in UTC."],
+      skills: { entries: [skill("plan"), skill("humanizer")], mode: "index" },
+    });
+    expect(system).toContain(
+      "- PLAN (id: plan): When plan is asked for.\n- HUMANIZER (id: humanizer): When humanizer is asked for.",
+    );
+    expect(system).toContain("call skill_view with its id and follow that recipe");
+    expect(system).toContain("skill_view returns the station's own installed recipes");
+    expect(system).not.toContain("Steps for plan.");
+    const role = system.indexOf("# Your role");
+    const skills = system.indexOf("# Installed skills");
+    const beliefs = system.indexOf("# What you remember");
+    expect(role).toBeLessThan(skills);
+    expect(skills).toBeLessThan(beliefs);
+    expect(system.endsWith(UNTRUSTED_DATA_NOTICE)).toBe(true);
+  });
+
+  it("includes each body in inline mode and never mentions skill_view", () => {
+    const text = skillsSection({ entries: [skill("plan")], mode: "inline" });
+    expect(text).toBe(
+      [
+        "# Installed skills",
+        "These are recipes the Commander installed on this station. When a task matches one, follow that recipe instead of improvising.",
+        "## PLAN (id: plan)",
+        "When plan is asked for.",
+        "Steps for plan.",
+      ].join("\n\n"),
+    );
+    expect(text).not.toContain("skill_view");
+  });
+
+  it("keeps entries in priority order within the budget and counts the rest", () => {
+    const entries = ["mine", "a", "b", "c"].map((id) => skill(id, "x".repeat(400)));
+    const text = skillsSection({ entries, mode: "inline", charBudget: 1_200 }) ?? "";
+    expect(text.length).toBeLessThanOrEqual(1_200);
+    expect(text).toContain("## MINE (id: mine)");
+    expect(text).toContain("## A (id: a)");
+    expect(text).not.toContain("## B (id: b)");
+    expect(text.endsWith("(2 more skills not listed.)")).toBe(true);
+  });
+
+  it("never lets a later, shorter entry jump ahead of one that did not fit", () => {
+    const entries = [skill("first"), skill("big", "x".repeat(2_000)), skill("small", "y")];
+    const text = skillsSection({ entries, mode: "inline", charBudget: 1_000 }) ?? "";
+    expect(text).toContain("## FIRST (id: first)");
+    expect(text).not.toContain("SMALL");
+    expect(text.endsWith("(2 more skills not listed.)")).toBe(true);
+  });
+
+  it("fits exactly one index entry in a small budget, and gives no section below that", () => {
+    const entries = [skill("a"), skill("b")];
+    const head = `# Installed skills\n\n${skillsSection({ entries: [skill("a")], mode: "index" })?.split("\n\n")[1]}`;
+    const line = "- A (id: a): When a is asked for.";
+    const note = "\n\n(1 more skill not listed.)";
+    const exact = head.length + 2 + line.length + note.length;
+    const one = skillsSection({ entries, mode: "index", charBudget: exact });
+    expect(one).toBe(`${head}\n\n${line}${note}`);
+    expect(one?.length).toBe(exact);
+    expect(skillsSection({ entries, mode: "index", charBudget: exact - 1 })).toBeUndefined();
+    expect(skillsSection({ entries, mode: "index", charBudget: 10 })).toBeUndefined();
+  });
+
+  it("takes a complete list that fits exactly, even when a shorter prefix plus its note would not", () => {
+    // The second entry is shorter than "(1 more skill not listed.)".
+    const entries = [skill("a"), { id: "b", name: "B", description: "x", body: "y" }];
+    const full = skillsSection({ entries, mode: "index" }) ?? "";
+    expect(full).not.toContain("not listed");
+    expect(skillsSection({ entries, mode: "index", charBudget: full.length })).toBe(full);
+  });
+
+  it("caps the index at the default 12k budget, and counts one skill in the singular", () => {
+    const entries = Array.from({ length: 400 }, (_, i) => skill(`skill-${i}`));
+    const text = skillsSection({ entries, mode: "index" }) ?? "";
+    expect(text.length).toBeLessThanOrEqual(SKILLS_CHAR_BUDGET);
+    expect(text).toMatch(/\(\d+ more skills not listed\.\)$/);
+    const one = skillsSection({
+      entries: [skill("a"), skill("b", "z".repeat(500))],
+      mode: "inline",
+      charBudget: 400,
+    });
+    expect(one?.endsWith("(1 more skill not listed.)")).toBe(true);
   });
 });

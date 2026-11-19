@@ -85,6 +85,15 @@ export const DispatchPolicy = z.looseObject({
   autoReview: z.boolean().default(true),
 });
 
+/**
+ * The Commander's station-wide skill choices (ADR-0023): ids turned on or off against each skill's
+ * own default. A skill in neither list follows its default. Ids not in the library are ignored.
+ */
+export const SkillOverrides = z.looseObject({
+  enabled: z.array(Id).default([]),
+  disabled: z.array(Id).default([]),
+});
+
 export const StationConfig = z.looseObject({
   schemaVersion: SchemaVersion,
   name: z.string().min(1),
@@ -93,6 +102,8 @@ export const StationConfig = z.looseObject({
   connectors: z.array(Connector).default([]),
   budgets: Budgets.default({}),
   dispatch: DispatchPolicy.default({ maxDepth: 1, autoReview: true }),
+  /** Absent until the Commander first changes a skill; every default stands. */
+  skills: SkillOverrides.optional(),
 });
 
 export type PropKind = z.infer<typeof PropKind>;
@@ -103,6 +114,7 @@ export type ConnectorTransport = z.infer<typeof ConnectorTransport>;
 export type Connector = z.infer<typeof Connector>;
 export type Budgets = z.infer<typeof Budgets>;
 export type DispatchPolicy = z.infer<typeof DispatchPolicy>;
+export type SkillOverridesConfig = z.infer<typeof SkillOverrides>;
 export type StationConfig = z.infer<typeof StationConfig>;
 
 /** Rules zod cannot express field by field. Pure; returns issues, never throws. */
@@ -152,6 +164,17 @@ export function stationConfigIssues(station: StationConfig): Issue[] {
       issues.push({ level: "error", path: `lanes.${i}`, message: `duplicate lane ${direction}` });
     }
     directions.add(direction);
+  });
+
+  const on = new Set(station.skills?.enabled ?? []);
+  station.skills?.disabled.forEach((id, i) => {
+    if (on.has(id)) {
+      issues.push({
+        level: "error",
+        path: `skills.disabled.${i}`,
+        message: `skill "${id}" is both enabled and disabled`,
+      });
+    }
   });
 
   return issues;

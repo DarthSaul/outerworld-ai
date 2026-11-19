@@ -197,6 +197,25 @@ decisions made, open questions.
     OAuth app is kept and the Commander signs in again.
   - Open: make Gmail MCP available once access comes through (`UNAVAILABLE_PRESETS` in core).
     Also, a Testing consent screen means a weekly Google sign-in.
+- **D31 Skills library (Phase 13, owner 2026-11-18).** ADR-0023 records the design. Choices
+  flagged at Checkpoint 13:
+  - The library is bundled read-only under `packages/runtime/skills/` (with StarNet's MIT
+    `LICENSE` and an attribution `NOTICE.md`, which name real authors as the license requires);
+    there is no Commander skills folder in `$OUTERWORLD_HOME` yet.
+  - Index plus `skill_view`, a 12k-character budget, capability gating, and a byte-identical
+    empty case are in; task-only injection is not (it would churn the cached prefix).
+  - Web research recipes work from sources the agent can name with `web_fetch` (owner's choice;
+    no search tool). The 18 shell skills, plus 3 browser skills and 1 image skill, load and show
+    as unavailable, never offered (owner's choice for the shell ones).
+  - StarNet's notebook mapped to workspace files for logs and to `remember` only for lasting
+    preferences, since `remember` asks the Commander to approve each proposal.
+  - `skill_view` answers only for skills the calling run listed at setup that are still offered
+    now. A skill the budget left out of the index is still offered, so still viewable.
+  - After review (PR #13): `web_fetch` reads Atom and RSS; arXiv full text comes from its HTML
+    version, and PDF extraction is deferred (owner's choice). `files` needs all three file tools.
+  - Found along the way: the SPA offered setup over a station.json that did not load. The
+    station view now reports `stationFile` (`present`, `missing`, or `unknown` when the folder
+    cannot be checked), and onboarding runs only for `missing`.
 
 ## Phase 0 — Housekeeping and decisions
 
@@ -390,6 +409,17 @@ Source: `docs/design/station-dashboard/`. Dark only; sprites replace the rig; ev
 - [x] 12.9 Connector sign-ins tied to the server that issued them (ADR-0012 amendment).
 
 **CHECKPOINT 12**
+
+## Phase 13 — Skills library (ADR-0023)
+- [x] 13.1 Core: skill file parsing, enablement (station-wide ∪ own), capability gating,
+  `withSkillTool`, the Installed skills prompt section (index or inline, 12k budget), catalog.
+- [x] 13.2 Runtime: library loader, `skill_view`, skills in the run loop and `CrewService`.
+- [x] 13.3 Port the 74-skill library (mapping, fetch-only research, notebook → files/remember).
+- [x] 13.4 Daemon: `GET /api/skills`, `PUT /api/skills/:id`, `skills` on `PATCH /api/agents/:id`.
+- [x] 13.5 Station: Abilities › Skills; Skills panel on Config; offered skills on Brief.
+- [x] 13.6 Docs: ADR-0023, D31, SCHEMA, PRIVACY, READMEs.
+
+**CHECKPOINT 13**
 
 ## Follow-ups (not scheduled)
 - ~~Intermittent React #418 hydration mismatch in `browser:verify`~~ gone with `apps/web` (Next.js
