@@ -77,7 +77,8 @@ agent you created:
    - A station that had Gmail MCP under the `gmail` id is moved to the Gmail API on daemon start:
      the OAuth app you saved carries over, and the MCP server's tokens are deleted.
 5. **`web_fetch` requests** to public http(s) URLs an agent with the Web prop chooses. Loopback,
-   private-network, and link-local addresses are refused.
+   private-network, and link-local addresses are refused. Only text comes back: pages, plain
+   text, JSON, and XML, including Atom and RSS feeds; images, PDFs, and other binaries are refused.
 
 Nothing else: no connector you have not added is ever contacted. The SPA talks only to the daemon on `127.0.0.1`. Fonts are self-hosted. Tests and CI
 make no network calls: they use a scripted fake model and a fake MCP server; a real-network smoke

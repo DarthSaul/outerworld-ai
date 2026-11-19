@@ -142,7 +142,10 @@ export function createWebFetch(options: WebFetchOptions = {}): ToolImpl {
         const res = await fetchImpl(url.href, {
           redirect: "manual",
           signal,
-          headers: { accept: "text/html, text/plain, application/json;q=0.9, */*;q=0.1" },
+          headers: {
+            accept:
+              "text/html, text/plain, application/json;q=0.9, application/atom+xml;q=0.9, application/rss+xml;q=0.9, application/xml;q=0.9, */*;q=0.1",
+          },
         });
         const location = res.headers.get("location");
         if (res.status >= 300 && res.status < 400 && location) {
@@ -152,8 +155,9 @@ export function createWebFetch(options: WebFetchOptions = {}): ToolImpl {
           continue;
         }
         const contentType = res.headers.get("content-type") ?? "";
+        // Structured text too: any +xml or +json type (Atom and RSS feeds, problem+json, ld+json).
         const textual =
-          /^(text\/|application\/(json|xml|xhtml\+xml|ld\+json))/i.test(contentType) ||
+          /^(text\/|application\/(json|xml|[\w.-]+\+(xml|json))\s*(;|$))/i.test(contentType) ||
           contentType === "";
         if (!textual) {
           await res.body?.cancel();

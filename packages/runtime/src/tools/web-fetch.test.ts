@@ -126,9 +126,29 @@ describe("web_fetch", () => {
     expect(r.text).toHaveLength(1000);
   });
 
+  it("reads Atom and RSS feeds as text", async () => {
+    const atom = '<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom"><entry/></feed>';
+    const { tool } = setup({
+      "https://feeds.test/atom": { type: "application/atom+xml; charset=utf-8", body: atom },
+      "https://feeds.test/rss": { type: "application/rss+xml", body: "<rss><channel/></rss>" },
+    });
+    expect(await tool.execute({ url: "https://feeds.test/atom" }, ctx)).toMatchObject({
+      text: atom,
+    });
+    expect(await tool.execute({ url: "https://feeds.test/rss" }, ctx)).toMatchObject({
+      text: "<rss><channel/></rss>",
+    });
+  });
+
   it("refuses binary content", async () => {
-    const { tool } = setup({ "https://img.test/a.png": { type: "image/png", body: "\x89PNG" } });
+    const { tool } = setup({
+      "https://img.test/a.png": { type: "image/png", body: "\x89PNG" },
+      "https://docs.test/a.pdf": { type: "application/pdf", body: "%PDF-1.7" },
+      "https://docs.test/a.zip": { type: "application/zip+xmlish", body: "PK" },
+    });
     await expect(tool.execute({ url: "https://img.test/a.png" }, ctx)).rejects.toThrow(/not text/);
+    await expect(tool.execute({ url: "https://docs.test/a.pdf" }, ctx)).rejects.toThrow(/not text/);
+    await expect(tool.execute({ url: "https://docs.test/a.zip" }, ctx)).rejects.toThrow(/not text/);
   });
 
   it("reports an HTTP error status without failing the call", async () => {
