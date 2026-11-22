@@ -25,3 +25,4 @@ supersedes the old one. Template: `0000-template.md`.
 | [0021](0021-retire-seven-drawn-characters.md) | Retire seven drawn characters; add MERLO and SHADE as painted art; `look` is a character id | Accepted |
 | [0022](0022-gmail-through-the-rest-api.md) | Gmail through the Gmail REST API; Gmail MCP shown but not available yet | Accepted |
 | [0023](0023-skills-library.md) | Skills library: enablement, capability gating, and an index with skill_view | Accepted |
+| [0024](0024-one-design-folder.md) | One design folder; drop the Reach-era docs and the retired sprite exports | Accepted |

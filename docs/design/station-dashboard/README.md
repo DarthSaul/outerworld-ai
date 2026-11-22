@@ -5,7 +5,7 @@ An AI-agent management dashboard with a 16-bit / Super FX-era space-station look
 
 There are two pages:
 1. **Station**: the live ops dashboard (map, crew, Overseer comms, scanner, vitals).
-2. **Crew Select**: picking an agent's appearance from the pixel characters (24 drawn here; the station offers 17 of them plus painted art, ADR-0017, ADR-0021).
+2. **Crew Select**: picking an agent's appearance from the pixel characters (the prototype draws 24; the station offers 17 of them plus painted art, ADR-0017, ADR-0021, ADR-0024).
 
 ## About the design files
 Everything in `reference/` is a **design reference built in HTML**: a working prototype that shows the intended look and behavior. It is not production code to copy. Rebuild it in the existing **React + Vite SPA**, following that codebase's patterns (component structure, state management, data fetching, styling approach). The prototype runs on a custom runtime; ignore that runtime and treat the template and logic only as a spec.
@@ -260,11 +260,13 @@ All tokens are in `src/tokens.css`. Room colors:
 Spacing in use: 2, 4, 5, 6, 8, 10, 12, 14, 16, 20px. The main gutter is 14.
 
 ## Assets
-- **Character sprites**: 24 original characters, procedurally drawn on a 20×26 grid with a `#14121c` 1px outline added around the silhouette.
+- **Character sprites**: original characters, procedurally drawn on a 20×26 grid with a `#14121c` 1px outline added around the silhouette. The prototype draws 24; the exports below hold the 17 the station offers (ADR-0024). File numbers and `index` keep the prototype's numbering, so they have gaps.
   - `sprites/1x/*.png`: native size.
   - `sprites/8x/*.png`: 160×208.
-  - `sprites/sheet-4x.png`: 6×4 grid, 80×104 cells.
+  - `sprites/sheet-4x.png`: 6×3 grid, 80×104 cells, in export order.
   - `sprites/characters.json`: index → id/name/role/file (renamed from manifest.json, D26).
+  - `sprites/art/*.png`: painted characters (ADR-0017, ADR-0021), 64×64 or 96×96.
+  - `sprites/candidates/*.png`: painted art that is not offered. `armored-hunter.png` imitates a franchise character: not original, never ship it.
   - Either use the PNGs, or generate at runtime with `characterSprites.ts`. That route is preferred if you want users to recolor later; the spec fields are documented in the `CharacterSpec` type.
   - Always render with `image-rendering: pixelated` at integer scales.
 - **Overseer portrait**: not yet designed (placeholder slot).
@@ -278,4 +280,4 @@ Spacing in use: 2, 4, 5, 6, 8, 10, 12, 14, 16, 20px. The main gutter is 14.
 - `reference/Station Dashboard.dc.html`: the full interactive prototype. Its template has all exact inline styles; the logic class has all behavior.
 - `reference/support.js`: the runtime needed to open the prototype locally.
 - `src/tokens.css`, `src/characterSprites.ts`, `src/stationSeed.ts`: drop-in starting points.
-- `sprites/`: exported PNGs and manifest.
+- `sprites/`: exported PNGs, painted art, unused candidates, and `characters.json`.

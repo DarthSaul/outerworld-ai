@@ -129,9 +129,8 @@ is **dark only** (ADR-0013); there is no light theme or `data-theme` toggle.
 spec, `reference/Station Dashboard.dc.html` is the interactive prototype (a spec, not code to
 copy), `src/tokens.css` is the token source, and `sprites/` are the character exports. Read
 `docs/design/README.md` before any ui work; change the spec first, then the tokens. ADR-0013 lists
-how each design element is backed by runtime state. The older Reach spec, UI mock, and rig studies
-in `docs/design/` are superseded and kept for history; their generated reference renders are never
-shipped or traced.
+how each design element is backed by runtime state. `docs/design/` is the only design folder; new
+assets go under `station-dashboard/` (ADR-0024). `sprites/candidates/` is never shipped or traced.
 
 ## Run and test
 
