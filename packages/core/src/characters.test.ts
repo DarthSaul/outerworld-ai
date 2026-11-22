@@ -71,17 +71,13 @@ function decodePng(buf: Buffer): (string | null)[][] {
   );
 }
 
-/** Drawn characters in the design export that the station no longer offers (ADR-0021). */
-const RETIRED = ["rivet", "sable", "tock", "sprocket", "quill", "atlas", "juno"];
-
 describe("characters", () => {
-  it("has the drawn characters still in use, in export order, then the painted ones", () => {
-    const kept = index.characters.filter((c) => !RETIRED.includes(c.id));
+  it("has the exported drawn characters, in export order, then the painted ones", () => {
     expect(DRAWN_CHARACTERS).toHaveLength(17);
     expect(CHARACTER_COUNT).toBe(17 + ART_CHARACTERS.length);
-    expect(DRAWN_CHARACTERS.map((c) => c.id)).toEqual(kept.map((c) => c.id));
+    expect(DRAWN_CHARACTERS.map((c) => c.id)).toEqual(index.characters.map((c) => c.id));
     expect(DRAWN_CHARACTERS.map((c) => [c.name, c.role])).toEqual(
-      kept.map((c) => [c.name, c.role]),
+      index.characters.map((c) => [c.name, c.role]),
     );
   });
 

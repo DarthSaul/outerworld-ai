@@ -52,14 +52,6 @@
       "file8x": "sprites/8x/04-dr-iso.png"
     },
     {
-      "index": 5,
-      "id": "rivet",
-      "name": "RIVET",
-      "role": "Mechanic",
-      "file1x": "sprites/1x/05-rivet.png",
-      "file8x": "sprites/8x/05-rivet.png"
-    },
-    {
       "index": 6,
       "id": "zephyr",
       "name": "ZEPHYR",
@@ -98,22 +90,6 @@
       "role": "Vanguard",
       "file1x": "sprites/1x/10-crux.png",
       "file8x": "sprites/8x/10-crux.png"
-    },
-    {
-      "index": 11,
-      "id": "sable",
-      "name": "SABLE",
-      "role": "Strategist",
-      "file1x": "sprites/1x/11-sable.png",
-      "file8x": "sprites/8x/11-sable.png"
-    },
-    {
-      "index": 12,
-      "id": "tock",
-      "name": "TOCK",
-      "role": "Clockwork Unit",
-      "file1x": "sprites/1x/12-tock.png",
-      "file8x": "sprites/8x/12-tock.png"
     },
     {
       "index": 13,
@@ -156,14 +132,6 @@
       "file8x": "sprites/8x/17-vega.png"
     },
     {
-      "index": 18,
-      "id": "sprocket",
-      "name": "SPROCKET",
-      "role": "Apprentice",
-      "file1x": "sprites/1x/18-sprocket.png",
-      "file8x": "sprites/8x/18-sprocket.png"
-    },
-    {
       "index": 19,
       "id": "onyx",
       "name": "ONYX",
@@ -178,30 +146,6 @@
       "role": "Pathfinder",
       "file1x": "sprites/1x/20-fennec.png",
       "file8x": "sprites/8x/20-fennec.png"
-    },
-    {
-      "index": 21,
-      "id": "quill",
-      "name": "QUILL",
-      "role": "Scribe",
-      "file1x": "sprites/1x/21-quill.png",
-      "file8x": "sprites/8x/21-quill.png"
-    },
-    {
-      "index": 22,
-      "id": "atlas",
-      "name": "ATLAS",
-      "role": "Heavy Lifter",
-      "file1x": "sprites/1x/22-atlas.png",
-      "file8x": "sprites/8x/22-atlas.png"
-    },
-    {
-      "index": 23,
-      "id": "juno",
-      "name": "JUNO",
-      "role": "Dispatcher",
-      "file1x": "sprites/1x/23-juno.png",
-      "file8x": "sprites/8x/23-juno.png"
     }
   ]
 }
