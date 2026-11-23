@@ -158,45 +158,52 @@ function DispatchSection() {
       </h2>
       <p className="m-0 text-b17 text-fg-soft">{term("dispatch.policy.hint")}</p>
       <form onSubmit={submit} className="flex flex-col gap-2">
-        <div className="flex flex-wrap items-end gap-3">
-          <label className={fieldLabel}>
-            {term("dispatch.maxDepth")}
-            <select
-              className={fieldInput}
-              value={depth}
-              onChange={(e) => setDraft((d) => ({ ...d, depth: e.target.value }))}
-            >
-              {DEPTHS.map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className={fieldLabel}>
-            {term("dispatch.maxRunsPerTree")}
+        {/* Held while saving, so an edit made then is not cleared with the saved draft. */}
+        <fieldset
+          disabled={update.isPending}
+          className="m-0 flex flex-col gap-2 border-0 p-0"
+          aria-label={term("dispatch.policy")}
+        >
+          <div className="flex flex-wrap items-end gap-3">
+            <label className={fieldLabel}>
+              {term("dispatch.maxDepth")}
+              <select
+                className={fieldInput}
+                value={depth}
+                onChange={(e) => setDraft((d) => ({ ...d, depth: e.target.value }))}
+              >
+                {DEPTHS.map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className={fieldLabel}>
+              {term("dispatch.maxRunsPerTree")}
+              <input
+                type="number"
+                inputMode="numeric"
+                min="1"
+                max={MAX_RUNS_PER_TREE_LIMIT}
+                step="1"
+                className={fieldInput}
+                value={runs}
+                onChange={(e) => setDraft((d) => ({ ...d, runs: e.target.value }))}
+              />
+            </label>
+          </div>
+          <p className="m-0 text-b17 text-fg-mute">{term("dispatch.maxDepth.hint")}</p>
+          <p className="m-0 text-b17 text-fg-mute">{term("dispatch.maxRunsPerTree.hint")}</p>
+          <label className="flex items-center gap-2 text-b19 text-fg">
             <input
-              type="number"
-              inputMode="numeric"
-              min="1"
-              max={MAX_RUNS_PER_TREE_LIMIT}
-              step="1"
-              className={fieldInput}
-              value={runs}
-              onChange={(e) => setDraft((d) => ({ ...d, runs: e.target.value }))}
+              type="checkbox"
+              checked={review}
+              onChange={(e) => setDraft((d) => ({ ...d, review: e.target.checked }))}
             />
+            {term("dispatch.autoReview")}
           </label>
-        </div>
-        <p className="m-0 text-b17 text-fg-mute">{term("dispatch.maxDepth.hint")}</p>
-        <p className="m-0 text-b17 text-fg-mute">{term("dispatch.maxRunsPerTree.hint")}</p>
-        <label className="flex items-center gap-2 text-b19 text-fg">
-          <input
-            type="checkbox"
-            checked={review}
-            onChange={(e) => setDraft((d) => ({ ...d, review: e.target.checked }))}
-          />
-          {term("dispatch.autoReview")}
-        </label>
+        </fieldset>
         <div className="flex items-center gap-2">
           <button type="submit" className={button} disabled={update.isPending}>
             {term("dispatch.save")}

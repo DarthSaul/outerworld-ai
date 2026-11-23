@@ -601,9 +601,8 @@ export function fakeApi() {
     if (parts[0] === "lanes") {
       const lanes = state.station.lanes;
       if (method === "POST") {
-        const linked = lanes.some(
-          (l) => (l.from === b.from && l.to === b.to) || (l.from === b.to && l.to === b.from),
-        );
+        // As the daemon: hallways are directed, so only a duplicate the same way is refused.
+        const linked = lanes.some((l) => l.from === b.from && l.to === b.to);
         if (b.from === b.to || linked) throw new ApiError(409, "already linked");
         const lane = {
           id: slugify(

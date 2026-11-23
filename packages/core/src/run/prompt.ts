@@ -214,6 +214,10 @@ export function roleBriefing(
 ): string {
   const me = crew.find((c) => c.id === agentId);
   const roomName = (id: string) => station.rooms.find((r) => r.id === id)?.name ?? id;
+  if (me?.config.role === "overseer" && station.dispatch.maxDepth < 1) {
+    // No tool to hand work on, so no roster that invites it.
+    return `You are the Overseer of ${station.name}. You take requests from the Commander. Dispatch is turned off on this station, so do the work yourself.`;
+  }
   if (me?.config.role === "overseer") {
     const roster = crew
       .filter((c) => c.id !== agentId)

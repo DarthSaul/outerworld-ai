@@ -398,6 +398,15 @@ export class SessionStore {
     return chain;
   }
 
+  /** The runs a dispatch owns: its worker's run and that session's reviews, oldest first. */
+  byDispatch(dispatchId: string): RunRecord[] {
+    return (
+      this.#db
+        .prepare("select * from runs where dispatch_id = ? order by created_at, rowid")
+        .all(dispatchId) as Row[]
+    ).map(toRun);
+  }
+
   /** Every run in a dispatch tree, the root included, oldest first. */
   treeRuns(rootRunId: string): RunRecord[] {
     return (

@@ -195,6 +195,16 @@ describe("roleBriefing", () => {
     expect(roleBriefing("quill", off, team)).not.toContain("hand part");
   });
 
+  it("tells the Overseer to do the work itself when the station turns dispatch off", () => {
+    const off = { ...station, dispatch: { ...station.dispatch, maxDepth: 0 } };
+    const b = roleBriefing("vesper", off, crew);
+    expect(b).toContain("Dispatch is turned off on this station, so do the work yourself.");
+    expect(b).not.toContain("decide who on the crew");
+    expect(b).not.toContain("(id: quill)");
+    // With dispatch on, the roster and the delegation wording stay.
+    expect(roleBriefing("vesper", station, crew)).toContain("decide who on the crew");
+  });
+
   it("tells crew at the depth limit to do the work itself, as its tools do", () => {
     const deep: StationConfig = {
       ...station,

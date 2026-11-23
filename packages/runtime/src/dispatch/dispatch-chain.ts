@@ -5,20 +5,30 @@ import type { EventStore } from "../storage/event-store.js";
 const MAX_HOPS = 16;
 
 /**
- * Who asked whom for a run (ADR-0025), from the event log alone: each run's `run.queued` names
- * the run above it, so the chain is one indexed lookup per level. Core's `dispatchChain` turns
- * the events into links, root first.
+ * Who asked whom for a run (ADR-0025), from the event log: each run's `run.queued` names the run
+ * above it, so the chain is one indexed lookup per level. Core's `dispatchChain` turns the events
+ * into links, root first. A `run.queued` logged before lineage existed names no parent; then
+ * `parentOf` (the run's backfilled row) supplies it, so older dispatches still chain.
  */
-export function dispatchChainOf(events: EventStore, runId: string): ChainLink[] {
+export function dispatchChainOf(
+  events: EventStore,
+  runId: string,
+  parentOf: (runId: string) => string | undefined = () => undefined,
+): ChainLink[] {
   const found: RuntimeEvent[] = [];
   const seen = new Set<string>();
   let at: string | undefined = runId;
   for (let hop = 0; at && !seen.has(at) && hop < MAX_HOPS; hop++) {
     seen.add(at);
-    const queued = events.ofRun(at, ["run.queued"]).at(0);
+    const queued: RuntimeEvent | undefined = events.ofRun(at, ["run.queued"]).at(0);
     if (!queued || queued.type !== "run.queued") break;
-    found.push(queued);
-    at = queued.payload.parentRunId;
+    const parentRunId: string | undefined = queued.payload.parentRunId ?? parentOf(at);
+    found.push(
+      parentRunId && !queued.payload.parentRunId
+        ? { ...queued, payload: { ...queued.payload, parentRunId } }
+        : queued,
+    );
+    at = parentRunId;
   }
   return dispatchChain(found, runId);
 }

@@ -128,15 +128,23 @@ const toolCall = (toolName: string, input: unknown, toolCallId: string): Chunk =
   input: JSON.stringify(input),
 });
 
-/** A step that waits for `ready` before it streams, to order runs that would race. */
+/**
+ * A step that waits for `ready` before it streams, to order runs that would race. It gives up
+ * when the call is aborted, and fails the call if `ready` never comes.
+ */
 const after =
   (ready: () => boolean, step: () => ReturnType<typeof reply>): Step =>
-  () => {
+  (signal) => {
     const inner = step().stream as ReadableStream<Chunk>;
     return {
       stream: new ReadableStream<Chunk>({
         async start(c) {
-          while (!ready()) await new Promise((r) => setTimeout(r, 2));
+          const deadline = Date.now() + 2000;
+          while (!ready()) {
+            if (signal.aborted) return c.error(new DOMException("aborted", "AbortError"));
+            if (Date.now() > deadline) return c.error(new Error("never became ready"));
+            await new Promise((r) => setTimeout(r, 2));
+          }
           const reader = inner.getReader();
           for (;;) {
             const { done, value } = await reader.read();
@@ -438,7 +446,10 @@ describe("nested dispatch", () => {
       );
     expect(byAgentRun("quill")?.state).toBe("blocked_budget");
     expect(byAgentRun("wren")?.state).toBe("cancelled");
-    const cancelled = t.events.since(0).find((e) => e.type === "run.cancelled");
+    const wrenRun = byAgentRun("wren")?.id;
+    const cancelled = t.events
+      .since(0)
+      .find((e) => e.type === "run.cancelled" && e.runId === wrenRun);
     expect(cancelled).toMatchObject({ agentId: "wren", payload: { by: "budget" } });
     expect(t.reports(lead.id).map((r) => [r.from, r.status])).toEqual(
       expect.arrayContaining([
@@ -533,6 +544,74 @@ describe("nested dispatch", () => {
     // A worker whose own run was cancelled does not review the report it gets.
     expect(t.sessions.runs(toQuill?.workerSessionId ?? "").map((r) => r.trigger)).toEqual([
       "dispatch",
+    ]);
+  });
+
+  it("starts no review for a request the Commander cancelled, though its report arrives later", async () => {
+    const t = withDispatch({
+      Vesper: [dispatchCall("quill", "Plan"), hanging, reply("never: a cancelled request")],
+      Quill: [hanging],
+    });
+    const lead = t.service.createSession("vesper", "Chat");
+    const { runId: root } = await t.service.send(lead.id, "Plan");
+    await until(
+      () => t.sessions.activeRuns().some((r) => r.agentId === "quill" && r.state === "running"),
+      "Quill at work",
+    );
+    await t.service.cancel(root);
+    await until(() => t.reports(lead.id).length === 1, "the report");
+    expect(t.reports(lead.id)[0]).toMatchObject({ from: "quill", status: "cancelled" });
+    await new Promise((r) => setTimeout(r, 20));
+    expect(t.sessions.runs(lead.id).map((r) => [r.trigger, r.state])).toEqual([
+      ["user", "cancelled"],
+    ]);
+  });
+
+  it("cancels a dispatched worker's review with its dispatch, since the review is not its child", async () => {
+    const t = withDispatch(
+      {
+        Vesper: [dispatchCall("quill", "Plan"), reply("Handed.")],
+        Quill: [dispatchCall("wren", "Read"), reply("Asked Wren."), hanging],
+        Wren: [reply("Read it.")],
+      },
+      (home) => setDispatch(home, { maxDepth: 2, autoReview: false }),
+    );
+    const lead = t.service.createSession("vesper", "Chat");
+    await t.service.send(lead.id, "Plan");
+    const [toQuill] = await (async () => {
+      await until(() => t.dispatches.forLeadSession(lead.id)[0]?.workerRunId !== undefined, "it");
+      return t.dispatches.forLeadSession(lead.id);
+    })();
+    const review = () =>
+      t.sessions.runs(toQuill?.workerSessionId ?? "").find((r) => r.trigger === "review");
+    await until(() => review()?.state === "running", "Quill's review");
+    expect(review()?.dispatchId).toBe(toQuill?.id);
+    // Quill's own dispatched run has already finished; cancelling it still reaches the review.
+    await t.service.cancel(toQuill?.workerRunId ?? "");
+    await until(() => t.reports(lead.id).length === 1, "the report");
+    expect(review()?.state).toBe("cancelled");
+    expect(t.dispatches.get(toQuill?.id ?? "")?.status).toBe("cancelled");
+  });
+
+  it("chains a run whose run.queued predates lineage, through its stored row", () => {
+    const t = withDispatch({});
+    const append = (runId: string, agentId: string) =>
+      t.events.append({
+        type: "run.queued",
+        agentId,
+        sessionId: `s-${runId}`,
+        runId,
+        payload: { trigger: "user" },
+      });
+    append("old-lead", "vesper");
+    append("old-worker", "quill");
+    const parents: Record<string, string> = { "old-worker": "old-lead" };
+    expect(dispatchChainOf(t.events, "old-worker")).toEqual([
+      { agentId: "quill", runId: "old-worker" },
+    ]);
+    expect(dispatchChainOf(t.events, "old-worker", (id) => parents[id])).toEqual([
+      { agentId: "vesper", runId: "old-lead" },
+      { agentId: "quill", runId: "old-worker" },
     ]);
   });
 

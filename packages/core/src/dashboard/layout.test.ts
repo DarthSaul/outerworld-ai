@@ -191,7 +191,18 @@ describe("directed lanes (ADR-0025)", () => {
 
   it("finds a point along a lane with its heading and shift, clamping u", () => {
     // Weighted length: 40 × 1.5 = 60 across, then 40 down; total 100.
-    expect(lanePointAlong(route, 0.3, true)).toEqual({ at: [40, 10], heading: "e", shift: [0, 1] });
+    // Halfway along the first run, its shift is halfway from its start to its shifted corner.
+    expect(lanePointAlong(route, 0.3, true)).toEqual({
+      at: [40, 10],
+      heading: "e",
+      shift: [-0.5, 1],
+    });
+    // At the corner itself, exactly where both shifted runs meet: no jump between them.
+    expect(lanePointAlong(route, 0.6, true)).toEqual({
+      at: [60, 10],
+      heading: "e",
+      shift: [-1, 1],
+    });
     expect(lanePointAlong(route, 0.8, false)).toEqual({
       at: [60, 30],
       heading: "s",

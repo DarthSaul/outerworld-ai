@@ -391,7 +391,7 @@ export const glossary = {
     "How far work may be handed down. The Overseer can always dispatch; crew only when you allow it, and only along their room and hallways.",
   "dispatch.maxDepth": "Levels of hand-off",
   "dispatch.maxDepth.hint":
-    "0 turns dispatch off. 1 lets the Overseer hand work to crew; 2 and 3 let crew pass part of it on.",
+    "0 turns dispatch off. 1 allows one hand-off from the run you started; 2 and 3 let work that was handed off be passed on again.",
   "dispatch.maxRunsPerTree": "Hand-offs per request",
   "dispatch.maxRunsPerTree.hint": "The most dispatched runs one request may lead to.",
   "dispatch.autoReview": "Overseer reviews reports",

@@ -419,7 +419,11 @@ export interface LanePoint {
   readonly shift: Point;
 }
 
-/** The point `u` (0–1) of the way along a lane's route, with the heading and shift there. */
+/**
+ * The point `u` (0–1) of the way along a lane's route, with the heading and shift there. The
+ * shift is interpolated between the segment's two ends, so a point stays on the drawn lane up to
+ * and through a shifted corner.
+ */
 export function lanePointAlong(
   route: readonly Point[],
   u: number,
@@ -436,7 +440,10 @@ export function lanePointAlong(
       return {
         at: [s.start[0] + (s.end[0] - s.start[0]) * f, s.start[1] + (s.end[1] - s.start[1]) * f],
         heading: s.heading,
-        shift: shifted ? RIGHT_OF[s.heading] : [0, 0],
+        shift: [
+          s.startShift[0] + (s.endShift[0] - s.startShift[0]) * f,
+          s.startShift[1] + (s.endShift[1] - s.startShift[1]) * f,
+        ],
       };
     }
     d -= length;

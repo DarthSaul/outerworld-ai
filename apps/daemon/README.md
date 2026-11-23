@@ -39,7 +39,7 @@ allowed `Origin` and a `Sec-Fetch-Site` other than `cross-site`. Every `/api/*` 
 | `PUT /api/agents/:id/documents/:name` | `{ text }` for `identity`, `purpose`, `standing-orders`, or `context` → 204. |
 | `DELETE /api/agents/:id` | 204; the agent's workspace files stay. |
 | `POST /api/rooms`, `PATCH /api/rooms/:id`, `DELETE /api/rooms/:id` | Rooms and their props; deleting a room with crew or hallways is 409. |
-| `POST /api/lanes {from, to, note?}`, `DELETE /api/lanes/:id` | Open and close a hallway (ADR-0013). Config only: hallways are drawn, not enforced, in v1. A loop or a second hallway between linked rooms is 409. |
+| `POST /api/lanes {from, to, note?}`, `DELETE /api/lanes/:id` | Open and close a hallway (ADR-0013). Hallways are directed and enforced: a crew member reaches rooms a hallway leads to from its own (ADR-0025). The reverse of a hallway is a hallway of its own, so two-way reach takes two. A loop, or a second hallway the same way, is 409. |
 
 | `GET /api/sessions` | Every crew member's sessions, the same shape as below plus `origin` (`dispatch` for a session the Overseer opened to hand work to crew, else `commander`); `?archived=1` includes archived ones. |
 | `GET /api/agents/:id/sessions` | The agent's sessions, most recently active first, each with `messageCount`, `lastMessageAt?`, `lastMessage? {role, text}` (clipped), and `active`; `?archived=1` includes archived ones. |

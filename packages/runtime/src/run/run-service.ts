@@ -431,7 +431,9 @@ export class RunService {
    */
   async continueSession(
     sessionId: string,
-    options: Pick<SendOptions, "depth" | "parentRunId" | "rootRunId"> & { trigger: RunTrigger },
+    options: Pick<SendOptions, "depth" | "dispatchId" | "parentRunId" | "rootRunId"> & {
+      trigger: RunTrigger;
+    },
   ): Promise<{ runId: string }> {
     return this.#start(sessionId, undefined, options);
   }
@@ -456,6 +458,10 @@ export class RunService {
     // The owner now, not before the await: a handover may have landed meanwhile. No await
     // follows until the run is created, so the run and its model are that owner's.
     const current = this.#session(sessionId);
+    // Checked again after the await: another start may have created its run meanwhile.
+    if (this.hasActiveRun(sessionId)) {
+      throw new ConflictError("a run is already running in this session");
+    }
     const owner = current.agentId;
     const agentModel = loaded.agents.find((a) => a.id === owner)?.config.model ?? "unknown";
     // The crew member's model, then this conversation's choice, then this send's (a schedule's).
@@ -510,12 +516,23 @@ export class RunService {
 
   /**
    * Cancels a queued or running run, and every unfinished run it dispatched, level by level
-   * (ADR-0025). A finished run is left as it is; its unfinished descendants are still cancelled.
+   * (ADR-0025). A dispatched run's reviews belong to its dispatch, not under it as children, so
+   * they and theirs are cancelled with it. A finished run is left as it is; its unfinished
+   * descendants are still cancelled.
    */
   async cancel(runId: string, by: "user" | "kill_switch" | "budget" = "user"): Promise<void> {
     if (!this.#o.sessions.getRun(runId)) throw new NotFoundError(`no run "${runId}"`);
-    for (const r of [{ id: runId }, ...this.#o.sessions.descendants(runId)]) {
-      this.#active.get(r.id)?.abort(new Cancelled(by));
+    const seen = new Set<string>();
+    const queue = [runId];
+    for (let id = queue.shift(); id !== undefined; id = queue.shift()) {
+      if (seen.has(id)) continue;
+      seen.add(id);
+      this.#active.get(id)?.abort(new Cancelled(by));
+      const run = this.#o.sessions.getRun(id);
+      queue.push(...this.#o.sessions.descendants(id).map((r) => r.id));
+      if (run?.dispatchId) {
+        queue.push(...this.#o.sessions.byDispatch(run.dispatchId).map((r) => r.id));
+      }
     }
   }
 
@@ -538,6 +555,12 @@ export class RunService {
         .length,
       spentUsd: this.#o.spend.forTree(rootRunId).costUsd,
     };
+  }
+
+  /** Whether a tree has reached its spend cap (ADR-0025); never with no cap. */
+  #treeSpent(budgets: Budgets, rootRunId: string): boolean {
+    const cap = budgets.perTreeUsd;
+    return cap !== null && cap !== undefined && this.#o.spend.forTree(rootRunId).costUsd >= cap;
   }
 
   /** Stops every other unfinished run of a tree that reached its spend cap (ADR-0025). */
@@ -604,9 +627,15 @@ export class RunService {
     provider: ProviderChoice,
   ): Promise<void> {
     const ids = { agentId: session.agentId, sessionId: session.id, runId };
+    // The title is spend of the run it started, so it counts against that run's tree too.
+    const rootRunId = this.#o.sessions.getRun(runId)?.rootRunId ?? runId;
     let title: string | undefined;
     const station = (await loadStationDir(this.#o.home)).station;
-    if (station && !this.#o.killSwitch.engaged() && !this.#budgetCheck(station.budgets, ids)) {
+    if (
+      station &&
+      !this.#o.killSwitch.engaged() &&
+      !this.#budgetCheck(station.budgets, ids, rootRunId)
+    ) {
       const controller = new AbortController();
       this.#titleCalls.add(controller);
       let holding = false;
@@ -614,7 +643,7 @@ export class RunService {
         await this.#titleSlots.acquire(controller.signal);
         holding = true;
         // Spend may have moved while this call waited for a slot: check again before calling.
-        if (this.#o.killSwitch.engaged() || this.#budgetCheck(station.budgets, ids)) {
+        if (this.#o.killSwitch.engaged() || this.#budgetCheck(station.budgets, ids, rootRunId)) {
           throw new Cancelled("budget");
         }
         const model = await this.#o.models(modelId, { provider });
@@ -788,8 +817,11 @@ export class RunService {
         if (blocked) {
           sessions.transition(run.id, "block_budget");
           events.append({ type: "budget.blocked", ...ids, payload: { ...blocked } });
-          // A tree that reached its cap stops everywhere, not only where the check ran.
-          if (blocked.scope === "tree") this.#cancelTree(run.rootRunId, run.id);
+          // A tree that reached its cap stops everywhere, not only where the check ran, whichever
+          // cap was reported first. A run-only cap stops only this run.
+          if (blocked.scope === "tree" || this.#treeSpent(station.budgets, run.rootRunId)) {
+            this.#cancelTree(run.rootRunId, run.id);
+          }
           return sessions.getRun(run.id) as RunRecord;
         }
         for (const direction of this.#directions.get(run.id) ?? []) {
@@ -808,16 +840,27 @@ export class RunService {
           history,
           budgetTokens: historyBudget(context),
         });
-        const result = await this.#callWithRetry(ids, run.model, signal, () =>
-          streamText({
-            model,
-            instructions: prompt.system,
-            messages: toModelMessages(prompt.messages),
-            ...(offered.length ? { tools } : {}),
-            ...reasoningOptions(run.reasoning),
-            abortSignal: signal,
-            maxRetries: 0,
-          }),
+        const result = await this.#callWithRetry(
+          ids,
+          run.model,
+          signal,
+          () =>
+            streamText({
+              model,
+              instructions: prompt.system,
+              messages: toModelMessages(prompt.messages),
+              ...(offered.length ? { tools } : {}),
+              ...reasoningOptions(run.reasoning),
+              abortSignal: signal,
+              maxRetries: 0,
+            }),
+          // The charge that fills the tree stops its other runs at once: siblings mid-call,
+          // waiting for consent, or backing off. This run stops at its own next check.
+          () => {
+            if (this.#treeSpent(station.budgets, run.rootRunId)) {
+              this.#cancelTree(run.rootRunId, run.id);
+            }
+          },
         );
         sessions.countStep(run.id);
         if (result.text || result.toolCalls.length) {
@@ -935,6 +978,7 @@ export class RunService {
     modelId: string,
     signal: AbortSignal,
     call: () => ReturnType<typeof streamText>,
+    afterSpend?: () => void,
   ): Promise<{ text: string; toolCalls: ToolCallRecord[] }> {
     const policy = this.#o.retry ?? DEFAULT_RETRY;
     for (let attempt = 0; ; attempt++) {
@@ -949,6 +993,7 @@ export class RunService {
             toolCalls.push({ id: part.toolCallId, name: part.toolName, input: part.input });
           } else if (part.type === "finish-step") {
             this.#recordSpend(ids, modelId, part);
+            afterSpend?.();
           } else if (part.type === "error") {
             throw part.error;
           }
@@ -983,16 +1028,16 @@ export class RunService {
 
   /**
    * Strictest approval wins (ADR-0025): a run works under *Ask first* if its own agent or any agent
-   * above it in the dispatch chain is *Ask first*, read from their configs now. An agent that is
-   * gone counts as *Ask first*.
+   * above it in the dispatch chain is *Ask first*, all read from their configs now. An agent that
+   * is gone counts as *Ask first*.
    */
   async #approvalMode(runId: string, agent: AgentConfig): Promise<ApprovalMode> {
-    const above = this.#o.sessions.lineage(runId).slice(1);
-    if (above.length === 0) return agent.approvalMode;
+    const chain = this.#o.sessions.lineage(runId);
+    if (chain.length <= 1) return agent.approvalMode;
     const loaded = await loadStationDir(this.#o.home);
     const modeOf = (id: string) =>
       loaded.agents.find((a) => a.id === id)?.config.approvalMode ?? "ask";
-    return effectiveApprovalMode([agent.approvalMode, ...above.map((r) => modeOf(r.agentId))]);
+    return effectiveApprovalMode(chain.map((r) => modeOf(r.agentId)));
   }
 
   /** Double enforcement: a call to anything not offered is rejected here and never executed. */
@@ -1037,7 +1082,10 @@ export class RunService {
       ...ids,
       payload: { toolCallId: call.id, tool: call.name, input: call.input, class: grant.class },
     });
-    if (needsConsent(grant.class, await this.#approvalMode(ids.runId, agent))) {
+    const mode = await this.#approvalMode(ids.runId, agent);
+    // Cancelled while the chain's configs loaded: ask nothing, run nothing.
+    signal.throwIfAborted();
+    if (needsConsent(grant.class, mode)) {
       const decision = await this.#askConsent(call, ids, signal);
       if (decision === "denied") {
         const summary = "the Commander denied this call";
@@ -1054,6 +1102,8 @@ export class RunService {
         return;
       }
     }
+    // An approval does not outlive a cancel: a run stopped meanwhile never runs the tool.
+    signal.throwIfAborted();
     try {
       const output = await impl.execute(call.input, { ...ids, depth, signal, skills });
       events.append({

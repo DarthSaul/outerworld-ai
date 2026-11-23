@@ -57,10 +57,19 @@ export class DispatchService {
     events: EventStore;
     dispatches: DispatchStore;
   };
-  /** Sessions with a report they have not yet reviewed. */
-  readonly #needsReview = new Set<string>();
+  /**
+   * Sessions with reports they have not yet reviewed: the lead run each report answers, oldest
+   * first. A review takes its place in the tree from that run, so reports from different
+   * requests are reviewed separately, each under its own request's limits.
+   */
+  readonly #needsReview = new Map<string, string[]>();
   /** One `#step` at a time per session, so a dispatch is reported and reviewed once. */
   readonly #advancing = new Map<string, Promise<void>>();
+  /**
+   * Dispatches admitted but whose worker run is not yet stored, per root run. They count toward
+   * the run cap, so two dispatches in one tree cannot both take its last slot across an await.
+   */
+  readonly #reserved = new Map<string, number>();
 
   constructor(options: {
     home: string;
@@ -134,14 +143,17 @@ export class DispatchService {
 
   async #dispatch(
     input: unknown,
-    ctx: { agentId: string; sessionId: string; runId: string; depth: number },
+    ctx: { agentId: string; sessionId: string; runId: string; depth: number; signal: AbortSignal },
   ): Promise<unknown> {
     const parsed = DispatchInput.safeParse(input);
     if (!parsed.success) throw new Error("invalid input: `to` and `task` are required");
     const { to, task, inputs } = parsed.data;
     const loaded = await loadStationDir(this.#o.home);
     if (!loaded.station) throw new Error("the station has no valid station.json");
+    // A dispatcher cancelled while the station loaded starts nothing.
+    ctx.signal.throwIfAborted();
     const tree = this.#o.runs.tree(ctx.runId);
+    const reserved = this.#reserved.get(tree.rootRunId) ?? 0;
     const check = checkDispatch({
       from: ctx.agentId,
       to,
@@ -149,10 +161,29 @@ export class DispatchService {
       station: loaded.station,
       crew: loaded.agents,
       chain: tree.chain,
-      tree,
+      tree: { ...tree, dispatchedRuns: tree.dispatchedRuns + reserved },
     });
     if (!check.ok) throw new Error(check.reason);
+    // Checked and reserved with no await between, so the run cap holds across concurrent sends.
+    this.#reserved.set(tree.rootRunId, reserved + 1);
+    try {
+      return await this.#admit(ctx, to, task, inputs, loaded, tree.rootRunId);
+    } finally {
+      const left = (this.#reserved.get(tree.rootRunId) ?? 1) - 1;
+      if (left > 0) this.#reserved.set(tree.rootRunId, left);
+      else this.#reserved.delete(tree.rootRunId);
+    }
+  }
 
+  /** Opens the worker's session and starts its run, once the dispatch has been checked. */
+  async #admit(
+    ctx: { agentId: string; sessionId: string; runId: string; depth: number; signal: AbortSignal },
+    to: string,
+    task: string,
+    inputs: unknown,
+    loaded: Awaited<ReturnType<typeof loadStationDir>>,
+    rootRunId: string,
+  ): Promise<unknown> {
     const leader = loaded.agents.find((a) => a.id === ctx.agentId)?.config;
     const lead = leader?.name ?? ctx.agentId;
     const worker = this.#o.runs.createSession(to, `From ${lead}: ${task.slice(0, 60)}`);
@@ -180,7 +211,7 @@ export class DispatchService {
         depth,
         dispatchId: dispatch.id,
         parentRunId: ctx.runId,
-        rootRunId: tree.rootRunId,
+        rootRunId,
       }));
     } catch (error) {
       this.#o.dispatches.finish(
@@ -191,6 +222,9 @@ export class DispatchService {
       throw error;
     }
     this.#o.dispatches.setWorkerRun(dispatch.id, runId);
+    // The dispatcher was cancelled while its worker was being started: the cascade that ran then
+    // could not see this run, so stop it now. It is the dispatcher's child, so later cascades do.
+    if (ctx.signal.aborted) await this.#o.runs.cancel(runId);
     this.#o.events.append({
       type: "dispatch.started",
       agentId: ctx.agentId,
@@ -244,41 +278,64 @@ export class DispatchService {
   async #step(sessionId: string): Promise<void> {
     if (this.#o.runs.hasActiveRun(sessionId)) return;
     const own = this.#o.dispatches.forWorkerSession(sessionId);
-    if (this.#needsReview.has(sessionId)) {
-      this.#needsReview.delete(sessionId);
+    for (let next = this.#needsReview.get(sessionId)?.[0]; next; ) {
+      const result = await this.#review(sessionId, own, next);
+      // A run got in first: the review stays pending, and that run's end comes back here.
+      if (result === "retry") return;
+      this.#reviewed(sessionId, next);
       // A review that starts ends in a run that settles, which comes back here.
-      if (await this.#review(sessionId, own)) return;
+      if (result === "started") return;
+      next = this.#needsReview.get(sessionId)?.[0];
     }
     if (own?.status !== "running") return;
     if (this.#o.dispatches.forLeadSession(sessionId).some((d) => d.status === "running")) return;
     await this.#complete(own);
   }
 
+  /** Drops the pending reports of the same request as `leadRunId`: one review covers them. */
+  #reviewed(sessionId: string, leadRunId: string): void {
+    const rootOf = (id: string) => this.#o.sessions.getRun(id)?.rootRunId ?? id;
+    const root = rootOf(leadRunId);
+    const left = (this.#needsReview.get(sessionId) ?? []).filter((id) => rootOf(id) !== root);
+    if (left.length) this.#needsReview.set(sessionId, left);
+    else this.#needsReview.delete(sessionId);
+  }
+
   /**
-   * Starts a review turn in a session with a new report. It continues the tree of the session's
-   * latest run, at its depth and under its parent, so it is held to the same limits and chain.
-   * Returns whether one started.
+   * Starts a review turn for a report. It continues the tree of the lead run the report answers,
+   * at its depth and under its parent, so it is held to that request's limits and chain.
+   * `retry` when a run started first, so the review must wait rather than be dropped.
    */
-  async #review(sessionId: string, own: DispatchRecord | undefined): Promise<boolean> {
+  async #review(
+    sessionId: string,
+    own: DispatchRecord | undefined,
+    leadRunId: string,
+  ): Promise<"started" | "skipped" | "retry"> {
     const latest = this.#o.sessions.runs(sessionId)[0];
-    if (!latest) return false;
+    if (!latest) return "skipped";
+    const lead = this.#o.sessions.getRun(leadRunId) ?? latest;
     const station = (await loadStationDir(this.#o.home)).station;
-    if (!station) return false;
+    if (!station) return "skipped";
+    if (this.#o.runs.hasActiveRun(sessionId)) return "retry";
+    // A cancelled request starts nothing new; its report stays in the session for the Commander.
+    if (lead.state === "cancelled" || latest.state === "cancelled") return "skipped";
     // The Commander's session follows the setting; a dispatched one reviews only while its own
-    // work is going well (not after it was cancelled, stopped by a budget, or failed).
-    if (own ? latest.state !== "completed" : !station.dispatch.autoReview) return false;
-    if (this.#overTreeBudget(latest.id, station.budgets.perTreeUsd)) return false;
+    // work is going well (not after it was stopped by a budget or failed).
+    if (own ? latest.state !== "completed" : !station.dispatch.autoReview) return "skipped";
+    if (this.#overTreeBudget(lead.id, station.budgets.perTreeUsd)) return "skipped";
     try {
       await this.#o.runs.continueSession(sessionId, {
         trigger: "review",
-        depth: latest.depth,
-        rootRunId: latest.rootRunId,
-        ...(latest.parentRunId ? { parentRunId: latest.parentRunId } : {}),
+        depth: lead.depth,
+        rootRunId: lead.rootRunId,
+        ...(lead.parentRunId ? { parentRunId: lead.parentRunId } : {}),
+        // A nested review belongs to its dispatch, so cancelling the dispatch reaches it.
+        ...(own ? { dispatchId: own.id } : {}),
       });
-      return true;
+      return "started";
     } catch {
-      // Kill switch on, session archived, or a run started meanwhile: the report stays put.
-      return false;
+      // A run started meanwhile: try again when it ends. Kill switch or archived: the report stays.
+      return this.#o.runs.hasActiveRun(sessionId) ? "retry" : "skipped";
     }
   }
 
@@ -288,12 +345,27 @@ export class DispatchService {
 
   /** The worker's session has gone quiet: report how it went to the dispatcher. */
   async #complete(dispatch: DispatchRecord): Promise<void> {
+    // Everything after this check is synchronous, so no run can start in the worker's session
+    // between deciding it is quiet and reporting. A run that got in first reports when it ends.
+    if (this.#o.runs.hasActiveRun(dispatch.workerSessionId)) return;
     const last = this.#o.sessions.runs(dispatch.workerSessionId)[0];
-    const station = (await loadStationDir(this.#o.home)).station;
-    const overTree = last ? this.#overTreeBudget(last.id, station?.budgets.perTreeUsd) : false;
+    // Why it stopped, as recorded when it did, not as the caps stand now.
+    const cancelledBy = last
+      ? this.#o.events
+          .ofRun(last.id, ["run.cancelled"])
+          .flatMap((e) => (e.type === "run.cancelled" ? [e.payload.by] : []))
+          .at(-1)
+      : undefined;
+    const blockedScope = last
+      ? this.#o.events
+          .ofRun(last.id, ["budget.blocked"])
+          .flatMap((e) => (e.type === "budget.blocked" ? [e.payload.scope] : []))
+          .at(-1)
+      : undefined;
     let status: Exclude<DispatchStatus, "running"> = (last && outcome[last.state]) ?? "failed";
-    // A run the tree's spend cap cancelled was stopped by a budget, not by the Commander.
-    if (status === "cancelled" && overTree) status = "blocked";
+    // A run a spend cap cancelled was stopped by a budget, not by the Commander.
+    if (status === "cancelled" && cancelledBy === "budget") status = "blocked";
+    const overTree = cancelledBy === "budget" || blockedScope === "tree";
     const messages = this.#o.sessions.messages(dispatch.workerSessionId);
     const lastReply = [...messages]
       .reverse()
@@ -325,7 +397,8 @@ export class DispatchService {
       .filter(Boolean)
       .join("\n\n");
     if (!this.#report(dispatch, status, text, why)) return;
-    this.#needsReview.add(dispatch.leadSessionId);
+    const pending = this.#needsReview.get(dispatch.leadSessionId) ?? [];
+    this.#needsReview.set(dispatch.leadSessionId, [...pending, dispatch.leadRunId]);
     await this.#advance(dispatch.leadSessionId);
   }
 

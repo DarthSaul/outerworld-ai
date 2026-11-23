@@ -157,6 +157,9 @@ export function commsRoutes(deps: CommsDeps): Hono {
     return c.json(view);
   });
 
+  // A run's parent from its row, for chains that run through events logged before lineage.
+  const parentOf = (runId: string) => sessions.getRun(runId)?.parentRunId;
+
   app.get("/runs", (c) => {
     const raw = c.req.query("limit");
     const limit = raw === undefined ? RECENT_RUNS_DEFAULT : Number(raw);
@@ -166,7 +169,7 @@ export function commsRoutes(deps: CommsDeps): Hono {
     const view: RecentRun[] = sessions.recentRuns(limit).map(({ run, sessionTitle }) => {
       // Only a run with a parent has anyone above it; the rest skip the lookup.
       const above = run.parentRunId
-        ? dispatchChainOf(deps.events, run.id)
+        ? dispatchChainOf(deps.events, run.id, parentOf)
             .slice(0, -1)
             .map((l) => l.agentId)
         : [];
@@ -187,9 +190,10 @@ export function commsRoutes(deps: CommsDeps): Hono {
   // Each pending request with who asked whom for its run, from the event log (ADR-0025).
   app.get("/consents", (c) =>
     c.json(
-      deps.consents
-        .pending()
-        .map((consent) => ({ ...consent, chain: dispatchChainOf(deps.events, consent.runId) })),
+      deps.consents.pending().map((consent) => ({
+        ...consent,
+        chain: dispatchChainOf(deps.events, consent.runId, parentOf),
+      })),
     ),
   );
   app.post("/consents/:id", async (c) => {
