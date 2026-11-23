@@ -780,7 +780,7 @@ export class RunService {
         ]),
       ) as ToolSet;
       const context = findModel(run.model)?.contextTokens ?? DEFAULT_CONTEXT;
-      const briefing = roleBriefing(agent.id, station, loaded.agents);
+      const briefing = roleBriefing(agent.id, station, loaded.agents, { depth: run.depth });
 
       const maxSteps = this.#o.maxSteps ?? 12;
       for (let step = 1; step <= maxSteps; step++) {

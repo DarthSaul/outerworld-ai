@@ -334,6 +334,12 @@ describe("nested dispatch", () => {
     await t.service.send(lead.id, "Plan it");
     await until(() => t.reports(lead.id).length === 1, "the report");
     expect(t.toolsOf("Quill")[0]).not.toContain("dispatch");
+    // Its briefing agrees: no roster of crew to hand work to, and a plain "do it yourself".
+    const system = t.model.doStreamCalls
+      .map((c) => String(c.prompt.find((m) => m.role === "system")?.content ?? ""))
+      .find((s) => s.includes("You are Quill"));
+    expect(system).not.toContain("You can hand part");
+    expect(system).toContain("Do it yourself and report back.");
     const [d] = t.dispatches.forLeadSession(lead.id);
     expect(t.errorsIn(d?.workerSessionId ?? "")).toEqual([
       'the tool "dispatch" is not granted to this crew member',

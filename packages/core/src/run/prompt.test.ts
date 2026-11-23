@@ -194,6 +194,23 @@ describe("roleBriefing", () => {
     const off = { ...withLab, dispatch: { ...withLab.dispatch, maxDepth: 0 } };
     expect(roleBriefing("quill", off, team)).not.toContain("hand part");
   });
+
+  it("tells crew at the depth limit to do the work itself, as its tools do", () => {
+    const deep: StationConfig = {
+      ...station,
+      dispatch: { ...station.dispatch, maxDepth: 2 },
+    };
+    const team = [
+      { id: "vesper", config: a("Vesper", "command", "overseer") },
+      { id: "quill", config: { ...a("Quill", "ops", "crew"), canDispatch: true } },
+      { id: "scout", config: a("Scout", "ops", "crew") },
+    ];
+    expect(roleBriefing("quill", deep, team, { depth: 1 })).toContain("You can hand part");
+    const atLimit = roleBriefing("quill", deep, team, { depth: 2 });
+    expect(atLimit).not.toContain("You can hand part");
+    expect(atLimit).not.toContain("(id: scout)");
+    expect(atLimit).toContain("Do it yourself and report back.");
+  });
 });
 
 describe("helpers", () => {

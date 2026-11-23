@@ -202,12 +202,15 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
 
 /**
  * What an agent is told about its place on the station. The Overseer gets the crew roster (who it
- * can hand work to in Phase 5); crew get their room and who leads.
+ * can hand work to in Phase 5); crew get their room and who leads. `context.depth` is the run's
+ * depth: a crew member with dispatch is told whom it can reach only below the station's limit,
+ * and at the limit that it must do the work itself, matching the tools the run is offered.
  */
 export function roleBriefing(
   agentId: string,
   station: StationConfig,
   crew: readonly CrewMember[],
+  context: { readonly depth?: number } = {},
 ): string {
   const me = crew.find((c) => c.id === agentId);
   const roomName = (id: string) => station.rooms.find((r) => r.id === id)?.name ?? id;
@@ -232,6 +235,12 @@ export function roleBriefing(
   // A crew member with dispatch is told exactly who policy lets it reach, and how (ADR-0024).
   const reach = dispatchReach(agentId, station, crew);
   if (reach.length === 0) return intro;
+  if ((context.depth ?? 0) >= station.dispatch.maxDepth) {
+    return [
+      intro,
+      "This task was handed to you at the station's limit for passing work on, so you cannot hand any of it to others. Do it yourself and report back.",
+    ].join("\n\n");
+  }
   const lines = reach.map((r) => {
     const who = crew.find((c) => c.id === r.agentId);
     const how =
