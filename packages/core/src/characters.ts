@@ -2,8 +2,9 @@ import { CHARACTER_ART } from "./character-art.js";
 
 /**
  * The pixel characters an agent can appear as (ADR-0013): painted characters shipped as art
- * (ADR-0017), and 17 drawn characters generated on a 20×26 grid (the design exports 24; 7 are
- * retired, ADR-0021). An agent stores its character's `id`, so order is only the picker's order.
+ * (ADR-0017), and 17 drawn characters generated on a 20×26 grid (7 more were retired, ADR-0021,
+ * and their exports removed, ADR-0024). An agent stores its character's `id`, so order is only
+ * the picker's order.
  * The generator draws the drawn ones. Ported from docs/design/station-dashboard/src/characterSprites.ts; the
  * exported PNGs in docs/design/station-dashboard/sprites/1x are the reference, and
  * characters.test.ts checks every grid against them pixel for pixel. Pure: no DOM, no canvas.
