@@ -80,20 +80,64 @@ describe("Crew screen", () => {
       ).toEqual(["vesper"]),
     );
     expect(within(top).getByText(term("overseer.role"))).toBeInTheDocument();
-    const rule = side.querySelector("[data-overseer-rule]") as HTMLElement;
+    const rule = side.querySelector("[data-head-rule]") as HTMLElement;
     const add = within(side).getByRole("link", { name: `+ ${term("agent.verb")}` });
     const order = (a: Node, b: Node) =>
       a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING;
     expect(order(top, rule)).toBeTruthy();
     expect(order(rule, add)).toBeTruthy();
     expect(rule.className).toMatch(/border-t\b/);
-    // Rooms has no Overseer to lead with.
+    // Rooms leads with Command instead.
     await userEvent.click(
       within(screen.getByRole("group", { name: term("crewPage.view") })).getByRole("button", {
         name: term("rooms"),
       }),
     );
     expect(side.querySelector("[data-overseer-list]")).toBeNull();
+  });
+
+  it("puts Command (the Overseer's room) above Add room, set apart by a thin rule", async () => {
+    const fake = fakeApi();
+    // The station lists Command last; the rooms list still leads with it.
+    fake.state.station = { ...fake.state.station, rooms: [...fake.state.station.rooms].reverse() };
+    renderApp("/crew?listing=rooms", fake);
+    const side = await nav();
+    const top = await waitFor(() => {
+      const el = side.querySelector("[data-command-list]");
+      if (!el) throw new Error("no rooms yet");
+      return el as HTMLElement;
+    });
+    expect(
+      within(top)
+        .getAllByRole("listitem")
+        .map((i) => i.dataset.roomItem),
+    ).toEqual(["command"]);
+    const rest = side.querySelector('[data-listing="rooms"]') as HTMLElement;
+    expect(
+      within(rest)
+        .getAllByRole("listitem")
+        .map((i) => i.dataset.roomItem),
+    ).toEqual(["operations"]);
+    const rule = side.querySelector("[data-head-rule]") as HTMLElement;
+    const add = within(side).getByRole("link", { name: `+ ${term("room.verb")}` });
+    const order = (a: Node, b: Node) =>
+      a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING;
+    expect(order(top, rule)).toBeTruthy();
+    expect(order(rule, add)).toBeTruthy();
+    expect(order(add, rest)).toBeTruthy();
+  });
+
+  it("pads each room in the list and wraps a long name instead of cutting it short", async () => {
+    renderApp("/crew?listing=rooms");
+    const side = await nav();
+    const name = await waitFor(() => {
+      const el = side.querySelector('[data-room-item="operations"] [data-room-name]');
+      if (!el) throw new Error("no rooms yet");
+      return el as HTMLElement;
+    });
+    expect(name.className).toMatch(/\bwrap-break-word\b/);
+    expect(name.className).not.toMatch(/\btruncate\b/);
+    expect(name.closest("a")?.className).toMatch(/\bpy-3\b/);
   });
 
   it("opens a crew member's setup in the main panel, marking them in the list", async () => {
@@ -123,12 +167,12 @@ describe("Crew screen", () => {
       return el as HTMLElement;
     });
     expect(
-      within(list)
-        .getAllByRole("listitem")
-        .map((i) => i.dataset.roomItem),
+      Array.from(side.querySelectorAll<HTMLElement>("[data-room-item]")).map(
+        (i) => i.dataset.roomItem,
+      ),
     ).toEqual(["command", "operations"]);
     expect(within(main(container)).getByText(term("crewPage.pickRoom.title"))).toBeVisible();
-    await user.click(within(list).getByRole("link", { name: /Command/ }));
+    await user.click(within(side).getByRole("link", { name: /Command/ }));
     const command = await screen.findByRole("region", { name: "Command" });
     expect(within(command).getByRole("link", { name: "Vesper" })).toBeInTheDocument();
     expect(within(command).getByText(term("overseer.role"))).toBeInTheDocument();
@@ -139,13 +183,28 @@ describe("Crew screen", () => {
     );
   });
 
-  it("shows a room's props as toggles and places a prop with one click", async () => {
+  it("shows a room's props as rows like Config's connectors, and places one with one click", async () => {
     const user = userEvent.setup();
-    const { calls } = renderApp("/crew?listing=rooms&room=operations");
+    const { calls, container } = renderApp("/crew?listing=rooms&room=operations");
     const ops = await screen.findByRole("region", { name: "Operations" });
-    const web = within(ops).getByRole("checkbox", { name: term("prop.web") });
+    const place = (kind: string) =>
+      within(ops).getByRole("checkbox", {
+        name: termWith("room.props.placeName", { name: term(`prop.${kind}` as "prop.web") }),
+      });
+    // One full-width row each: logo, name, object, what it does, and a Place box.
+    const rows = Array.from(ops.querySelectorAll<HTMLElement>("[data-room-prop]"));
+    expect(rows.map((r) => r.dataset.roomProp)).toEqual(["web", "files", "memory"]);
+    const files = rows[1] as HTMLElement;
+    expect(files.dataset.placed).toBe("true");
+    expect(files.className).toMatch(/\bborder-cyan\b/);
+    expect(files.querySelector('[data-ability-logo="files"]')).not.toBeNull();
+    expect(files).toHaveTextContent(term("object.files"));
+    expect(files).toHaveTextContent(term("item.prop.files.hint"));
+    expect(within(files).getByText(term("room.props.place"))).toBeInTheDocument();
+    const web = place("web");
     expect(web).not.toBeChecked();
-    expect(within(ops).getByRole("checkbox", { name: term("prop.files") })).toBeChecked();
+    expect(place("files")).toBeChecked();
+    expect(await axe(container)).toHaveNoViolations();
     await user.click(web);
     expect(calls.at(-1)).toEqual({
       method: "PATCH",
@@ -339,7 +398,9 @@ describe("Brief", () => {
     expect(web.querySelector("[data-tool-source]")).toHaveTextContent(
       `web_fetch · ${term("grant")}: ${term("prop.web")}`,
     );
-    expect(web.querySelector('svg[data-icon="web"]')).not.toBeNull();
+    // Each item's icon is a standard emoji (ADR-0026), not a drawn glyph.
+    expect(web.querySelector('[data-icon="web"]')?.textContent).toBe("🌐");
+    expect(tools.querySelector("svg")).toBeNull();
   });
 
   it("marks each tool read or write", async () => {
@@ -383,7 +444,7 @@ describe("Brief", () => {
     });
     expect(line).toHaveTextContent(`${term("connector")}: Notion${term("tools.connector.full")}`);
     expect(line).toHaveTextContent("30 tools · 20 read, 10 write");
-    expect(line.querySelector('svg[data-icon="connector"]')).not.toBeNull();
+    expect(line.querySelector('[data-icon="connector"]')?.textContent).toBe("🔌");
     // The thirty tools are not spelled out in the panel until asked for, then in a bounded box.
     const toggle = within(line).getByText(term("tools.connector.show"));
     const details = toggle.closest("details") as HTMLDetailsElement;

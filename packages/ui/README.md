@@ -18,7 +18,7 @@ the glossary.
 
 | Export | What it is |
 |--------|------------|
-| `DashboardMap` | The station map in three styles (`MAP_STYLES`: schematic, floorplan, polygon). It draws rooms around the Bridge, hallways routed between doors, packets while a dispatch runs, a draw-hallway mode (`drawFrom`), and the stopped scrim (`paused`). Room, crew and hallway selection go through callbacks. The plane is never smaller than `--st-map-min-*`: drag to pan, zoom buttons, and Recenter to fit every room (ADR-0014). |
+| `DashboardMap` | The station map in three styles (`MAP_STYLES`: schematic, floorplan, polygon). It draws the rooms as an org tree under the Bridge (ADR-0025), hallways routed between doors, packets while a dispatch runs, a draw-hallway mode (`drawFrom`), and the stopped scrim (`paused`). Room, crew and hallway selection go through callbacks. The plane is never smaller than `--st-map-min-*`: drag to pan, zoom buttons, and Recenter to fit every room (ADR-0014). |
 | `OverseerComms`, `OverseerCommsBody` | The typed Overseer message (`useTypewriter`), (A)/(B) approvals, Next, and the order line (`orderPlaceholder` names who it goes to). Chatter and replies move on after the design's hold; a streaming reply waits. |
 | `FolderTab` | A folded column's handle: a tab on the left edge, cut at its free corners like a file folder's, its words running down it; `controls` names the column it unfolds (ADR-0018). |
 | `Scanner` | Crew and room pickers (each with its count), then the selected room, crew member, or hallway. It has Stop run (`onStopRun`) and Demolish (`onDemolish`). |
@@ -43,7 +43,7 @@ the glossary.
 | `crewOptionGroups` | Every crew member as `Dropdown` options grouped by room: character, name underlined in their color, colored status. Shared by the scanner and crew comms. |
 | `MenuButton`, `menuItemClass`, `MenuItemBody` | A tab-styled button opening a menu of destinations (the footer's System menu): items are the caller's links with `role="menuitem"`, an icon beside a title over a subtitle. ↓ ↑ Home End move, Escape closes to the button, Tab closes and moves on, a click outside closes. |
 | `BrandIcon` | A service's logo by core's `AbilityBrand` (`notion`, `github`, `gmail`), from Simple Icons, in the current color. Decorative. |
-| `PixelIcon` | A pixel glyph in the current color, `size` `sm` / `md` / `lg`: the menu's `gear`, `sliders`, `bolt` (9 × 9) and every capability icon in core's `ItemIconName` (8 × 8). Decorative. |
+| `Icon`, `ICON_EMOJI` | An icon as a standard emoji in the emoji font (`--st-font-emoji`), `size` `sm` / `md` / `lg`: the menu's `gear` (Settings, System) and `bolt`, and every capability icon in core's `ItemIconName` (ADR-0026). Decorative. |
 | `Dropdown` | A select drawn in the station style: a button opening a listbox of grouped options with rich labels (avatar, colored status). Arrow keys, Home/End, type-ahead, Enter/Space, Escape and Tab; focus moves to the options while open; a click outside closes it. |
 | `Checkbox`, `fieldClass`, `inputClass` | A checkbox drawn as a pixel box (the native input stays, visually hidden and focusable), and the classes for a labelled field and an input or select at the shared form height. |
 | `EmptyState` | A status region: a title, one sentence, and at most one action. |

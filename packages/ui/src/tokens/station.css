@@ -83,6 +83,8 @@
   /* Type */
   --st-font-display: "Press Start 2P", monospace; /* labels, titles, buttons */
   --st-font-body: "VT323", monospace; /* body copy and values */
+  --st-font-emoji:
+    "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; /* icons */
   --st-line-height: 1.15;
   /*
    * The design pixel (Settings › Appearance › Display). The design is drawn at a 19px root (the

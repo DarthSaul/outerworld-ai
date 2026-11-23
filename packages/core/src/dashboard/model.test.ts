@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { lookFor } from "../characters.js";
 import { parseAgentConfig } from "../config/agent-config.js";
 import { parseStationConfig } from "../config/station-config.js";
-import { BRIDGE_RECT } from "./layout.js";
+import { BRIDGE_RECT, branchTag, treeRoute } from "./layout.js";
 import { type DashboardInput, dashboardModel } from "./model.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -32,7 +32,7 @@ const input = (over: Partial<DashboardInput> = {}): DashboardInput => ({
 });
 
 describe("dashboardModel on the demo station", () => {
-  it("puts the Overseer's room (Command) on the Bridge and the others around it", () => {
+  it("puts the Overseer's room (Command) on the Bridge at the top, the others below it", () => {
     const d = dashboardModel(input());
     expect(d.bridgeId).toBe("command");
     expect(d.rooms.map((r) => [r.id, r.sector, r.bridge, r.colorIndex])).toEqual([
@@ -41,6 +41,30 @@ describe("dashboardModel on the demo station", () => {
       ["research", "B-1", false, 1],
     ]);
     expect(d.rooms[0]?.rect).toEqual(BRIDGE_RECT);
+    for (const room of d.rooms.slice(1))
+      expect(room.rect.y).toBeGreaterThan(BRIDGE_RECT.y + BRIDGE_RECT.h);
+  });
+
+  it("draws Bridge hallways as org-tree branches, whichever way the lane runs (ADR-0025)", () => {
+    const [toCommand] = dashboardModel(input()).lanes;
+    const ops = dashboardModel(input()).rooms.find((r) => r.id === "operations");
+    if (!toCommand || !ops) throw new Error("fixture");
+    // operations-to-command starts at Operations' top and ends under the Bridge.
+    const fromBridge = treeRoute(BRIDGE_RECT, ops.rect, 0);
+    expect(toCommand.route).toEqual([...fromBridge].reverse());
+    expect(toCommand.route.at(-1)).toEqual([50, BRIDGE_RECT.y + BRIDGE_RECT.h]);
+    expect(toCommand.tag).toEqual(branchTag(fromBridge));
+    // The same lane the other way round is the same line, run from the Bridge.
+    const flipped = dashboardModel(
+      input({
+        station: {
+          ...station.value,
+          lanes: [{ id: "command-to-operations", from: "command", to: "operations" }],
+        },
+      }),
+    ).lanes[0];
+    expect(flipped?.route).toEqual(fromBridge);
+    expect(flipped?.tag).toEqual(toCommand.tag);
   });
 
   it("lists crew with the Overseer last, each with its look", () => {

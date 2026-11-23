@@ -7,7 +7,7 @@ import {
   tabClass,
 } from "@darthsaul/outerworld-ai-ui";
 import { useState } from "react";
-import { CrewButton, SessionButton } from "../comms/CommsPage.js";
+import { CrewButton, overseerRule, SessionButton } from "../comms/CommsPage.js";
 import { ErrorNote } from "../components/ErrorNote.js";
 import { type SessionSummary, useAllSessions, useStationView } from "../queries.js";
 
@@ -80,7 +80,7 @@ export function CrewPanel({
             {agents.map((a) => {
               const crew = dashboard.crew.find((c) => c.id === a.id);
               return (
-                <li key={a.id}>
+                <li key={a.id} className={overseerRule(a)}>
                   <CrewButton
                     agent={a}
                     crew={crew}

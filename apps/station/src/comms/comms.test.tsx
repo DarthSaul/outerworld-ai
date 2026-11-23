@@ -288,6 +288,27 @@ describe("COMMS: reading a conversation", () => {
     void user;
   });
 
+  it("lists the Overseer first, set apart from the rest by a thin rule", async () => {
+    const fake = fakeApi();
+    // The daemon lists Quill before the Overseer.
+    const entries = [...fake.state.agents.entries()].reverse();
+    fake.state.agents.clear();
+    for (const [k, v] of entries) fake.state.agents.set(k, v);
+    const { container } = renderApp("/comms", fake);
+    const list = await waitFor(() => {
+      const el = container.querySelector<HTMLElement>("[data-crew-list]");
+      if (!el || within(el).queryAllByRole("listitem").length < 2) throw new Error("no crew yet");
+      return el;
+    });
+    const items = within(list).getAllByRole("listitem");
+    expect(items.map((i) => within(i).getByRole("button").getAttribute("aria-label"))).toEqual([
+      "Vesper",
+      "Quill",
+    ]);
+    expect(items[0]?.className).toMatch(/\bborder-b\b/);
+    expect(items[1]?.className ?? "").not.toMatch(/\bborder-b\b/);
+  });
+
   it("keeps the crew, the chosen crew member, and their sessions in one column, lists scrolling", async () => {
     const fake = fakeApi();
     fake.seedSession("vesper", "One");

@@ -1,11 +1,11 @@
 import { type GlossaryKey, term } from "@darthsaul/outerworld-ai-core";
 import {
   CrtToggle,
+  Icon,
+  type IconName,
   MenuButton,
   MenuItemBody,
   menuItemClass,
-  PixelIcon,
-  type PixelIconName,
   StationHeader,
   StationVitals,
   StatusDrawer,
@@ -109,11 +109,11 @@ function Tabs() {
 /** The System menu's destinations: an icon, a title, and what each holds. */
 const SYSTEM_ITEMS: ReadonlyArray<{
   path: string;
-  icon: PixelIconName;
+  icon: IconName;
   title: GlossaryKey;
   subtitle: GlossaryKey;
 }> = [
-  { path: SETTINGS_PATH, icon: "sliders", title: "settings", subtitle: "nav.settings.hint" },
+  { path: SETTINGS_PATH, icon: "gear", title: "settings", subtitle: "nav.settings.hint" },
   { path: ABILITIES_PATH, icon: "bolt", title: "abilities", subtitle: "abilities.hint" },
 ];
 
@@ -124,7 +124,7 @@ function SystemMenu() {
   return (
     <MenuButton
       label={term("nav.system")}
-      icon={<PixelIcon name="gear" size="sm" />}
+      icon={<Icon name="gear" size="sm" />}
       active={within(SYSTEM_PATH)}
     >
       {SYSTEM_ITEMS.map((item) => (
@@ -135,7 +135,7 @@ function SystemMenu() {
           className={({ isActive }) => menuItemClass(isActive)}
         >
           <MenuItemBody
-            icon={<PixelIcon name={item.icon} size="lg" />}
+            icon={<Icon name={item.icon} size="lg" />}
             title={term(item.title)}
             subtitle={term(item.subtitle)}
           />

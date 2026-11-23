@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   BRIDGE_RECT,
+  branchTag,
   laneLabel,
+  type Point,
   placeRooms,
   pointAlong,
   type Rect,
@@ -9,45 +11,66 @@ import {
   routeLength,
   sectorFor,
   tagPoint,
+  treeRoute,
 } from "./layout.js";
 
 const overlaps = (a: Rect, b: Rect) =>
   a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 
+const ids = (n: number) => ["bridge", ...Array.from({ length: n }, (_, i) => `room-${i}`)];
+
 describe("placeRooms", () => {
-  it("puts the Overseer's room on the Bridge and the design's three rooms around it", () => {
-    const placed = placeRooms(["command", "research", "operations", "build"], "command");
-    expect(placed.map((p) => [p.id, p.sector, p.colorIndex, p.bridge])).toEqual([
-      ["command", "HQ", 0, true],
-      ["research", "A-1", 0, false],
-      ["operations", "B-1", 1, false],
-      ["build", "C-1", 2, false],
+  it("puts the Bridge at the top center and the other rooms in one row below it (ADR-0025)", () => {
+    const placed = placeRooms(["research", "command", "operations", "build"], "command");
+    expect(placed.map((p) => [p.id, p.sector, p.colorIndex, p.bridge, p.row])).toEqual([
+      ["command", "HQ", 0, true, -1],
+      ["research", "A-1", 0, false, 0],
+      ["operations", "B-1", 1, false, 0],
+      ["build", "C-1", 2, false, 0],
     ]);
     expect(placed[0]?.rect).toEqual(BRIDGE_RECT);
+    expect(BRIDGE_RECT).toEqual({ x: 35, y: 4, w: 30, h: 30 });
     expect(placed.slice(1).map((p) => p.rect)).toEqual([
-      { x: 4, y: 8, w: 28, h: 36 },
-      { x: 68, y: 8, w: 28, h: 36 },
-      { x: 28, y: 68, w: 44, h: 29 },
+      { x: 4, y: 46, w: 28, h: 50 },
+      { x: 36, y: 46, w: 28, h: 50 },
+      { x: 68, y: 46, w: 28, h: 50 },
     ]);
   });
 
-  it("works without a Bridge (no Overseer yet)", () => {
+  it("centers a short row, at most 30% wide per room", () => {
+    const [, one] = placeRooms(ids(1), "bridge");
+    expect(one?.rect).toEqual({ x: 35, y: 46, w: 30, h: 50 });
+    const [, left, right] = placeRooms(ids(2), "bridge");
+    expect([left?.rect.x, right?.rect.x, left?.rect.w]).toEqual([18, 52, 30]);
+  });
+
+  it("wraps past four rooms into a grid, and shortens the Bridge to make room", () => {
+    const placed = placeRooms(ids(6), "bridge");
+    expect(placed.map((p) => p.row)).toEqual([-1, 0, 0, 0, 0, 1, 1]);
+    expect(placed[0]?.rect.h).toBe(22);
+    expect(placed[5]?.rect.x).toBe(placed[1]?.rect.x);
+    expect(placeRooms(ids(13), "bridge")[0]?.rect.h).toBe(16);
+  });
+
+  it("lays the rooms out from the top without a Bridge (no Overseer yet)", () => {
     const placed = placeRooms(["a", "b"]);
     expect(placed.every((p) => !p.bridge)).toBe(true);
     expect(placed).toHaveLength(2);
+    expect(placed.map((p) => p.rect.y)).toEqual([4, 4]);
   });
 
   it.each(Array.from({ length: 14 }, (_, n) => n))(
-    "never overlaps two rooms and stays on the map with %i rooms around the Bridge",
+    "keeps every room below the Bridge, apart, and on the map with %i rooms",
     (n) => {
-      const ids = ["bridge", ...Array.from({ length: n }, (_, i) => `room-${i}`)];
-      const placed = placeRooms(ids, "bridge");
+      const placed = placeRooms(ids(n), "bridge");
       expect(placed).toHaveLength(n + 1);
+      const bridgeBottom = BRIDGE_RECT.y + (placed[0]?.rect.h ?? 0);
       for (const [i, p] of placed.entries()) {
         expect(p.rect.x).toBeGreaterThanOrEqual(0);
         expect(p.rect.y).toBeGreaterThanOrEqual(0);
         expect(p.rect.x + p.rect.w).toBeLessThanOrEqual(100);
         expect(p.rect.y + p.rect.h).toBeLessThanOrEqual(100);
+        if (!p.bridge) expect(p.rect.y).toBeGreaterThan(bridgeBottom);
         for (const q of placed.slice(i + 1))
           expect(overlaps(p.rect, q.rect), `${p.id}/${q.id}`).toBe(false);
       }
@@ -59,25 +82,126 @@ describe("placeRooms", () => {
   });
 });
 
-describe("routeBetween", () => {
-  const [, research, operations, build] = placeRooms(
-    ["command", "research", "operations", "build"],
-    "command",
-  ).map((p) => p.rect);
+describe("treeRoute (ADR-0025)", () => {
+  const [bridge, left, middle, right] = placeRooms(ids(3), "bridge");
 
-  it("matches the design's Bridge hallways", () => {
-    if (!research || !operations || !build) throw new Error("layout");
-    expect(routeBetween(BRIDGE_RECT, research)).toEqual([
-      [38, 40],
-      [32, 40],
+  it("runs down from the Bridge to a bus, along it, and down into a first-row room", () => {
+    if (!bridge || !left || !middle || !right) throw new Error("layout");
+    expect(treeRoute(bridge.rect, left.rect, left.row)).toEqual([
+      [50, 34],
+      [50, 40],
+      [18, 40],
+      [18, 46],
     ]);
-    expect(routeBetween(BRIDGE_RECT, operations)).toEqual([
-      [62, 40],
-      [68, 40],
+    expect(treeRoute(bridge.rect, right.rect, right.row)).toEqual([
+      [50, 34],
+      [50, 40],
+      [82, 40],
+      [82, 46],
     ]);
-    expect(routeBetween(BRIDGE_RECT, build)).toEqual([
-      [50, 64],
-      [50, 68],
+    // Straight below the Bridge: one drop.
+    expect(treeRoute(bridge.rect, middle.rect, middle.row)).toEqual([
+      [50, 34],
+      [50, 46],
+    ]);
+  });
+
+  it("reaches a later row down the gutter on the room's left, entering from its side", () => {
+    // Six rooms: four in the first row, then room-4 and room-5 below.
+    const placed = placeRooms(ids(6), "bridge");
+    const [b, lower] = [placed[0], placed[5]];
+    if (!b || !lower) throw new Error("layout");
+    expect(lower.row).toBe(1);
+    const route = treeRoute(b.rect, lower.rect, lower.row);
+    const last = route[route.length - 1];
+    expect(last).toEqual([lower.rect.x, lower.rect.y + lower.rect.h / 2]);
+    expect(route[route.length - 2]?.[0]).toBe(lower.rect.x - 2);
+  });
+
+  it.each(Array.from({ length: 14 }, (_, n) => n))(
+    "never passes through another room, orthogonal throughout, with %i rooms",
+    (n) => {
+      const placed = placeRooms(ids(n), "bridge");
+      const [b, ...rest] = placed;
+      if (!b) throw new Error("layout");
+      const inside = (x: number, y: number, r: Rect) =>
+        x > r.x + 0.5 && x < r.x + r.w - 0.5 && y > r.y + 0.5 && y < r.y + r.h - 0.5;
+      for (const child of rest) {
+        const route = treeRoute(b.rect, child.rect, child.row);
+        expect(route.length).toBeGreaterThanOrEqual(2);
+        for (let i = 1; i < route.length; i++) {
+          const [x1, y1] = route[i - 1] ?? [0, 0];
+          const [x2, y2] = route[i] ?? [0, 0];
+          expect(x1 === x2 || y1 === y2).toBe(true);
+          // Sample the segment and check no point lies inside any room, its own two included.
+          for (let s = 0; s <= 20; s++) {
+            const x = x1 + ((x2 - x1) * s) / 20;
+            const y = y1 + ((y2 - y1) * s) / 20;
+            for (const p of placed)
+              expect(inside(x, y, p.rect), `${child.id} via ${p.id}`).toBe(false);
+          }
+        }
+      }
+    },
+  );
+
+  it("tags a Bridge hallway on the branch nearest its room, never on the shared bus", () => {
+    if (!bridge || !left || !middle) throw new Error("layout");
+    expect(branchTag(treeRoute(bridge.rect, left.rect, left.row))).toEqual([18, 43]);
+    expect(branchTag(treeRoute(bridge.rect, middle.rect, middle.row))).toEqual([50, 40]);
+    const placed = placeRooms(ids(6), "bridge");
+    const lower = placed[5];
+    if (!placed[0] || !lower) throw new Error("layout");
+    const tag = branchTag(treeRoute(placed[0].rect, lower.rect, lower.row));
+    expect(tag?.[0]).toBe(lower.rect.x - 2);
+  });
+});
+
+describe("routeBetween", () => {
+  const [, research, operations] = placeRooms(["command", "research", "operations"], "command").map(
+    (p) => p.rect,
+  );
+
+  it("runs straight between two rooms side by side in a row", () => {
+    if (!research || !operations) throw new Error("layout");
+    expect(routeBetween(research, operations)).toEqual([
+      [48, 71],
+      [52, 71],
+    ]);
+  });
+
+  it("detours through the row gap between non-adjacent rooms, straight between adjacent ones", () => {
+    // Six rooms: row 0 spans y 38–65, so the gap below it runs at y 67. room-2 sits between
+    // room-1 and room-3, and the Bridge, room-0, room-4 and room-5 block the station-wide detours.
+    const placed = placeRooms(ids(6), "bridge");
+    const [one, two, three] = [placed[2], placed[3], placed[4]];
+    if (!one || !two || !three) throw new Error("layout");
+    const othersThan = (...skip: Rect[]) =>
+      placed.map((p) => p.rect).filter((r) => !skip.includes(r));
+    const route = routeBetween(one.rect, three.rect, othersThan(one.rect, three.rect));
+    expect(route).toEqual([
+      [38, 65],
+      [38, 67],
+      [86, 67],
+      [86, 65],
+    ]);
+    const inside = ([x, y]: Point, r: Rect) =>
+      x > r.x + 0.5 && x < r.x + r.w - 0.5 && y > r.y + 0.5 && y < r.y + r.h - 0.5;
+    for (let i = 1; i < route.length; i++) {
+      const [x1, y1] = route[i - 1] ?? [0, 0];
+      const [x2, y2] = route[i] ?? [0, 0];
+      for (let s = 0; s <= 20; s++) {
+        const at: Point = [x1 + ((x2 - x1) * s) / 20, y1 + ((y2 - y1) * s) / 20];
+        for (const p of placed) expect(inside(at, p.rect), p.id).toBe(false);
+      }
+    }
+    const tag = tagPoint(route);
+    expect(tag?.[1]).toBe(67);
+    for (const p of placed) expect(inside(tag ?? [0, 0], p.rect), p.id).toBe(false);
+    // Neighbors in a row still get one straight hallway.
+    expect(routeBetween(one.rect, two.rect, othersThan(one.rect, two.rect))).toEqual([
+      [48, 51.5],
+      [52, 51.5],
     ]);
   });
 

@@ -136,6 +136,7 @@ export { type ChatterLine, type ChatterSnapshot, chatterLines } from "./dashboar
 export {
   BRIDGE_RECT,
   BRIDGE_SECTOR,
+  branchTag,
   laneLabel,
   type Point,
   placeRooms,
@@ -146,6 +147,7 @@ export {
   routeLength,
   sectorFor,
   tagPoint,
+  treeRoute,
 } from "./dashboard/layout.js";
 export {
   type Dashboard,

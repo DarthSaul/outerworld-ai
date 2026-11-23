@@ -39,6 +39,7 @@
   /* Type */
   --st-font-display: 'Press Start 2P', monospace; /* labels, titles, buttons — 6–18px */
   --st-font-body:    'VT323', monospace;          /* body copy, values — 14–22px, base 19px */
+  --st-font-emoji:   'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif; /* icons (ADR-0026) */
 
   /* Geometry — NO border radius anywhere except: A/B button glyph circles, pause pill, character pedestal */
   --st-gap: 14px;

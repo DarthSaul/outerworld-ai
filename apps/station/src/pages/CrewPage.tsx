@@ -23,6 +23,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, type ReactNode, useId, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
+import { AbilityLogo } from "../components/AbilityLogo.js";
 import { ErrorNote } from "../components/ErrorNote.js";
 import { formatUsd } from "../components/format.js";
 import { ScrollArea } from "../components/ScrollArea.js";
@@ -110,7 +111,10 @@ function CrewItem({
   );
 }
 
-/** One room in the crew screen's sidenav: its color, sector, name, and how many crew it holds. */
+/**
+ * One room in the crew screen's sidenav: its color, sector, name, and how many crew it holds. A
+ * long name wraps onto more lines rather than being cut short.
+ */
 function RoomItem({
   room,
   sector,
@@ -129,7 +133,7 @@ function RoomItem({
       <Link
         to={`/crew?listing=rooms&room=${encodeURIComponent(room.id)}`}
         aria-current={current ? "page" : undefined}
-        className={`flex items-center gap-2 border-2 px-2 py-1.5 no-underline ${current ? "border-cyan bg-active-bg" : "border-line-soft bg-well hover:bg-hover"}`}
+        className={`flex items-center gap-2.5 border-2 px-2.5 py-3 no-underline ${current ? "border-cyan bg-active-bg" : "border-line-soft bg-well hover:bg-hover"}`}
       >
         <span
           className="shrink-0 px-1 py-0.5 font-display text-d7 text-ink"
@@ -137,7 +141,11 @@ function RoomItem({
         >
           {sector}
         </span>
-        <span className="min-w-0 flex-1 truncate text-b19 uppercase" style={{ color }}>
+        <span
+          data-room-name
+          className="min-w-0 flex-1 wrap-break-word text-b19 uppercase"
+          style={{ color }}
+        >
           {room.name}
         </span>
         <span className="shrink-0 font-display text-d6 text-fg-mute uppercase">
@@ -202,23 +210,43 @@ function RoomSection({
           {room.description ? (
             <p className="m-0 text-b18 text-fg-soft">{room.description}</p>
           ) : null}
-          <fieldset className="m-0 flex flex-col gap-1.5 border-0 p-0">
-            <legend className="mb-1.5 p-0">
-              <PanelLabel>{term("grants")}</PanelLabel>
-            </legend>
-            <div className="flex flex-wrap gap-x-5 gap-y-2">
-              {PROPS.map((kind) => (
-                <Checkbox
-                  key={kind}
-                  label={term(`prop.${kind}`)}
-                  checked={placed.has(kind)}
-                  disabled={update.isPending}
-                  onChange={() => toggle(kind)}
-                />
-              ))}
-            </div>
-            <p className="m-0 text-b15 text-fg-mute">{term("room.props.hint")}</p>
-          </fieldset>
+          {/* One full-width row per prop, laid out like Config's connector grants. */}
+          <section aria-label={term("grants")} className="flex flex-col gap-2">
+            <PanelLabel>{term("grants")}</PanelLabel>
+            <p className="m-0 text-b17 text-fg-soft">{term("room.props.hint")}</p>
+            <ul data-room-props className="m-0 flex list-none flex-col gap-2 p-0">
+              {PROPS.map((kind) => {
+                const on = placed.has(kind);
+                return (
+                  <li
+                    key={kind}
+                    data-room-prop={kind}
+                    data-placed={on}
+                    className={`flex min-w-0 items-start gap-3 border-2 p-2.5 ${on ? "border-cyan bg-active-bg" : "border-line-faint bg-well"}`}
+                  >
+                    <AbilityLogo icon={kind} />
+                    <div className="flex min-w-0 flex-1 flex-col gap-1">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <span className="font-display text-cyan text-d9 uppercase">
+                          {term(`prop.${kind}`)}
+                        </span>
+                        <Tag>{term(`object.${kind}`)}</Tag>
+                      </div>
+                      <p className="m-0 text-b17 text-fg-soft">{term(`item.prop.${kind}.hint`)}</p>
+                    </div>
+                    <Checkbox
+                      label={term("room.props.place")}
+                      aria-label={termWith("room.props.placeName", { name: term(`prop.${kind}`) })}
+                      checked={on}
+                      disabled={update.isPending}
+                      onChange={() => toggle(kind)}
+                      className="shrink-0 self-center"
+                    />
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
           <ErrorNote error={update.error ?? remove.error} />
           <div className="flex flex-col gap-1.5">
             <PanelLabel>{term("scanner.crew")}</PanelLabel>
@@ -487,10 +515,29 @@ export function CrewPage() {
       current={a.id === id && !adding}
     />
   );
-  // The Overseer heads the crew list, above Add; everyone else follows Add, below a thin rule.
+  const roomItem = (room: Room) => (
+    <RoomItem
+      key={room.id}
+      room={room}
+      sector={dashboard?.rooms.find((r) => r.id === room.id)?.sector ?? ""}
+      color={colorOf(room.id)}
+      crew={view.agents.filter((a) => a.config.roomId === room.id).length}
+      current={room.id === roomId && !adding}
+    />
+  );
+  // The Overseer heads the crew list, and Command (the Overseer's room) the rooms list, above
+  // Add; everything else follows Add, below a thin rule.
   const crew = overseerFirst(view.agents);
-  const overseers = listing === "agents" ? crew.filter((a) => a.config.role === "overseer") : [];
-  const others = crew.filter((a) => !overseers.includes(a));
+  const overseers = crew.filter((a) => a.config.role === "overseer");
+  const commandId = overseers[0]?.config.roomId;
+  const head =
+    listing === "agents"
+      ? overseers.map(crewItem)
+      : rooms.filter((r) => r.id === commandId).map(roomItem);
+  const rest =
+    listing === "agents"
+      ? crew.filter((a) => !overseers.includes(a)).map(crewItem)
+      : rooms.filter((r) => r.id !== commandId).map(roomItem);
 
   const listLink = (next: Listing) => (next === "agents" ? "/crew" : "/crew?listing=rooms");
   const addLink = listing === "agents" ? "/crew?add=agent" : "/crew?listing=rooms&add=room";
@@ -530,12 +577,15 @@ export function CrewPage() {
           className="flex shrink-0 flex-col gap-2 desktop:min-h-0 desktop:w-60"
         >
           <h2 className="sr-only">{term("crewPage.nav")}</h2>
-          {overseers.length > 0 ? (
+          {head.length > 0 ? (
             <>
-              <ul data-overseer-list className="m-0 mr-1 flex list-none flex-col gap-1.5 p-0">
-                {overseers.map(crewItem)}
+              <ul
+                {...{ [listing === "agents" ? "data-overseer-list" : "data-command-list"]: "" }}
+                className="m-0 mr-1 flex list-none flex-col gap-1.5 p-0"
+              >
+                {head}
               </ul>
-              <hr data-overseer-rule className="m-0 mr-1 border-0 border-line-faint border-t" />
+              <hr data-head-rule className="m-0 mr-1 border-0 border-line-faint border-t" />
             </>
           ) : null}
           {/* mr-1 matches the list's pr-1 (room for its scrollbar), so both are the same width. */}
@@ -552,18 +602,7 @@ export function CrewPage() {
             data-listing={listing}
             className="m-0 flex list-none flex-col gap-1.5 overflow-y-auto overscroll-y-contain p-0 pr-1 desktop:min-h-0 desktop:flex-1"
           >
-            {listing === "agents"
-              ? others.map(crewItem)
-              : rooms.map((room) => (
-                  <RoomItem
-                    key={room.id}
-                    room={room}
-                    sector={dashboard?.rooms.find((r) => r.id === room.id)?.sector ?? ""}
-                    color={colorOf(room.id)}
-                    crew={view.agents.filter((a) => a.config.roomId === room.id).length}
-                    current={room.id === roomId && !adding}
-                  />
-                ))}
+            {rest}
           </ul>
           {view.issues.length > 0 ? (
             <section aria-label={term("issues")} className="flex shrink-0 flex-col gap-1">

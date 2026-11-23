@@ -258,6 +258,8 @@ export const glossary = {
   "scanner.expand": "Show the scanner",
   "room.crew.none": "No crew in this room yet.",
   "room.props.hint": "Props placed here give every crew member in the room their tools.",
+  "room.props.place": "Place",
+  "room.props.placeName": "Place {name}",
   "agent.add.hint": "Pick a name and a room. You set the model, documents, and approval mode next.",
   "room.add.hint": "A room is a team. Place props in it to give its crew tools.",
   "station.map": "Station map",

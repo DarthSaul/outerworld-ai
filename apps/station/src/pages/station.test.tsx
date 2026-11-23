@@ -750,6 +750,10 @@ describe("Crew column", () => {
           .map((b) => b.getAttribute("aria-label")),
       ).toEqual(["Vesper", "Quill"]),
     );
+    // A thin rule under the Overseer sets them apart from the rest of the crew.
+    const [overseer, quill] = within(roster).getAllByRole("listitem");
+    expect(overseer?.className).toMatch(/\bborder-b\b/);
+    expect(quill?.className ?? "").not.toMatch(/\bborder-b\b/);
   });
 });
 

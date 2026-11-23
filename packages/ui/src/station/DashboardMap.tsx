@@ -317,7 +317,7 @@ const viewButton =
   "cursor-pointer border-2 border-line-soft bg-chip-bg px-2 py-1 font-display text-d7 text-fg-chip uppercase hover:border-cyan hover:text-cyan disabled:cursor-not-allowed disabled:opacity-50";
 
 /**
- * The station map (ADR-0013): rooms placed around the Bridge, hallways between them, packets
+ * The station map (ADR-0013): rooms in an org tree under the Bridge (ADR-0025), hallways between them, packets
  * where a dispatch is running, all from `Dashboard`. Three styles. The plane is never smaller
  * than --st-map-min-*: drag to pan it, zoom, or recenter to fit every room in view (ADR-0014).
  */

@@ -50,6 +50,7 @@ export {
   fieldClass,
   inputClass,
 } from "./station/form.js";
+export { ICON_EMOJI, ICONS, Icon, type IconName, type IconProps } from "./station/Icon.js";
 export { MenuButton, type MenuButtonProps, MenuItemBody, menuItemClass } from "./station/Menu.js";
 export {
   type CommsMessage,
@@ -60,12 +61,6 @@ export {
 } from "./station/OverseerComms.js";
 export { Panel, PanelLabel, type PanelProps } from "./station/Panel.js";
 export { type PanelTab, PanelTabs, type PanelTabsProps } from "./station/PanelTabs.js";
-export {
-  PIXEL_ICONS,
-  PixelIcon,
-  type PixelIconName,
-  type PixelIconProps,
-} from "./station/PixelIcon.js";
 export { Popup, type PopupProps } from "./station/Popup.js";
 export {
   RESIZE_KEY_STEP,
