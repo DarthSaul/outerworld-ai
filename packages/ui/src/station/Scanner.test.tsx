@@ -207,6 +207,20 @@ describe("Scanner", () => {
     expect(onSelect).toHaveBeenCalledWith({ type: "room", id: "operations" });
   });
 
+  it("says who asked for a dispatched mission, up the chain (ADR-0024)", () => {
+    const d = demoDashboard({
+      runs: [
+        { ...run("4", "wren", "running"), askedBy: ["vesper", "quill"] },
+        run("5", "wren", "completed"),
+      ],
+    });
+    const { container } = render(
+      <Scanner dashboard={d} selection={{ type: "agent", id: "wren" }} onSelect={() => {}} />,
+    );
+    const chains = [...container.querySelectorAll("[data-mission-chain]")];
+    expect(chains.map((c) => c.textContent)).toEqual(["Asked by: Vesper → Quill"]);
+  });
+
   it("disables stop run for an idle crew member", () => {
     render(
       <Scanner

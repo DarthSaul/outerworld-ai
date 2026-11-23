@@ -15,6 +15,7 @@ import {
   setup,
   streamOf,
 } from "../test/loop.js";
+import { dispatchChainOf } from "./dispatch-chain.js";
 import { DispatchService } from "./dispatch-service.js";
 
 /**
@@ -304,6 +305,14 @@ describe("nested dispatch", () => {
       "moth",
     ]);
     expect(t.service.tree(mothRun?.id ?? "").chain).toEqual(["moth", "wren", "quill", "vesper"]);
+    // The same chain walked through the stored log, one run.queued per level, for consent cards.
+    expect(dispatchChainOf(t.events, mothRun?.id ?? "").map((l) => l.agentId)).toEqual([
+      "vesper",
+      "quill",
+      "wren",
+      "moth",
+    ]);
+    expect(dispatchChainOf(t.events, root)).toEqual([{ agentId: "vesper", runId: root }]);
     // Dispatch is offered below the limit only.
     expect(t.toolsOf("Wren")[0]).toContain("dispatch");
     expect(t.toolsOf("Moth")[0]).not.toContain("dispatch");

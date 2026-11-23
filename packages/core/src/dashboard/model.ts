@@ -2,6 +2,7 @@ import { lookFor } from "../characters.js";
 import type { AgentConfig } from "../config/agent-config.js";
 import type { StationConfig } from "../config/station-config.js";
 import type { GlossaryKey } from "../glossary.js";
+import { dispatchReach } from "../policy/dispatch.js";
 import type { CrewActivityEntry } from "../run/crew-activity.js";
 import type { RunState } from "../run/run-state.js";
 import {
@@ -43,6 +44,8 @@ export interface DashboardRun {
   readonly createdAt: string;
   readonly steps: number;
   readonly title: string;
+  /** For a dispatched run: the agents above it in its chain, root first (ADR-0024). */
+  readonly askedBy?: readonly string[];
 }
 
 export interface DashboardInput {
@@ -72,6 +75,10 @@ export interface DashboardCrew {
   /** The character id this crew member appears as, always one that exists. */
   readonly look: string;
   readonly colorIndex: number;
+  /** Who this crew member can dispatch to, from core's `dispatchReach` (ADR-0024). */
+  readonly reach: readonly string[];
+  /** The hallways that reach uses; empty for the Overseer, which needs none. */
+  readonly reachLanes: readonly string[];
   /** Why the last run ended badly, when it did. */
   readonly detail?: string;
   readonly sessionId?: string;
@@ -167,6 +174,11 @@ export function dashboardModel(input: DashboardInput): Dashboard {
 
   const crew: DashboardCrew[] = agents.map(({ id, config }) => {
     const entry = activity[id] ?? { state: "idle" as const, runs: 0 };
+    // The same reach the dispatch policy enforces, so the map shows exactly that (ADR-0024).
+    const reach = dispatchReach(id, station, agents);
+    const reachLanes = [
+      ...new Set(reach.flatMap((r) => (r.via.kind === "lane" ? [r.via.laneId] : []))),
+    ];
     return {
       id,
       name: config.name,
@@ -175,6 +187,8 @@ export function dashboardModel(input: DashboardInput): Dashboard {
       status: crewDisplayStatus(entry),
       look: lookFor(id, config.look),
       colorIndex: placement.get(config.roomId)?.colorIndex ?? 0,
+      reach: reach.map((r) => r.agentId),
+      reachLanes,
       ...(entry.detail ? { detail: entry.detail } : {}),
       ...(entry.sessionId ? { sessionId: entry.sessionId } : {}),
     };

@@ -61,6 +61,7 @@
   --color-white: var(--st-white);
   --color-lane-auth: var(--st-lane-auth);
   --color-lane-selected: var(--st-lane-selected);
+  --color-lane-reach: var(--st-lane-reach);
   --color-done: var(--st-done);
   --color-room-0: var(--st-room-0);
   --color-room-1: var(--st-room-1);

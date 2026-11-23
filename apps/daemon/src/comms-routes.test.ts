@@ -54,7 +54,7 @@ const setup = (keyCheckStatus = 200, options: { titles?: boolean } = {}) => {
     const text = await res.text();
     return { status: res.status, text, json: text ? JSON.parse(text) : undefined };
   };
-  return { call, runs, events };
+  return { call, runs, events, services };
 };
 
 const untilSettled = async (call: ReturnType<typeof setup>["call"], sessionId: string) => {
@@ -203,6 +203,56 @@ describe("consents, kill switch, and spend", () => {
     expect((await call("GET", "/consents")).json).toEqual([]);
     expect((await call("POST", "/consents/nope", { decision: "approved" })).status).toBe(404);
     expect((await call("POST", "/consents/nope", { decision: "maybe" })).status).toBe(400);
+  });
+
+  it("gives each pending request the chain of who asked whom, from the event log (ADR-0024)", async () => {
+    const { call, events, services } = setup();
+    const { sessions, consents } = services;
+    const lead = sessions.createSession("vesper", "Chat");
+    const root = sessions.createRun({
+      sessionId: lead.id,
+      agentId: "vesper",
+      trigger: "user",
+      model: "m",
+    });
+    const worker = sessions.createSession("quill", "From Vesper");
+    const child = sessions.createRun({
+      sessionId: worker.id,
+      agentId: "quill",
+      trigger: "dispatch",
+      model: "m",
+      depth: 1,
+      parentRunId: root.id,
+      rootRunId: root.id,
+    });
+    events.append({
+      type: "run.queued",
+      agentId: "vesper",
+      sessionId: lead.id,
+      runId: root.id,
+      payload: { trigger: "user" },
+    });
+    events.append({
+      type: "run.queued",
+      agentId: "quill",
+      sessionId: worker.id,
+      runId: child.id,
+      payload: { trigger: "dispatch", parentRunId: root.id, rootRunId: root.id },
+    });
+    consents.create({
+      runId: child.id,
+      sessionId: worker.id,
+      agentId: "quill",
+      toolCallId: "c1",
+      tool: "write_file",
+      input: { path: "a.md" },
+    });
+    const [pending] = (await call("GET", "/consents")).json;
+    expect(pending).toMatchObject({ runId: child.id, tool: "write_file" });
+    expect(pending.chain).toEqual([
+      { agentId: "vesper", runId: root.id },
+      { agentId: "quill", runId: child.id },
+    ]);
   });
 
   it("turns the kill switch on and off; while on, sending is refused (409)", async () => {

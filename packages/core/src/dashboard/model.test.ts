@@ -83,6 +83,16 @@ describe("dashboardModel on the demo station", () => {
     expect(busy.lanes.map((l) => l.traffic)).toEqual([2, 0, 0]);
   });
 
+  it("gives each crew member the reach the dispatch policy enforces, with its hallways", () => {
+    const crew = dashboardModel(input()).crew;
+    const of = (id: string) => crew.find((c) => c.id === id);
+    // Quill has dispatch and the hallway Operations → Research; never the Overseer.
+    expect(of("quill")).toMatchObject({ reach: ["wren"], reachLanes: ["operations-to-research"] });
+    // The Overseer reaches everyone and needs no hallway; Wren has no dispatch.
+    expect(of("vesper")).toMatchObject({ reach: ["quill", "wren"], reachLanes: [] });
+    expect(of("wren")).toMatchObject({ reach: [], reachLanes: [] });
+  });
+
   it("draws a one-way hallway on its route with two chevrons in its direction", () => {
     const lane = dashboardModel(input()).lanes.find((l) => l.id === "operations-to-research");
     expect(lane?.paired).toBe(false);

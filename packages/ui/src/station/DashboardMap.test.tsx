@@ -95,6 +95,28 @@ describe("DashboardMap", () => {
     expect(lane?.innerHTML).not.toContain("--st-map-lane-gap");
   });
 
+  it("lights up the hallways a selected crew member can dispatch along (ADR-0024)", () => {
+    const { container, rerender } = render(
+      <DashboardMap dashboard={demoDashboard()} selection={{ type: "agent", id: "quill" }} />,
+    );
+    const reached = [...container.querySelectorAll("[data-reach]")].map((l) =>
+      l.getAttribute("data-lane"),
+    );
+    // Quill's only hallway out is Operations → Research; the one into Command is not reach.
+    expect(reached).toEqual(["operations-to-research"]);
+    const segment = container.querySelector(
+      '[data-lane="operations-to-research"] .st-lane',
+    ) as HTMLElement;
+    expect(segment.style.getPropertyValue("--st-lane-color")).toBe("var(--st-lane-reach)");
+    // The Overseer needs no hallway, and nothing is lit with no crew member selected.
+    rerender(
+      <DashboardMap dashboard={demoDashboard()} selection={{ type: "agent", id: "vesper" }} />,
+    );
+    expect(container.querySelector("[data-reach]")).toBeNull();
+    rerender(<DashboardMap dashboard={demoDashboard()} />);
+    expect(container.querySelector("[data-reach]")).toBeNull();
+  });
+
   it("runs a two-way pair side by side, each lane shifted by the lane gap", () => {
     const input = demoInput();
     const station = {

@@ -48,6 +48,31 @@ describe("consent in COMMS", () => {
 });
 
 describe("Notifications", () => {
+  it("names who asked for a dispatched run's request, up the chain (ADR-0024)", async () => {
+    const fake = fakeApi();
+    fake.consents.push(
+      pending({
+        chain: [
+          { agentId: "vesper", runId: "r0" },
+          { agentId: "quill", runId: "r2" },
+        ],
+      }),
+      pending({
+        id: "k2",
+        agentId: "vesper",
+        runId: "r9",
+        chain: [{ agentId: "vesper", runId: "r9" }],
+      }),
+    );
+    const { container } = renderApp("/notifications", fake);
+    const nested = await screen.findByRole("region", { name: /Quill wants to use write_file/ });
+    expect(within(nested).getByText(`${term("dispatch.chain")}: Vesper`)).toBeInTheDocument();
+    // A request from a run nobody dispatched has no chain line.
+    const direct = screen.getByRole("region", { name: /Vesper wants to use write_file/ });
+    expect(direct.querySelector("[data-consent-chain]")).toBeNull();
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
   it("says so when nothing needs approval", async () => {
     renderApp("/notifications");
     expect(await screen.findByText(term("consent.none.title"))).toBeInTheDocument();

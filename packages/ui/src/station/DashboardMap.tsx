@@ -248,15 +248,22 @@ function Room({
 function Lane({
   lane,
   selected,
+  inReach = false,
   name,
   onSelect,
 }: {
   readonly lane: DashboardLane;
   readonly selected: boolean;
+  /** The selected crew member can dispatch along this hallway (ADR-0024). */
+  readonly inReach?: boolean;
   readonly name: string;
   readonly onSelect?: () => void;
 }) {
-  const color = selected ? stVar("lane-selected") : "var(--st-map-lane-auth)";
+  const color = selected
+    ? stVar("lane-selected")
+    : inReach
+      ? stVar("lane-reach")
+      : "var(--st-map-lane-auth)";
   const segments = lane.segments.map((s, i) => {
     const horizontal = s.heading === "e" || s.heading === "w";
     // The end nearer the map's origin comes first; each end is moved by its shift (ADR-0024).
@@ -277,7 +284,12 @@ function Lane({
     return { key: `${i}`, horizontal, style };
   });
   return (
-    <div className="contents" data-lane={lane.id} data-paired={lane.paired || undefined}>
+    <div
+      className="contents"
+      data-lane={lane.id}
+      data-paired={lane.paired || undefined}
+      data-reach={inReach || undefined}
+    >
       {segments.map((s) => (
         <button
           key={s.key}
@@ -353,6 +365,10 @@ export function DashboardMap(props: DashboardMapProps) {
   const t = useAnimationClock(!paused && dashboard.lanes.some((l) => l.traffic > 0));
   const roomName = (id: string) => dashboard.rooms.find((r) => r.id === id)?.name ?? id;
   const drawing = drawFrom !== undefined;
+  // A selected crew member's hallways light up: where the dispatch policy lets it send work.
+  const picked =
+    selection?.type === "agent" ? dashboard.crew.find((c) => c.id === selection.id) : undefined;
+  const reachLanes = new Set(picked?.reachLanes ?? []);
   const viewport = useRef<HTMLDivElement>(null);
   const plane = useRef<HTMLDivElement>(null);
   const { view, dragging, recenter, zoom, handlers } = useMapView(viewport, plane);
@@ -386,6 +402,7 @@ export function DashboardMap(props: DashboardMapProps) {
               key={lane.id}
               lane={lane}
               selected={selection?.type === "lane" && selection.id === lane.id}
+              inReach={reachLanes.has(lane.id)}
               name={`${term("lane")} ${lane.label}: ${roomName(lane.from)} → ${roomName(lane.to)}`}
               {...(props.onSelectLane ? { onSelect: () => props.onSelectLane?.(lane.id) } : {})}
             />

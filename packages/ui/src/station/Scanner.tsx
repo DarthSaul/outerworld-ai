@@ -84,12 +84,16 @@ function CrewRow({
 function MissionCard({
   mission,
   agentName,
+  nameOf,
   onSelect,
 }: {
   readonly mission: DashboardMission;
   readonly agentName: string;
+  /** Names the agents a dispatched run was asked for by (ADR-0024). */
+  readonly nameOf: (id: string) => string;
   readonly onSelect?: () => void;
 }) {
+  const askedBy = mission.askedBy?.map(nameOf).join(" → ");
   const color = toneVar(RUN_STATUS_TONE[mission.status]);
   const percent = mission.status === "done" ? 100 : mission.status === "queued" ? 0 : undefined;
   const body = (
@@ -104,6 +108,11 @@ function MissionCard({
         <span className="uppercase">{agentName}</span>
         <span>{termWith("mission.step", { n: String(mission.steps) })}</span>
       </span>
+      {askedBy ? (
+        <span className="truncate text-b15 text-fg-soft" data-mission-chain>
+          {term("dispatch.chain")}: {askedBy}
+        </span>
+      ) : null}
       <SegmentBar
         color={color}
         active={mission.status === "running"}
@@ -224,6 +233,7 @@ function RoomScan({ room, props }: { readonly room: DashboardRoom; readonly prop
                 key={m.id}
                 mission={m}
                 agentName={nameOf(m.agentId)}
+                nameOf={nameOf}
                 onSelect={() => onSelect({ type: "agent", id: m.agentId })}
               />
             ))}
@@ -247,6 +257,7 @@ function AgentScan({
   const room = dashboard.rooms.find((r) => r.id === member.roomId);
   const color = member.overseer ? stVar("white") : room ? roomColor(room) : stVar("cyan");
   const missions = dashboard.missions.filter((m) => m.agentId === member.id);
+  const nameOf = (id: string) => dashboard.crew.find((c) => c.id === id)?.name ?? id;
   const live = missions.some((m) => LIVE.has(m.status)) || member.status === "active";
   return (
     <div className="flex flex-col gap-3.5 p-3">
@@ -272,7 +283,7 @@ function AgentScan({
         {missions.length ? (
           <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
             {missions.map((m) => (
-              <MissionCard key={m.id} mission={m} agentName={member.name} />
+              <MissionCard key={m.id} mission={m} agentName={member.name} nameOf={nameOf} />
             ))}
           </ul>
         ) : (

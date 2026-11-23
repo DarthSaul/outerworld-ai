@@ -50,11 +50,11 @@ allowed `Origin` and a `Sec-Fetch-Site` other than `cross-site`. Every `/api/*` 
 | `POST /api/runs/:id/cancel` | 202; a queued or running run becomes cancelled. |
 | `POST /api/runs/:id/steer` | `{ text }` → 202: a direction for a running run, added before its next model call. 409 if the run is not running. |
 | `GET /api/activity` | `{ runs, dispatches, crew }`: every run in flight, every dispatch still running, and what each crew member is doing now (`crew`, folded from the event log: `running`, `awaiting_consent`, `done`, `failed`, `blocked`; absent means idle). The station map renders it. Session detail also carries `dispatches` made from that session. |
-| `GET /api/consents` | Pending consent requests (write-class calls under *Ask first*). |
+| `GET /api/consents` | Pending consent requests (write-class calls under *Ask first*), each with `chain`: who asked whom for its run, root first, read from the event log (ADR-0024). |
 | `POST /api/consents/:id` | `{ decision: "approved" \| "denied" }`; the paused run continues. 409 if already decided or expired. |
 | `GET /api/kill-switch`, `PUT /api/kill-switch` | `{ engaged }`. Engaging is persisted first, then cancels every queued, running, or waiting run; sends are 409 until cleared. |
 | `GET /api/spend?day=YYYY-MM-DD` | USD spent that UTC day (default today), station-wide and per agent, and `tokens` (input plus output) for the day. Session detail carries `spend` and `runSpend`. |
-| `GET /api/runs?limit=1..200` | The station's latest runs (default 40), newest first, each with a `title`: the task for a dispatch, else the session title. The dashboard's missions. |
+| `GET /api/runs?limit=1..200` | The station's latest runs (default 40), newest first, each with a `title`: the task for a dispatch, else the session title, and for a dispatched run `askedBy` (the agents above it, root first, ADR-0024). The dashboard's missions. |
 | `GET /api/connectors` | Each connector: status (`disconnected`, `needs_auth`, `connected`, `error`), its classified tools, `grantedTo`, and `url` for a server or `service` for the station's own (`gmail`, ADR-0022). |
 | `POST /api/connectors` | `{ preset: "notion" \| "github" \| "gmail" }` installs that preset: Notion's or GitHub's hosted MCP server (ADR-0012, ADR-0019), or the Gmail API service the daemon calls itself (`transport: { type: "builtin", service: "gmail" }`, ADR-0022). `gmail-mcp` is listed in the catalog but not available yet: 400. |
 | `PUT /api/connectors/:id/client` | `{ clientId, clientSecret? }`: your own OAuth app, for a server with no dynamic registration (GitHub, Gmail). Kept in the keychain, never returned; the list shows `ownClient: { set, redirectUrl }`. 409 for a server that registers its own. |
@@ -73,7 +73,8 @@ allowed `Origin` and a `Sec-Fetch-Site` other than `cross-site`. Every `/api/*` 
 | `POST /api/notifications/read` | `{ seq }` marks everything up to it read (the marker never moves back) → `{ readSeq, unread }`. |
 | `POST /api/onboarding` | `{ overseerName, tone: "calm" \| "warm" \| "brisk", stationName? }` → 201 `AgentView` of the new Overseer, on a station with no `station.json` file only: 409 once one exists, including one that does not load, so setup never replaces a Commander's file. Writes the Command room and the default budgets (D22). |
 | `POST /api/templates/project-manager` | Optional `{ name }` → 201 `AgentView`: the Project Manager (brief §17), adding the Operations room, a hallway to Command, and the Notion connector when missing. Unknown template: 404. |
-| `PUT /api/budgets` | `{ perRunUsd?, perAgentDailyUsd?, stationDailyUsd? }`: USD caps in `station.json`; `null` removes one, a missing field keeps it. Current caps are in `GET /api/station`. |
+| `PUT /api/budgets` | `{ perRunUsd?, perAgentDailyUsd?, stationDailyUsd?, perTreeUsd? }`: USD caps in `station.json`; `null` removes one (kept as an explicit `null` for `perTreeUsd`, whose missing value means the default), a missing field keeps it. Current caps are in `GET /api/station`. |
+| `PUT /api/dispatch` | `{ maxDepth?: 0–3, maxRunsPerTree?: 1–50, autoReview? }`: the station's dispatch policy (ADR-0024); a missing field keeps it. `PATCH /api/agents/:id` takes `canDispatch`. |
 | `GET /api/settings` | `{ modelMode, timezone, openrouter: { configured, source }, anthropic: { configured, source } }` (`timezone`: the machine's zone, used by schedules without one), never a key. |
 | `PUT /api/settings/openrouter` | `{ key }`: checked with OpenRouter's key endpoint (no model call), stored in the OS keychain → 204; a rejected key is 400. |
 | `PUT /api/settings/anthropic` | `{ key }`: checked with Anthropic's model list (no tokens spent), stored in the OS keychain → 204; a rejected key is 400 (ADR-0015). |

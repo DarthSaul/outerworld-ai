@@ -170,6 +170,14 @@ completed dispatch, plus the root. The depth is bounded by `maxDepth`.
   two-way pair shares one route, and each lane is shifted `--st-map-lane-gap` to the right of its
   own travel, so the two run parallel with their corners joined. Core's `laneSegments` and
   `lanePointAlong` compute the geometry; the renderer only multiplies the shifts by the token.
-  Lane names, notes and the Scanner say `→` (or `←` for a hallway coming in) instead of `⇄`. The UI
+  Lane names, notes and the Scanner say `→` (or `←` for a hallway coming in) instead of `⇄`.
+- The interface shows what policy enforces, from the same core function:
+  - The crew page's Brief lists "Can hand work to", by room or hallway label.
+  - The map lights a selected crew member's hallways (`DashboardCrew.reachLanes`).
+  - Config has the dispatch toggle. Settings has a Dispatch section (`PUT /api/dispatch`) and the
+    per-request cap.
+- Who asked whom is read from the log. `dispatchChainOf` walks `run.queued` one indexed lookup
+  per level, and `GET /api/consents` and `GET /api/runs` attach it (`chain`, `askedBy`), so
+  consent cards and Scanner missions say "Asked by: Vesper → Quill". The UI
   (crew page toggle and reach, Settings for depth, run cap and the per-tree cap, the chain on
   consent cards) is Phase 14's second half.
