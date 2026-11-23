@@ -203,7 +203,7 @@ function RoomScan({ room, props }: { readonly room: DashboardRoom; readonly prop
                 >
                   <span className="font-display text-d7 text-lane-auth">{l.label}</span>
                   <span className="flex-1 text-b17">
-                    ⇄ {roomName(l.from === room.id ? l.to : l.from)}
+                    {l.from === room.id ? "→" : "←"} {roomName(l.from === room.id ? l.to : l.from)}
                   </span>
                   <span className="font-display text-d7 text-lane-auth uppercase">
                     {term("lane.authorized")}
@@ -348,7 +348,7 @@ function LaneScan({ laneId, props }: { readonly laneId: string; readonly props: 
       </div>
       <div className="flex items-center gap-2">
         {end(from, lane.from)}
-        <span className="text-b20 text-fg-mute">⇄</span>
+        <span className="text-b20 text-fg-mute">→</span>
         {end(to, lane.to)}
       </div>
       <div className="flex flex-col gap-0.5">

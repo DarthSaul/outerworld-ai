@@ -463,8 +463,10 @@ Source: `docs/design/station-dashboard/`. Dark only; sprites replace the rig; ev
 - [ ] 14.7 Crew page: dispatch toggle on Config; "Can hand work to" on Brief from `dispatchReach`.
 - [ ] 14.8 Settings: Dispatch section (levels, hand-offs per request, auto review); per-request
   budget in Budgets; budget notifications name the scope in words.
-- [ ] 14.9 Map highlights a selected crew member's reach; hallway drawing allows the reverse of
-  an existing hallway; consent cards and the dashboard show the chain from `dispatchChain`.
+- [x] 14.9a Directed hallways on the map: subtle chevrons, a two-way pair drawn parallel (each
+  lane right of its travel), `→` / `←` wording, and drawing the reverse of a hallway allowed.
+- [ ] 14.9 Map highlights a selected crew member's reach; consent cards and the dashboard show
+  the chain from `dispatchChain`.
 
 **CHECKPOINT 14b**
 

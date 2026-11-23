@@ -369,6 +369,87 @@ export function pointAlong(points: readonly Point[], u: number): Point | undefin
   return points[points.length - 1];
 }
 
+/** Which way a straight run of a route travels, on screen (y grows downward). */
+export type Heading = "e" | "w" | "n" | "s";
+
+const headingOf = (p: Point, q: Point): Heading =>
+  p[1] === q[1] ? (q[0] >= p[0] ? "e" : "w") : q[1] >= p[1] ? "s" : "n";
+
+/** The unit step to the right of travel: where a lane of a two-way pair sits (ADR-0024). */
+const RIGHT_OF: Record<Heading, Point> = { e: [0, 1], w: [0, -1], s: [-1, 0], n: [1, 0] };
+const add = (a: Point, b: Point): Point => [a[0] + b[0], a[1] + b[1]];
+
+/**
+ * One straight run of a hallway, in its direction of travel. `start` and `end` are in map percent;
+ * `startShift` and `endShift` say how far each end sits off the route, in lane gaps (the renderer
+ * multiplies them by `--st-map-lane-gap`), so a shifted lane's corners stay joined.
+ */
+export interface LaneSegment {
+  readonly heading: Heading;
+  readonly start: Point;
+  readonly end: Point;
+  readonly startShift: Point;
+  readonly endShift: Point;
+}
+
+/**
+ * A route as segments, each shifted one gap to the right of its own travel when `shifted` (one
+ * lane of a two-way pair: the two run the same route in opposite directions, so they land side by
+ * side). Each end moves by its own segment's shift plus the neighbor's, which lies along it.
+ */
+export function laneSegments(route: readonly Point[], shifted: boolean): LaneSegment[] {
+  const runs = route.slice(1).map((q, i) => {
+    const p = route[i] ?? q;
+    const heading = headingOf(p, q);
+    return { heading, start: p, end: q, shift: shifted ? RIGHT_OF[heading] : ([0, 0] as Point) };
+  });
+  return runs.map((r, i) => ({
+    heading: r.heading,
+    start: r.start,
+    end: r.end,
+    startShift: add(r.shift, runs[i - 1]?.shift ?? [0, 0]),
+    endShift: add(r.shift, runs[i + 1]?.shift ?? [0, 0]),
+  }));
+}
+
+/** A point on a lane: where it is, which way the lane runs there, and its shift in lane gaps. */
+export interface LanePoint {
+  readonly at: Point;
+  readonly heading: Heading;
+  readonly shift: Point;
+}
+
+/** The point `u` (0–1) of the way along a lane's route, with the heading and shift there. */
+export function lanePointAlong(
+  route: readonly Point[],
+  u: number,
+  shifted: boolean,
+): LanePoint | undefined {
+  const segments = laneSegments(route, shifted);
+  if (segments.length === 0) return undefined;
+  const total = routeLength(route);
+  let d = Math.min(1, Math.max(0, u)) * total;
+  for (const s of segments) {
+    const length = routeLength([s.start, s.end]);
+    if (d <= length || s === segments[segments.length - 1]) {
+      const f = length ? Math.min(1, d / length) : 0;
+      return {
+        at: [s.start[0] + (s.end[0] - s.start[0]) * f, s.start[1] + (s.end[1] - s.start[1]) * f],
+        heading: s.heading,
+        shift: shifted ? RIGHT_OF[s.heading] : [0, 0],
+      };
+    }
+    d -= length;
+  }
+  return undefined;
+}
+
+/** Where a lane's direction chevrons go: a quarter and three quarters along, or later on a pair. */
+export const LANE_ARROWS_AT = [0.25, 0.75] as const;
+export const PAIRED_LANE_ARROWS_AT = [0.55, 0.85] as const;
+/** Where a lane of a two-way pair puts its tag, along its own direction, so the two never meet. */
+export const PAIRED_LANE_TAG_AT = 0.3;
+
 /** The on-map label of the n-th hallway in station order: `L-01`, `L-02`, … */
 export function laneLabel(index: number): string {
   return `L-${String(index + 1).padStart(2, "0")}`;

@@ -141,7 +141,15 @@ export { type ChatterLine, type ChatterSnapshot, chatterLines } from "./dashboar
 export {
   BRIDGE_RECT,
   BRIDGE_SECTOR,
+  type Heading,
+  LANE_ARROWS_AT,
+  type LanePoint,
+  type LaneSegment,
   laneLabel,
+  lanePointAlong,
+  laneSegments,
+  PAIRED_LANE_ARROWS_AT,
+  PAIRED_LANE_TAG_AT,
   type Point,
   placeRooms,
   pointAlong,
@@ -162,6 +170,7 @@ export {
   type DashboardRoom,
   type DashboardRun,
   dashboardModel,
+  type LaneTag,
 } from "./dashboard/model.js";
 export {
   alertCount,

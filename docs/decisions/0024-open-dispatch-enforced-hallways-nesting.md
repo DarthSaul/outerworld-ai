@@ -165,6 +165,11 @@ completed dispatch, plus the root. The depth is bounded by `maxDepth`.
 - `station.db` gains two columns on `runs`; nothing new leaves the machine.
 - The demo fixture gives Quill dispatch and opens Operations → Research, so the map and tests have
   a crew dispatch to draw.
-- Hallways now carry policy. The map's traffic follows the hallway a crew dispatch used. The UI
+- Hallways now carry policy. The map's traffic follows the hallway a crew dispatch used.
+- The map shows direction. Each hallway has two subtle chevrons pointing the way it runs. A
+  two-way pair shares one route, and each lane is shifted `--st-map-lane-gap` to the right of its
+  own travel, so the two run parallel with their corners joined. Core's `laneSegments` and
+  `lanePointAlong` compute the geometry; the renderer only multiplies the shifts by the token.
+  Lane names, notes and the Scanner say `→` (or `←` for a hallway coming in) instead of `⇄`. The UI
   (crew page toggle and reach, Settings for depth, run cap and the per-tree cap, the chain on
   consent cards) is Phase 14's second half.

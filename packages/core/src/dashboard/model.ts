@@ -4,7 +4,21 @@ import type { StationConfig } from "../config/station-config.js";
 import type { GlossaryKey } from "../glossary.js";
 import type { CrewActivityEntry } from "../run/crew-activity.js";
 import type { RunState } from "../run/run-state.js";
-import { laneLabel, type Point, placeRooms, type Rect, routeBetween, tagPoint } from "./layout.js";
+import {
+  LANE_ARROWS_AT,
+  type LanePoint,
+  type LaneSegment,
+  laneLabel,
+  lanePointAlong,
+  laneSegments,
+  PAIRED_LANE_ARROWS_AT,
+  PAIRED_LANE_TAG_AT,
+  type Point,
+  placeRooms,
+  type Rect,
+  routeBetween,
+  tagPoint,
+} from "./layout.js";
 import {
   alertCount,
   type CrewDisplayStatus,
@@ -87,14 +101,27 @@ export interface DashboardRoom {
   readonly alert: boolean;
 }
 
+/** Where a hallway's ID tag sits: a point on its route and its shift there, in lane gaps. */
+export interface LaneTag {
+  readonly at: Point;
+  readonly shift: Point;
+}
+
 export interface DashboardLane {
   readonly id: string;
   readonly label: string;
   readonly from: string;
   readonly to: string;
   readonly note?: string;
+  /** The route in the lane's direction of travel, `from` to `to`. */
   readonly route: readonly Point[];
-  readonly tag?: Point;
+  /** The reverse hallway exists too: the two run side by side (ADR-0024). */
+  readonly paired: boolean;
+  /** The route as straight runs, each with how far its ends sit off the route, in lane gaps. */
+  readonly segments: readonly LaneSegment[];
+  /** Where the direction chevrons go, each with the way the lane runs there. */
+  readonly arrows: readonly LanePoint[];
+  readonly tag?: LaneTag;
   /** Dispatches running to crew in a room this hallway joins to the Bridge (ADR-0013 #9). */
   readonly traffic: number;
   /** The room whose color the packets take: the end that is not the Bridge. */
@@ -209,11 +236,25 @@ export function dashboardModel(input: DashboardInput): Dashboard {
     }
   }
   const lanes: DashboardLane[] = station.lanes.map((lane, i) => {
-    const a = placement.get(lane.from);
-    const b = placement.get(lane.to);
+    // A two-way pair (ADR-0024) shares one route, laid from the lower room id, so the two lanes
+    // run side by side; each is shifted to the right of its own travel.
+    const paired = station.lanes.some((l) => l.from === lane.to && l.to === lane.from);
+    const reversed = paired && lane.from > lane.to;
+    const [first, second] = reversed ? [lane.to, lane.from] : [lane.from, lane.to];
+    const a = placement.get(first);
+    const b = placement.get(second);
     const others = placed.filter((p) => p.id !== lane.from && p.id !== lane.to).map((p) => p.rect);
-    const route = a && b ? routeBetween(a.rect, b.rect, others) : [];
-    const tag = tagPoint(route);
+    const laid = a && b ? routeBetween(a.rect, b.rect, others) : [];
+    const route = reversed ? [...laid].reverse() : laid;
+    const center = tagPoint(route);
+    const onPair = paired ? lanePointAlong(route, PAIRED_LANE_TAG_AT, true) : undefined;
+    const tag: LaneTag | undefined = onPair
+      ? { at: onPair.at, shift: onPair.shift }
+      : center && { at: center, shift: [0, 0] };
+    const arrows = (paired ? PAIRED_LANE_ARROWS_AT : LANE_ARROWS_AT).flatMap((u) => {
+      const p = lanePointAlong(route, u, paired);
+      return p ? [p] : [];
+    });
     const far = lane.from === bridgeId ? lane.to : lane.from;
     const touchesBridge = lane.from === bridgeId || lane.to === bridgeId;
     return {
@@ -223,6 +264,9 @@ export function dashboardModel(input: DashboardInput): Dashboard {
       to: lane.to,
       ...(lane.note ? { note: lane.note } : {}),
       route,
+      paired,
+      segments: laneSegments(route, paired),
+      arrows,
       ...(tag ? { tag } : {}),
       traffic:
         (touchesBridge ? (dispatchedTo.get(far) ?? 0) : 0) +

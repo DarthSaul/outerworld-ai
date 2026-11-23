@@ -83,6 +83,44 @@ describe("dashboardModel on the demo station", () => {
     expect(busy.lanes.map((l) => l.traffic)).toEqual([2, 0, 0]);
   });
 
+  it("draws a one-way hallway on its route with two chevrons in its direction", () => {
+    const lane = dashboardModel(input()).lanes.find((l) => l.id === "operations-to-research");
+    expect(lane?.paired).toBe(false);
+    expect(lane?.arrows).toHaveLength(2);
+    expect(lane?.arrows.every((a) => a.shift[0] === 0 && a.shift[1] === 0)).toBe(true);
+    expect(lane?.segments.every((s) => s.startShift.join() === "0,0")).toBe(true);
+    expect(lane?.tag?.shift).toEqual([0, 0]);
+  });
+
+  it("runs a two-way pair side by side on one route, each shifted right of its travel", () => {
+    const both = {
+      ...station.value,
+      lanes: [
+        ...station.value.lanes,
+        { id: "research-to-operations", from: "research", to: "operations" },
+      ],
+    };
+    const lanes = dashboardModel(input({ station: both })).lanes;
+    const there = lanes.find((l) => l.id === "operations-to-research");
+    const back = lanes.find((l) => l.id === "research-to-operations");
+    expect([there?.paired, back?.paired]).toEqual([true, true]);
+    // One route, travelled in opposite directions.
+    expect(back?.route).toEqual([...(there?.route ?? [])].reverse());
+    expect(there?.route[0]).not.toEqual(back?.route[0]);
+    // Every run of each lane is shifted, so they land on opposite sides of the route.
+    const firstThere = there?.segments[0]?.startShift ?? [0, 0];
+    const lastBack = back?.segments.at(-1)?.endShift ?? [0, 0];
+    expect(firstThere.some((v) => v !== 0)).toBe(true);
+    // The same end of the shared route: shifted exactly the opposite way.
+    expect(lastBack.map((v) => -v || 0)).toEqual(firstThere);
+    // Their tags never sit on top of each other; the other lanes stay unpaired.
+    expect(there?.tag?.at).not.toEqual(back?.tag?.at);
+    expect(lanes.filter((l) => l.paired).map((l) => l.id)).toEqual([
+      "operations-to-research",
+      "research-to-operations",
+    ]);
+  });
+
   it("runs a crew member's dispatch along the hallway policy let it use (ADR-0024)", () => {
     const d = dashboardModel(
       input({
