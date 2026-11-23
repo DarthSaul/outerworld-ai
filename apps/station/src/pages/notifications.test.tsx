@@ -61,7 +61,7 @@ describe("Notifications feed", () => {
     expect(items[0]).toHaveTextContent("Quill finished a scheduled run.");
     expect(items[1]).toHaveTextContent("A run by Quill failed: HTTP 500");
     expect(items[2]).toHaveTextContent("Vesper wants to remember: Likes bullets.");
-    expect(items[3]).toHaveTextContent("The run budget stopped a run: $5.10 of $5.00.");
+    expect(items[3]).toHaveTextContent("The per-run budget stopped a run: $5.10 of $5.00.");
     expect(items[4]).toHaveTextContent("Notion needs attention: fetch failed");
     expect(items.map((li) => li.dataset.unread)).toEqual([
       "true",

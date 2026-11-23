@@ -28,8 +28,6 @@ const editJson = (path: string, change: (json: Record<string, unknown>) => void)
 };
 const editStation = (home: string, change: (s: Record<string, unknown>) => void) =>
   editJson(join(home, "station.json"), change);
-const editAgent = (home: string, id: string, change: (a: Record<string, unknown>) => void) =>
-  editJson(join(home, "agents", id, "agent.json"), change);
 
 const setDispatch = (home: string, policy: Record<string, unknown>) =>
   editStation(home, (s) => {

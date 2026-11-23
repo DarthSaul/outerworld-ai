@@ -11,6 +11,18 @@ const session = (n: Notification) =>
     ? `/comms?agent=${encodeURIComponent(n.agentId)}&open=${encodeURIComponent(n.sessionId)}`
     : undefined;
 
+const BUDGET_SCOPES = ["run", "tree", "agent", "station"] as const;
+
+/** A notification's subject in words: a connector's name, or a budget's scope (ADR-0024). */
+const subjectWords = (n: Notification, connectorName: (id: string) => string) => {
+  if (n.kind === "connector" && n.subject) return connectorName(n.subject);
+  const scope = BUDGET_SCOPES.find((s) => s === n.subject);
+  if ((n.kind === "budget_warning" || n.kind === "budget_blocked") && scope) {
+    return term(`budgets.scope.${scope}`);
+  }
+  return n.subject ?? "";
+};
+
 /** Where to look for each kind of notification, if anywhere. */
 export function linkFor(n: Notification): string | undefined {
   switch (n.kind) {
@@ -39,7 +51,7 @@ export function notificationText(
 ): string {
   return termWith(`notification.${n.kind}`, {
     agent: n.agentId ? nameOf(n.agentId) : "",
-    subject: n.kind === "connector" && n.subject ? connectorName(n.subject) : (n.subject ?? ""),
+    subject: subjectWords(n, connectorName),
     detail: n.detail ?? n.reason ?? "",
     reason: reasonWords(n),
   });

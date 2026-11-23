@@ -27,6 +27,7 @@ import {
   term,
   type UpdateAgentInput,
   type UpdateBudgetsInput,
+  type UpdateDispatchInput,
   type UpdateRoomInput,
   type UpdateScheduleInput,
 } from "@darthsaul/outerworld-ai-core";
@@ -617,6 +618,14 @@ export function useUpdateBudgets() {
   const { api } = useDaemon();
   return useMutation({
     mutationFn: (input: UpdateBudgetsInput) => api.send("PUT", "/budgets", input),
+  });
+}
+
+/** The station's dispatch policy: depth, run cap per request, auto review (ADR-0024). */
+export function useUpdateDispatch() {
+  const { api } = useDaemon();
+  return useMutation({
+    mutationFn: (input: UpdateDispatchInput) => api.send("PUT", "/dispatch", input),
   });
 }
 

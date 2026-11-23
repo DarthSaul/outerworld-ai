@@ -710,3 +710,81 @@ describe("Deleting a crew member", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent('no agent "nobody"');
   });
 });
+
+describe("Dispatch on the crew page (ADR-0024)", () => {
+  /** Quill in Operations, Wren in Research, a hallway Operations → Research. */
+  const withHallway = (quillDispatches = false) => {
+    const fake = fakeApi();
+    fake.state.station = {
+      ...fake.state.station,
+      rooms: [...fake.state.station.rooms, { id: "research", name: "Research", props: [] }],
+      lanes: [{ id: "operations-to-research", from: "operations", to: "research" }],
+    };
+    const quill = fake.state.agents.get("quill");
+    if (!quill) throw new Error("the fake station has Quill");
+    const { canDispatch: _, ...plain } = quill.config;
+    fake.state.agents.set("wren", {
+      config: { ...plain, name: "Wren", roomId: "research" },
+      documents: quill.documents,
+    });
+    if (quillDispatches) quill.config = { ...quill.config, canDispatch: true };
+    return fake;
+  };
+
+  it("turns a crew member's dispatch on from Config", async () => {
+    const user = userEvent.setup();
+    const { calls } = renderApp("/crew/quill?tab=config", withHallway());
+    const form = await screen.findByRole("form", { name: "Configuration" });
+    const toggle = within(form).getByRole("checkbox", {
+      name: new RegExp(term("dispatch.canDispatch")),
+    });
+    expect(toggle).not.toBeChecked();
+    expect(within(form).getByText(term("dispatch.canDispatch.hint"))).toBeInTheDocument();
+    await user.click(toggle);
+    await user.click(within(form).getByRole("button", { name: "Save changes" }));
+    expect(calls.at(-1)).toEqual({
+      method: "PATCH",
+      path: "/agents/quill",
+      body: { canDispatch: true },
+    });
+  });
+
+  it("shows the Overseer's dispatch as always on", async () => {
+    renderApp("/crew/vesper?tab=config");
+    const form = await screen.findByRole("form", { name: "Configuration" });
+    const toggle = within(form).getByRole("checkbox", {
+      name: new RegExp(term("dispatch.canDispatch")),
+    });
+    expect(toggle).toBeChecked();
+    expect(toggle).toBeDisabled();
+    expect(within(form).getByText(term("dispatch.canDispatch.overseer"))).toBeInTheDocument();
+  });
+
+  it("lists on Brief exactly who policy lets it reach, and how", async () => {
+    const { container } = renderApp("/crew/quill", withHallway(true));
+    const panel = await screen.findByRole("region", { name: term("dispatch.reach") });
+    const items = within(panel).getAllByRole("listitem");
+    // Wren by the hallway's map label; never the Overseer, though Command is a room away.
+    expect(items.map((li) => li.textContent)).toEqual([
+      `WrenResearch${termWith("dispatch.reach.lane", { lane: "L-01" })}`,
+    ]);
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it("says so on Brief when dispatch is off", async () => {
+    renderApp("/crew/quill", withHallway(false));
+    const off = await screen.findByRole("region", { name: term("dispatch.reach") });
+    expect(off).toHaveTextContent(term("dispatch.reach.off"));
+  });
+
+  it("shows the Overseer reaching every crew member", async () => {
+    renderApp("/crew/vesper", withHallway());
+    const panel = await screen.findByRole("region", { name: term("dispatch.reach") });
+    expect(
+      within(panel)
+        .getAllByRole("listitem")
+        .map((li) => li.firstChild?.textContent),
+    ).toEqual(["Quill", "Wren"]);
+    expect(panel).toHaveTextContent(term("dispatch.reach.overseer"));
+  });
+});

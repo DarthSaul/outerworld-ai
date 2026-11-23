@@ -293,6 +293,11 @@ export function fakeApi() {
       state.station = { ...state.station, budgets: budgets as typeof state.station.budgets };
       return budgets;
     }
+    if (path === "/dispatch") {
+      const dispatch = { ...state.station.dispatch, ...(b as object) };
+      state.station = { ...state.station, dispatch };
+      return dispatch;
+    }
     if (path === "/spend")
       return {
         day: "2026-09-29",

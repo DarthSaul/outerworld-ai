@@ -395,6 +395,7 @@ export const glossary = {
   "dispatch.maxRunsPerTree": "Hand-offs per request",
   "dispatch.maxRunsPerTree.hint": "The most dispatched runs one request may lead to.",
   "dispatch.autoReview": "Overseer reviews reports",
+  "dispatch.save": "Save dispatch",
   "dispatch.canDispatch": "Can dispatch",
   "dispatch.canDispatch.hint":
     "Lets this crew member hand part of a task to its roommates and to rooms its hallways lead to.",

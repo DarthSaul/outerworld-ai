@@ -454,6 +454,7 @@ describe("Settings", () => {
       term("settings.providers"),
       term("settings.models"),
       term("budgets"),
+      term("dispatch.policy"),
       term("settings.appearance"),
     ]);
     await waitFor(() =>

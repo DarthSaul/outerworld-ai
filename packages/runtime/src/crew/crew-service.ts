@@ -16,6 +16,7 @@ import {
   DEFAULT_BUDGETS,
   DEFAULT_MAX_RUNS_PER_TREE,
   DEFAULT_MODEL,
+  type DispatchPolicy,
   type Issue,
   type Lane,
   NOTION_PRESET,
@@ -35,6 +36,7 @@ import {
   type TemplateInput,
   type UpdateAgentInput,
   type UpdateBudgetsInput,
+  type UpdateDispatchInput,
   type UpdateRoomInput,
   type UpdateScheduleInput,
   withSkillOverride,
@@ -519,6 +521,20 @@ export class CrewService {
       }
       await this.#saveStation(loaded, { ...loaded.station, budgets: budgets as Budgets });
       return budgets as Budgets;
+    });
+  }
+
+  /**
+   * Sets the station's dispatch policy (ADR-0024): how deep chains may nest, how many dispatched
+   * runs one request may lead to, and whether the Commander's sessions review reports. Fields not
+   * given keep their value. Takes effect at the next dispatch and the next run's tools.
+   */
+  updateDispatch(input: UpdateDispatchInput): Promise<DispatchPolicy> {
+    return this.#serial(async () => {
+      const loaded = await this.#loadWithStation();
+      const dispatch = { ...loaded.station.dispatch, ...given(input) } as DispatchPolicy;
+      await this.#saveStation(loaded, { ...loaded.station, dispatch });
+      return dispatch;
     });
   }
 
