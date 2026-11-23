@@ -27,3 +27,4 @@ supersedes the old one. Template: `0000-template.md`.
 | [0023](0023-skills-library.md) | Skills library: enablement, capability gating, and an index with skill_view | Accepted |
 | [0024](0024-one-design-folder.md) | One design folder; drop the Reach-era docs and the retired sprite exports | Accepted |
 | [0025](0025-station-map-as-org-tree.md) | The station map is an org tree: Command at the top, every other room below it | Accepted |
+| [0026](0026-emoji-icons.md) | Icons are standard emoji; service logos and character sprites stay | Accepted |

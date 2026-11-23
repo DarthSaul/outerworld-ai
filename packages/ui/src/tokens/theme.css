@@ -72,6 +72,7 @@
   --font-sans: var(--st-font-body);
   --font-display: var(--st-font-display);
   --font-body: var(--st-font-body);
+  --font-emoji: var(--st-font-emoji);
 
   --text-*: initial;
   --text-d6: var(--st-d6);

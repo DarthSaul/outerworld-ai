@@ -276,7 +276,7 @@ Spacing in use: 2, 4, 5, 6, 8, 10, 12, 14, 16, 20px. The main gutter is 14.
   - Always render with `image-rendering: pixelated` at integer scales.
 - **Overseer portrait**: not yet designed (placeholder slot).
 - **Fonts**: Press Start 2P and VT323 (Google Fonts, OFL).
-- No icon set. Glyphs are CSS shapes (diamonds, the arrowhead) or text (▶ ◀ ⇄ >).
+- No drawn icon set. Glyphs are CSS shapes (diamonds, the arrowhead) or text (▶ ◀ ⇄ >); icons beside menu items, capabilities, and connectors are standard emoji in `--st-font-emoji` (⚙️ Settings, ⚡ Abilities, 🌐 Web, 🗂️ Files, 🧠 Memory, 🔌 Connector, …; ADR-0026). Service logos (Notion, GitHub, Gmail) and the pixel character sprites stay.
 
 ## Suggested component breakdown
 `AppShell` (Header, Footer, CRT), `StatBox`, `RadioChatter`, `Panel` (title strip), `CrewRoster`, `StationMap` (`MapRoom`, `MapBridge`, `HallwaySegment`, `LaneTag`, `Packet`), `OverseerComms`, `Scanner` (`RoomScan` / `AgentScan` / `LaneScan`), `TaskCard`, `SegmentBar`, `Avatar` / `Sprite`, `CrewSelect` (`AgentPicker`, `CharacterStage`, `CharacterGrid`).

@@ -54,7 +54,7 @@ describe("App shell", () => {
     const system = within(footer).getByRole("button", { name: term("nav.system") });
     expect(system).toHaveAttribute("aria-haspopup", "menu");
     expect(system).toHaveAttribute("aria-expanded", "false");
-    expect(system.querySelector('svg[data-icon="gear"]')).not.toBeNull();
+    expect(system.querySelector('[data-icon="gear"]')).not.toBeNull();
     expect(footer).not.toHaveTextContent(/budget · tokens · uptime/i);
     // The vitals keep their name for screen readers only.
     expect(within(footer).getByRole("heading", { name: term("vitals.title") })).toHaveClass(
@@ -72,6 +72,9 @@ describe("App shell", () => {
     ]);
     expect(items[0]).toHaveTextContent(term("settings"));
     expect(items[0]).toHaveTextContent(term("nav.settings.hint"));
+    // Icons are standard emoji (ADR-0026): Settings is the gear.
+    expect(items[0]?.querySelector('[data-icon="gear"]')?.textContent).toBe("⚙️");
+    expect(menu.querySelector("svg")).toBeNull();
     expect(items[1]).toHaveTextContent(term("abilities"));
     expect(items[1]).toHaveTextContent(term("abilities.hint"));
     // Focus moves into the menu; choosing an item routes there and closes it.

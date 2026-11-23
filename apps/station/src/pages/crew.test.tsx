@@ -398,7 +398,9 @@ describe("Brief", () => {
     expect(web.querySelector("[data-tool-source]")).toHaveTextContent(
       `web_fetch · ${term("grant")}: ${term("prop.web")}`,
     );
-    expect(web.querySelector('svg[data-icon="web"]')).not.toBeNull();
+    // Each item's icon is a standard emoji (ADR-0026), not a drawn glyph.
+    expect(web.querySelector('[data-icon="web"]')?.textContent).toBe("🌐");
+    expect(tools.querySelector("svg")).toBeNull();
   });
 
   it("marks each tool read or write", async () => {
@@ -442,7 +444,7 @@ describe("Brief", () => {
     });
     expect(line).toHaveTextContent(`${term("connector")}: Notion${term("tools.connector.full")}`);
     expect(line).toHaveTextContent("30 tools · 20 read, 10 write");
-    expect(line.querySelector('svg[data-icon="connector"]')).not.toBeNull();
+    expect(line.querySelector('[data-icon="connector"]')?.textContent).toBe("🔌");
     // The thirty tools are not spelled out in the panel until asked for, then in a bounded box.
     const toggle = within(line).getByText(term("tools.connector.show"));
     const details = toggle.closest("details") as HTMLDetailsElement;

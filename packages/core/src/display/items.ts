@@ -6,7 +6,7 @@ import type { BUILTIN_TOOLS } from "../policy/grants.js";
 /**
  * How a capability looks to people: one place that turns a code name (`web_fetch`, the `files`
  * prop, a connector) into a readable title, a one-line description, and an icon id. The words come
- * from the glossary; the ui draws each icon id (`PixelIcon`).
+ * from the glossary; the ui draws each icon id as an emoji (`Icon`, ADR-0026).
  */
 export const ITEM_ICONS = [
   "dispatch",

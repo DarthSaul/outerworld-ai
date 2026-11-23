@@ -5,7 +5,7 @@ import {
   term,
   termWith,
 } from "@darthsaul/outerworld-ai-core";
-import { Checkbox, EmptyState, PixelIcon, Tag } from "@darthsaul/outerworld-ai-ui";
+import { Checkbox, EmptyState, Icon, Tag } from "@darthsaul/outerworld-ai-ui";
 import { ErrorNote } from "../components/ErrorNote.js";
 import { useSetSkill, useSkills } from "../queries.js";
 
@@ -40,7 +40,7 @@ function SkillRow({ skill }: { readonly skill: SkillListItem }) {
       data-enabled={skill.globallyEnabled}
       className={`flex min-w-0 items-start gap-3 border-2 p-2.5 ${skill.globallyEnabled ? "border-cyan bg-active-bg" : "border-line-faint bg-well"}`}
     >
-      <PixelIcon name="skill" className="mt-1 shrink-0 text-cyan" />
+      <Icon name="skill" className="mt-1" />
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <span id={titleId} className="font-display text-cyan text-d9 uppercase">
