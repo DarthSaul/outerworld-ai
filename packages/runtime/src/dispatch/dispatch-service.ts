@@ -260,6 +260,14 @@ export class DispatchService {
     return stuck;
   }
 
+  /**
+   * Resolves once no session is being checked: every report posted and every review decision
+   * made for what has settled so far. For tests and shutdown; runs still going are not awaited.
+   */
+  async idle(): Promise<void> {
+    while (this.#advancing.size) await Promise.all([...this.#advancing.values()]);
+  }
+
   /** Re-checks a session once nothing else is checking it (see `#step`). */
   #advance(sessionId: string): Promise<void> {
     const prior = this.#advancing.get(sessionId) ?? Promise.resolve();
@@ -318,7 +326,9 @@ export class DispatchService {
     if (!station) return "skipped";
     if (this.#o.runs.hasActiveRun(sessionId)) return "retry";
     // A cancelled request starts nothing new; its report stays in the session for the Commander.
-    if (lead.state === "cancelled" || latest.state === "cancelled") return "skipped";
+    // A cancelled run of some other request in the same session does not stop this one's review.
+    const cancelledHere = latest.state === "cancelled" && latest.rootRunId === lead.rootRunId;
+    if (lead.state === "cancelled" || cancelledHere) return "skipped";
     // The Commander's session follows the setting; a dispatched one reviews only while its own
     // work is going well (not after it was stopped by a budget or failed).
     if (own ? latest.state !== "completed" : !station.dispatch.autoReview) return "skipped";

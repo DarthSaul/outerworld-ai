@@ -46,7 +46,7 @@ allowed `Origin` and a `Sec-Fetch-Site` other than `cross-site`. Every `/api/*` 
 | `POST /api/agents/:id/sessions` | `{ title? }` → 201 session. Without a title, the first message names it (one short model call, ADR-0014). |
 | `GET /api/sessions/:id` | `{ session, messages, runs }`: messages oldest first, runs newest first. |
 | `PATCH /api/sessions/:id` | `{ title?, archived?: true, modelSettings?, agentId? }`; `agentId` hands the conversation to another crew member, whose next run it is (404 unknown agent, 409 while a run is going or for a dispatched session, ADR-0018); `modelSettings` is `{ model?, provider?, reasoning? }` for this conversation, `null` to go back to the crew member's (ADR-0016). |
-| `POST /api/sessions/:id/messages` | `{ text }` → 202 `{ runId }`; the reply streams as events (deltas are ephemeral, D18). 409 while a run is active or the session is archived. |
+| `POST /api/sessions/:id/messages` | `{ text }` → 202 `{ runId }`; the reply streams as events (deltas are ephemeral, D18). 409 while a run is active, the session is archived, or it is a worker's session whose dispatch has not reported yet (steer its run instead, ADR-0025). |
 | `POST /api/runs/:id/cancel` | 202; a queued or running run becomes cancelled. |
 | `POST /api/runs/:id/steer` | `{ text }` → 202: a direction for a running run, added before its next model call. 409 if the run is not running. |
 | `GET /api/activity` | `{ runs, dispatches, crew }`: every run in flight, every dispatch still running, and what each crew member is doing now (`crew`, folded from the event log: `running`, `awaiting_consent`, `done`, `failed`, `blocked`; absent means idle). The station map renders it. Session detail also carries `dispatches` made from that session. |

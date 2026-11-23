@@ -205,6 +205,38 @@ describe("roleBriefing", () => {
     expect(roleBriefing("vesper", station, crew)).toContain("decide who on the crew");
   });
 
+  it("tells crew with dispatch at the limit to do the work, even with nobody in reach", () => {
+    const lonely = { ...station, dispatch: { ...station.dispatch, maxDepth: 1 } };
+    const team = [
+      { id: "vesper", config: a("Vesper", "command", "overseer") },
+      { id: "quill", config: { ...a("Quill", "ops", "crew"), canDispatch: true } },
+    ];
+    // Nobody to reach in Operations, and below the limit: the room line alone.
+    expect(roleBriefing("quill", lonely, team)).toBe(
+      "You are a crew member of Demo, in the Operations room. Vesper is the Overseer.",
+    );
+    expect(roleBriefing("quill", lonely, team, { depth: 1 })).toContain(
+      "Do it yourself and report back.",
+    );
+    const off = { ...station, dispatch: { ...station.dispatch, maxDepth: 0 } };
+    expect(roleBriefing("quill", off, team)).toContain(
+      "Dispatch is turned off on this station, so do the work yourself.",
+    );
+  });
+
+  it("leaves agents above the run off the list it can hand work to", () => {
+    const deep = { ...station, dispatch: { ...station.dispatch, maxDepth: 3 } };
+    const team = [
+      { id: "vesper", config: a("Vesper", "command", "overseer") },
+      { id: "quill", config: { ...a("Quill", "ops", "crew"), canDispatch: true } },
+      { id: "scout", config: a("Scout", "ops", "crew") },
+      { id: "moth", config: a("Moth", "ops", "crew") },
+    ];
+    const b = roleBriefing("quill", deep, team, { depth: 1, chain: ["quill", "scout", "vesper"] });
+    expect(b).toContain("(id: moth)");
+    expect(b).not.toContain("(id: scout)");
+  });
+
   it("tells crew at the depth limit to do the work itself, as its tools do", () => {
     const deep: StationConfig = {
       ...station,

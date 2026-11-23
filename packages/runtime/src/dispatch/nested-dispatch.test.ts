@@ -548,10 +548,14 @@ describe("nested dispatch", () => {
   });
 
   it("starts no review for a request the Commander cancelled, though its report arrives later", async () => {
-    const t = withDispatch({
-      Vesper: [dispatchCall("quill", "Plan"), hanging, reply("never: a cancelled request")],
-      Quill: [hanging],
-    });
+    const t = withDispatch(
+      {
+        Vesper: [dispatchCall("quill", "Plan"), hanging, reply("never: a cancelled request")],
+        Quill: [hanging],
+      },
+      // On, so it is the cancellation and not the setting that holds the review back.
+      (home) => setDispatch(home, { autoReview: true }),
+    );
     const lead = t.service.createSession("vesper", "Chat");
     const { runId: root } = await t.service.send(lead.id, "Plan");
     await until(
@@ -561,10 +565,52 @@ describe("nested dispatch", () => {
     await t.service.cancel(root);
     await until(() => t.reports(lead.id).length === 1, "the report");
     expect(t.reports(lead.id)[0]).toMatchObject({ from: "quill", status: "cancelled" });
-    await new Promise((r) => setTimeout(r, 20));
+    // Every report is posted and every review decision made.
+    await t.dispatch.idle();
     expect(t.sessions.runs(lead.id).map((r) => [r.trigger, r.state])).toEqual([
       ["user", "cancelled"],
     ]);
+  });
+
+  it("stops the Commander's own review with its request when the root run is cancelled", async () => {
+    const t = withDispatch({
+      Vesper: [dispatchCall("quill", "Plan"), reply("Handed."), hanging],
+      Quill: [reply("Planned.")],
+    });
+    const lead = t.service.createSession("vesper", "Chat");
+    const { runId: root } = await t.service.send(lead.id, "Plan");
+    const review = () => t.sessions.runs(lead.id).find((r) => r.trigger === "review");
+    await until(() => review()?.state === "running", "Vesper's review");
+    // The root finished long ago, and the review is not its child; cancelling the root reaches it.
+    expect(review()).toMatchObject({ rootRunId: root });
+    expect(review()?.parentRunId).toBeUndefined();
+    await t.service.cancel(root);
+    await t.service.settled(review()?.id ?? "");
+    expect(review()?.state).toBe("cancelled");
+  });
+
+  it("refuses a Commander's message into a worker's session until its dispatch reports", async () => {
+    const t = withDispatch(
+      {
+        Vesper: [dispatchCall("quill", "Plan"), reply("Handed.")],
+        Quill: [dispatchCall("wren", "Read"), reply("Asked Wren."), reply("Planned.")],
+        Wren: [hanging],
+      },
+      (home) => setDispatch(home, { maxDepth: 2, autoReview: false }),
+    );
+    const lead = t.service.createSession("vesper", "Chat");
+    await t.service.send(lead.id, "Plan");
+    await until(
+      () => t.sessions.activeRuns().some((r) => r.agentId === "wren" && r.state === "running"),
+      "Wren at work",
+    );
+    // Quill's own run is done and it is waiting on Wren: its session is free, but not open.
+    const [toQuill] = t.dispatches.forLeadSession(lead.id);
+    await t.service.settled(toQuill?.workerRunId ?? "");
+    expect(t.service.hasActiveRun(toQuill?.workerSessionId ?? "")).toBe(false);
+    await expect(t.service.send(toQuill?.workerSessionId ?? "", "Also do X")).rejects.toThrow(
+      /dispatched task/,
+    );
   });
 
   it("cancels a dispatched worker's review with its dispatch, since the review is not its child", async () => {

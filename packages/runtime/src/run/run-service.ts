@@ -454,6 +454,13 @@ export class RunService {
     if (this.hasActiveRun(sessionId)) {
       throw new ConflictError("a run is already running in this session");
     }
+    // A worker's session belongs to its dispatch until it reports (ADR-0025): a Commander's
+    // message would start a run outside the request's tree and become its report. Steer instead.
+    if (trigger === "user" && this.#o.sessions.hasOpenDispatch(sessionId)) {
+      throw new ConflictError(
+        "this session is working on a dispatched task: steer its run, or wait for its report",
+      );
+    }
     const loaded = await loadStationDir(this.#o.home);
     // The owner now, not before the await: a handover may have landed meanwhile. No await
     // follows until the run is created, so the run and its model are that owner's.
@@ -532,6 +539,11 @@ export class RunService {
       queue.push(...this.#o.sessions.descendants(id).map((r) => r.id));
       if (run?.dispatchId) {
         queue.push(...this.#o.sessions.byDispatch(run.dispatchId).map((r) => r.id));
+      }
+      // The Commander's own reviews continue the root with no parent and no dispatch: stopping
+      // the root stops them, and so the whole request.
+      if (id === runId && run?.rootRunId === run?.id) {
+        queue.push(...this.#o.sessions.treeRuns(id).map((r) => r.id));
       }
     }
   }
@@ -650,6 +662,14 @@ export class RunService {
         if (hasBudget(station.budgets) && unpricedDirect(model, modelId)) {
           throw new Cancelled("budget");
         }
+        // The model took time to resolve: check once more, right before the billable call.
+        if (
+          controller.signal.aborted ||
+          this.#o.killSwitch.engaged() ||
+          this.#budgetCheck(station.budgets, ids, rootRunId)
+        ) {
+          throw new Cancelled("budget");
+        }
         const prompt = titlePrompt(text);
         const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(TITLE_TIMEOUT_MS)]);
         let reply = "";
@@ -663,8 +683,11 @@ export class RunService {
         });
         for await (const part of result.stream) {
           if (part.type === "text-delta") reply += part.text;
-          else if (part.type === "finish-step") this.#recordSpend(ids, modelId, part);
-          else if (part.type === "error") throw part.error;
+          else if (part.type === "finish-step") {
+            this.#recordSpend(ids, modelId, part);
+            // A title that fills the tree stops the whole request, its own run included.
+            if (this.#treeSpent(station.budgets, rootRunId)) this.#cancelTree(rootRunId, "");
+          } else if (part.type === "error") throw part.error;
         }
         // An aborted stream ends without an error; its partial text is no title.
         signal.throwIfAborted();
@@ -809,7 +832,11 @@ export class RunService {
         ]),
       ) as ToolSet;
       const context = findModel(run.model)?.contextTokens ?? DEFAULT_CONTEXT;
-      const briefing = roleBriefing(agent.id, station, loaded.agents, { depth: run.depth });
+      const briefing = roleBriefing(agent.id, station, loaded.agents, {
+        depth: run.depth,
+        // The agents above this run: the cycle guard refuses them, so the briefing leaves them out.
+        chain: sessions.lineage(run.id).map((r) => r.agentId),
+      });
 
       const maxSteps = this.#o.maxSteps ?? 12;
       for (let step = 1; step <= maxSteps; step++) {

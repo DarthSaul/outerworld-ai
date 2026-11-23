@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { AgentDocumentName } from "../api/crew-api.js";
 import type { StationConfig } from "../config/station-config.js";
 import type { CrewMember } from "../config/station-crew.js";
-import { dispatchReach } from "../policy/dispatch.js";
+import { dispatchReach, hasDispatch } from "../policy/dispatch.js";
 
 /**
  * Prompt assembly (brief §8): system prompt = documents + role briefing + installed skills
@@ -205,12 +205,14 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
  * can hand work to in Phase 5); crew get their room and who leads. `context.depth` is the run's
  * depth: a crew member with dispatch is told whom it can reach only below the station's limit,
  * and at the limit that it must do the work itself, matching the tools the run is offered.
+ * `context.chain` is the agents above the run: the cycle guard refuses them, so they are not
+ * offered.
  */
 export function roleBriefing(
   agentId: string,
   station: StationConfig,
   crew: readonly CrewMember[],
-  context: { readonly depth?: number } = {},
+  context: { readonly depth?: number; readonly chain?: readonly string[] } = {},
 ): string {
   const me = crew.find((c) => c.id === agentId);
   const roomName = (id: string) => station.rooms.find((r) => r.id === id)?.name ?? id;
@@ -237,14 +239,17 @@ export function roleBriefing(
     overseer ? `${overseer.config.name} is the Overseer.` : "The station has no Overseer yet.",
   ].join(" ");
   // A crew member with dispatch is told exactly who policy lets it reach, and how (ADR-0025).
-  const reach = dispatchReach(agentId, station, crew);
-  if (reach.length === 0) return intro;
-  if ((context.depth ?? 0) >= station.dispatch.maxDepth) {
+  if (me && hasDispatch(me.config) && (context.depth ?? 0) >= station.dispatch.maxDepth) {
     return [
       intro,
-      "This task was handed to you at the station's limit for passing work on, so you cannot hand any of it to others. Do it yourself and report back.",
+      station.dispatch.maxDepth < 1
+        ? "Dispatch is turned off on this station, so do the work yourself."
+        : "This task was handed to you at the station's limit for passing work on, so you cannot hand any of it to others. Do it yourself and report back.",
     ].join("\n\n");
   }
+  const above = new Set(context.chain ?? []);
+  const reach = dispatchReach(agentId, station, crew).filter((r) => !above.has(r.agentId));
+  if (reach.length === 0) return intro;
   const lines = reach.map((r) => {
     const who = crew.find((c) => c.id === r.agentId);
     const how =

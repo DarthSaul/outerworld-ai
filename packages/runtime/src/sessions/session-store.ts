@@ -221,6 +221,17 @@ export class SessionStore {
     );
   }
 
+  /** The session is a worker's whose dispatch has not reported yet (ADR-0025). */
+  hasOpenDispatch(id: string): boolean {
+    return (
+      this.#db
+        .prepare(
+          "select 1 from dispatches where worker_session_id = ? and status = 'running' limit 1",
+        )
+        .get(id) !== undefined
+    );
+  }
+
   /** Sets this conversation's model settings; `null` (or nothing set) goes back to the default. */
   setModelSettings(id: string, settings: ModelSettings | null): SessionRecord {
     const parsed = settings === null ? null : ModelSettings.parse(settings);
