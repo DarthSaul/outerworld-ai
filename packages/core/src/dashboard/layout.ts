@@ -1,9 +1,10 @@
 /**
- * Station map layout for the dashboard (ADR-0013 #8, #18). Pure geometry in percent of the map
- * viewport: x and y are the top-left corner, w and h the size. The Bridge (the Overseer's room)
- * sits in the middle where the design puts it; the other rooms take slots around it in station
- * order, and their color index, sector, and position all follow from that order, so the schema
- * needs no layout fields. Hallways are orthogonal polylines between doors on the rooms' sides.
+ * Station map layout for the dashboard (ADR-0013 #8, #18; ADR-0025). Pure geometry in percent of
+ * the map viewport: x and y are the top-left corner, w and h the size. The map is an org tree: the
+ * Bridge (the Overseer's room, Command) is always at the top center, and every other room sits in
+ * rows below it in station order. Color index, sector, and position all follow from that order,
+ * so the schema needs no layout fields. Hallways are orthogonal polylines between doors on the
+ * rooms' sides; a Bridge hallway runs like an org chart's connector (`treeRoute`).
  */
 
 export interface Rect {
@@ -23,71 +24,48 @@ export interface RoomPlacement {
   /** `A-1`, `B-1`, …; the Bridge is `HQ`. */
   readonly sector: string;
   readonly bridge: boolean;
+  /** The room's row below the Bridge, from 0; the Bridge itself is -1. */
+  readonly row: number;
 }
 
-export const BRIDGE_RECT: Rect = { x: 38, y: 36, w: 24, h: 28 };
+/** The map's outer margin and the gap between rooms. */
+const EDGE = 4;
+const GAP = 4;
+/** How far the trunk drops from the Bridge to the bus, and the bus to the first row. */
+const TRUNK = 6;
+/** Rooms that share one row before the map wraps into a grid; and a room's widest. */
+const ROW_MAX = 4;
+const ROOM_MAX_W = 30;
+
+/** The Bridge's rect when every other room fits in one row; it shortens for more rows. */
+export const BRIDGE_RECT: Rect = { x: 35, y: EDGE, w: 30, h: 30 };
 export const BRIDGE_SECTOR = "HQ";
 
-const r = (x: number, y: number, w: number, h: number): Rect => ({ x, y, w, h });
+function bridgeRect(rows: number): Rect {
+  return { ...BRIDGE_RECT, h: rows <= 1 ? 30 : rows === 2 ? 22 : 16 };
+}
 
-/** The design's three rooms: top left, top right, bottom center. */
-const TOP_LEFT = r(4, 8, 28, 36);
-const TOP_RIGHT = r(68, 8, 28, 36);
-const BOTTOM = r(28, 68, 44, 29);
+const columnsFor = (count: number) =>
+  count <= ROW_MAX ? count : Math.max(ROW_MAX, Math.ceil(Math.sqrt(1.6 * count)));
 
-/** Slots by how many rooms surround the Bridge. Past eight rooms, `gridSlots` takes over. */
-const SLOTS: Readonly<Record<number, readonly Rect[]>> = {
-  0: [],
-  1: [r(4, 30, 28, 40)],
-  2: [r(4, 30, 28, 40), r(68, 30, 28, 40)],
-  3: [TOP_LEFT, TOP_RIGHT, BOTTOM],
-  4: [TOP_LEFT, TOP_RIGHT, r(4, 68, 30, 29), r(66, 68, 30, 29)],
-  5: [r(4, 4, 28, 28), r(68, 4, 28, 28), r(4, 68, 28, 28), r(68, 68, 28, 28), r(36, 4, 28, 26)],
-  6: [
-    r(4, 4, 28, 28),
-    r(68, 4, 28, 28),
-    r(4, 68, 28, 28),
-    r(68, 68, 28, 28),
-    r(36, 4, 28, 26),
-    r(36, 70, 28, 26),
-  ],
-  7: [
-    r(4, 4, 28, 28),
-    r(68, 4, 28, 28),
-    r(4, 68, 28, 28),
-    r(68, 68, 28, 28),
-    r(36, 4, 28, 26),
-    r(36, 70, 28, 26),
-    r(4, 36, 28, 28),
-  ],
-  8: [
-    r(4, 4, 28, 28),
-    r(68, 4, 28, 28),
-    r(4, 68, 28, 28),
-    r(68, 68, 28, 28),
-    r(36, 4, 28, 26),
-    r(36, 70, 28, 26),
-    r(4, 36, 28, 28),
-    r(68, 36, 28, 28),
-  ],
-};
-
-/** A grid around the middle cell for crowded stations; the Bridge keeps its own place. */
-function gridSlots(count: number): Rect[] {
-  const cols = Math.ceil(Math.sqrt(count + 1));
-  const rows = Math.ceil((count + 1) / cols);
-  const gap = 2;
-  const w = (100 - gap * (cols + 1)) / cols;
-  const h = (100 - gap * (rows + 1)) / rows;
-  const middle = Math.floor((rows * cols) / 2);
-  const slots: Rect[] = [];
-  for (let i = 0; i < rows * cols && slots.length < count; i++) {
-    if (i === middle) continue;
-    const col = i % cols;
+/**
+ * The rooms' slots in rows from `top` down to the bottom margin: one centered row up to four
+ * rooms, then a grid filled left to right, its columns aligned so the gutters run clear.
+ */
+function rowSlots(count: number, top: number): { rect: Rect; row: number }[] {
+  if (count === 0) return [];
+  const cols = columnsFor(count);
+  const rows = Math.ceil(count / cols);
+  const w = Math.min(ROOM_MAX_W, (100 - GAP * (cols + 1)) / cols);
+  const x0 = (100 - cols * w - (cols - 1) * GAP) / 2;
+  const h = (100 - EDGE - top - GAP * (rows - 1)) / rows;
+  return Array.from({ length: count }, (_, i) => {
     const row = Math.floor(i / cols);
-    slots.push(r(gap + col * (w + gap), gap + row * (h + gap), w, h));
-  }
-  return slots;
+    return {
+      rect: { x: x0 + (i % cols) * (w + GAP), y: top + row * (h + GAP), w, h },
+      row,
+    };
+  });
 }
 
 /** Sector label for the n-th room: A-1 … Z-1, then A-2 … */
@@ -97,34 +75,34 @@ export function sectorFor(index: number): string {
 
 /**
  * Places rooms on the map. `roomIds` is station order; `bridgeId` (the Overseer's room, when
- * there is one) goes in the middle. Color index and sector count only the non-Bridge rooms.
+ * there is one) goes at the top. Color index and sector count only the non-Bridge rooms.
  */
 export function placeRooms(roomIds: readonly string[], bridgeId?: string): RoomPlacement[] {
-  const others = roomIds.filter((id) => id !== bridgeId);
-  const crowded = others.length > 8;
-  const slots = crowded ? gridSlots(others.length) : (SLOTS[others.length] ?? []);
+  const hasBridge = bridgeId !== undefined && roomIds.includes(bridgeId);
+  const others = roomIds.filter((id) => !hasBridge || id !== bridgeId);
+  const rows = others.length ? Math.ceil(others.length / columnsFor(others.length)) : 0;
+  const bridge = bridgeRect(rows);
+  const top = hasBridge ? bridge.y + bridge.h + 2 * TRUNK : EDGE;
+  const slots = rowSlots(others.length, top);
   const placed: RoomPlacement[] = others.map((id, i) => ({
     id,
-    rect: slots[i] ?? BRIDGE_RECT,
+    rect: slots[i]?.rect ?? bridge,
     colorIndex: i,
     sector: sectorFor(i),
     bridge: false,
+    row: slots[i]?.row ?? 0,
   }));
-  if (bridgeId && roomIds.includes(bridgeId)) {
-    const rect = crowded ? bridgeInGrid(others.length) : BRIDGE_RECT;
-    placed.unshift({ id: bridgeId, rect, colorIndex: 0, sector: BRIDGE_SECTOR, bridge: true });
+  if (hasBridge) {
+    placed.unshift({
+      id: bridgeId,
+      rect: bridge,
+      colorIndex: 0,
+      sector: BRIDGE_SECTOR,
+      bridge: true,
+      row: -1,
+    });
   }
   return placed;
-}
-
-function bridgeInGrid(count: number): Rect {
-  const cols = Math.ceil(Math.sqrt(count + 1));
-  const rows = Math.ceil((count + 1) / cols);
-  const gap = 2;
-  const w = (100 - gap * (cols + 1)) / cols;
-  const h = (100 - gap * (rows + 1)) / rows;
-  const middle = Math.floor((rows * cols) / 2);
-  return r(gap + (middle % cols) * (w + gap), gap + Math.floor(middle / cols) * (h + gap), w, h);
 }
 
 /* ---------------------------------------------------------------- routing */
@@ -372,4 +350,57 @@ export function pointAlong(points: readonly Point[], u: number): Point | undefin
 /** The on-map label of the n-th hallway in station order: `L-01`, `L-02`, … */
 export function laneLabel(index: number): string {
   return `L-${String(index + 1).padStart(2, "0")}`;
+}
+
+/* ------------------------------------------------------- the org tree (ADR-0025) */
+
+/** Drops repeated points and the middle of three in a line, so a drop straight down is 2 points. */
+function straighten(points: readonly Point[]): Point[] {
+  const out: Point[] = [];
+  for (const p of simplify(points)) {
+    const a = out[out.length - 2];
+    const b = out[out.length - 1];
+    if (a && b && ((a[0] === b[0] && b[0] === p[0]) || (a[1] === b[1] && b[1] === p[1]))) {
+      out[out.length - 1] = p;
+    } else {
+      out.push(p);
+    }
+  }
+  return out;
+}
+
+/**
+ * A Bridge hallway, from the Bridge to `child`, drawn like an org chart's connector: down from the
+ * middle of the Bridge's bottom edge to a bus, along the bus, then down into the top of a
+ * first-row room (`row` 0). A room in a later row is reached down the gutter on its left and
+ * entered from its left side; the columns line up, so the gutter never crosses a room.
+ */
+export function treeRoute(bridge: Rect, child: Rect, row: number): Point[] {
+  const busY = bottom(bridge) + TRUNK;
+  const trunk: Point[] = [
+    [cx(bridge), bottom(bridge)],
+    [cx(bridge), busY],
+  ];
+  if (row <= 0) {
+    return straighten([...trunk, [cx(child), busY], [cx(child), child.y]]);
+  }
+  const gutter = child.x - GAP / 2;
+  return straighten([...trunk, [gutter, busY], [gutter, cy(child)], [child.x, cy(child)]]);
+}
+
+/** A branch at least this long holds a lane tag. */
+const TAG_MIN = 4;
+
+/**
+ * Where a Bridge hallway's tag goes: the middle of the branch nearest its room (the last drop, or
+ * the gutter run), so the tags of lanes sharing the trunk and bus never pile up. `points` run from
+ * the Bridge to the room, as `treeRoute` draws them.
+ */
+export function branchTag(points: readonly Point[]): Point | undefined {
+  for (let i = points.length - 1; i > 0; i--) {
+    const p = points[i - 1];
+    const q = points[i];
+    if (p && q && routeLength([p, q]) >= TAG_MIN) return [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
+  }
+  return tagPoint(points);
 }

@@ -4,7 +4,16 @@ import type { StationConfig } from "../config/station-config.js";
 import type { GlossaryKey } from "../glossary.js";
 import type { CrewActivityEntry } from "../run/crew-activity.js";
 import type { RunState } from "../run/run-state.js";
-import { laneLabel, type Point, placeRooms, type Rect, routeBetween, tagPoint } from "./layout.js";
+import {
+  branchTag,
+  laneLabel,
+  type Point,
+  placeRooms,
+  type Rect,
+  routeBetween,
+  tagPoint,
+  treeRoute,
+} from "./layout.js";
 import {
   alertCount,
   type CrewDisplayStatus,
@@ -198,10 +207,20 @@ export function dashboardModel(input: DashboardInput): Dashboard {
     const a = placement.get(lane.from);
     const b = placement.get(lane.to);
     const others = placed.filter((p) => p.id !== lane.from && p.id !== lane.to).map((p) => p.rect);
-    const route = a && b ? routeBetween(a.rect, b.rect, others) : [];
-    const tag = tagPoint(route);
     const far = lane.from === bridgeId ? lane.to : lane.from;
     const touchesBridge = lane.from === bridgeId || lane.to === bridgeId;
+    // A Bridge hallway is an org-tree branch down to its room (ADR-0025); others route freely.
+    const bridge = touchesBridge && lane.from !== lane.to ? (a?.bridge ? a : b) : undefined;
+    const child = bridge === a ? b : a;
+    const down = bridge && child ? treeRoute(bridge.rect, child.rect, child.row) : undefined;
+    const route = down
+      ? bridge === a
+        ? down
+        : [...down].reverse()
+      : a && b
+        ? routeBetween(a.rect, b.rect, others)
+        : [];
+    const tag = down ? branchTag(down) : tagPoint(route);
     return {
       id: lane.id,
       label: laneLabel(i),

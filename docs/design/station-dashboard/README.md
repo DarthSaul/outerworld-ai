@@ -97,7 +97,12 @@ Main area: `display:grid; grid-template-columns: minmax(0,1fr) minmax(0,3fr) min
 **Viewport:**
 - `position:relative; flex:1; min-width:860px; min-height:580px; overflow:hidden`.
 - Wrapped in an `overflow-x:auto` container so the map scrolls instead of crushing the rooms.
-- All children are absolutely positioned in **% of the viewport**. Room rects come from `ROOMS` in `stationSeed.ts`; the Bridge is at left 38%, top 36%, w 24%, h 28%.
+- All children are absolutely positioned in **% of the viewport**. The map is laid out as an **org tree** (ADR-0025; this supersedes the prototype's `ROOMS` rects, which put the Bridge in the middle):
+  - The Bridge (Command) is always at the top center: left 35%, top 4%, w 30%. Its height is 30% when the other rooms fit in one row, 22% for two rows, and 16% for three or more.
+  - Every other room sits below it in station order, in rows with a 4% gap and 4% margins. Up to four rooms share one row, centered and at most 30% wide each; past four, the rooms fill a grid of `max(4, ceil(√(1.6·n)))` columns, left to right and top to bottom.
+  - A Bridge hallway runs like an org chart's connector: down from the middle of the Bridge's bottom edge to a shared bus 6% below it, along the bus, then down into the top of a first-row room. A room in a later row is reached down the gutter to its left and entered from its left side. A room directly below the Bridge gets one straight drop.
+  - The lane tag of a Bridge hallway sits on the branch nearest its room (the last drop, or the gutter run), so tags on the shared bus never pile up. Hallways between two non-Bridge rooms route as before.
+  - With no Overseer yet, the rooms fill the same rows from the top of the map.
 - An inner "plane" div holds everything and takes the per-style background and transform.
 
 **Rooms:**
