@@ -199,6 +199,49 @@ function detours(a: Rect, b: Rect, others: readonly Rect[]): Point[][] {
   return out;
 }
 
+/**
+ * U routes that hug the two rooms: through the gap just below or above them (for rooms side by
+ * side in a row), or the gutter just left or right of them (for stacked rooms). Tried before the
+ * station-wide `detours`, which in a grid run into the Bridge or the outer rooms.
+ */
+function localDetours(a: Rect, b: Rect): Point[][] {
+  const out: Point[][] = [];
+  const onMap = (v: number) => v >= 0 && v <= 100;
+  const below = Math.max(bottom(a), bottom(b)) + DETOUR;
+  const above = Math.min(a.y, b.y) - DETOUR;
+  const leftOf = Math.min(a.x, b.x) - DETOUR;
+  const rightOf = Math.max(right(a), right(b)) + DETOUR;
+  if (onMap(below))
+    out.push([
+      [cx(a), bottom(a)],
+      [cx(a), below],
+      [cx(b), below],
+      [cx(b), bottom(b)],
+    ]);
+  if (onMap(above))
+    out.push([
+      [cx(a), a.y],
+      [cx(a), above],
+      [cx(b), above],
+      [cx(b), b.y],
+    ]);
+  if (onMap(leftOf))
+    out.push([
+      [a.x, cy(a)],
+      [leftOf, cy(a)],
+      [leftOf, cy(b)],
+      [b.x, cy(b)],
+    ]);
+  if (onMap(rightOf))
+    out.push([
+      [right(a), cy(a)],
+      [rightOf, cy(a)],
+      [rightOf, cy(b)],
+      [right(b), cy(b)],
+    ]);
+  return out;
+}
+
 /** Every reasonable orthogonal route from room `a` to room `b`, simplest shapes first. */
 function candidates(a: Rect, b: Rect): Point[][] {
   const out: Point[][] = [];
@@ -296,8 +339,8 @@ function simplify(points: readonly Point[]): Point[] {
 
 /**
  * The hallway between two rooms: the first candidate route that crosses no other room (straight,
- * then L, then Z, then a U detour), or the shortest one when every route crosses something.
- * Empty when the rooms overlap.
+ * then L, then Z, then a U through the nearest row gap or gutter, then a U around everything), or
+ * the shortest one when every route crosses something. Empty when the rooms overlap.
  */
 export function routeBetween(a: Rect, b: Rect, others: readonly Rect[] = []): Point[] {
   if (
@@ -306,7 +349,7 @@ export function routeBetween(a: Rect, b: Rect, others: readonly Rect[] = []): Po
   ) {
     return [];
   }
-  const all = [...candidates(a, b), ...detours(a, b, others)].map(simplify);
+  const all = [...candidates(a, b), ...localDetours(a, b), ...detours(a, b, others)].map(simplify);
   const open = all.find((points) => clear(points, others));
   if (open) return open;
   return [...all].sort((p, q) => routeLength(p) - routeLength(q))[0] ?? [];

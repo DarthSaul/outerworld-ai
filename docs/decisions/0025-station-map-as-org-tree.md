@@ -39,4 +39,4 @@ geometry.
   rect for one row of rooms.
 - Bridge hallways share their trunk and bus segments, so packets on different lanes overlap there;
   each lane's tag sits on its own branch.
-- Hallways between two non-Bridge rooms may detour around rooms in the grid, as before.
+- A hallway between two non-Bridge rooms that are not neighbors detours through the nearest row gap or gutter, so it never runs through a room in the grid.

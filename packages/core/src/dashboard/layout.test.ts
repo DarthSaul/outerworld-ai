@@ -3,6 +3,7 @@ import {
   BRIDGE_RECT,
   branchTag,
   laneLabel,
+  type Point,
   placeRooms,
   pointAlong,
   type Rect,
@@ -166,6 +167,41 @@ describe("routeBetween", () => {
     expect(routeBetween(research, operations)).toEqual([
       [48, 71],
       [52, 71],
+    ]);
+  });
+
+  it("detours through the row gap between non-adjacent rooms, straight between adjacent ones", () => {
+    // Six rooms: row 0 spans y 38–65, so the gap below it runs at y 67. room-2 sits between
+    // room-1 and room-3, and the Bridge, room-0, room-4 and room-5 block the station-wide detours.
+    const placed = placeRooms(ids(6), "bridge");
+    const [one, two, three] = [placed[2], placed[3], placed[4]];
+    if (!one || !two || !three) throw new Error("layout");
+    const othersThan = (...skip: Rect[]) =>
+      placed.map((p) => p.rect).filter((r) => !skip.includes(r));
+    const route = routeBetween(one.rect, three.rect, othersThan(one.rect, three.rect));
+    expect(route).toEqual([
+      [38, 65],
+      [38, 67],
+      [86, 67],
+      [86, 65],
+    ]);
+    const inside = ([x, y]: Point, r: Rect) =>
+      x > r.x + 0.5 && x < r.x + r.w - 0.5 && y > r.y + 0.5 && y < r.y + r.h - 0.5;
+    for (let i = 1; i < route.length; i++) {
+      const [x1, y1] = route[i - 1] ?? [0, 0];
+      const [x2, y2] = route[i] ?? [0, 0];
+      for (let s = 0; s <= 20; s++) {
+        const at: Point = [x1 + ((x2 - x1) * s) / 20, y1 + ((y2 - y1) * s) / 20];
+        for (const p of placed) expect(inside(at, p.rect), p.id).toBe(false);
+      }
+    }
+    const tag = tagPoint(route);
+    expect(tag?.[1]).toBe(67);
+    for (const p of placed) expect(inside(tag ?? [0, 0], p.rect), p.id).toBe(false);
+    // Neighbors in a row still get one straight hallway.
+    expect(routeBetween(one.rect, two.rect, othersThan(one.rect, two.rect))).toEqual([
+      [48, 51.5],
+      [52, 51.5],
     ]);
   });
 
