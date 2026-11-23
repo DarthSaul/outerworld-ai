@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   BRIDGE_RECT,
   laneLabel,
+  lanePointAlong,
+  laneSegments,
   placeRooms,
   pointAlong,
   type Rect,
@@ -140,5 +142,62 @@ describe("route helpers", () => {
 
   it("labels hallways L-01, L-02, …", () => {
     expect([laneLabel(0), laneLabel(9), laneLabel(99)]).toEqual(["L-01", "L-10", "L-100"]);
+  });
+});
+
+describe("directed lanes (ADR-0025)", () => {
+  // East 20 → 60 along y 10, then south to y 50: an L.
+  const route = [
+    [20, 10],
+    [60, 10],
+    [60, 50],
+  ] as const satisfies readonly (readonly [number, number])[];
+  const back = [...route].reverse();
+
+  it("gives each run its heading in the direction of travel", () => {
+    expect(laneSegments(route, false).map((s) => s.heading)).toEqual(["e", "s"]);
+    expect(laneSegments(back, false).map((s) => s.heading)).toEqual(["n", "w"]);
+  });
+
+  it("leaves a one-way lane on the route", () => {
+    for (const s of laneSegments(route, false)) {
+      expect([s.startShift, s.endShift]).toEqual([
+        [0, 0],
+        [0, 0],
+      ]);
+    }
+  });
+
+  it("shifts a paired lane right of its travel and keeps its corner joined", () => {
+    const [east, south] = laneSegments(route, true);
+    // Heading east, right is down (+y); heading south, right is left (-x).
+    expect(east?.startShift).toEqual([0, 1]);
+    expect(south?.endShift).toEqual([-1, 0]);
+    // Both runs end at the same shifted corner.
+    expect(east?.endShift).toEqual([-1, 1]);
+    expect(south?.startShift).toEqual([-1, 1]);
+  });
+
+  it("puts a pair's two lanes on opposite sides of the shared route", () => {
+    const there = laneSegments(route, true);
+    const home = laneSegments(back, true);
+    // The same east-west run: one lane below the route, the other above.
+    expect(there[0]?.startShift[1]).toBe(1);
+    expect(home[1]?.endShift[1]).toBe(-1);
+    // The same north-south run: one lane left of it, the other right.
+    expect(there[1]?.endShift[0]).toBe(-1);
+    expect(home[0]?.startShift[0]).toBe(1);
+  });
+
+  it("finds a point along a lane with its heading and shift, clamping u", () => {
+    // Weighted length: 40 × 1.5 = 60 across, then 40 down; total 100.
+    expect(lanePointAlong(route, 0.3, true)).toEqual({ at: [40, 10], heading: "e", shift: [0, 1] });
+    expect(lanePointAlong(route, 0.8, false)).toEqual({
+      at: [60, 30],
+      heading: "s",
+      shift: [0, 0],
+    });
+    expect(lanePointAlong(route, 5, true)?.at).toEqual([60, 50]);
+    expect(lanePointAlong([], 0.5, true)).toBeUndefined();
   });
 });

@@ -107,10 +107,10 @@ describe("crew and room routes", () => {
     expect(events.since(0).map((e) => e.type)).toEqual(["station.updated", "station.updated"]);
   });
 
-  it("refuses a hallway to the same room (409), a second one between linked rooms (409), unknown rooms and lanes (404)", async () => {
+  it("refuses a hallway to the same room (409), a second one the same way (409), unknown rooms and lanes (404)", async () => {
     const { call } = setup();
     expect((await call("POST", "/lanes", { from: "research", to: "research" })).status).toBe(409);
-    expect((await call("POST", "/lanes", { from: "command", to: "research" })).status).toBe(409);
+    expect((await call("POST", "/lanes", { from: "research", to: "command" })).status).toBe(409);
     expect((await call("POST", "/lanes", { from: "research", to: "nowhere" })).status).toBe(404);
     expect((await call("DELETE", "/lanes/nowhere")).status).toBe(404);
     expect((await call("POST", "/lanes", { from: "research" })).status).toBe(400);
@@ -170,9 +170,44 @@ describe("crew and room routes", () => {
   it("PUT /budgets sets and clears caps; zero or an unknown cap is 400", async () => {
     const { call } = setup();
     const res = await call("PUT", "/budgets", { perRunUsd: 1.5, stationDailyUsd: null });
-    expect(await res.json()).toEqual({ perRunUsd: 1.5, perAgentDailyUsd: 25 });
+    expect(await res.json()).toEqual({ perRunUsd: 1.5, perAgentDailyUsd: 25, perTreeUsd: 15 });
     expect((await call("PUT", "/budgets", { perRunUsd: 0 })).status).toBe(400);
     expect((await call("PUT", "/budgets", { weeklyUsd: 3 })).status).toBe(400);
+  });
+
+  it("PUT /budgets keeps no per-request cap as null, and takes one back (ADR-0025)", async () => {
+    const { call } = setup();
+    expect(await (await call("PUT", "/budgets", { perTreeUsd: null })).json()).toMatchObject({
+      perTreeUsd: null,
+    });
+    expect(await (await call("PUT", "/budgets", { perTreeUsd: 8 })).json()).toMatchObject({
+      perTreeUsd: 8,
+    });
+  });
+
+  it("PUT /dispatch sets depth, run cap and auto review; out of range is 400 (ADR-0025)", async () => {
+    const { call } = setup();
+    const res = await call("PUT", "/dispatch", { maxDepth: 3, maxRunsPerTree: 20 });
+    expect(await res.json()).toEqual({ maxDepth: 3, maxRunsPerTree: 20, autoReview: true });
+    expect(await (await call("PUT", "/dispatch", { autoReview: false })).json()).toEqual({
+      maxDepth: 3,
+      maxRunsPerTree: 20,
+      autoReview: false,
+    });
+    expect((await call("PUT", "/dispatch", { maxDepth: 4 })).status).toBe(400);
+    expect((await call("PUT", "/dispatch", { maxRunsPerTree: 0 })).status).toBe(400);
+    expect((await call("PUT", "/dispatch", { fanOut: 2 })).status).toBe(400);
+  });
+
+  it("PATCH /agents/:id turns a crew member's dispatch on and off (ADR-0025)", async () => {
+    const { call } = setup();
+    const patch = async (canDispatch: boolean) =>
+      (await (await call("PATCH", "/agents/wren", { canDispatch })).json()) as AgentView;
+    const on = await patch(true);
+    expect(on.config.canDispatch).toBe(true);
+    expect(on.tools.map((t) => t.name)).toContain("dispatch");
+    const off = await patch(false);
+    expect(off.tools.map((t) => t.name)).not.toContain("dispatch");
   });
 
   it("adds a Project Manager from its template; an unknown template is 404", async () => {

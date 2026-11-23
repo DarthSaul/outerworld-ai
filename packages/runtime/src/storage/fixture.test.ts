@@ -16,7 +16,8 @@ describe("fixtures/demo-station", () => {
       ["wren", "crew", "research"],
     ]);
     expect(loaded.station?.rooms.map((r) => r.id)).toEqual(["command", "operations", "research"]);
-    expect(loaded.station?.lanes.map((l) => l.to)).toEqual(["command", "command"]);
+    expect(loaded.station?.lanes.map((l) => l.to)).toEqual(["command", "command", "research"]);
+    expect(loaded.agents.find((a) => a.id === "quill")?.config.canDispatch).toBe(true);
     for (const agent of loaded.agents) {
       for (const text of Object.values(agent.documents)) expect(text.length).toBeGreaterThan(0);
     }

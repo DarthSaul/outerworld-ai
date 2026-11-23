@@ -170,8 +170,8 @@ describe("skillsForAgent", () => {
       rooms: [{ id: "lab", name: "Lab", props: [{ kind: "web" as const }] }],
       lanes: [],
       connectors: [],
-      budgets: {},
-      dispatch: { maxDepth: 1, autoReview: true },
+      budgets: { perTreeUsd: null },
+      dispatch: { maxDepth: 1, maxRunsPerTree: 12, autoReview: true },
       skills: { enabled: [], disabled: ["humanizer"] },
     };
     const agent = {
@@ -188,5 +188,38 @@ describe("skillsForAgent", () => {
     const { offered, unavailable } = skillsForAgent(agent, station, library);
     expect(offered.map((s) => s.id)).toEqual(["meal-planning", "plan"]);
     expect(unavailable.map((u) => [u.skill.id, u.missing])).toEqual([["web-research", ["files"]]]);
+  });
+
+  it("offers dispatch skills to crew with canDispatch, and not at the depth limit (ADR-0025)", () => {
+    const station = {
+      schemaVersion: 1,
+      name: "S",
+      rooms: [{ id: "lab", name: "Lab", props: [] }],
+      lanes: [],
+      connectors: [],
+      budgets: { perTreeUsd: null },
+      dispatch: { maxDepth: 2, maxRunsPerTree: 12, autoReview: true },
+      skills: { enabled: ["work-splitting"], disabled: [] },
+    };
+    const splitting = [skill("work-splitting", { requires: ["dispatch"] })];
+    const crewMember = {
+      schemaVersion: 1,
+      name: "A",
+      roomId: "lab",
+      role: "crew" as const,
+      model: "m",
+      approvalMode: "ask" as const,
+      connectorGrants: [],
+      skills: [],
+      schedules: [],
+    };
+    const offeredIds = (agent: typeof crewMember & { canDispatch?: boolean }, depth?: number) =>
+      skillsForAgent(agent, station, splitting, depth === undefined ? {} : { depth }).offered.map(
+        (s) => s.id,
+      );
+    expect(offeredIds(crewMember)).toEqual([]);
+    expect(offeredIds({ ...crewMember, canDispatch: true })).toEqual(["work-splitting"]);
+    expect(offeredIds({ ...crewMember, canDispatch: true }, 1)).toEqual(["work-splitting"]);
+    expect(offeredIds({ ...crewMember, canDispatch: true }, 2)).toEqual([]);
   });
 });

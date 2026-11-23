@@ -118,6 +118,10 @@ Main area: `display:grid; grid-template-columns: minmax(0,1fr) minmax(0,3fr) min
 - Colors: AUTH = `--st-lane-auth`, PENDING = amber, SEALED = red, selected = near-white.
 - A lane-ID tag (6px Press Start, dark background, 1px border in the lane color) sits at the midpoint of the longest segment.
 - Clicking a segment or its tag selects the lane.
+- **Direction (ADR-0025).** Hallways are directed `from → to`. Two small chevrons on the lane's centerline, a quarter and three quarters of the way along, point the way it runs. They are drawn in the lane color at `--st-map-lane-arrow-opacity` (subtle), sized `--st-map-lane-arrow`, and follow the selected color.
+- **Two-way pairs.** When a hallway and its reverse both exist, they share one route and run side by side. Each is shifted `--st-map-lane-gap` to the right of its own direction of travel, like road lanes, and the corners stay joined. Each tag moves to 30% of the way along its own lane, so the two tags don't overlap, and the chevrons move to 55% and 85%. A one-way hallway stays centered.
+- **Reach.** When a crew member is selected, the hallways it can dispatch along (core's `dispatchReach`) are drawn in `--st-lane-reach` (green). The Overseer needs no hallway, so selecting it lights none.
+- **Who asked whom.** A dispatched mission in the Scanner, and a consent request for a dispatched run, carry an "Asked by: Vesper → Quill" line built from the event log.
 
 **Traffic packets:**
 - 8×8 squares in the destination room's color with `box-shadow: 0 0 8px` of the same color.

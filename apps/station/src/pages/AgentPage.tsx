@@ -5,10 +5,14 @@ import {
   type AgentView,
   type ApprovalMode,
   abilityDisplay,
+  type CrewMember,
   characterById,
   connectorDisplay,
+  dispatchReach,
   type EffectiveTool,
   findModel,
+  hasDispatch,
+  laneLabel,
   lookFor,
   type StationConfig,
   term,
@@ -63,6 +67,8 @@ const sourceLabel = (t: EffectiveTool) => {
   switch (t.source.kind) {
     case "role":
       return term("tools.source.role");
+    case "dispatch":
+      return term("tools.source.dispatch");
     case "prop":
       return `${term("grant")}: ${term(`prop.${t.source.prop}`)}`;
     case "connector":
@@ -221,7 +227,9 @@ function DocumentEditor({
 }
 
 /** The config fields this form edits; each is present only once the Commander changed it. */
-type Draft = Partial<Pick<AgentConfig, "name" | "roomId" | "role" | "model" | "approvalMode">>;
+type Draft = Partial<
+  Pick<AgentConfig, "name" | "roomId" | "role" | "model" | "approvalMode" | "canDispatch">
+>;
 
 /**
  * Config's Connectors: every connector installed on the station, one full-width row each with its
@@ -418,6 +426,25 @@ function ConfigForm({
           </label>
         ))}
       </fieldset>
+      {/* Dispatch (ADR-0025): the Overseer always has it; crew only when it is turned on here. */}
+      <label className="flex items-start gap-2 text-b19 text-fg" data-dispatch-toggle>
+        <input
+          type="checkbox"
+          checked={value.role === "overseer" || value.canDispatch === true}
+          disabled={value.role === "overseer"}
+          onChange={(e) => set({ canDispatch: e.target.checked })}
+        />
+        <span className="flex flex-col">
+          <span>{term("dispatch.canDispatch")}</span>
+          <span className="text-b17 text-fg-mute">
+            {term(
+              value.role === "overseer"
+                ? "dispatch.canDispatch.overseer"
+                : "dispatch.canDispatch.hint",
+            )}
+          </span>
+        </span>
+      </label>
       <div className="flex items-center gap-2">
         <button type="submit" className={button} disabled={!dirty || update.isPending}>
           Save changes
@@ -507,6 +534,58 @@ function AppearanceRow({ agentId }: { readonly agentId: string }) {
  * What this crew member can use, as the runtime resolves it: built-in tools by their readable
  * names, then each granted connector, in two columns.
  */
+/**
+ * Who this crew member can hand work to (ADR-0025), from core's `dispatchReach`: the same function
+ * the dispatch policy checks, so the page shows exactly what is enforced. Each target says how it
+ * is reached: same room, or the hallway by its map label.
+ */
+function DispatchReachPanel({
+  agent,
+  station,
+  crew,
+}: {
+  readonly agent: AgentView;
+  readonly station: StationConfig;
+  readonly crew: readonly CrewMember[];
+}) {
+  // This crew member's own config is the freshest one; the rest come from the station view.
+  const team = crew.map((c) => (c.id === agent.id ? { id: c.id, config: agent.config } : c));
+  const reach = dispatchReach(agent.id, station, team);
+  const nameOf = (id: string) => team.find((c) => c.id === id)?.config.name ?? id;
+  const roomOf = (id: string) => station.rooms.find((r) => r.id === id)?.name ?? id;
+  const laneLabelOf = (id: string) => laneLabel(station.lanes.findIndex((l) => l.id === id));
+  const empty = !hasDispatch(agent.config)
+    ? "dispatch.reach.off"
+    : reach.length === 0
+      ? "dispatch.reach.none"
+      : undefined;
+  return (
+    <Panel title={term("dispatch.reach")}>
+      <div className="p-3" data-dispatch-reach>
+        {empty ? (
+          <p className="m-0 text-b17 text-fg-mute">{term(empty)}</p>
+        ) : (
+          <ul className="m-0 flex list-none flex-col gap-1 p-0">
+            {reach.map((r) => (
+              <li key={r.agentId} className="flex flex-wrap items-baseline gap-2 text-b18 text-fg">
+                <span>{nameOf(r.agentId)}</span>
+                <span className="text-b17 text-fg-mute">{roomOf(r.roomId)}</span>
+                <span className="text-b17 text-fg-soft">
+                  {r.via.kind === "lane"
+                    ? termWith("dispatch.reach.lane", { lane: laneLabelOf(r.via.laneId) })
+                    : term(
+                        r.via.kind === "room" ? "dispatch.reach.room" : "dispatch.reach.overseer",
+                      )}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </Panel>
+  );
+}
+
 function Capabilities({
   agent,
   station,
@@ -640,7 +719,15 @@ function SkillGrants({ agent }: { readonly agent: AgentView }) {
  * Brief: who this crew member is, at a glance and read only. Their look, name, room, and model;
  * what they can use; their identity; and their schedules. Everything editable is on Config.
  */
-function Brief({ agent, station }: { readonly agent: AgentView; readonly station: StationConfig }) {
+function Brief({
+  agent,
+  station,
+  crew,
+}: {
+  readonly agent: AgentView;
+  readonly station: StationConfig;
+  readonly crew: readonly CrewMember[];
+}) {
   const identity = agent.documents.identity.trim();
   const look = lookFor(agent.id, agent.config.look);
   const room = station.rooms.find((r) => r.id === agent.config.roomId)?.name ?? agent.config.roomId;
@@ -692,6 +779,7 @@ function Brief({ agent, station }: { readonly agent: AgentView; readonly station
         </Link>
       </header>
       <Capabilities agent={agent} station={station} />
+      <DispatchReachPanel agent={agent} station={station} crew={crew} />
       <Panel title={term("document.identity")}>
         <div className="p-3" data-identity>
           {identity ? (
@@ -746,7 +834,7 @@ export function AgentDetail({ id }: { readonly id: string }) {
   const content = (t: AgentTab) => {
     switch (t) {
       case "brief":
-        return <Brief agent={a} station={stationConfig} />;
+        return <Brief agent={a} station={stationConfig} crew={station.data.agents} />;
       case "schedules":
         return <SchedulesSection agentId={a.id} />;
       case "memory":

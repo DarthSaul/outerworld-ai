@@ -37,6 +37,9 @@
         "full"
       ]
     },
+    "canDispatch": {
+      "type": "boolean"
+    },
     "connectorGrants": {
       "default": [],
       "type": "array",

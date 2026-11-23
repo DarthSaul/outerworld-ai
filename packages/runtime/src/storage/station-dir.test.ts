@@ -18,8 +18,8 @@ const station: StationConfig = {
   rooms: [{ id: "command", name: "Command", props: [{ kind: "web" }] }],
   lanes: [],
   connectors: [],
-  budgets: {},
-  dispatch: { maxDepth: 1, autoReview: true },
+  budgets: { perTreeUsd: null },
+  dispatch: { maxDepth: 1, maxRunsPerTree: 12, autoReview: true },
 };
 
 const overseer: AgentConfig = {

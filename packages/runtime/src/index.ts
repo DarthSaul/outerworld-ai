@@ -20,6 +20,7 @@ export {
   type CrewServiceOptions,
   NotFoundError,
 } from "./crew/crew-service.js";
+export { dispatchChainOf } from "./dispatch/dispatch-chain.js";
 export { DispatchService } from "./dispatch/dispatch-service.js";
 export {
   type DispatchRecord,

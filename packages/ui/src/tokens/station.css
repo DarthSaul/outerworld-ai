@@ -70,6 +70,8 @@
   --st-white: oklch(0.92 0.04 250); /* the Overseer */
   --st-lane-auth: oklch(0.62 0.09 230); /* an authorized hallway (schematic) */
   --st-lane-selected: oklch(0.97 0.03 250);
+  /* A hallway the selected crew member can dispatch along (ADR-0025). */
+  --st-lane-reach: var(--st-green);
   --st-done: oklch(0.62 0.04 250); /* design .55; AA (D26) */
 
   /* Room colors by room order (ADR-0013 #18). The first three are the design's. */
@@ -175,6 +177,15 @@
   --st-map-room-border-width: 2px;
   --st-map-lane-thick: 12px;
   --st-map-lane-border: 2px;
+  /*
+   * Directed hallways (ADR-0025): each lane of a two-way pair sits this far right of its travel,
+   * so the two run side by side with a sliver between; chevrons show the way a lane runs. Both
+   * follow the style's lane thickness.
+   */
+  --st-map-lane-gap: calc(var(--st-map-lane-thick) * 0.6);
+  --st-map-lane-arrow: calc(var(--st-map-lane-thick) * 0.45);
+  --st-map-lane-arrow-stroke: var(--st-map-lane-border);
+  --st-map-lane-arrow-opacity: 0.55;
 }
 [data-map-style="schematic"] {
   --st-map-viewport-bg: var(--st-map-bg);
@@ -564,6 +575,33 @@ label:hover .st-check:not(:disabled) + .st-check-box {
   margin-left: calc(var(--st-map-lane-thick) / -2);
   border-left-width: var(--st-map-lane-border);
   border-right-width: var(--st-map-lane-border);
+}
+/*
+ * A direction chevron (ADR-0025): two borders of a square, turned to point the way the lane runs.
+ * Subtle by design; it takes the lane's color, selected included.
+ */
+.st-lane-arrow {
+  position: absolute;
+  width: var(--st-map-lane-arrow);
+  height: var(--st-map-lane-arrow);
+  pointer-events: none;
+  border: 0 solid var(--st-lane-color);
+  border-top-width: var(--st-map-lane-arrow-stroke);
+  border-right-width: var(--st-map-lane-arrow-stroke);
+  opacity: var(--st-map-lane-arrow-opacity);
+  transform: translate(-50%, -50%) rotate(var(--st-lane-arrow-turn));
+}
+.st-lane-arrow[data-lane-arrow="e"] {
+  --st-lane-arrow-turn: 45deg;
+}
+.st-lane-arrow[data-lane-arrow="s"] {
+  --st-lane-arrow-turn: 135deg;
+}
+.st-lane-arrow[data-lane-arrow="w"] {
+  --st-lane-arrow-turn: 225deg;
+}
+.st-lane-arrow[data-lane-arrow="n"] {
+  --st-lane-arrow-turn: -45deg;
 }
 .st-packet {
   position: absolute;

@@ -87,7 +87,7 @@ describe("Station map", () => {
     renderApp("/", withLane());
     const m = await map();
     expect(scanner()).toHaveTextContent("Most urgent missions");
-    await user.click(within(m).getByRole("button", { name: "Hallway L-01: Operations ⇄ Command" }));
+    await user.click(within(m).getByRole("button", { name: "Hallway L-01: Operations → Command" }));
     expect(scanner()).toHaveTextContent("Briefings");
     await user.click(within(scanner()).getByRole("button", { name: /^Crew · 2/ }));
     await user.click(within(scanner()).getByRole("option", { name: /^Quill/ }));
@@ -121,27 +121,41 @@ describe("hallways", () => {
     await user.click(screen.getByRole("button", { name: term("map.draw") }));
     expect(within(m).getByRole("status")).toHaveTextContent(term("map.drawFirst"));
     await user.click(within(m).getByRole("button", { name: "A-1 Operations" }));
-    expect(within(m).getByRole("status")).toHaveTextContent("Link Operations to…");
+    expect(within(m).getByRole("status")).toHaveTextContent("Hallway from Operations to…");
     await user.click(within(m).getByRole("button", { name: "HQ · Bridge Command" }));
     expect(calls).toContainEqual({
       method: "POST",
       path: "/lanes",
-      body: { from: "operations", to: "command", note: "Handoff · Operations ⇄ Command" },
+      body: { from: "operations", to: "command", note: "Handoff · Operations → Command" },
     });
   });
 
-  it("says so instead of drawing a second hallway between linked rooms, and can cancel", async () => {
+  it("draws the reverse of a hallway as its own, since hallways are directed (ADR-0025)", async () => {
     const user = userEvent.setup();
     const { calls } = renderApp("/", withLane());
     const m = await map();
     await user.click(screen.getByRole("button", { name: term("map.draw") }));
     await user.click(within(m).getByRole("button", { name: "HQ · Bridge Command" }));
-    await user.click(within(m).getByRole("button", { name: "HQ · Bridge Command" }));
-    expect(within(m).getByRole("status")).toHaveTextContent(term("map.drawFirst"));
-    await user.click(within(m).getByRole("button", { name: "HQ · Bridge Command" }));
     await user.click(within(m).getByRole("button", { name: "A-1 Operations" }));
+    expect(calls).toContainEqual({
+      method: "POST",
+      path: "/lanes",
+      body: { from: "command", to: "operations", note: "Handoff · Command → Operations" },
+    });
+  });
+
+  it("says so instead of drawing a second hallway the same way, and can cancel", async () => {
+    const user = userEvent.setup();
+    const { calls } = renderApp("/", withLane());
+    const m = await map();
+    await user.click(screen.getByRole("button", { name: term("map.draw") }));
+    await user.click(within(m).getByRole("button", { name: "A-1 Operations" }));
+    await user.click(within(m).getByRole("button", { name: "A-1 Operations" }));
+    expect(within(m).getByRole("status")).toHaveTextContent(term("map.drawFirst"));
+    await user.click(within(m).getByRole("button", { name: "A-1 Operations" }));
+    await user.click(within(m).getByRole("button", { name: "HQ · Bridge Command" }));
     expect(
-      await screen.findByText("Command and Operations are already linked"),
+      await screen.findByText("A hallway already leads from Operations to Command"),
     ).toBeInTheDocument();
     expect(calls.some((c) => c.path === "/lanes")).toBe(false);
     await user.click(screen.getByRole("button", { name: term("map.draw") }));

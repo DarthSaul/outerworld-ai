@@ -57,6 +57,10 @@ export interface RunRecord {
   /** 0 for a run the Commander (or a schedule) started; 1 for a dispatched worker's run. */
   readonly depth: number;
   readonly dispatchId?: string;
+  /** The run this one was dispatched from, or whose work it reviews (ADR-0025). */
+  readonly parentRunId?: string;
+  /** The top of this run's dispatch tree: its own id when nothing is above it. */
+  readonly rootRunId: string;
 }
 
 export interface StoredMessage {
@@ -89,6 +93,7 @@ const toRun = (r: Row): RunRecord => {
     endedAt: str(r.ended_at),
     error: str(r.error),
     dispatchId: str(r.dispatch_id),
+    parentRunId: str(r.parent_run_id),
   };
   return {
     id: String(r.id),
@@ -102,6 +107,7 @@ const toRun = (r: Row): RunRecord => {
     createdAt: String(r.created_at),
     steps: Number(r.steps),
     depth: Number(r.depth),
+    rootRunId: str(r.root_run_id) ?? String(r.id),
     ...Object.fromEntries(Object.entries(optional).filter(([, v]) => v !== undefined)),
   };
 };
@@ -291,9 +297,13 @@ export class SessionStore {
     reasoning?: ReasoningLevel;
     depth?: number;
     dispatchId?: string;
+    /** Lineage (ADR-0025): absent for a run that starts a tree of its own. */
+    parentRunId?: string;
+    rootRunId?: string;
   }): RunRecord {
+    const id = randomUUID();
     const row = {
-      id: randomUUID(),
+      id,
       session_id: input.sessionId,
       agent_id: input.agentId,
       state: "queued",
@@ -303,11 +313,13 @@ export class SessionStore {
       reasoning: input.reasoning ?? "default",
       depth: input.depth ?? 0,
       dispatch_id: input.dispatchId ?? null,
+      parent_run_id: input.parentRunId ?? null,
+      root_run_id: input.rootRunId ?? id,
       created_at: this.#at(),
     };
     this.#db
       .prepare(
-        "insert into runs (id, session_id, agent_id, state, trigger, model, provider, reasoning, depth, dispatch_id, created_at) values (@id, @session_id, @agent_id, @state, @trigger, @model, @provider, @reasoning, @depth, @dispatch_id, @created_at)",
+        "insert into runs (id, session_id, agent_id, state, trigger, model, provider, reasoning, depth, dispatch_id, parent_run_id, root_run_id, created_at) values (@id, @session_id, @agent_id, @state, @trigger, @model, @provider, @reasoning, @depth, @dispatch_id, @parent_run_id, @root_run_id, @created_at)",
       )
       .run(row);
     return this.getRun(row.id) as RunRecord;
@@ -370,6 +382,43 @@ export class SessionStore {
       this.#db
         .prepare(`select * from runs where state in (${placeholders}) order by created_at, rowid`)
         .all(...UNFINISHED) as Row[]
+    ).map(toRun);
+  }
+
+  /** The run and every run above it in its dispatch tree, nearest first (ADR-0025). */
+  lineage(id: string): RunRecord[] {
+    const chain: RunRecord[] = [];
+    const seen = new Set<string>();
+    let at = this.getRun(id);
+    while (at && !seen.has(at.id)) {
+      seen.add(at.id);
+      chain.push(at);
+      at = at.parentRunId ? this.getRun(at.parentRunId) : undefined;
+    }
+    return chain;
+  }
+
+  /** Every run in a dispatch tree, the root included, oldest first. */
+  treeRuns(rootRunId: string): RunRecord[] {
+    return (
+      this.#db
+        .prepare("select * from runs where root_run_id = ? order by created_at, rowid")
+        .all(rootRunId) as Row[]
+    ).map(toRun);
+  }
+
+  /** Every run below this one in its tree: those it dispatched or that review for it, and theirs. */
+  descendants(id: string): RunRecord[] {
+    return (
+      this.#db
+        .prepare(
+          `with recursive below(id) as (
+             select id from runs where parent_run_id = ?
+             union select runs.id from runs join below on runs.parent_run_id = below.id
+           )
+           select runs.* from runs join below on below.id = runs.id order by created_at, rowid`,
+        )
+        .all(id) as Row[]
     ).map(toRun);
   }
 

@@ -1,4 +1,9 @@
-import { routeModel, term } from "@darthsaul/outerworld-ai-core";
+import {
+  MAX_DISPATCH_DEPTH,
+  MAX_RUNS_PER_TREE_LIMIT,
+  routeModel,
+  term,
+} from "@darthsaul/outerworld-ai-core";
 import { useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 import { ErrorNote } from "../components/ErrorNote.js";
@@ -15,6 +20,7 @@ import {
   useSpend,
   useStationView,
   useUpdateBudgets,
+  useUpdateDispatch,
 } from "../queries.js";
 
 const button =
@@ -24,10 +30,14 @@ const CAPS = [
   ["perRunUsd", "budgets.perRun"],
   ["perAgentDailyUsd", "budgets.perAgentDaily"],
   ["stationDailyUsd", "budgets.stationDaily"],
+  ["perTreeUsd", "budgets.perTree"],
 ] as const;
 type Cap = (typeof CAPS)[number][0];
 
-/** The three spend caps in station.json (brief §15). Empty means no cap. */
+/**
+ * The spend caps in station.json (brief §15), with the per-request cap across every dispatch
+ * (ADR-0025). Empty means no cap; for the per-request cap that is stored as an explicit null.
+ */
 function BudgetsSection() {
   const station = useStationView();
   const spend = useSpend();
@@ -35,7 +45,10 @@ function BudgetsSection() {
   const client = useQueryClient();
   const saved = station.data?.station?.budgets;
   const [draft, setDraft] = useState<Partial<Record<Cap, string>>>({});
-  const value = (cap: Cap) => draft[cap] ?? (saved?.[cap] !== undefined ? String(saved[cap]) : "");
+  const value = (cap: Cap) => {
+    const stored = saved?.[cap];
+    return draft[cap] ?? (stored !== undefined && stored !== null ? String(stored) : "");
+  };
   const submit = (e: FormEvent) => {
     e.preventDefault();
     const input = Object.fromEntries(
@@ -81,6 +94,7 @@ function BudgetsSection() {
             </label>
           ))}
         </div>
+        <p className="m-0 text-b17 text-fg-mute">{term("budgets.perTree.hint")}</p>
         <p className="m-0 text-b17 text-fg-mute">{term("budgets.none")}</p>
         {spend.data ? (
           <p className="m-0 text-b19 text-fg">
@@ -105,6 +119,99 @@ function BudgetsSection() {
 
 const panel = "flex flex-col gap-2 border-2 border-line bg-panel p-3 shadow-panel";
 const heading = "m-0 font-display font-normal text-d9 text-panel-title uppercase tracking-st-1";
+const fieldLabel = "flex flex-col gap-1 font-display text-d7 text-fg-mute uppercase";
+/** Every depth the station may allow: 0 (off) to MAX_DISPATCH_DEPTH. */
+const DEPTHS = Array.from({ length: MAX_DISPATCH_DEPTH + 1 }, (_, depth) => depth);
+const fieldInput =
+  "min-w-0 border-2 border-line-soft bg-well px-2 py-1 font-body text-b19 text-fg-hi";
+
+/**
+ * The station's dispatch policy (ADR-0025): how many levels work may be handed down, how many
+ * dispatched runs one request may lead to, and whether the Overseer reviews reports itself.
+ */
+function DispatchSection() {
+  const station = useStationView();
+  const update = useUpdateDispatch();
+  const client = useQueryClient();
+  const saved = station.data?.station?.dispatch;
+  const [draft, setDraft] = useState<{ depth?: string; runs?: string; review?: boolean }>({});
+  if (!saved) return null;
+  const depth = draft.depth ?? String(saved.maxDepth);
+  const runs = draft.runs ?? String(saved.maxRunsPerTree);
+  const review = draft.review ?? saved.autoReview;
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    update.mutate(
+      { maxDepth: Number(depth), maxRunsPerTree: Number(runs), autoReview: review },
+      {
+        onSuccess: () => {
+          setDraft({});
+          void client.invalidateQueries({ queryKey: ["station"] });
+        },
+      },
+    );
+  };
+  return (
+    <section aria-labelledby="dispatch-title" className={panel}>
+      <h2 id="dispatch-title" className={heading}>
+        {term("dispatch.policy")}
+      </h2>
+      <p className="m-0 text-b17 text-fg-soft">{term("dispatch.policy.hint")}</p>
+      <form onSubmit={submit} className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-end gap-3">
+          <label className={fieldLabel}>
+            {term("dispatch.maxDepth")}
+            <select
+              className={fieldInput}
+              value={depth}
+              onChange={(e) => setDraft((d) => ({ ...d, depth: e.target.value }))}
+            >
+              {DEPTHS.map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className={fieldLabel}>
+            {term("dispatch.maxRunsPerTree")}
+            <input
+              type="number"
+              inputMode="numeric"
+              min="1"
+              max={MAX_RUNS_PER_TREE_LIMIT}
+              step="1"
+              className={fieldInput}
+              value={runs}
+              onChange={(e) => setDraft((d) => ({ ...d, runs: e.target.value }))}
+            />
+          </label>
+        </div>
+        <p className="m-0 text-b17 text-fg-mute">{term("dispatch.maxDepth.hint")}</p>
+        <p className="m-0 text-b17 text-fg-mute">{term("dispatch.maxRunsPerTree.hint")}</p>
+        <label className="flex items-center gap-2 text-b19 text-fg">
+          <input
+            type="checkbox"
+            checked={review}
+            onChange={(e) => setDraft((d) => ({ ...d, review: e.target.checked }))}
+          />
+          {term("dispatch.autoReview")}
+        </label>
+        <div className="flex items-center gap-2">
+          <button type="submit" className={button} disabled={update.isPending}>
+            {term("dispatch.save")}
+          </button>
+          {update.isSuccess && Object.keys(draft).length === 0 ? (
+            <span role="status" className="m-0 text-b17 text-fg-soft">
+              {term("budgets.saved")}
+            </span>
+          ) : null}
+        </div>
+        <ErrorNote error={update.error} />
+      </form>
+    </section>
+  );
+}
 
 /** One provider's key: whether it is set and where from, a form to replace it, and removal. */
 function KeyCard({ provider }: { readonly provider: KeyProviderName }) {
@@ -272,6 +379,7 @@ const SECTIONS: readonly Section[] = [
   { path: "providers", label: "settings.providers", element: <ProvidersSection /> },
   { path: "models", label: "settings.models", element: <ModelsSection /> },
   { path: "budgets", label: "budgets", element: <BudgetsSection /> },
+  { path: "dispatch", label: "dispatch.policy", element: <DispatchSection /> },
   { path: "appearance", label: "settings.appearance", element: <AppearanceSection /> },
 ];
 

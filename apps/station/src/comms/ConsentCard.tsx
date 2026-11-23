@@ -2,7 +2,7 @@ import { term } from "@darthsaul/outerworld-ai-core";
 import { ChoiceButton } from "@darthsaul/outerworld-ai-ui";
 import { ErrorNote } from "../components/ErrorNote.js";
 import type { ConsentRecord } from "../queries.js";
-import { useDecideConsent } from "../queries.js";
+import { useDecideConsent, useStationView } from "../queries.js";
 
 /**
  * One consent request (brief §6): who wants to run which tool with what input, and (A) Approve or
@@ -16,7 +16,11 @@ export function ConsentCard({
   readonly agentName: string;
 }) {
   const decide = useDecideConsent();
+  const station = useStationView();
   const titleId = `consent-${consent.id}`;
+  // A dispatched run's request says who asked for it, up the chain (ADR-0025).
+  const above = (consent.chain ?? []).slice(0, -1);
+  const nameOf = (id: string) => station.data?.agents.find((a) => a.id === id)?.config.name ?? id;
   return (
     <section
       aria-labelledby={titleId}
@@ -27,6 +31,11 @@ export function ConsentCard({
         <span className="font-display text-amber text-d8 uppercase">{term("consent.title")}:</span>{" "}
         {agentName} {term("consent.body")} <code className="text-cyan">{consent.tool}</code>
       </h3>
+      {above.length > 0 ? (
+        <p className="m-0 text-b17 text-fg-soft" data-consent-chain>
+          {term("dispatch.chain")}: {above.map((l) => nameOf(l.agentId)).join(" → ")}
+        </p>
+      ) : null}
       <pre className="m-0 max-h-60 overflow-auto whitespace-pre-wrap border border-line-faint bg-well p-1.5 font-body text-b15 text-fg-soft">
         {JSON.stringify(consent.input, null, 2)}
       </pre>

@@ -150,6 +150,16 @@ export class EventStore {
     return rows.map(toEvent);
   }
 
+  /** One run's stored events of the given types, oldest first (the `events_run` index). */
+  ofRun(runId: string, types: readonly string[]): RuntimeEvent[] {
+    if (types.length === 0) return [];
+    const marks = types.map(() => "?").join(", ");
+    const rows = this.#db
+      .prepare(`select * from events where run_id = ? and type in (${marks}) order by seq`)
+      .all(runId, ...types) as Row[];
+    return rows.map(toEvent);
+  }
+
   latestSeq(): number {
     return (this.#latest.get() as { seq: number }).seq;
   }

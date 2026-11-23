@@ -63,10 +63,19 @@ export const Connector = z.looseObject({
 
 const Usd = z.number().positive();
 
+/** The per-tree cap a station has when station.json says nothing about it (ADR-0025). */
+export const DEFAULT_PER_TREE_USD = 15;
+
 export const Budgets = z.looseObject({
   perRunUsd: Usd.optional(),
   perAgentDailyUsd: Usd.optional(),
   stationDailyUsd: Usd.optional(),
+  /**
+   * The summed spend of one root run and every run descended from it (ADR-0025). Unlike the other
+   * caps, a missing value means the default, because nested dispatch multiplies cost; `null` is
+   * the Commander's explicit "no cap".
+   */
+  perTreeUsd: Usd.nullable().default(DEFAULT_PER_TREE_USD),
 });
 
 /**
@@ -77,11 +86,28 @@ export const DEFAULT_BUDGETS = {
   perRunUsd: 5,
   perAgentDailyUsd: 25,
   stationDailyUsd: 50,
+  perTreeUsd: DEFAULT_PER_TREE_USD,
 } as const satisfies z.infer<typeof Budgets>;
 
-/** v1 allows depth 1 at most (brief §7); 0 turns delegation off. */
+/** The deepest a dispatch chain may nest (ADR-0025): the Commander's run is depth 0. */
+export const MAX_DISPATCH_DEPTH = 3;
+/** Dispatched runs one root run may lead to, unless station.json says otherwise (ADR-0025). */
+export const DEFAULT_MAX_RUNS_PER_TREE = 12;
+export const MAX_RUNS_PER_TREE_LIMIT = 50;
+
+/**
+ * Dispatch policy (brief §7, ADR-0025). `maxDepth` 0 turns delegation off; a run at depth N may
+ * dispatch only while N < maxDepth. `maxRunsPerTree` caps the dispatched runs under one root run.
+ * `autoReview` governs the Commander's session; nested dispatchers always review.
+ */
 export const DispatchPolicy = z.looseObject({
-  maxDepth: z.number().int().min(0).max(1).default(1),
+  maxDepth: z.number().int().min(0).max(MAX_DISPATCH_DEPTH).default(1),
+  maxRunsPerTree: z
+    .number()
+    .int()
+    .min(1)
+    .max(MAX_RUNS_PER_TREE_LIMIT)
+    .default(DEFAULT_MAX_RUNS_PER_TREE),
   autoReview: z.boolean().default(true),
 });
 
@@ -100,8 +126,12 @@ export const StationConfig = z.looseObject({
   rooms: z.array(Room).min(1),
   lanes: z.array(Lane).default([]),
   connectors: z.array(Connector).default([]),
-  budgets: Budgets.default({}),
-  dispatch: DispatchPolicy.default({ maxDepth: 1, autoReview: true }),
+  budgets: Budgets.default({ perTreeUsd: DEFAULT_PER_TREE_USD }),
+  dispatch: DispatchPolicy.default({
+    maxDepth: 1,
+    maxRunsPerTree: DEFAULT_MAX_RUNS_PER_TREE,
+    autoReview: true,
+  }),
   /** Absent until the Commander first changes a skill; every default stands. */
   skills: SkillOverrides.optional(),
 });

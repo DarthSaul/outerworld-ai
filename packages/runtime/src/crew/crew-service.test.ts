@@ -108,7 +108,7 @@ describe("CrewService: agents", () => {
   it("recomputes the effective tools after a move to another room", async () => {
     const { crew } = setup();
     const moved = await crew.updateAgent("quill", { roomId: "command" });
-    expect(moved.tools.map((t) => t.name)).toEqual(["web_fetch", "remember"]);
+    expect(moved.tools.map((t) => t.name)).toEqual(["dispatch", "web_fetch", "remember"]);
   });
 
   it("refuses a grant for a connector the station does not have", async () => {
@@ -184,7 +184,10 @@ describe("CrewService: rooms", () => {
   it("places and removes props, which changes the crew's tools", async () => {
     const { crew } = setup();
     await crew.updateRoom("operations", { props: [{ kind: "web" }] });
-    expect((await crew.agent("quill"))?.tools.map((t) => t.name)).toEqual(["web_fetch"]);
+    expect((await crew.agent("quill"))?.tools.map((t) => t.name)).toEqual([
+      "dispatch",
+      "web_fetch",
+    ]);
   });
 
   it("refuses the same prop twice in a room", async () => {
@@ -231,12 +234,12 @@ describe("CrewService: hallways", () => {
     await crew.deleteRoom(room.id);
   });
 
-  it("refuses a loop, a second hallway between linked rooms (either way), and unknown ids", async () => {
+  it("refuses a loop, a second hallway the same way, and unknown ids", async () => {
     const { crew, types } = setup();
     await expect(crew.createLane({ from: "research", to: "research" })).rejects.toBeInstanceOf(
       ConflictError,
     );
-    await expect(crew.createLane({ from: "command", to: "research" })).rejects.toBeInstanceOf(
+    await expect(crew.createLane({ from: "research", to: "command" })).rejects.toBeInstanceOf(
       ConflictError,
     );
     await expect(crew.createLane({ from: "attic", to: "research" })).rejects.toBeInstanceOf(
@@ -244,6 +247,16 @@ describe("CrewService: hallways", () => {
     );
     await expect(crew.deleteLane("nowhere")).rejects.toBeInstanceOf(NotFoundError);
     expect(types()).toEqual([]);
+  });
+
+  it("opens the reverse of a hallway as its own, since hallways are directed (ADR-0025)", async () => {
+    const { crew } = setup();
+    const back = await crew.createLane({ from: "command", to: "research" });
+    expect(back).toEqual({ id: "command-to-research", from: "command", to: "research" });
+    const lanes = (await crew.view()).station?.lanes ?? [];
+    expect(lanes.filter((l) => [l.from, l.to].sort().join() === "command,research")).toHaveLength(
+      2,
+    );
   });
 });
 
@@ -447,9 +460,23 @@ describe("CrewService: budgets", () => {
     expect(await crew.updateBudgets({ perRunUsd: 2, stationDailyUsd: null })).toEqual({
       perRunUsd: 2,
       perAgentDailyUsd: 25,
+      perTreeUsd: 15,
     });
-    expect((await crew.view()).station?.budgets).toEqual({ perRunUsd: 2, perAgentDailyUsd: 25 });
+    expect((await crew.view()).station?.budgets).toEqual({
+      perRunUsd: 2,
+      perAgentDailyUsd: 25,
+      perTreeUsd: 15,
+    });
     expect(types()).toEqual(["station.updated"]);
+  });
+
+  it("stores no per-tree cap as an explicit null, so it does not fall back to the default", async () => {
+    const { crew, home } = setup();
+    expect(await crew.updateBudgets({ perTreeUsd: null })).toMatchObject({ perTreeUsd: null });
+    const stored = JSON.parse(readFileSync(stationPaths(home).stationJson, "utf8"));
+    expect(stored.budgets.perTreeUsd).toBeNull();
+    expect((await crew.view()).station?.budgets.perTreeUsd).toBeNull();
+    expect(await crew.updateBudgets({ perTreeUsd: 4 })).toMatchObject({ perTreeUsd: 4 });
   });
 });
 

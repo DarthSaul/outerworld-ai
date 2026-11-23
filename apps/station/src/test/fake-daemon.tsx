@@ -64,8 +64,8 @@ const station = (): StationConfig => ({
   connectors: [
     { id: "notion", name: "Notion", transport: { type: "http", url: "https://mcp.example/mcp" } },
   ],
-  budgets: {},
-  dispatch: { maxDepth: 1, autoReview: true },
+  budgets: { perTreeUsd: null },
+  dispatch: { maxDepth: 1, maxRunsPerTree: 12, autoReview: true },
 });
 
 const agent = (over: Partial<AgentConfig>): AgentConfig => ({
@@ -287,11 +287,16 @@ export function fakeApi() {
     if (path === "/budgets") {
       const budgets: Record<string, unknown> = { ...state.station.budgets };
       for (const [k, v] of Object.entries(b)) {
-        if (v === null) delete budgets[k];
+        if (v === null && k !== "perTreeUsd") delete budgets[k];
         else budgets[k] = v;
       }
-      state.station = { ...state.station, budgets };
+      state.station = { ...state.station, budgets: budgets as typeof state.station.budgets };
       return budgets;
+    }
+    if (path === "/dispatch") {
+      const dispatch = { ...state.station.dispatch, ...(b as object) };
+      state.station = { ...state.station, dispatch };
+      return dispatch;
     }
     if (path === "/spend")
       return {

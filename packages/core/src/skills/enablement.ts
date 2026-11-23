@@ -1,6 +1,6 @@
 import type { AgentConfig } from "../config/agent-config.js";
 import type { StationConfig } from "../config/station-config.js";
-import { type EffectiveTool, resolveGrants } from "../policy/grants.js";
+import { type EffectiveTool, type GrantContext, resolveGrants } from "../policy/grants.js";
 import { isRequirement, type Requirement, type Skill } from "./skill.js";
 
 /**
@@ -118,18 +118,20 @@ export function selectSkills(input: SkillSelectionInput): SkillSelection {
 
 /**
  * An agent's skills from its config alone: what `skill_view` checks and what its page shows.
- * Capabilities come from role and props only (connector tools meet no requirement), so this
- * matches the run's selection whenever the built-in tools are registered, as the daemon does.
+ * Capabilities come from dispatch, role and props only (connector tools meet no requirement), so
+ * this matches the run's selection whenever the built-in tools are registered, as the daemon does.
+ * `context.depth` is the run's depth: at the station's limit `dispatch` and its skills drop out.
  */
 export function skillsForAgent(
   agent: AgentConfig,
   station: StationConfig,
   skills: readonly Skill[],
+  context: GrantContext = {},
 ): SkillSelection {
   return selectSkills({
     skills,
     overrides: station.skills,
     agentSkills: agent.skills,
-    tools: resolveGrants(agent, station, {}),
+    tools: resolveGrants(agent, station, {}, context),
   });
 }

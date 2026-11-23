@@ -4,23 +4,36 @@ import { describe, expect, it } from "vitest";
 import { byAgent, callTool, hanging, reply, setup } from "../test/loop.js";
 import { DispatchService } from "./dispatch-service.js";
 
-/** Adds a third crew member, Scout, so the Overseer can fan out to two workers. */
-const addScout = (home: string) => {
-  const dir = join(home, "agents", "scout");
+/**
+ * Adds a crew member next to Quill in Operations (the fixture's Quill has dispatch; Scout does
+ * not unless asked), so the Overseer can fan out and Quill has a roommate.
+ */
+const addCrew = (home: string, id: string, name: string, over: Record<string, unknown> = {}) => {
+  const dir = join(home, "agents", id);
   mkdirSync(dir, { recursive: true });
   const quill = JSON.parse(readFileSync(join(home, "agents", "quill", "agent.json"), "utf8"));
+  const { canDispatch: _, ...plain } = quill;
   writeFileSync(
     join(dir, "agent.json"),
-    JSON.stringify({ ...quill, name: "Scout", connectorGrants: [], schedules: [] }),
+    JSON.stringify({ ...plain, name, connectorGrants: [], schedules: [], ...over }),
   );
-  writeFileSync(join(dir, "identity.md"), "You are Scout, a researcher.\n");
+  writeFileSync(join(dir, "identity.md"), `You are ${name}.\n`);
 };
+const addScout = (home: string) => addCrew(home, "scout", "Scout");
 
-const setAutoReview = (home: string, autoReview: boolean) => {
-  const path = join(home, "station.json");
-  const station = JSON.parse(readFileSync(path, "utf8"));
-  writeFileSync(path, JSON.stringify({ ...station, dispatch: { maxDepth: 1, autoReview } }));
+const editJson = (path: string, change: (json: Record<string, unknown>) => void) => {
+  const json = JSON.parse(readFileSync(path, "utf8"));
+  change(json);
+  writeFileSync(path, JSON.stringify(json));
 };
+const editStation = (home: string, change: (s: Record<string, unknown>) => void) =>
+  editJson(join(home, "station.json"), change);
+
+const setDispatch = (home: string, policy: Record<string, unknown>) =>
+  editStation(home, (s) => {
+    s.dispatch = { ...(s.dispatch as object), ...policy };
+  });
+const setAutoReview = (home: string, autoReview: boolean) => setDispatch(home, { autoReview });
 
 const withDispatch = (
   scripts: Parameters<typeof byAgent>[0],
@@ -256,9 +269,9 @@ describe("dispatch", () => {
     });
   });
 
-  it("never gives a worker the dispatch tool, and rejects a worker's attempt at execution", async () => {
-    const t = withDispatch({ Quill: [dispatchCall("scout", "x", "d1"), reply("Cannot.")] });
-    const s = t.service.createSession("quill", "Chat");
+  it("never gives crew without dispatch the tool, and rejects its attempt at execution", async () => {
+    const t = withDispatch({ Scout: [dispatchCall("quill", "x", "d1"), reply("Cannot.")] });
+    const s = t.service.createSession("scout", "Chat");
     await t.service.settled((await t.service.send(s.id, "Delegate")).runId);
     expect((t.model.doStreamCalls[0]?.tools ?? []).map((x) => x.name)).not.toContain("dispatch");
     expect(t.events.since(0).find((e) => e.type === "run.tool_call")?.payload).toMatchObject({

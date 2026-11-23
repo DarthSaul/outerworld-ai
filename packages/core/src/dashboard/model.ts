@@ -2,9 +2,24 @@ import { lookFor } from "../characters.js";
 import type { AgentConfig } from "../config/agent-config.js";
 import type { StationConfig } from "../config/station-config.js";
 import type { GlossaryKey } from "../glossary.js";
+import { dispatchReach } from "../policy/dispatch.js";
 import type { CrewActivityEntry } from "../run/crew-activity.js";
 import type { RunState } from "../run/run-state.js";
-import { laneLabel, type Point, placeRooms, type Rect, routeBetween, tagPoint } from "./layout.js";
+import {
+  LANE_ARROWS_AT,
+  type LanePoint,
+  type LaneSegment,
+  laneLabel,
+  lanePointAlong,
+  laneSegments,
+  PAIRED_LANE_ARROWS_AT,
+  PAIRED_LANE_TAG_AT,
+  type Point,
+  placeRooms,
+  type Rect,
+  routeBetween,
+  tagPoint,
+} from "./layout.js";
 import {
   alertCount,
   type CrewDisplayStatus,
@@ -29,6 +44,8 @@ export interface DashboardRun {
   readonly createdAt: string;
   readonly steps: number;
   readonly title: string;
+  /** For a dispatched run: the agents above it in its chain, root first (ADR-0025). */
+  readonly askedBy?: readonly string[];
 }
 
 export interface DashboardInput {
@@ -38,8 +55,11 @@ export interface DashboardInput {
   readonly activity: Readonly<Record<string, CrewActivityEntry>>;
   /** Recent runs, any order (GET /api/runs). */
   readonly runs: readonly DashboardRun[];
-  /** Dispatches still running: who they went to. */
-  readonly dispatches: readonly { readonly workerAgentId: string }[];
+  /** Dispatches still running: who they went to, and who sent them (absent: the Overseer). */
+  readonly dispatches: readonly {
+    readonly workerAgentId: string;
+    readonly leadAgentId?: string;
+  }[];
   /** Runs in flight now (GET /api/activity `runs`): the TASKS LIVE count. */
   readonly activeRunCount: number;
   /** Memory proposals awaiting a decision, station-wide. */
@@ -55,6 +75,10 @@ export interface DashboardCrew {
   /** The character id this crew member appears as, always one that exists. */
   readonly look: string;
   readonly colorIndex: number;
+  /** Who this crew member can dispatch to, from core's `dispatchReach` (ADR-0025). */
+  readonly reach: readonly string[];
+  /** The hallways that reach uses; empty for the Overseer, which needs none. */
+  readonly reachLanes: readonly string[];
   /** Why the last run ended badly, when it did. */
   readonly detail?: string;
   readonly sessionId?: string;
@@ -84,14 +108,27 @@ export interface DashboardRoom {
   readonly alert: boolean;
 }
 
+/** Where a hallway's ID tag sits: a point on its route and its shift there, in lane gaps. */
+export interface LaneTag {
+  readonly at: Point;
+  readonly shift: Point;
+}
+
 export interface DashboardLane {
   readonly id: string;
   readonly label: string;
   readonly from: string;
   readonly to: string;
   readonly note?: string;
+  /** The route in the lane's direction of travel, `from` to `to`. */
   readonly route: readonly Point[];
-  readonly tag?: Point;
+  /** The reverse hallway exists too: the two run side by side (ADR-0025). */
+  readonly paired: boolean;
+  /** The route as straight runs, each with how far its ends sit off the route, in lane gaps. */
+  readonly segments: readonly LaneSegment[];
+  /** Where the direction chevrons go, each with the way the lane runs there. */
+  readonly arrows: readonly LanePoint[];
+  readonly tag?: LaneTag;
   /** Dispatches running to crew in a room this hallway joins to the Bridge (ADR-0013 #9). */
   readonly traffic: number;
   /** The room whose color the packets take: the end that is not the Bridge. */
@@ -137,6 +174,11 @@ export function dashboardModel(input: DashboardInput): Dashboard {
 
   const crew: DashboardCrew[] = agents.map(({ id, config }) => {
     const entry = activity[id] ?? { state: "idle" as const, runs: 0 };
+    // The same reach the dispatch policy enforces, so the map shows exactly that (ADR-0025).
+    const reach = dispatchReach(id, station, agents);
+    const reachLanes = [
+      ...new Set(reach.flatMap((r) => (r.via.kind === "lane" ? [r.via.laneId] : []))),
+    ];
     return {
       id,
       name: config.name,
@@ -145,6 +187,8 @@ export function dashboardModel(input: DashboardInput): Dashboard {
       status: crewDisplayStatus(entry),
       look: lookFor(id, config.look),
       colorIndex: placement.get(config.roomId)?.colorIndex ?? 0,
+      reach: reach.map((r) => r.agentId),
+      reachLanes,
       ...(entry.detail ? { detail: entry.detail } : {}),
       ...(entry.sessionId ? { sessionId: entry.sessionId } : {}),
     };
@@ -189,17 +233,42 @@ export function dashboardModel(input: DashboardInput): Dashboard {
     ];
   });
 
+  // The Overseer's dispatches travel the hallways that touch the Bridge, whichever way they point
+  // (it is exempt from hallway direction); a crew member's travel the one hallway policy let them
+  // use, from its room to the worker's (ADR-0025). A dispatch inside one room uses no hallway.
   const dispatchedTo = new Map<string, number>();
+  const alongLane = new Map<string, number>();
   for (const d of input.dispatches) {
     const room = roomOf.get(d.workerAgentId);
-    if (room) dispatchedTo.set(room, (dispatchedTo.get(room) ?? 0) + 1);
+    if (!room) continue;
+    const lead = d.leadAgentId ? agents.find((a) => a.id === d.leadAgentId) : overseerAgent;
+    if (!lead || lead.config.role === "overseer") {
+      dispatchedTo.set(room, (dispatchedTo.get(room) ?? 0) + 1);
+    } else if (lead.config.roomId !== room) {
+      const key = `${lead.config.roomId}>${room}`;
+      alongLane.set(key, (alongLane.get(key) ?? 0) + 1);
+    }
   }
   const lanes: DashboardLane[] = station.lanes.map((lane, i) => {
-    const a = placement.get(lane.from);
-    const b = placement.get(lane.to);
+    // A two-way pair (ADR-0025) shares one route, laid from the lower room id, so the two lanes
+    // run side by side; each is shifted to the right of its own travel.
+    const paired = station.lanes.some((l) => l.from === lane.to && l.to === lane.from);
+    const reversed = paired && lane.from > lane.to;
+    const [first, second] = reversed ? [lane.to, lane.from] : [lane.from, lane.to];
+    const a = placement.get(first);
+    const b = placement.get(second);
     const others = placed.filter((p) => p.id !== lane.from && p.id !== lane.to).map((p) => p.rect);
-    const route = a && b ? routeBetween(a.rect, b.rect, others) : [];
-    const tag = tagPoint(route);
+    const laid = a && b ? routeBetween(a.rect, b.rect, others) : [];
+    const route = reversed ? [...laid].reverse() : laid;
+    const center = tagPoint(route);
+    const onPair = paired ? lanePointAlong(route, PAIRED_LANE_TAG_AT, true) : undefined;
+    const tag: LaneTag | undefined = onPair
+      ? { at: onPair.at, shift: onPair.shift }
+      : center && { at: center, shift: [0, 0] };
+    const arrows = (paired ? PAIRED_LANE_ARROWS_AT : LANE_ARROWS_AT).flatMap((u) => {
+      const p = lanePointAlong(route, u, paired);
+      return p ? [p] : [];
+    });
     const far = lane.from === bridgeId ? lane.to : lane.from;
     const touchesBridge = lane.from === bridgeId || lane.to === bridgeId;
     return {
@@ -209,8 +278,13 @@ export function dashboardModel(input: DashboardInput): Dashboard {
       to: lane.to,
       ...(lane.note ? { note: lane.note } : {}),
       route,
+      paired,
+      segments: laneSegments(route, paired),
+      arrows,
       ...(tag ? { tag } : {}),
-      traffic: touchesBridge ? (dispatchedTo.get(far) ?? 0) : 0,
+      traffic:
+        (touchesBridge ? (dispatchedTo.get(far) ?? 0) : 0) +
+        (alongLane.get(`${lane.from}>${lane.to}`) ?? 0),
       packetRoom: touchesBridge ? far : lane.to,
     };
   });

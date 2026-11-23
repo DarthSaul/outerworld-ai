@@ -6,6 +6,7 @@ export const ABILITIES_PATH = `${SYSTEM_PATH}/abilities`;
 /** Where a few places link to by name (notifications, the agent page, empty states). */
 export const ROUTES = {
   budgets: `${SETTINGS_PATH}/budgets`,
+  dispatch: `${SETTINGS_PATH}/dispatch`,
   discover: `${ABILITIES_PATH}/discover`,
   installed: `${ABILITIES_PATH}/installed`,
   skills: `${ABILITIES_PATH}/skills`,

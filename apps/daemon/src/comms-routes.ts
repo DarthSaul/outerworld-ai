@@ -17,6 +17,7 @@ import {
   crewActivity,
   type DispatchRecord,
   type DispatchStore,
+  dispatchChainOf,
   type EventStore,
   machineTimeZone,
   NotFoundError,
@@ -55,7 +56,11 @@ export interface ActivityView {
  * `GET /api/runs?limit=`: the station's latest runs, newest first (the dashboard's missions,
  * ADR-0013). `title` is the dispatched task for a dispatch, else the run's session title.
  */
-export type RecentRun = RunRecord & { readonly title: string };
+/** A recent run; a dispatched one also says who asked for it, from the event log (ADR-0025). */
+export type RecentRun = RunRecord & {
+  readonly title: string;
+  readonly askedBy?: readonly string[];
+};
 
 const RECENT_RUNS_DEFAULT = 40;
 const RECENT_RUNS_MAX = 200;
@@ -158,10 +163,19 @@ export function commsRoutes(deps: CommsDeps): Hono {
     if (!Number.isInteger(limit) || limit < 1 || limit > RECENT_RUNS_MAX) {
       return c.json({ error: `limit must be an integer from 1 to ${RECENT_RUNS_MAX}` }, 400);
     }
-    const view: RecentRun[] = sessions.recentRuns(limit).map(({ run, sessionTitle }) => ({
-      ...run,
-      title: (run.dispatchId && deps.dispatches.get(run.dispatchId)?.task) || sessionTitle,
-    }));
+    const view: RecentRun[] = sessions.recentRuns(limit).map(({ run, sessionTitle }) => {
+      // Only a run with a parent has anyone above it; the rest skip the lookup.
+      const above = run.parentRunId
+        ? dispatchChainOf(deps.events, run.id)
+            .slice(0, -1)
+            .map((l) => l.agentId)
+        : [];
+      return {
+        ...run,
+        title: (run.dispatchId && deps.dispatches.get(run.dispatchId)?.task) || sessionTitle,
+        ...(above.length ? { askedBy: above } : {}),
+      };
+    });
     return c.json(view);
   });
 
@@ -170,7 +184,14 @@ export function commsRoutes(deps: CommsDeps): Hono {
     return c.body(null, 202);
   });
 
-  app.get("/consents", (c) => c.json(deps.consents.pending()));
+  // Each pending request with who asked whom for its run, from the event log (ADR-0025).
+  app.get("/consents", (c) =>
+    c.json(
+      deps.consents
+        .pending()
+        .map((consent) => ({ ...consent, chain: dispatchChainOf(deps.events, consent.runId) })),
+    ),
+  );
   app.post("/consents/:id", async (c) => {
     const { decision } = await readBody(c, ConsentDecisionInput);
     return c.json(runs.resolveConsent(c.req.param("id"), decision));

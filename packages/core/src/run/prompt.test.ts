@@ -140,8 +140,8 @@ describe("roleBriefing", () => {
     ],
     lanes: [],
     connectors: [],
-    budgets: {},
-    dispatch: { maxDepth: 1, autoReview: true },
+    budgets: { perTreeUsd: null },
+    dispatch: { maxDepth: 1, maxRunsPerTree: 12, autoReview: true },
   };
   const a = (name: string, roomId: string, role: "overseer" | "crew"): AgentConfig => ({
     schemaVersion: 1,
@@ -170,6 +170,46 @@ describe("roleBriefing", () => {
     expect(roleBriefing("quill", station, crew)).toBe(
       "You are a crew member of Demo, in the Operations room. Vesper is the Overseer.",
     );
+  });
+
+  it("tells crew with dispatch exactly whom policy lets it reach, and how (ADR-0025)", () => {
+    const withLab: StationConfig = {
+      ...station,
+      rooms: [...station.rooms, { id: "lab", name: "Lab", props: [] }],
+      lanes: [{ id: "ops-to-lab", from: "ops", to: "lab" }],
+    };
+    const team = [
+      { id: "vesper", config: a("Vesper", "command", "overseer") },
+      { id: "quill", config: { ...a("Quill", "ops", "crew"), canDispatch: true } },
+      { id: "scout", config: a("Scout", "ops", "crew") },
+      { id: "moth", config: a("Moth", "lab", "crew") },
+    ];
+    const b = roleBriefing("quill", withLab, team);
+    expect(b).toContain("You can hand part of a task to:");
+    expect(b).toContain("- Scout (id: scout), your room");
+    expect(b).toContain("- Moth (id: moth), through the hallway to Lab");
+    expect(b).not.toContain("(id: vesper)");
+    // Without the flag, or with delegation off, nothing is offered.
+    expect(roleBriefing("scout", withLab, team)).not.toContain("hand part");
+    const off = { ...withLab, dispatch: { ...withLab.dispatch, maxDepth: 0 } };
+    expect(roleBriefing("quill", off, team)).not.toContain("hand part");
+  });
+
+  it("tells crew at the depth limit to do the work itself, as its tools do", () => {
+    const deep: StationConfig = {
+      ...station,
+      dispatch: { ...station.dispatch, maxDepth: 2 },
+    };
+    const team = [
+      { id: "vesper", config: a("Vesper", "command", "overseer") },
+      { id: "quill", config: { ...a("Quill", "ops", "crew"), canDispatch: true } },
+      { id: "scout", config: a("Scout", "ops", "crew") },
+    ];
+    expect(roleBriefing("quill", deep, team, { depth: 1 })).toContain("You can hand part");
+    const atLimit = roleBriefing("quill", deep, team, { depth: 2 });
+    expect(atLimit).not.toContain("You can hand part");
+    expect(atLimit).not.toContain("(id: scout)");
+    expect(atLimit).toContain("Do it yourself and report back.");
   });
 });
 

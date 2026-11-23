@@ -2,7 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { axe } from "vitest-axe";
-import { demoDashboard } from "../test/dashboard.js";
+import { demoDashboard, demoInput } from "../test/dashboard.js";
 import { DashboardMap, grantName, MAP_STYLES, walkPhase } from "./DashboardMap.js";
 
 describe("DashboardMap", () => {
@@ -71,7 +71,7 @@ describe("DashboardMap", () => {
       />,
     );
     await userEvent.click(
-      screen.getByRole("button", { name: "Hallway L-01: Operations ⇄ Command" }),
+      screen.getByRole("button", { name: "Hallway L-01: Operations → Command" }),
     );
     expect(onSelectLane).toHaveBeenCalledWith("operations-to-command");
     await userEvent.click(screen.getByRole("button", { name: "Quill, Idle" }));
@@ -79,6 +79,66 @@ describe("DashboardMap", () => {
     expect(onSelectRoom).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole("button", { name: "B-1 Research" }));
     expect(onSelectRoom).toHaveBeenCalledWith("research");
+  });
+
+  it("points two subtle chevrons along each hallway in the way it runs (ADR-0025)", () => {
+    const { container } = render(<DashboardMap dashboard={demoDashboard()} />);
+    const lane = container.querySelector('[data-lane="operations-to-research"]');
+    const arrows = lane?.querySelectorAll("[data-lane-arrow]") ?? [];
+    expect(arrows).toHaveLength(2);
+    for (const a of arrows) {
+      expect(a).toHaveAttribute("aria-hidden", "true");
+      expect(["e", "w", "n", "s"]).toContain(a.getAttribute("data-lane-arrow"));
+    }
+    // A one-way hallway sits on its route: nothing is shifted by the lane gap.
+    expect(lane).not.toHaveAttribute("data-paired");
+    expect(lane?.innerHTML).not.toContain("--st-map-lane-gap");
+  });
+
+  it("lights up the hallways a selected crew member can dispatch along (ADR-0025)", () => {
+    const { container, rerender } = render(
+      <DashboardMap dashboard={demoDashboard()} selection={{ type: "agent", id: "quill" }} />,
+    );
+    const reached = [...container.querySelectorAll("[data-reach]")].map((l) =>
+      l.getAttribute("data-lane"),
+    );
+    // Quill's only hallway out is Operations → Research; the one into Command is not reach.
+    expect(reached).toEqual(["operations-to-research"]);
+    const segment = container.querySelector(
+      '[data-lane="operations-to-research"] .st-lane',
+    ) as HTMLElement;
+    expect(segment.style.getPropertyValue("--st-lane-color")).toBe("var(--st-lane-reach)");
+    // The Overseer needs no hallway, and nothing is lit with no crew member selected.
+    rerender(
+      <DashboardMap dashboard={demoDashboard()} selection={{ type: "agent", id: "vesper" }} />,
+    );
+    expect(container.querySelector("[data-reach]")).toBeNull();
+    rerender(<DashboardMap dashboard={demoDashboard()} />);
+    expect(container.querySelector("[data-reach]")).toBeNull();
+  });
+
+  it("runs a two-way pair side by side, each lane shifted by the lane gap", () => {
+    const input = demoInput();
+    const station = {
+      ...input.station,
+      lanes: [
+        ...input.station.lanes,
+        { id: "research-to-operations", from: "research", to: "operations" },
+      ],
+    };
+    const { container } = render(<DashboardMap dashboard={demoDashboard({ station })} />);
+    for (const id of ["operations-to-research", "research-to-operations"]) {
+      const lane = container.querySelector(`[data-lane="${id}"]`);
+      expect(lane).toHaveAttribute("data-paired", "true");
+      const segments = [...(lane?.querySelectorAll(".st-lane") ?? [])] as HTMLElement[];
+      expect(segments.length).toBeGreaterThan(0);
+      expect(segments.every((s) => s.getAttribute("style")?.includes("--st-map-lane-gap"))).toBe(
+        true,
+      );
+    }
+    expect(
+      screen.getByRole("button", { name: "Hallway L-04: Research → Operations" }),
+    ).toBeInTheDocument();
   });
 
   it("marks the selected room (and a selected crew member's room)", () => {
@@ -113,7 +173,7 @@ describe("DashboardMap", () => {
     await userEvent.click(screen.getByRole("button", { name: "Quill, Idle" }));
     expect(onSelectAgent).not.toHaveBeenCalled();
     rerender(<DashboardMap dashboard={demoDashboard()} drawFrom="research" />);
-    expect(screen.getByRole("status")).toHaveTextContent("Link Research to…");
+    expect(screen.getByRole("status")).toHaveTextContent("Hallway from Research to…");
     expect(container.querySelector('[data-room="research"]')).toHaveAttribute("data-linking");
   });
 

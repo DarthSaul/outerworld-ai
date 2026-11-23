@@ -175,9 +175,8 @@ export function StationPage() {
     if (draw.from === id) return setDraw({ from: null });
     const from = draw.from;
     setDraw(undefined);
-    const linked = dashboard.lanes.some(
-      (l) => (l.from === from && l.to === id) || (l.from === id && l.to === from),
-    );
+    // Hallways are directed (ADR-0025): the reverse of one is a hallway of its own.
+    const linked = dashboard.lanes.some((l) => l.from === from && l.to === id);
     if (linked) {
       setNote(termWith("map.alreadyLinked", { from: roomName(from), to: roomName(id) }));
       return;

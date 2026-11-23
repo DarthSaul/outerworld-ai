@@ -4,7 +4,7 @@ import {
   type DashboardGrant,
   type DashboardLane,
   type DashboardRoom,
-  pointAlong,
+  lanePointAlong,
   routeLength,
   term,
   termWith,
@@ -248,25 +248,48 @@ function Room({
 function Lane({
   lane,
   selected,
+  inReach = false,
   name,
   onSelect,
 }: {
   readonly lane: DashboardLane;
   readonly selected: boolean;
+  /** The selected crew member can dispatch along this hallway (ADR-0025). */
+  readonly inReach?: boolean;
   readonly name: string;
   readonly onSelect?: () => void;
 }) {
-  const color = selected ? stVar("lane-selected") : "var(--st-map-lane-auth)";
-  const segments = lane.route.slice(1).map((q, i) => {
-    const p = lane.route[i] ?? q;
-    const horizontal = p[1] === q[1];
+  const color = selected
+    ? stVar("lane-selected")
+    : inReach
+      ? stVar("lane-reach")
+      : "var(--st-map-lane-auth)";
+  const segments = lane.segments.map((s, i) => {
+    const horizontal = s.heading === "e" || s.heading === "w";
+    // The end nearer the map's origin comes first; each end is moved by its shift (ADR-0025).
+    const forward = s.heading === "e" || s.heading === "s";
+    const [near, far] = forward ? [s.start, s.end] : [s.end, s.start];
+    const [nearShift, farShift] = forward ? [s.startShift, s.endShift] : [s.endShift, s.startShift];
     const style: CSSProperties = horizontal
-      ? { left: pct(Math.min(p[0], q[0])), top: pct(p[1]), width: pct(Math.abs(q[0] - p[0])) }
-      : { left: pct(p[0]), top: pct(Math.min(p[1], q[1])), height: pct(Math.abs(q[1] - p[1])) };
+      ? {
+          left: offset(near[0], nearShift[0]),
+          top: offset(near[1], nearShift[1]),
+          width: offset(far[0] - near[0], farShift[0] - nearShift[0]),
+        }
+      : {
+          left: offset(near[0], nearShift[0]),
+          top: offset(near[1], nearShift[1]),
+          height: offset(far[1] - near[1], farShift[1] - nearShift[1]),
+        };
     return { key: `${i}`, horizontal, style };
   });
   return (
-    <div className="contents" data-lane={lane.id}>
+    <div
+      className="contents"
+      data-lane={lane.id}
+      data-paired={lane.paired || undefined}
+      data-reach={inReach || undefined}
+    >
       {segments.map((s) => (
         <button
           key={s.key}
@@ -278,6 +301,15 @@ function Lane({
           style={{ ...s.style, "--st-lane-color": color } as CSSProperties}
         />
       ))}
+      {lane.arrows.map((a) => (
+        <span
+          key={`${a.at[0]},${a.at[1]}`}
+          aria-hidden="true"
+          data-lane-arrow={a.heading}
+          className="st-lane-arrow"
+          style={{ ...at(a.at, a.shift), "--st-lane-color": color } as CSSProperties}
+        />
+      ))}
       {lane.tag ? (
         <button
           type="button"
@@ -286,8 +318,7 @@ function Lane({
           aria-pressed={selected}
           className="-translate-x-1/2 -translate-y-1/2 absolute z-10 cursor-pointer whitespace-nowrap border bg-map-bg px-1 py-0.5 font-display text-d6"
           style={{
-            left: pct(lane.tag[0]),
-            top: pct(lane.tag[1]),
+            ...at(lane.tag.at, lane.tag.shift),
             borderColor: color,
             color: selected ? color : "var(--st-map-lane-tag)",
           }}
@@ -299,6 +330,14 @@ function Lane({
   );
 }
 
+/** A map percentage moved `gaps` lane gaps (`--st-map-lane-gap`); plain percent when 0. */
+const offset = (percent: number, gaps: number) =>
+  gaps === 0 ? pct(percent) : `calc(${pct(percent)} + ${gaps} * var(--st-map-lane-gap))`;
+const at = (point: readonly [number, number], shift: readonly [number, number]) => ({
+  left: offset(point[0], shift[0]),
+  top: offset(point[1], shift[1]),
+});
+
 /** Packets on a hallway with traffic: up to two, every second one running the other way. */
 function packetsFor(lane: DashboardLane, t: number): { id: string; left: string; top: string }[] {
   const count = Math.min(2, lane.traffic);
@@ -308,8 +347,8 @@ function packetsFor(lane: DashboardLane, t: number): { id: string; left: string;
   return Array.from({ length: count }, (_, k) => {
     let u = ((t * PACKET_SPEED) / total + k / count + seed) % 1;
     if (k % 2 === 1) u = 1 - u;
-    const at = pointAlong(lane.route, u) ?? [0, 0];
-    return { id: `${lane.id}:${k}`, left: pct(at[0]), top: pct(at[1]) };
+    const p = lanePointAlong(lane.route, u, lane.paired);
+    return { id: `${lane.id}:${k}`, ...at(p?.at ?? [0, 0], p?.shift ?? [0, 0]) };
   });
 }
 
@@ -326,6 +365,10 @@ export function DashboardMap(props: DashboardMapProps) {
   const t = useAnimationClock(!paused && dashboard.lanes.some((l) => l.traffic > 0));
   const roomName = (id: string) => dashboard.rooms.find((r) => r.id === id)?.name ?? id;
   const drawing = drawFrom !== undefined;
+  // A selected crew member's hallways light up: where the dispatch policy lets it send work.
+  const picked =
+    selection?.type === "agent" ? dashboard.crew.find((c) => c.id === selection.id) : undefined;
+  const reachLanes = new Set(picked?.reachLanes ?? []);
   const viewport = useRef<HTMLDivElement>(null);
   const plane = useRef<HTMLDivElement>(null);
   const { view, dragging, recenter, zoom, handlers } = useMapView(viewport, plane);
@@ -359,7 +402,8 @@ export function DashboardMap(props: DashboardMapProps) {
               key={lane.id}
               lane={lane}
               selected={selection?.type === "lane" && selection.id === lane.id}
-              name={`${term("lane")} ${lane.label}: ${roomName(lane.from)} ⇄ ${roomName(lane.to)}`}
+              inReach={reachLanes.has(lane.id)}
+              name={`${term("lane")} ${lane.label}: ${roomName(lane.from)} → ${roomName(lane.to)}`}
               {...(props.onSelectLane ? { onSelect: () => props.onSelectLane?.(lane.id) } : {})}
             />
           ))}

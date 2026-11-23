@@ -27,6 +27,7 @@ import {
   term,
   type UpdateAgentInput,
   type UpdateBudgetsInput,
+  type UpdateDispatchInput,
   type UpdateRoomInput,
   type UpdateScheduleInput,
 } from "@darthsaul/outerworld-ai-core";
@@ -221,6 +222,8 @@ export interface ConsentRecord {
   readonly input: unknown;
   readonly status: "pending" | "approved" | "denied" | "expired";
   readonly createdAt: string;
+  /** Who asked whom for this run, root first and the run's own agent last (ADR-0025). */
+  readonly chain?: readonly { readonly agentId: string; readonly runId: string }[];
 }
 
 export function useSessions(agentId: string | undefined) {
@@ -620,6 +623,14 @@ export function useUpdateBudgets() {
   });
 }
 
+/** The station's dispatch policy: depth, run cap per request, auto review (ADR-0025). */
+export function useUpdateDispatch() {
+  const { api } = useDaemon();
+  return useMutation({
+    mutationFn: (input: UpdateDispatchInput) => api.send("PUT", "/dispatch", input),
+  });
+}
+
 /** A page of the Notifications feed (mirrors the runtime's NotificationPage). */
 export interface NotificationPage {
   readonly items: readonly Notification[];
@@ -674,7 +685,11 @@ export function useSetLook() {
 }
 
 /** A recent run with its title (mirrors the daemon's RecentRun): the dashboard's missions. */
-export type RecentRun = RunRecord & { readonly title: string };
+export type RecentRun = RunRecord & {
+  readonly title: string;
+  /** Who asked for a dispatched run, root first (ADR-0025). */
+  readonly askedBy?: readonly string[];
+};
 
 export function useRecentRuns() {
   const { api } = useDaemon();
