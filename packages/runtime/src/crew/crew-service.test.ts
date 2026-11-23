@@ -249,7 +249,7 @@ describe("CrewService: hallways", () => {
     expect(types()).toEqual([]);
   });
 
-  it("opens the reverse of a hallway as its own, since hallways are directed (ADR-0024)", async () => {
+  it("opens the reverse of a hallway as its own, since hallways are directed (ADR-0025)", async () => {
     const { crew } = setup();
     const back = await crew.createLane({ from: "command", to: "research" });
     expect(back).toEqual({ id: "command-to-research", from: "command", to: "research" });

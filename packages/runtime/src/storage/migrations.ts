@@ -181,7 +181,7 @@ export const MIGRATIONS: readonly Migration[] = [
     `,
   },
   {
-    // ADR-0024: nested dispatch. A run's parent is the run it was dispatched from (or, for a
+    // ADR-0025: nested dispatch. A run's parent is the run it was dispatched from (or, for a
     // review, the run whose work it reviews); its root is the top of that tree. Before this every
     // dispatch was one level deep, so the dispatch's lead run is both parent and root.
     version: 7,

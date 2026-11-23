@@ -190,7 +190,7 @@ describe("skillsForAgent", () => {
     expect(unavailable.map((u) => [u.skill.id, u.missing])).toEqual([["web-research", ["files"]]]);
   });
 
-  it("offers dispatch skills to crew with canDispatch, and not at the depth limit (ADR-0024)", () => {
+  it("offers dispatch skills to crew with canDispatch, and not at the depth limit (ADR-0025)", () => {
     const station = {
       schemaVersion: 1,
       name: "S",

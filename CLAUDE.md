@@ -36,7 +36,7 @@ keys, event types, CSS custom properties, and test names.
 | Room | `room` | a capability-scoped team; props placed in it grant tools to its crew |
 | Crew / crew member | `agent` | an agent; exactly one room |
 | Overseer | `role: "overseer"` | the station lead; always has dispatch and reaches every crew member (a role, not "the first agent") |
-| Hallway | `lane` | a directed handoff lane between rooms; crew dispatch follows it (ADR-0024) |
+| Hallway | `lane` | a directed handoff lane between rooms; crew dispatch follows it (ADR-0025) |
 | Prop | `grant` (kind `prop`) | a capability placed in a room: `web`, `files`, `memory` |
 | Connector | `connector` | an MCP server installed station-wide; each agent is granted it or not |
 | COMMS | `comms` | the chat surface |
@@ -163,7 +163,7 @@ is wrong for this project, say so and propose a change to CONSTRAINTS.md.
 - Out of scope for v1 (brief §3): conveyor lines, inbox/outbox, webhooks, watchers, shell tools,
   helper copies, agents editing agents, desktop shell, non-Notion connectors, embeddings,
   summarization, npm publishing. If you find yourself building one, stop and ask. (Nested
-  dispatch up to depth 3 is in scope since ADR-0024.)
+  dispatch up to depth 3 is in scope since ADR-0025.)
 - A decision the brief doesn't cover: make the smallest reasonable choice, record it in an ADR
   (`docs/decisions/`) or the `tasks/todo.md` decisions list, and flag it at the next checkpoint.
 - Small commits, one logical change each, Conventional Commits (`feat(runtime): ...`,

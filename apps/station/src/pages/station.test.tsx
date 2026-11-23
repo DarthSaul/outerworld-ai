@@ -130,7 +130,7 @@ describe("hallways", () => {
     });
   });
 
-  it("draws the reverse of a hallway as its own, since hallways are directed (ADR-0024)", async () => {
+  it("draws the reverse of a hallway as its own, since hallways are directed (ADR-0025)", async () => {
     const user = userEvent.setup();
     const { calls } = renderApp("/", withLane());
     const m = await map();

@@ -58,7 +58,7 @@ describe("needsConsent", () => {
   });
 });
 
-describe("checkBudget for a dispatch tree (ADR-0024)", () => {
+describe("checkBudget for a dispatch tree (ADR-0025)", () => {
   const withTree = { ...budgets, perTreeUsd: 3 };
   const tree = (run: number, treeUsd: number, agentToday = 0, stationToday = 0) => ({
     run,

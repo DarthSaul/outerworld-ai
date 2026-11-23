@@ -205,7 +205,7 @@ describe("consents, kill switch, and spend", () => {
     expect((await call("POST", "/consents/nope", { decision: "maybe" })).status).toBe(400);
   });
 
-  it("gives each pending request the chain of who asked whom, from the event log (ADR-0024)", async () => {
+  it("gives each pending request the chain of who asked whom, from the event log (ADR-0025)", async () => {
     const { call, events, services } = setup();
     const { sessions, consents } = services;
     const lead = sessions.createSession("vesper", "Chat");

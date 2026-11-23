@@ -5,7 +5,7 @@ import type { EventStore } from "../storage/event-store.js";
 const MAX_HOPS = 16;
 
 /**
- * Who asked whom for a run (ADR-0024), from the event log alone: each run's `run.queued` names
+ * Who asked whom for a run (ADR-0025), from the event log alone: each run's `run.queued` names
  * the run above it, so the chain is one indexed lookup per level. Core's `dispatchChain` turns
  * the events into links, root first.
  */

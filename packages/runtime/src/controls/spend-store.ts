@@ -63,7 +63,7 @@ export class SpendStore {
     return this.#total("run_id = ?", runId);
   }
 
-  /** A dispatch tree's spend: its root run and every run whose root it is (ADR-0024). */
+  /** A dispatch tree's spend: its root run and every run whose root it is (ADR-0025). */
   forTree(rootRunId: string): SpendTotal {
     return this.#total("run_id in (select id from runs where root_run_id = ?)", rootRunId);
   }

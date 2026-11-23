@@ -89,7 +89,7 @@ function MissionCard({
 }: {
   readonly mission: DashboardMission;
   readonly agentName: string;
-  /** Names the agents a dispatched run was asked for by (ADR-0024). */
+  /** Names the agents a dispatched run was asked for by (ADR-0025). */
   readonly nameOf: (id: string) => string;
   readonly onSelect?: () => void;
 }) {

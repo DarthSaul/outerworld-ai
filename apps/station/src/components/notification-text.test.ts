@@ -11,7 +11,7 @@ const text = (n: Notification) =>
   );
 
 describe("notificationText", () => {
-  it("names each budget scope in words, the per-request cap included (ADR-0024)", () => {
+  it("names each budget scope in words, the per-request cap included (ADR-0025)", () => {
     const budget = (subject: string): Notification => ({
       seq: 1,
       at,

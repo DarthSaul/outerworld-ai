@@ -7,7 +7,7 @@ export interface ChainLink {
 }
 
 /**
- * Who asked whom for a run (ADR-0024), read from events alone: `dispatch.started` names the lead's
+ * Who asked whom for a run (ADR-0025), read from events alone: `dispatch.started` names the lead's
  * run and the worker's run, and `run.queued` names the run a review continues. Returns the chain
  * from the root run down to `runId`; just the run itself when nothing dispatched it, and an empty
  * list when no event mentions it. Pure.

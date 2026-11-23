@@ -131,7 +131,7 @@ describe("dashboardModel on the demo station", () => {
     ]);
   });
 
-  it("runs a crew member's dispatch along the hallway policy let it use (ADR-0024)", () => {
+  it("runs a crew member's dispatch along the hallway policy let it use (ADR-0025)", () => {
     const d = dashboardModel(
       input({
         dispatches: [

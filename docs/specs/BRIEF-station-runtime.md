@@ -34,7 +34,7 @@ StarNet (androoAGI/starnet) demonstrated the alternative: a local runtime ("side
 
 ### v1 goals
 1. Chat with any crew member in **COMMS**: streamed responses, sessions saved and re-openable.
-2. **Delegation**: the Overseer dispatches tasks to crew members, and crew given dispatch hand parts on along their room and hallways, up to three levels deep (ADR-0024); workers run concurrently in the background; each result returns to its dispatcher's session; everything visible live.
+2. **Delegation**: the Overseer dispatches tasks to crew members, and crew given dispatch hand parts on along their room and hallways, up to three levels deep (ADR-0025); workers run concurrently in the background; each result returns to its dispatcher's session; everything visible live.
 3. **Agents as documents**: identity, purpose, standing orders, context as markdown; model, approval mode, and grants as config. Edits in the UI take effect on the next run.
 4. **Capabilities**: Props (placed objects) grant base tools per Room; connector tools granted per agent; consent gates for side-effectful calls.
 5. **Notion MCP connector**: connected once, station-wide; each agent is either granted the connector or not.
@@ -165,7 +165,7 @@ An agent's effective tool set is computed by the runtime from four sources, then
 
 ## 7. Orchestration model (v1)
 
-Amended by ADR-0024: dispatch is no longer the Overseer's alone, hallways are enforced, and chains nest.
+Amended by ADR-0025: dispatch is no longer the Overseer's alone, hallways are enforced, and chains nest.
 
 - **Who dispatches.** The Overseer always; a crew member when its `canDispatch` flag is on. `read_session` stays the Overseer's.
 - **Depth up to 3.** `station.dispatch.maxDepth` (0–3, default 1; 0 turns delegation off) is runtime policy, checked in one place. A run at depth N may dispatch only while N < maxDepth; at the limit the `dispatch` tool is not offered.

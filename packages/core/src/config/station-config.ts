@@ -63,7 +63,7 @@ export const Connector = z.looseObject({
 
 const Usd = z.number().positive();
 
-/** The per-tree cap a station has when station.json says nothing about it (ADR-0024). */
+/** The per-tree cap a station has when station.json says nothing about it (ADR-0025). */
 export const DEFAULT_PER_TREE_USD = 15;
 
 export const Budgets = z.looseObject({
@@ -71,7 +71,7 @@ export const Budgets = z.looseObject({
   perAgentDailyUsd: Usd.optional(),
   stationDailyUsd: Usd.optional(),
   /**
-   * The summed spend of one root run and every run descended from it (ADR-0024). Unlike the other
+   * The summed spend of one root run and every run descended from it (ADR-0025). Unlike the other
    * caps, a missing value means the default, because nested dispatch multiplies cost; `null` is
    * the Commander's explicit "no cap".
    */
@@ -89,14 +89,14 @@ export const DEFAULT_BUDGETS = {
   perTreeUsd: DEFAULT_PER_TREE_USD,
 } as const satisfies z.infer<typeof Budgets>;
 
-/** The deepest a dispatch chain may nest (ADR-0024): the Commander's run is depth 0. */
+/** The deepest a dispatch chain may nest (ADR-0025): the Commander's run is depth 0. */
 export const MAX_DISPATCH_DEPTH = 3;
-/** Dispatched runs one root run may lead to, unless station.json says otherwise (ADR-0024). */
+/** Dispatched runs one root run may lead to, unless station.json says otherwise (ADR-0025). */
 export const DEFAULT_MAX_RUNS_PER_TREE = 12;
 export const MAX_RUNS_PER_TREE_LIMIT = 50;
 
 /**
- * Dispatch policy (brief §7, ADR-0024). `maxDepth` 0 turns delegation off; a run at depth N may
+ * Dispatch policy (brief §7, ADR-0025). `maxDepth` 0 turns delegation off; a run at depth N may
  * dispatch only while N < maxDepth. `maxRunsPerTree` caps the dispatched runs under one root run.
  * `autoReview` governs the Commander's session; nested dispatchers always review.
  */

@@ -19,7 +19,7 @@ import { dispatchChainOf } from "./dispatch-chain.js";
 import { DispatchService } from "./dispatch-service.js";
 
 /**
- * Nested dispatch, hallway reach, and the guards around them (ADR-0024), with the scripted model.
+ * Nested dispatch, hallway reach, and the guards around them (ADR-0025), with the scripted model.
  * The fixture: Vesper (Overseer, Command, Ask first), Quill (Operations, Ask first, has dispatch),
  * Wren (Research, Full power). Hallways: Operations → Command, Research → Command, Operations →
  * Research.

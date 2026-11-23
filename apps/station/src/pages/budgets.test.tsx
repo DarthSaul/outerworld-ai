@@ -44,7 +44,7 @@ describe("Settings → Budgets", () => {
     });
   });
 
-  it("edits the per-request cap across every dispatch, empty meaning none (ADR-0024)", async () => {
+  it("edits the per-request cap across every dispatch, empty meaning none (ADR-0025)", async () => {
     const user = userEvent.setup();
     const fake = withBudgets();
     fake.state.station = {
@@ -78,7 +78,7 @@ describe("Settings → Budgets", () => {
   });
 });
 
-describe("Settings → Dispatch (ADR-0024)", () => {
+describe("Settings → Dispatch (ADR-0025)", () => {
   it("shows the station's depth, run cap and auto review, and saves changes", async () => {
     const user = userEvent.setup();
     const { calls, container } = renderApp("/system/settings/dispatch");

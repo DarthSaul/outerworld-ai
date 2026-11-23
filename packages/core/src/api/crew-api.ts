@@ -38,7 +38,7 @@ export const UpdateAgentInput = z.strictObject({
   role: AgentRole.optional(),
   model: z.string().min(1).optional(),
   approvalMode: ApprovalMode.optional(),
-  /** Crew may be given dispatch along their room and hallways (ADR-0024). */
+  /** Crew may be given dispatch along their room and hallways (ADR-0025). */
   canDispatch: z.boolean().optional(),
   connectorGrants: z.array(Id).optional(),
   /** The crew member's own skills, on top of the station-wide ones (ADR-0023). */
@@ -110,7 +110,7 @@ export const UpdateBudgetsInput = z.strictObject({
   perTreeUsd: Cap,
 });
 
-/** `PUT /api/dispatch`: the station's dispatch policy (ADR-0024). Missing fields keep their value. */
+/** `PUT /api/dispatch`: the station's dispatch policy (ADR-0025). Missing fields keep their value. */
 export const UpdateDispatchInput = z.strictObject({
   maxDepth: z.number().int().min(0).max(MAX_DISPATCH_DEPTH).optional(),
   maxRunsPerTree: z.number().int().min(1).max(MAX_RUNS_PER_TREE_LIMIT).optional(),

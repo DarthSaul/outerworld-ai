@@ -254,7 +254,7 @@ function Lane({
 }: {
   readonly lane: DashboardLane;
   readonly selected: boolean;
-  /** The selected crew member can dispatch along this hallway (ADR-0024). */
+  /** The selected crew member can dispatch along this hallway (ADR-0025). */
   readonly inReach?: boolean;
   readonly name: string;
   readonly onSelect?: () => void;
@@ -266,7 +266,7 @@ function Lane({
       : "var(--st-map-lane-auth)";
   const segments = lane.segments.map((s, i) => {
     const horizontal = s.heading === "e" || s.heading === "w";
-    // The end nearer the map's origin comes first; each end is moved by its shift (ADR-0024).
+    // The end nearer the map's origin comes first; each end is moved by its shift (ADR-0025).
     const forward = s.heading === "e" || s.heading === "s";
     const [near, far] = forward ? [s.start, s.end] : [s.end, s.start];
     const [nearShift, farShift] = forward ? [s.startShift, s.endShift] : [s.endShift, s.startShift];

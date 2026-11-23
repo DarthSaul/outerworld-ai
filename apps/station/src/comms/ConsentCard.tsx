@@ -18,7 +18,7 @@ export function ConsentCard({
   const decide = useDecideConsent();
   const station = useStationView();
   const titleId = `consent-${consent.id}`;
-  // A dispatched run's request says who asked for it, up the chain (ADR-0024).
+  // A dispatched run's request says who asked for it, up the chain (ADR-0025).
   const above = (consent.chain ?? []).slice(0, -1);
   const nameOf = (id: string) => station.data?.agents.find((a) => a.id === id)?.config.name ?? id;
   return (

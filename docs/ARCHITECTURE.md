@@ -106,7 +106,7 @@ Our read/write classification is authoritative, and unknown tools are `write`.
 
 ## Orchestration
 
-- **Dispatch (D20, ADR-0024):**
+- **Dispatch (D20, ADR-0025):**
   - `dispatch` starts a worker run in a new session and returns at once. The Overseer always has
     it; a crew member has it when `canDispatch` is on.
   - Reach (core `dispatchReach`): the Overseer reaches every crew member; crew reach roommates and

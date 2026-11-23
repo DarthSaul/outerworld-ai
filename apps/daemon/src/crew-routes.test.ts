@@ -175,7 +175,7 @@ describe("crew and room routes", () => {
     expect((await call("PUT", "/budgets", { weeklyUsd: 3 })).status).toBe(400);
   });
 
-  it("PUT /budgets keeps no per-request cap as null, and takes one back (ADR-0024)", async () => {
+  it("PUT /budgets keeps no per-request cap as null, and takes one back (ADR-0025)", async () => {
     const { call } = setup();
     expect(await (await call("PUT", "/budgets", { perTreeUsd: null })).json()).toMatchObject({
       perTreeUsd: null,
@@ -185,7 +185,7 @@ describe("crew and room routes", () => {
     });
   });
 
-  it("PUT /dispatch sets depth, run cap and auto review; out of range is 400 (ADR-0024)", async () => {
+  it("PUT /dispatch sets depth, run cap and auto review; out of range is 400 (ADR-0025)", async () => {
     const { call } = setup();
     const res = await call("PUT", "/dispatch", { maxDepth: 3, maxRunsPerTree: 20 });
     expect(await res.json()).toEqual({ maxDepth: 3, maxRunsPerTree: 20, autoReview: true });
@@ -199,7 +199,7 @@ describe("crew and room routes", () => {
     expect((await call("PUT", "/dispatch", { fanOut: 2 })).status).toBe(400);
   });
 
-  it("PATCH /agents/:id turns a crew member's dispatch on and off (ADR-0024)", async () => {
+  it("PATCH /agents/:id turns a crew member's dispatch on and off (ADR-0025)", async () => {
     const { call } = setup();
     const patch = async (canDispatch: boolean) =>
       (await (await call("PATCH", "/agents/wren", { canDispatch })).json()) as AgentView;

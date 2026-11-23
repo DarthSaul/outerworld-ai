@@ -94,7 +94,7 @@ describe("resolveGrants", () => {
     expect(names(off)).toEqual([]);
   });
 
-  it("gives crew with canDispatch the dispatch tool, but never read_session (ADR-0024)", () => {
+  it("gives crew with canDispatch the dispatch tool, but never read_session (ADR-0025)", () => {
     const tools = resolveGrants(agent({ canDispatch: true }), station({ ops: ["web"] }), catalog);
     expect(tools[0]).toEqual({ name: "dispatch", class: "read", source: { kind: "dispatch" } });
     expect(names(tools)).toEqual(["dispatch", "web_fetch"]);

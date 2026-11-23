@@ -232,7 +232,7 @@ export function roleBriefing(
     `You are a crew member of ${station.name}, in the ${roomName(me?.config.roomId ?? "")} room.`,
     overseer ? `${overseer.config.name} is the Overseer.` : "The station has no Overseer yet.",
   ].join(" ");
-  // A crew member with dispatch is told exactly who policy lets it reach, and how (ADR-0024).
+  // A crew member with dispatch is told exactly who policy lets it reach, and how (ADR-0025).
   const reach = dispatchReach(agentId, station, crew);
   if (reach.length === 0) return intro;
   if ((context.depth ?? 0) >= station.dispatch.maxDepth) {

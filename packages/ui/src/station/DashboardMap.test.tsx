@@ -81,7 +81,7 @@ describe("DashboardMap", () => {
     expect(onSelectRoom).toHaveBeenCalledWith("research");
   });
 
-  it("points two subtle chevrons along each hallway in the way it runs (ADR-0024)", () => {
+  it("points two subtle chevrons along each hallway in the way it runs (ADR-0025)", () => {
     const { container } = render(<DashboardMap dashboard={demoDashboard()} />);
     const lane = container.querySelector('[data-lane="operations-to-research"]');
     const arrows = lane?.querySelectorAll("[data-lane-arrow]") ?? [];
@@ -95,7 +95,7 @@ describe("DashboardMap", () => {
     expect(lane?.innerHTML).not.toContain("--st-map-lane-gap");
   });
 
-  it("lights up the hallways a selected crew member can dispatch along (ADR-0024)", () => {
+  it("lights up the hallways a selected crew member can dispatch along (ADR-0025)", () => {
     const { container, rerender } = render(
       <DashboardMap dashboard={demoDashboard()} selection={{ type: "agent", id: "quill" }} />,
     );

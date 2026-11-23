@@ -59,7 +59,7 @@ export const AgentConfig = z.looseObject({
   model: z.string().min(1),
   approvalMode: ApprovalMode.default("ask"),
   /**
-   * Whether a crew member may hand work to others along its room and hallways (ADR-0024). The
+   * Whether a crew member may hand work to others along its room and hallways (ADR-0025). The
    * Overseer always may; the flag is ignored for it. Absent means no.
    */
   canDispatch: z.boolean().optional(),

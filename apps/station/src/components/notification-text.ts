@@ -13,7 +13,7 @@ const session = (n: Notification) =>
 
 const BUDGET_SCOPES = ["run", "tree", "agent", "station"] as const;
 
-/** A notification's subject in words: a connector's name, or a budget's scope (ADR-0024). */
+/** A notification's subject in words: a connector's name, or a budget's scope (ADR-0025). */
 const subjectWords = (n: Notification, connectorName: (id: string) => string) => {
   if (n.kind === "connector" && n.subject) return connectorName(n.subject);
   const scope = BUDGET_SCOPES.find((s) => s === n.subject);

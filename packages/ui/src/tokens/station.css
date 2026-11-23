@@ -70,7 +70,7 @@
   --st-white: oklch(0.92 0.04 250); /* the Overseer */
   --st-lane-auth: oklch(0.62 0.09 230); /* an authorized hallway (schematic) */
   --st-lane-selected: oklch(0.97 0.03 250);
-  /* A hallway the selected crew member can dispatch along (ADR-0024). */
+  /* A hallway the selected crew member can dispatch along (ADR-0025). */
   --st-lane-reach: var(--st-green);
   --st-done: oklch(0.62 0.04 250); /* design .55; AA (D26) */
 
@@ -178,7 +178,7 @@
   --st-map-lane-thick: 12px;
   --st-map-lane-border: 2px;
   /*
-   * Directed hallways (ADR-0024): each lane of a two-way pair sits this far right of its travel,
+   * Directed hallways (ADR-0025): each lane of a two-way pair sits this far right of its travel,
    * so the two run side by side with a sliver between; chevrons show the way a lane runs. Both
    * follow the style's lane thickness.
    */
@@ -577,7 +577,7 @@ label:hover .st-check:not(:disabled) + .st-check-box {
   border-right-width: var(--st-map-lane-border);
 }
 /*
- * A direction chevron (ADR-0024): two borders of a square, turned to point the way the lane runs.
+ * A direction chevron (ADR-0025): two borders of a square, turned to point the way the lane runs.
  * Subtle by design; it takes the lane's color, selected included.
  */
 .st-lane-arrow {

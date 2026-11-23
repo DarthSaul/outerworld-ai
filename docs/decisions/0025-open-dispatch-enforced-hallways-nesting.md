@@ -1,4 +1,4 @@
-# ADR-0024: Open dispatch: per-agent dispatch, enforced hallways, nesting to depth 3
+# ADR-0025: Open dispatch: per-agent dispatch, enforced hallways, nesting to depth 3
 
 ## Status
 

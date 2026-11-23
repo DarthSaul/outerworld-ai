@@ -375,7 +375,7 @@ export type Heading = "e" | "w" | "n" | "s";
 const headingOf = (p: Point, q: Point): Heading =>
   p[1] === q[1] ? (q[0] >= p[0] ? "e" : "w") : q[1] >= p[1] ? "s" : "n";
 
-/** The unit step to the right of travel: where a lane of a two-way pair sits (ADR-0024). */
+/** The unit step to the right of travel: where a lane of a two-way pair sits (ADR-0025). */
 const RIGHT_OF: Record<Heading, Point> = { e: [0, 1], w: [0, -1], s: [-1, 0], n: [1, 0] };
 const add = (a: Point, b: Point): Point => [a[0] + b[0], a[1] + b[1]];
 

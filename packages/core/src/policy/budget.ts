@@ -3,7 +3,7 @@ import type { Budgets } from "../config/station-config.js";
 import type { ToolClass } from "./grants.js";
 
 /**
- * Budgets (brief §15, ADR-0024) are checked before every model call: per run, per dispatch tree
+ * Budgets (brief §15, ADR-0025) are checked before every model call: per run, per dispatch tree
  * (a root run and every run descended from it), per agent per UTC day, and per station per UTC
  * day. A cap that is reached blocks the next call; 80% of a cap warns. Unset caps enforce
  * nothing. Pure.
@@ -55,7 +55,7 @@ export function needsConsent(toolClass: ToolClass, approvalMode: ApprovalMode): 
 }
 
 /**
- * The approval mode a run works under (ADR-0024): *Ask first* if any agent in its dispatch chain
+ * The approval mode a run works under (ADR-0025): *Ask first* if any agent in its dispatch chain
  * (the run's own agent and every agent above it) is *Ask first*. A less trusted agent never gains
  * *Full power* by dispatching to one that has it.
  */

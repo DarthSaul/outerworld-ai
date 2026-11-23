@@ -216,7 +216,7 @@ decisions made, open questions.
   - Found along the way: the SPA offered setup over a station.json that did not load. The
     station view now reports `stationFile` (`present`, `missing`, or `unknown` when the folder
     cannot be checked), and onboarding runs only for `missing`.
-- **D32 Open dispatch (Phase 14, owner 2026-11-22).** ADR-0024 records the design and lifts brief
+- **D32 Open dispatch (Phase 14, owner 2026-11-22).** ADR-0025 records the design and lifts brief
   §3's "recursive delegation" non-goal. Settled with the owner: crew never dispatch to the
   Overseer, and a missing `perTreeUsd` means $15 (`null` is no cap). Choices flagged at
   Checkpoint 14a:
@@ -436,7 +436,7 @@ Source: `docs/design/station-dashboard/`. Dark only; sprites replace the rig; ev
 
 **CHECKPOINT 13**
 
-## Phase 14 — Open dispatch: per-agent dispatch, enforced hallways, nesting (ADR-0024)
+## Phase 14 — Open dispatch: per-agent dispatch, enforced hallways, nesting (ADR-0025)
 - [x] 14.1 Core schemas: `canDispatch`, `maxDepth` 0–3, `maxRunsPerTree`, `perTreeUsd` (default 15,
   `null` = no cap), budget scope `tree`, lineage fields on `run.queued` / `dispatch.started`, API
   inputs (`canDispatch`, `perTreeUsd`, `UpdateDispatchInput`); JSON Schemas regenerated.
@@ -453,7 +453,7 @@ Source: `docs/design/station-dashboard/`. Dark only; sprites replace the rig; ev
 - [x] 14.4 Tests: core policy, guards, budgets, chain; runtime roommate, hallway, missing hallway,
   wrong direction, to the Overseer, three levels, depth limit, cycle, run cap, tree spend,
   strictest approval, per-run cap inside a tree, cancel cascade, recovery, handover at depth.
-- [x] 14.5 Docs: ADR-0024, D32, brief §3 §4 §5 §7, CLAUDE.md, SCHEMA, ARCHITECTURE, PRIVACY,
+- [x] 14.5 Docs: ADR-0025, D32, brief §3 §4 §5 §7, CLAUDE.md, SCHEMA, ARCHITECTURE, PRIVACY,
   READMEs, README status.
 
 **CHECKPOINT 14a** — core policy and runtime, before the UI.

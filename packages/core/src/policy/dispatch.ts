@@ -3,7 +3,7 @@ import type { StationConfig } from "../config/station-config.js";
 import type { CrewMember } from "../config/station-crew.js";
 
 /**
- * Dispatch policy (brief §7, ADR-0024), checked in one place.
+ * Dispatch policy (brief §7, ADR-0025), checked in one place.
  *
  * - The Overseer always has dispatch; a crew member has it when its `canDispatch` flag is on.
  * - The Overseer reaches every other crew member. A crew member reaches its roommates and every

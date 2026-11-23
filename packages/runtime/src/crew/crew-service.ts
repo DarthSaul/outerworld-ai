@@ -476,7 +476,7 @@ export class CrewService {
         if (!station.rooms.some((r) => r.id === end)) throw new NotFoundError(`no room "${end}"`);
       }
       if (input.from === input.to) throw new ConflictError("a hallway needs two different rooms");
-      // Hallways are directed (ADR-0024): the reverse of an existing one is a new hallway, and the
+      // Hallways are directed (ADR-0025): the reverse of an existing one is a new hallway, and the
       // only way to let crew dispatch both ways.
       const linked = station.lanes.find((l) => l.from === input.from && l.to === input.to);
       if (linked) throw new ConflictError(`a hallway already leads this way: "${linked.id}"`);
@@ -509,7 +509,7 @@ export class CrewService {
 
   /**
    * Sets each cap given; `null` removes it. The per-tree cap is kept as an explicit `null`, since a
-   * missing one means the default (ADR-0024). Takes effect before the next model call.
+   * missing one means the default (ADR-0025). Takes effect before the next model call.
    */
   updateBudgets(input: UpdateBudgetsInput): Promise<Budgets> {
     return this.#serial(async () => {
@@ -525,7 +525,7 @@ export class CrewService {
   }
 
   /**
-   * Sets the station's dispatch policy (ADR-0024): how deep chains may nest, how many dispatched
+   * Sets the station's dispatch policy (ADR-0025): how deep chains may nest, how many dispatched
    * runs one request may lead to, and whether the Commander's sessions review reports. Fields not
    * given keep their value. Takes effect at the next dispatch and the next run's tools.
    */

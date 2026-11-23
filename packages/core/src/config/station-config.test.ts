@@ -167,7 +167,7 @@ describe("parseStationConfig", () => {
     expect(p).toContain("error budgets.stationDailyUsd");
   });
 
-  it("limits dispatch depth to 0 through 3 (ADR-0024)", () => {
+  it("limits dispatch depth to 0 through 3 (ADR-0025)", () => {
     expect(paths({ ...valid(), dispatch: { maxDepth: 4 } })).toContain("error dispatch.maxDepth");
     expect(paths({ ...valid(), dispatch: { maxDepth: -1 } })).toContain("error dispatch.maxDepth");
     expect(paths({ ...valid(), dispatch: { maxDepth: 1.5 } })).toContain("error dispatch.maxDepth");

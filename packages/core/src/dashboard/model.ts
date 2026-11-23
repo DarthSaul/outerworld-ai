@@ -44,7 +44,7 @@ export interface DashboardRun {
   readonly createdAt: string;
   readonly steps: number;
   readonly title: string;
-  /** For a dispatched run: the agents above it in its chain, root first (ADR-0024). */
+  /** For a dispatched run: the agents above it in its chain, root first (ADR-0025). */
   readonly askedBy?: readonly string[];
 }
 
@@ -75,7 +75,7 @@ export interface DashboardCrew {
   /** The character id this crew member appears as, always one that exists. */
   readonly look: string;
   readonly colorIndex: number;
-  /** Who this crew member can dispatch to, from core's `dispatchReach` (ADR-0024). */
+  /** Who this crew member can dispatch to, from core's `dispatchReach` (ADR-0025). */
   readonly reach: readonly string[];
   /** The hallways that reach uses; empty for the Overseer, which needs none. */
   readonly reachLanes: readonly string[];
@@ -122,7 +122,7 @@ export interface DashboardLane {
   readonly note?: string;
   /** The route in the lane's direction of travel, `from` to `to`. */
   readonly route: readonly Point[];
-  /** The reverse hallway exists too: the two run side by side (ADR-0024). */
+  /** The reverse hallway exists too: the two run side by side (ADR-0025). */
   readonly paired: boolean;
   /** The route as straight runs, each with how far its ends sit off the route, in lane gaps. */
   readonly segments: readonly LaneSegment[];
@@ -174,7 +174,7 @@ export function dashboardModel(input: DashboardInput): Dashboard {
 
   const crew: DashboardCrew[] = agents.map(({ id, config }) => {
     const entry = activity[id] ?? { state: "idle" as const, runs: 0 };
-    // The same reach the dispatch policy enforces, so the map shows exactly that (ADR-0024).
+    // The same reach the dispatch policy enforces, so the map shows exactly that (ADR-0025).
     const reach = dispatchReach(id, station, agents);
     const reachLanes = [
       ...new Set(reach.flatMap((r) => (r.via.kind === "lane" ? [r.via.laneId] : []))),
@@ -235,7 +235,7 @@ export function dashboardModel(input: DashboardInput): Dashboard {
 
   // The Overseer's dispatches travel the hallways that touch the Bridge, whichever way they point
   // (it is exempt from hallway direction); a crew member's travel the one hallway policy let them
-  // use, from its room to the worker's (ADR-0024). A dispatch inside one room uses no hallway.
+  // use, from its room to the worker's (ADR-0025). A dispatch inside one room uses no hallway.
   const dispatchedTo = new Map<string, number>();
   const alongLane = new Map<string, number>();
   for (const d of input.dispatches) {
@@ -250,7 +250,7 @@ export function dashboardModel(input: DashboardInput): Dashboard {
     }
   }
   const lanes: DashboardLane[] = station.lanes.map((lane, i) => {
-    // A two-way pair (ADR-0024) shares one route, laid from the lower room id, so the two lanes
+    // A two-way pair (ADR-0025) shares one route, laid from the lower room id, so the two lanes
     // run side by side; each is shifted to the right of its own travel.
     const paired = station.lanes.some((l) => l.from === lane.to && l.to === lane.from);
     const reversed = paired && lane.from > lane.to;

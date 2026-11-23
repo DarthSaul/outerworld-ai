@@ -57,7 +57,7 @@ export interface RunRecord {
   /** 0 for a run the Commander (or a schedule) started; 1 for a dispatched worker's run. */
   readonly depth: number;
   readonly dispatchId?: string;
-  /** The run this one was dispatched from, or whose work it reviews (ADR-0024). */
+  /** The run this one was dispatched from, or whose work it reviews (ADR-0025). */
   readonly parentRunId?: string;
   /** The top of this run's dispatch tree: its own id when nothing is above it. */
   readonly rootRunId: string;
@@ -297,7 +297,7 @@ export class SessionStore {
     reasoning?: ReasoningLevel;
     depth?: number;
     dispatchId?: string;
-    /** Lineage (ADR-0024): absent for a run that starts a tree of its own. */
+    /** Lineage (ADR-0025): absent for a run that starts a tree of its own. */
     parentRunId?: string;
     rootRunId?: string;
   }): RunRecord {
@@ -385,7 +385,7 @@ export class SessionStore {
     ).map(toRun);
   }
 
-  /** The run and every run above it in its dispatch tree, nearest first (ADR-0024). */
+  /** The run and every run above it in its dispatch tree, nearest first (ADR-0025). */
   lineage(id: string): RunRecord[] {
     const chain: RunRecord[] = [];
     const seen = new Set<string>();

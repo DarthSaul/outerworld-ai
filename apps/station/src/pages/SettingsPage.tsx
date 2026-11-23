@@ -36,7 +36,7 @@ type Cap = (typeof CAPS)[number][0];
 
 /**
  * The spend caps in station.json (brief §15), with the per-request cap across every dispatch
- * (ADR-0024). Empty means no cap; for the per-request cap that is stored as an explicit null.
+ * (ADR-0025). Empty means no cap; for the per-request cap that is stored as an explicit null.
  */
 function BudgetsSection() {
   const station = useStationView();
@@ -126,7 +126,7 @@ const fieldInput =
   "min-w-0 border-2 border-line-soft bg-well px-2 py-1 font-body text-b19 text-fg-hi";
 
 /**
- * The station's dispatch policy (ADR-0024): how many levels work may be handed down, how many
+ * The station's dispatch policy (ADR-0025): how many levels work may be handed down, how many
  * dispatched runs one request may lead to, and whether the Overseer reviews reports itself.
  */
 function DispatchSection() {

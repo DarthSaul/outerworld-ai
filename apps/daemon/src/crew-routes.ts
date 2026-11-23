@@ -19,7 +19,7 @@ import { jsonApi, readBody } from "./http.js";
 
 /**
  * `/api/station`, `/api/models`, `/api/agents/*`, `/api/rooms/*`, `/api/lanes/*`, `/api/budgets`,
- * `/api/dispatch` (Phase 2, ADR-0024,
+ * `/api/dispatch` (Phase 2, ADR-0025,
  * ADR-0013): thin handlers over the
  * runtime's CrewService. Validation errors are 400, unknown ids 404, changes that would break the
  * station 409 (with the issues), non-JSON bodies 415.
@@ -85,7 +85,7 @@ export function crewRoutes(crew: CrewService): Hono {
   app.put("/budgets", async (c) =>
     c.json(await crew.updateBudgets(await readBody(c, UpdateBudgetsInput))),
   );
-  // The station's dispatch policy: depth, run cap per request, auto review (ADR-0024).
+  // The station's dispatch policy: depth, run cap per request, auto review (ADR-0025).
   app.put("/dispatch", async (c) =>
     c.json(await crew.updateDispatch(await readBody(c, UpdateDispatchInput))),
   );

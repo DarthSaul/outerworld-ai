@@ -48,7 +48,7 @@ describe("consent in COMMS", () => {
 });
 
 describe("Notifications", () => {
-  it("names who asked for a dispatched run's request, up the chain (ADR-0024)", async () => {
+  it("names who asked for a dispatched run's request, up the chain (ADR-0025)", async () => {
     const fake = fakeApi();
     fake.consents.push(
       pending({

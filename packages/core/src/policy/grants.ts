@@ -18,7 +18,7 @@ export interface ToolSpec {
 
 export type ToolSource =
   | { readonly kind: "role"; readonly role: AgentRole }
-  /** The Overseer's, or a crew member's whose `canDispatch` is on (ADR-0024). */
+  /** The Overseer's, or a crew member's whose `canDispatch` is on (ADR-0025). */
   | { readonly kind: "dispatch" }
   | { readonly kind: "prop"; readonly prop: PropKind }
   | { readonly kind: "connector"; readonly connectorId: string; readonly tool: string }
@@ -86,7 +86,7 @@ export interface GrantContext {
 /**
  * The agent's effective tools, in a stable order: dispatch, role, props, then connectors. Pure.
  * `dispatch` is offered only to an agent that has it (`hasDispatch`) in a run below the station's
- * depth limit, so at the limit the model never sees it (ADR-0024).
+ * depth limit, so at the limit the model never sees it (ADR-0025).
  */
 export function resolveGrants(
   agent: AgentConfig,

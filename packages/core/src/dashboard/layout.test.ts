@@ -145,7 +145,7 @@ describe("route helpers", () => {
   });
 });
 
-describe("directed lanes (ADR-0024)", () => {
+describe("directed lanes (ADR-0025)", () => {
   // East 20 → 60 along y 10, then south to y 50: an L.
   const route = [
     [20, 10],

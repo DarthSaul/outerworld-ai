@@ -61,7 +61,7 @@ export const RuntimeEvent = z.discriminatedUnion("type", [
 
   event("run.queued", about.run, {
     trigger: RunTrigger,
-    /** The run this one was dispatched from or reviews for, and the root of its tree (ADR-0024). */
+    /** The run this one was dispatched from or reviews for, and the root of its tree (ADR-0025). */
     parentRunId: Ref.optional(),
     rootRunId: Ref.optional(),
   }),

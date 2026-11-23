@@ -426,7 +426,7 @@ function ConfigForm({
           </label>
         ))}
       </fieldset>
-      {/* Dispatch (ADR-0024): the Overseer always has it; crew only when it is turned on here. */}
+      {/* Dispatch (ADR-0025): the Overseer always has it; crew only when it is turned on here. */}
       <label className="flex items-start gap-2 text-b19 text-fg" data-dispatch-toggle>
         <input
           type="checkbox"
@@ -535,7 +535,7 @@ function AppearanceRow({ agentId }: { readonly agentId: string }) {
  * names, then each granted connector, in two columns.
  */
 /**
- * Who this crew member can hand work to (ADR-0024), from core's `dispatchReach`: the same function
+ * Who this crew member can hand work to (ADR-0025), from core's `dispatchReach`: the same function
  * the dispatch policy checks, so the page shows exactly what is enforced. Each target says how it
  * is reached: same room, or the hallway by its map label.
  */

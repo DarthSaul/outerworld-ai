@@ -172,7 +172,7 @@ describe("roleBriefing", () => {
     );
   });
 
-  it("tells crew with dispatch exactly whom policy lets it reach, and how (ADR-0024)", () => {
+  it("tells crew with dispatch exactly whom policy lets it reach, and how (ADR-0025)", () => {
     const withLab: StationConfig = {
       ...station,
       rooms: [...station.rooms, { id: "lab", name: "Lab", props: [] }],

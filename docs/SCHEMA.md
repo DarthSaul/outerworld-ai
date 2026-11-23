@@ -39,10 +39,10 @@ run, so a change takes effect on the next run. Secrets are never here (see below
 | `schemaVersion` | `1` | |
 | `name` | string | |
 | `rooms` | `Room[]`, at least 1 | `{ id, name, description?, props: [{ kind: "web" \| "files" \| "memory" }] }`. Props grant the room's crew built-in tools. |
-| `lanes` | `Lane[]` | Hallways: `{ id, from, to, note? }` between room ids, directed `from → to`. Crew dispatch follows them; the Overseer is exempt (ADR-0024). The reverse of a hallway is a hallway of its own. |
+| `lanes` | `Lane[]` | Hallways: `{ id, from, to, note? }` between room ids, directed `from → to`. Crew dispatch follows them; the Overseer is exempt (ADR-0025). The reverse of a hallway is a hallway of its own. |
 | `connectors` | `Connector[]` | `{ id, name, transport }`, where `transport` is `{ type: "http", url }` (http or https), `{ type: "stdio", command, args }`, or `{ type: "builtin", service: "gmail" }` (the Gmail REST API, ADR-0022). There is no field for headers or environment values, so secrets cannot be put here. v1 connects HTTP and builtin connectors only. A `gmail` connector moved off Gmail MCP briefly carries `migratedFrom` (the old URL) until its old keychain entries are deleted. |
-| `budgets` | `{ perRunUsd?, perAgentDailyUsd?, stationDailyUsd?, perTreeUsd }` | Positive USD. A missing cap means no cap, except `perTreeUsd` (a root run and every run descended from it, ADR-0024): missing means the default, 15, and `null` means no cap. Onboarding writes `DEFAULT_BUDGETS` (5 / 25 / 50 / 15, D22, D32). |
-| `dispatch` | `{ maxDepth: 0–3, maxRunsPerTree: 1–50, autoReview }` | Defaults `{ maxDepth: 1, maxRunsPerTree: 12, autoReview: true }`. `0` turns delegation off. A run at depth N may dispatch while N < `maxDepth`. `autoReview` governs the Commander's sessions; dispatched sessions always review (ADR-0024). |
+| `budgets` | `{ perRunUsd?, perAgentDailyUsd?, stationDailyUsd?, perTreeUsd }` | Positive USD. A missing cap means no cap, except `perTreeUsd` (a root run and every run descended from it, ADR-0025): missing means the default, 15, and `null` means no cap. Onboarding writes `DEFAULT_BUDGETS` (5 / 25 / 50 / 15, D22, D32). |
+| `dispatch` | `{ maxDepth: 0–3, maxRunsPerTree: 1–50, autoReview }` | Defaults `{ maxDepth: 1, maxRunsPerTree: 12, autoReview: true }`. `0` turns delegation off. A run at depth N may dispatch while N < `maxDepth`. `autoReview` governs the Commander's sessions; dispatched sessions always review (ADR-0025). |
 | `skills` | `{ enabled: id[], disabled: id[] }`? | The Commander's station-wide skill choices against each skill's own `default` (ADR-0023). Absent until one is changed. An id in both lists is an error; an id not in the library is ignored. |
 
 Cross-file rules (`stationCrewIssues`): agent ids are unique, every room and connector an agent
@@ -56,7 +56,7 @@ names exists, and there is at most one Overseer.
 | `name` | string | Display name; the id is the directory name. |
 | `roomId` | room id | Exactly one room. |
 | `role` | `"overseer"` \| `"crew"` | The Overseer always gets `dispatch` and `read_session`. |
-| `canDispatch` | boolean? | A crew member with it gets `dispatch`, reaching its roommates and the rooms its hallways lead to (ADR-0024). Ignored for the Overseer. |
+| `canDispatch` | boolean? | A crew member with it gets `dispatch`, reaching its roommates and the rooms its hallways lead to (ADR-0025). Ignored for the Overseer. |
 | `model` | string | An OpenRouter model id. One outside `SUPPORTED_MODELS` is a warning. |
 | `approvalMode` | `"ask"` \| `"full"` | *Ask first* (default) pauses `write`-class calls for consent. |
 | `connectorGrants` | connector ids | Granting a connector grants all of its tools (ADR-0012). |
@@ -112,7 +112,7 @@ log are:
 - `notificationFor`: Notifications;
 - `foldCrewActivity` / `activityOf`: what each crew member is doing now;
 - `dashboardModel`: the station dashboard from config, activity, recent runs and dispatches (ADR-0013);
-- `dispatchChain`: who asked whom for a run, from `dispatch.started` and `run.queued` (ADR-0024).
+- `dispatchChain`: who asked whom for a run, from `dispatch.started` and `run.queued` (ADR-0025).
 
 ## SQLite (`station.db`)
 
@@ -123,7 +123,7 @@ recorded in `schema_migrations`.
 |---|---|
 | `events` | The append-only log. Triggers refuse update and delete. |
 | `sessions` | `id, agent_id, title, created_at, archived_at?` |
-| `runs` | `id, session_id, agent_id, state, trigger, model, created_at, started_at?, ended_at?, error?, steps, depth, dispatch_id?, parent_run_id?, root_run_id` (lineage since migration 7, ADR-0024: a run with no parent is its own root) |
+| `runs` | `id, session_id, agent_id, state, trigger, model, created_at, started_at?, ended_at?, error?, steps, depth, dispatch_id?, parent_run_id?, root_run_id` (lineage since migration 7, ADR-0025: a run with no parent is its own root) |
 | `messages` | Each session's messages in order (`position`): the Commander, assistant text with tool calls, tool results, and dispatch reports (`ChatMessage`). |
 | `memories` | `id, agent_id, scope (agent \| station), text, status (proposed \| approved \| rejected), source_run_id?, created_at, decided_at?` |
 | `consents` | One row per consent request: `tool, input, status (pending \| approved \| denied \| expired)`. |

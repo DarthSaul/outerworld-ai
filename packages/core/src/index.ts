@@ -284,7 +284,7 @@ export {
   profileSource,
   type ToolHints,
 } from "./policy/connector-tools.js";
-// Dispatch (brief §7, ADR-0024)
+// Dispatch (brief §7, ADR-0025)
 export {
   checkDispatch,
   type DispatchCheck,
@@ -318,7 +318,7 @@ export {
   type CrewActivityState,
   foldCrewActivity,
 } from "./run/crew-activity.js";
-// Who asked whom, from events (ADR-0024)
+// Who asked whom, from events (ADR-0025)
 export { type ChainLink, dispatchChain } from "./run/dispatch-chain.js";
 // Runs: lifecycle and prompt assembly (brief §8)
 export {

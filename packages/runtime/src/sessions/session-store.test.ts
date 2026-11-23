@@ -223,7 +223,7 @@ describe("SessionStore: runs", () => {
   });
 });
 
-describe("SessionStore: dispatch trees (ADR-0024)", () => {
+describe("SessionStore: dispatch trees (ADR-0025)", () => {
   const tree = () => {
     const s = store();
     const lead = s.createSession("vesper", "Chat");

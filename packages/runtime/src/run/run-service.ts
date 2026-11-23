@@ -202,7 +202,7 @@ export interface SendOptions {
   readonly trigger?: RunTrigger;
   readonly depth?: number;
   readonly dispatchId?: string;
-  /** Lineage (ADR-0024): the run above this one, and its tree's root. Absent: a new tree. */
+  /** Lineage (ADR-0025): the run above this one, and its tree's root. Absent: a new tree. */
   readonly parentRunId?: string;
   readonly rootRunId?: string;
   /** Overrides the session's model settings for this run only (a scheduled job's, ADR-0016). */
@@ -510,7 +510,7 @@ export class RunService {
 
   /**
    * Cancels a queued or running run, and every unfinished run it dispatched, level by level
-   * (ADR-0024). A finished run is left as it is; its unfinished descendants are still cancelled.
+   * (ADR-0025). A finished run is left as it is; its unfinished descendants are still cancelled.
    */
   async cancel(runId: string, by: "user" | "kill_switch" | "budget" = "user"): Promise<void> {
     if (!this.#o.sessions.getRun(runId)) throw new NotFoundError(`no run "${runId}"`);
@@ -520,7 +520,7 @@ export class RunService {
   }
 
   /**
-   * Where a run sits in its dispatch tree (ADR-0024): the root, the agents of the run and every
+   * Where a run sits in its dispatch tree (ADR-0025): the root, the agents of the run and every
    * run above it (nearest first), how many runs the tree has dispatched, and what it has spent.
    */
   tree(runId: string): {
@@ -540,7 +540,7 @@ export class RunService {
     };
   }
 
-  /** Stops every other unfinished run of a tree that reached its spend cap (ADR-0024). */
+  /** Stops every other unfinished run of a tree that reached its spend cap (ADR-0025). */
   #cancelTree(rootRunId: string, except: string): void {
     for (const r of this.#o.sessions.treeRuns(rootRunId)) {
       if (r.id !== except && !isTerminal(r.state)) {
@@ -735,7 +735,7 @@ export class RunService {
       }
 
       const connectors = this.#o.connectors;
-      // At the station's depth limit `dispatch` is not offered at all (ADR-0024).
+      // At the station's depth limit `dispatch` is not offered at all (ADR-0025).
       const base = resolveGrants(agent.config, station, connectors?.catalog() ?? {}, {
         depth: run.depth,
       });
@@ -892,7 +892,7 @@ export class RunService {
   }
 
   /**
-   * Budgets before every model call (brief §15, ADR-0024). Returns the cap that blocks, if any;
+   * Budgets before every model call (brief §15, ADR-0025). Returns the cap that blocks, if any;
    * sends each 80% warning once per run, tree, agent-day, or station-day. `rootRunId` adds the
    * run's tree; a session title call has none.
    */
@@ -982,7 +982,7 @@ export class RunService {
   }
 
   /**
-   * Strictest approval wins (ADR-0024): a run works under *Ask first* if its own agent or any agent
+   * Strictest approval wins (ADR-0025): a run works under *Ask first* if its own agent or any agent
    * above it in the dispatch chain is *Ask first*, read from their configs now. An agent that is
    * gone counts as *Ask first*.
    */

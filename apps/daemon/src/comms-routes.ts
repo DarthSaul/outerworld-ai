@@ -56,7 +56,7 @@ export interface ActivityView {
  * `GET /api/runs?limit=`: the station's latest runs, newest first (the dashboard's missions,
  * ADR-0013). `title` is the dispatched task for a dispatch, else the run's session title.
  */
-/** A recent run; a dispatched one also says who asked for it, from the event log (ADR-0024). */
+/** A recent run; a dispatched one also says who asked for it, from the event log (ADR-0025). */
 export type RecentRun = RunRecord & {
   readonly title: string;
   readonly askedBy?: readonly string[];
@@ -184,7 +184,7 @@ export function commsRoutes(deps: CommsDeps): Hono {
     return c.body(null, 202);
   });
 
-  // Each pending request with who asked whom for its run, from the event log (ADR-0024).
+  // Each pending request with who asked whom for its run, from the event log (ADR-0025).
   app.get("/consents", (c) =>
     c.json(
       deps.consents

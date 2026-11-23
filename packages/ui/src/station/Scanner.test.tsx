@@ -207,7 +207,7 @@ describe("Scanner", () => {
     expect(onSelect).toHaveBeenCalledWith({ type: "room", id: "operations" });
   });
 
-  it("says who asked for a dispatched mission, up the chain (ADR-0024)", () => {
+  it("says who asked for a dispatched mission, up the chain (ADR-0025)", () => {
     const d = demoDashboard({
       runs: [
         { ...run("4", "wren", "running"), askedBy: ["vesper", "quill"] },

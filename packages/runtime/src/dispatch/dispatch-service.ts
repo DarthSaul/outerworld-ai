@@ -40,7 +40,7 @@ const line = (m: ChatMessage, names: (id: string) => string, agent: string): str
 };
 
 /**
- * Dispatch (brief §7, ADR-0024). The `dispatch` tool starts a worker's run in a new session and
+ * Dispatch (brief §7, ADR-0025). The `dispatch` tool starts a worker's run in a new session and
  * returns at once. Any agent with dispatch can use it, within its reach and the station's depth,
  * run and spend limits, so a worker may itself dispatch. A dispatch is done when its worker
  * session has gone quiet: its run has ended, nothing it dispatched is still running, and it has

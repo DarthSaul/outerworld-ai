@@ -711,7 +711,7 @@ describe("Deleting a crew member", () => {
   });
 });
 
-describe("Dispatch on the crew page (ADR-0024)", () => {
+describe("Dispatch on the crew page (ADR-0025)", () => {
   /** Quill in Operations, Wren in Research, a hallway Operations → Research. */
   const withHallway = (quillDispatches = false) => {
     const fake = fakeApi();
