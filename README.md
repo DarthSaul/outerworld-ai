@@ -46,8 +46,7 @@ Add either key, or both, under **System → Settings → Providers** (ADR-0015).
 with its provider (a metadata call, no tokens spent) and stored in your OS keychain, never on disk
 or in the browser.
 
-- With an **Anthropic** key, Claude models go straight to Anthropic, with Anthropic's own prompt
-  caching.
+- With an **Anthropic** key, Claude models go straight to Anthropic, without OpenRouter's markup.
 - With an **OpenRouter** key, any listed model runs, Claude included when there is no Anthropic
   key.
 - A conversation or schedule can force one key or the other. **Settings → Models** shows where
@@ -82,8 +81,12 @@ Config tab.
   needs; recipes that need a shell, media, or a browser show in the catalog but are never offered
   in this version. Crew see an index in their prompt and read a recipe with `skill_view`.
 
-OAuth clients and tokens live in the OS keychain. Tool calls a connector marks read-only run
-without asking; everything else counts as a write and asks under *Ask first*.
+OAuth clients and tokens live in the OS keychain. Each connector tool is classed as read or write.
+Our own map in core (`packages/core/src/policy/connector-tools.ts`) decides first: it names
+Notion's tools (so `notion-search` is a read even without an annotation) and Gmail's. A tool the
+map doesn't name is a read only when the server marks it read-only and not destructive. Everything
+else is a write. Under *Ask first*, reads run without asking and every write waits for your
+approval.
 
 ## The System menu
 
@@ -124,7 +127,7 @@ Other commands:
 pnpm build        pnpm test        pnpm lint        pnpm typecheck
 pnpm check:task   # lint, types, secrets, floor guard, tests
 pnpm check:full   # check:task + build, as CI runs it
-pnpm browser:verify   # Playwright screenshots, console errors, reduced motion, axe; CI runs it on every PR
+pnpm browser:verify   # Playwright screenshots, console errors, reduced motion, axe; CI runs it on PRs to main
 ```
 
 ## Layout
