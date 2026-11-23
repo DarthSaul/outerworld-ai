@@ -107,10 +107,10 @@ describe("crew and room routes", () => {
     expect(events.since(0).map((e) => e.type)).toEqual(["station.updated", "station.updated"]);
   });
 
-  it("refuses a hallway to the same room (409), a second one between linked rooms (409), unknown rooms and lanes (404)", async () => {
+  it("refuses a hallway to the same room (409), a second one the same way (409), unknown rooms and lanes (404)", async () => {
     const { call } = setup();
     expect((await call("POST", "/lanes", { from: "research", to: "research" })).status).toBe(409);
-    expect((await call("POST", "/lanes", { from: "command", to: "research" })).status).toBe(409);
+    expect((await call("POST", "/lanes", { from: "research", to: "command" })).status).toBe(409);
     expect((await call("POST", "/lanes", { from: "research", to: "nowhere" })).status).toBe(404);
     expect((await call("DELETE", "/lanes/nowhere")).status).toBe(404);
     expect((await call("POST", "/lanes", { from: "research" })).status).toBe(400);
@@ -170,7 +170,7 @@ describe("crew and room routes", () => {
   it("PUT /budgets sets and clears caps; zero or an unknown cap is 400", async () => {
     const { call } = setup();
     const res = await call("PUT", "/budgets", { perRunUsd: 1.5, stationDailyUsd: null });
-    expect(await res.json()).toEqual({ perRunUsd: 1.5, perAgentDailyUsd: 25 });
+    expect(await res.json()).toEqual({ perRunUsd: 1.5, perAgentDailyUsd: 25, perTreeUsd: 15 });
     expect((await call("PUT", "/budgets", { perRunUsd: 0 })).status).toBe(400);
     expect((await call("PUT", "/budgets", { weeklyUsd: 3 })).status).toBe(400);
   });

@@ -24,8 +24,8 @@ const station = (props: Record<string, PropKind[]>, maxDepth = 1): StationConfig
     { id: "notion", name: "Notion", transport: { type: "http", url: "https://a.test/mcp" } },
     { id: "wiki", name: "Wiki", transport: { type: "http", url: "https://b.test/mcp" } },
   ],
-  budgets: {},
-  dispatch: { maxDepth, autoReview: true },
+  budgets: { perTreeUsd: null },
+  dispatch: { maxDepth, maxRunsPerTree: 12, autoReview: true },
 });
 
 const agent = (over: Partial<AgentConfig> = {}): AgentConfig => ({
@@ -80,16 +80,34 @@ describe("resolveGrants", () => {
   it("gives the overseer dispatch and read_session on top of its room's props", () => {
     const tools = resolveGrants(agent({ role: "overseer" }), station({ ops: ["web"] }), catalog);
     expect(tools.slice(0, 2)).toEqual([
-      { name: "dispatch", class: "read", source: { kind: "role", role: "overseer" } },
+      { name: "dispatch", class: "read", source: { kind: "dispatch" } },
       { name: "read_session", class: "read", source: { kind: "role", role: "overseer" } },
     ]);
     expect(names(tools)).toContain("web_fetch");
   });
 
-  it("never gives crew the dispatch tool, whatever their room holds", () => {
+  it("never gives crew without the flag the dispatch tool, whatever their room holds", () => {
     const tools = resolveGrants(agent(), station({ ops: ["web", "files", "memory"] }), catalog);
     expect(names(tools)).not.toContain("dispatch");
     expect(names(tools)).not.toContain("read_session");
+    const off = resolveGrants(agent({ canDispatch: false }), station({ ops: [] }), catalog);
+    expect(names(off)).toEqual([]);
+  });
+
+  it("gives crew with canDispatch the dispatch tool, but never read_session (ADR-0024)", () => {
+    const tools = resolveGrants(agent({ canDispatch: true }), station({ ops: ["web"] }), catalog);
+    expect(tools[0]).toEqual({ name: "dispatch", class: "read", source: { kind: "dispatch" } });
+    expect(names(tools)).toEqual(["dispatch", "web_fetch"]);
+  });
+
+  it("withholds dispatch from a run at the depth limit, and offers it below", () => {
+    const s = station({ ops: [] }, 2);
+    const crewMember = agent({ canDispatch: true });
+    expect(names(resolveGrants(crewMember, s, catalog, { depth: 0 }))).toEqual(["dispatch"]);
+    expect(names(resolveGrants(crewMember, s, catalog, { depth: 1 }))).toEqual(["dispatch"]);
+    expect(names(resolveGrants(crewMember, s, catalog, { depth: 2 }))).toEqual([]);
+    const overseer = agent({ role: "overseer" });
+    expect(names(resolveGrants(overseer, s, catalog, { depth: 2 }))).toEqual(["read_session"]);
   });
 
   it("withholds dispatch from the overseer when the station turns delegation off (depth 0)", () => {

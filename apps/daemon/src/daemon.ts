@@ -130,7 +130,7 @@ export async function startDaemon(
     redact,
     titles: true,
   });
-  new DispatchService({ home: config.home, runs, sessions, events, dispatches });
+  const dispatch = new DispatchService({ home: config.home, runs, sessions, events, dispatches });
   const scheduler = new Scheduler({
     home: config.home,
     runs,
@@ -198,6 +198,8 @@ export async function startDaemon(
   // Crash semantics (brief §8): runs the last process left unfinished are surfaced, never resumed.
   const interrupted = runs.recover();
   if (interrupted.length) warn(`${interrupted.length} unfinished run(s) marked interrupted`);
+  // Their dispatches can no longer finish: each dispatcher gets an interrupted report (ADR-0024).
+  dispatch.recover();
   // Reconnect connectors that already have a sign-in, in the background: a slow or unreachable
   // server must not hold up the daemon. Their status arrives as connector.status events.
   void connectors.start().catch((error: unknown) => warn(`connectors: ${String(error)}`));

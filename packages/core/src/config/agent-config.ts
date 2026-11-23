@@ -17,7 +17,7 @@ import { isSupportedModel, ModelSettings } from "./models.js";
  * is the agent's id, so the id is not repeated here.
  */
 
-/** The overseer holds the station-lead role and dispatch rights; everyone else is crew. */
+/** The overseer holds the station-lead role and always has dispatch; everyone else is crew. */
 export const AgentRole = z.enum(["overseer", "crew"]);
 
 /** `ask` pauses write-class tool calls for consent (*Ask first*); `full` auto-approves (*Full power*). */
@@ -58,6 +58,11 @@ export const AgentConfig = z.looseObject({
   role: AgentRole.default("crew"),
   model: z.string().min(1),
   approvalMode: ApprovalMode.default("ask"),
+  /**
+   * Whether a crew member may hand work to others along its room and hallways (ADR-0024). The
+   * Overseer always may; the flag is ignored for it. Absent means no.
+   */
+  canDispatch: z.boolean().optional(),
   /** Connector ids from station.json; granting one grants all of its tools (ADR-0012). */
   connectorGrants: z.array(Id).default([]),
   /** Skill ids this agent has on top of the station-wide ones; it only adds (ADR-0023). */

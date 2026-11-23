@@ -1,7 +1,12 @@
 import { z } from "zod";
 import { characterById } from "../characters.js";
 import { type AgentConfig, AgentRole, ApprovalMode, Schedule } from "../config/agent-config.js";
-import { Prop, type StationConfig } from "../config/station-config.js";
+import {
+  MAX_DISPATCH_DEPTH,
+  MAX_RUNS_PER_TREE_LIMIT,
+  Prop,
+  type StationConfig,
+} from "../config/station-config.js";
 import type { EffectiveTool } from "../policy/grants.js";
 import { Id, type Issue } from "../schema/common.js";
 import type { AgentSkillsView } from "./skills-api.js";
@@ -33,6 +38,8 @@ export const UpdateAgentInput = z.strictObject({
   role: AgentRole.optional(),
   model: z.string().min(1).optional(),
   approvalMode: ApprovalMode.optional(),
+  /** Crew may be given dispatch along their room and hallways (ADR-0024). */
+  canDispatch: z.boolean().optional(),
   connectorGrants: z.array(Id).optional(),
   /** The crew member's own skills, on top of the station-wide ones (ADR-0023). */
   skills: z.array(Id).optional(),
@@ -99,7 +106,17 @@ export const UpdateBudgetsInput = z.strictObject({
   perRunUsd: Cap,
   perAgentDailyUsd: Cap,
   stationDailyUsd: Cap,
+  /** `null` is stored as an explicit "no cap"; a missing field in station.json means the default. */
+  perTreeUsd: Cap,
 });
+
+/** `PUT /api/dispatch`: the station's dispatch policy (ADR-0024). Missing fields keep their value. */
+export const UpdateDispatchInput = z.strictObject({
+  maxDepth: z.number().int().min(0).max(MAX_DISPATCH_DEPTH).optional(),
+  maxRunsPerTree: z.number().int().min(1).max(MAX_RUNS_PER_TREE_LIMIT).optional(),
+  autoReview: z.boolean().optional(),
+});
+export type UpdateDispatchInput = z.infer<typeof UpdateDispatchInput>;
 
 /** Overseer tones offered at onboarding; the runtime turns each into a line of its identity. */
 export const OVERSEER_TONES = ["calm", "warm", "brisk"] as const;

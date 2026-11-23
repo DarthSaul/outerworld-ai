@@ -40,7 +40,7 @@ const event = <T extends string, C extends z.ZodRawShape, P extends z.ZodRawShap
     .extend({ type: z.literal(type), payload: z.looseObject(payload) });
 
 const ToolClass = z.enum(["read", "write"]);
-const BudgetScope = z.enum(["run", "agent", "station"]);
+const BudgetScope = z.enum(["run", "tree", "agent", "station"]);
 const RunTrigger = z.enum(["user", "dispatch", "schedule", "review"]);
 
 const budget = { scope: BudgetScope, spentUsd: z.number(), limitUsd: z.number() };
@@ -59,7 +59,12 @@ export const RuntimeEvent = z.discriminatedUnion("type", [
   /** The Commander handed the conversation to another crew member; `agentId` is the new one. */
   event("session.reassigned", about.session, { from: Id, to: Id }),
 
-  event("run.queued", about.run, { trigger: RunTrigger }),
+  event("run.queued", about.run, {
+    trigger: RunTrigger,
+    /** The run this one was dispatched from or reviews for, and the root of its tree (ADR-0024). */
+    parentRunId: Ref.optional(),
+    rootRunId: Ref.optional(),
+  }),
   event("run.started", about.run, { model: z.string().min(1) }),
   event("run.delta", about.run, { text: z.string() }),
   event("run.tool_call", about.run, {
@@ -94,7 +99,16 @@ export const RuntimeEvent = z.discriminatedUnion("type", [
   event("run.cancelled", about.run, { by: z.enum(["user", "kill_switch", "budget"]) }),
   event("run.interrupted", about.run, {}),
 
-  event("dispatch.started", about.run, { dispatchId: Ref, to: Id, task: z.string() }),
+  /** About the lead's run. The worker fields let the dispatch chain be read from events alone. */
+  event("dispatch.started", about.run, {
+    dispatchId: Ref,
+    to: Id,
+    task: z.string(),
+    workerSessionId: Ref.optional(),
+    workerRunId: Ref.optional(),
+    /** The worker run's depth: 1 for a dispatch from the Commander's run. */
+    depth: z.number().int().positive().optional(),
+  }),
   event("dispatch.completed", about.run, { dispatchId: Ref, summary: z.string() }),
   event("dispatch.failed", about.run, { dispatchId: Ref, error: z.string() }),
   event("dispatch.cancelled", about.run, { dispatchId: Ref }),

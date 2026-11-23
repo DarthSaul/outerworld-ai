@@ -9,7 +9,7 @@ const withBudgets = () => {
   const fake = fakeApi();
   fake.state.station = {
     ...fake.state.station,
-    budgets: { perRunUsd: 5, perAgentDailyUsd: 25 },
+    budgets: { perRunUsd: 5, perAgentDailyUsd: 25, perTreeUsd: null },
   };
   fake.spend.stationUsd = 1.25;
   return fake;

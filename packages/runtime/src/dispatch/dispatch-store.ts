@@ -111,6 +111,14 @@ export class DispatchStore {
     ).map(toDispatch);
   }
 
+  /** The dispatch that opened this worker session, if one did (each dispatch opens its own). */
+  forWorkerSession(sessionId: string): DispatchRecord | undefined {
+    const row = this.#db
+      .prepare("select * from dispatches where worker_session_id = ? order by created_at limit 1")
+      .get(sessionId) as Row | undefined;
+    return row ? toDispatch(row) : undefined;
+  }
+
   running(): DispatchRecord[] {
     return (
       this.#db

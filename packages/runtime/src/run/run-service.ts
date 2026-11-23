@@ -1,5 +1,6 @@
 import {
   type AgentConfig,
+  type ApprovalMode,
   assemblePrompt,
   type BudgetLine,
   type Budgets,
@@ -9,6 +10,7 @@ import {
   cleanTitle,
   DEFAULT_SESSION_TITLE,
   type EffectiveTool,
+  effectiveApprovalMode,
   estimateCostUsd,
   fallbackTitle,
   findModel,
@@ -136,7 +138,10 @@ const DEFAULT_RETRY: RetryPolicy = { attempts: 3, baseMs: 2000, maxMs: 60_000 };
 const DEFAULT_CONTEXT = 128_000;
 /** Whether any spend cap is set: then every call's cost must be known. */
 const hasBudget = (b: Budgets) =>
-  b.perRunUsd !== undefined || b.perAgentDailyUsd !== undefined || b.stationDailyUsd !== undefined;
+  b.perRunUsd !== undefined ||
+  b.perAgentDailyUsd !== undefined ||
+  b.stationDailyUsd !== undefined ||
+  (b.perTreeUsd ?? null) !== null;
 
 /**
  * A direct Anthropic call reports tokens, not dollars, and is priced from the model list
@@ -197,6 +202,9 @@ export interface SendOptions {
   readonly trigger?: RunTrigger;
   readonly depth?: number;
   readonly dispatchId?: string;
+  /** Lineage (ADR-0024): the run above this one, and its tree's root. Absent: a new tree. */
+  readonly parentRunId?: string;
+  readonly rootRunId?: string;
   /** Overrides the session's model settings for this run only (a scheduled job's, ADR-0016). */
   readonly modelSettings?: ModelSettings | undefined;
 }
@@ -423,7 +431,7 @@ export class RunService {
    */
   async continueSession(
     sessionId: string,
-    options: { trigger: RunTrigger; depth?: number },
+    options: Pick<SendOptions, "depth" | "parentRunId" | "rootRunId"> & { trigger: RunTrigger },
   ): Promise<{ runId: string }> {
     return this.#start(sessionId, undefined, options);
   }
@@ -462,6 +470,8 @@ export class RunService {
       reasoning: settings.reasoning,
       ...(options.depth !== undefined ? { depth: options.depth } : {}),
       ...(options.dispatchId !== undefined ? { dispatchId: options.dispatchId } : {}),
+      ...(options.parentRunId !== undefined ? { parentRunId: options.parentRunId } : {}),
+      ...(options.rootRunId !== undefined ? { rootRunId: options.rootRunId } : {}),
     });
     if (text !== undefined)
       this.#o.sessions.appendMessage(sessionId, run.id, { role: "user", text });
@@ -481,7 +491,11 @@ export class RunService {
       agentId: owner,
       sessionId,
       runId: run.id,
-      payload: { trigger },
+      payload: {
+        trigger,
+        ...(run.parentRunId ? { parentRunId: run.parentRunId } : {}),
+        ...(run.rootRunId !== run.id ? { rootRunId: run.rootRunId } : {}),
+      },
     });
     const controller = new AbortController();
     this.#active.set(run.id, controller);
@@ -494,14 +508,45 @@ export class RunService {
     return this.#o.sessions.runs(sessionId).some((r) => !isTerminal(r.state));
   }
 
-  /** Cancels a queued or running run. A finished run is left as it is. */
-  async cancel(runId: string, by: "user" | "kill_switch" = "user"): Promise<void> {
-    const controller = this.#active.get(runId);
-    if (!controller) {
-      if (!this.#o.sessions.getRun(runId)) throw new NotFoundError(`no run "${runId}"`);
-      return;
+  /**
+   * Cancels a queued or running run, and every unfinished run it dispatched, level by level
+   * (ADR-0024). A finished run is left as it is; its unfinished descendants are still cancelled.
+   */
+  async cancel(runId: string, by: "user" | "kill_switch" | "budget" = "user"): Promise<void> {
+    if (!this.#o.sessions.getRun(runId)) throw new NotFoundError(`no run "${runId}"`);
+    for (const r of [{ id: runId }, ...this.#o.sessions.descendants(runId)]) {
+      this.#active.get(r.id)?.abort(new Cancelled(by));
     }
-    controller.abort(new Cancelled(by));
+  }
+
+  /**
+   * Where a run sits in its dispatch tree (ADR-0024): the root, the agents of the run and every
+   * run above it (nearest first), how many runs the tree has dispatched, and what it has spent.
+   */
+  tree(runId: string): {
+    rootRunId: string;
+    chain: string[];
+    dispatchedRuns: number;
+    spentUsd: number;
+  } {
+    const lineage = this.#o.sessions.lineage(runId);
+    const rootRunId = lineage[0]?.rootRunId ?? runId;
+    return {
+      rootRunId,
+      chain: lineage.map((r) => r.agentId),
+      dispatchedRuns: this.#o.sessions.treeRuns(rootRunId).filter((r) => r.trigger === "dispatch")
+        .length,
+      spentUsd: this.#o.spend.forTree(rootRunId).costUsd,
+    };
+  }
+
+  /** Stops every other unfinished run of a tree that reached its spend cap (ADR-0024). */
+  #cancelTree(rootRunId: string, except: string): void {
+    for (const r of this.#o.sessions.treeRuns(rootRunId)) {
+      if (r.id !== except && !isTerminal(r.state)) {
+        this.#active.get(r.id)?.abort(new Cancelled("budget"));
+      }
+    }
   }
 
   /** Approves or denies a pending consent; the paused run continues with the decision. */
@@ -690,7 +735,10 @@ export class RunService {
       }
 
       const connectors = this.#o.connectors;
-      const base = resolveGrants(agent.config, station, connectors?.catalog() ?? {});
+      // At the station's depth limit `dispatch` is not offered at all (ADR-0024).
+      const base = resolveGrants(agent.config, station, connectors?.catalog() ?? {}, {
+        depth: run.depth,
+      });
       // Connector tools are implemented by calling through to the connector.
       const registry: Record<string, ToolImpl> = { ...this.#tools };
       for (const t of base) {
@@ -736,10 +784,12 @@ export class RunService {
 
       const maxSteps = this.#o.maxSteps ?? 12;
       for (let step = 1; step <= maxSteps; step++) {
-        const blocked = this.#budgetCheck(station.budgets, ids);
+        const blocked = this.#budgetCheck(station.budgets, ids, run.rootRunId);
         if (blocked) {
           sessions.transition(run.id, "block_budget");
           events.append({ type: "budget.blocked", ...ids, payload: { ...blocked } });
+          // A tree that reached its cap stops everywhere, not only where the check ran.
+          if (blocked.scope === "tree") this.#cancelTree(run.rootRunId, run.id);
           return sessions.getRun(run.id) as RunRecord;
         }
         for (const direction of this.#directions.get(run.id) ?? []) {
@@ -842,21 +892,32 @@ export class RunService {
   }
 
   /**
-   * Budgets before every model call (brief §15). Returns the cap that blocks, if any; sends each
-   * 80% warning once per run, agent-day, or station-day.
+   * Budgets before every model call (brief §15, ADR-0024). Returns the cap that blocks, if any;
+   * sends each 80% warning once per run, tree, agent-day, or station-day. `rootRunId` adds the
+   * run's tree; a session title call has none.
    */
   #budgetCheck(
     budgets: Budgets,
     ids: { agentId: string; sessionId: string; runId: string },
+    rootRunId?: string,
   ): BudgetLine | undefined {
     const day = utcDay(this.#now());
     const check = checkBudget(budgets, {
       run: this.#o.spend.forRun(ids.runId).costUsd,
+      ...(rootRunId ? { tree: this.#o.spend.forTree(rootRunId).costUsd } : {}),
       agentToday: this.#o.spend.agentDay(ids.agentId, day),
       stationToday: this.#o.spend.stationDay(day),
     });
+    const keyOf = (scope: BudgetLine["scope"]) =>
+      scope === "run"
+        ? ids.runId
+        : scope === "tree"
+          ? rootRunId
+          : scope === "agent"
+            ? `${ids.agentId}:${day}`
+            : day;
     for (const w of check.warnings) {
-      const key = `${w.scope}:${w.scope === "run" ? ids.runId : w.scope === "agent" ? `${ids.agentId}:${day}` : day}`;
+      const key = `${w.scope}:${keyOf(w.scope)}`;
       if (this.#warned.has(key)) continue;
       this.#warned.add(key);
       this.#o.events.append({ type: "budget.warning", ...ids, payload: { ...w } });
@@ -920,6 +981,20 @@ export class RunService {
     }
   }
 
+  /**
+   * Strictest approval wins (ADR-0024): a run works under *Ask first* if its own agent or any agent
+   * above it in the dispatch chain is *Ask first*, read from their configs now. An agent that is
+   * gone counts as *Ask first*.
+   */
+  async #approvalMode(runId: string, agent: AgentConfig): Promise<ApprovalMode> {
+    const above = this.#o.sessions.lineage(runId).slice(1);
+    if (above.length === 0) return agent.approvalMode;
+    const loaded = await loadStationDir(this.#o.home);
+    const modeOf = (id: string) =>
+      loaded.agents.find((a) => a.id === id)?.config.approvalMode ?? "ask";
+    return effectiveApprovalMode([agent.approvalMode, ...above.map((r) => modeOf(r.agentId))]);
+  }
+
   /** Double enforcement: a call to anything not offered is rejected here and never executed. */
   async #runTool(
     call: ToolCallRecord,
@@ -962,7 +1037,7 @@ export class RunService {
       ...ids,
       payload: { toolCallId: call.id, tool: call.name, input: call.input, class: grant.class },
     });
-    if (needsConsent(grant.class, agent.approvalMode)) {
+    if (needsConsent(grant.class, await this.#approvalMode(ids.runId, agent))) {
       const decision = await this.#askConsent(call, ids, signal);
       if (decision === "denied") {
         const summary = "the Commander denied this call";

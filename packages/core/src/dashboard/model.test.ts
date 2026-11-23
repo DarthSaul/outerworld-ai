@@ -74,12 +74,29 @@ describe("dashboardModel on the demo station", () => {
     expect(quiet.lanes.map((l) => [l.id, l.label, l.traffic, l.packetRoom])).toEqual([
       ["operations-to-command", "L-01", 0, "operations"],
       ["research-to-command", "L-02", 0, "research"],
+      ["operations-to-research", "L-03", 0, "research"],
     ]);
     expect(quiet.lanes.every((l) => l.route.length >= 2 && l.tag)).toBe(true);
     const busy = dashboardModel(
       input({ dispatches: [{ workerAgentId: "quill" }, { workerAgentId: "quill" }] }),
     );
-    expect(busy.lanes.map((l) => l.traffic)).toEqual([2, 0]);
+    expect(busy.lanes.map((l) => l.traffic)).toEqual([2, 0, 0]);
+  });
+
+  it("runs a crew member's dispatch along the hallway policy let it use (ADR-0024)", () => {
+    const d = dashboardModel(
+      input({
+        dispatches: [
+          { workerAgentId: "wren", leadAgentId: "quill" },
+          { workerAgentId: "wren", leadAgentId: "vesper" },
+        ],
+      }),
+    );
+    expect(d.lanes.map((l) => [l.id, l.traffic])).toEqual([
+      ["operations-to-command", 0],
+      ["research-to-command", 1],
+      ["operations-to-research", 1],
+    ]);
   });
 
   it("maps live activity to statuses, flags a blocked room, and counts alerts", () => {
@@ -132,6 +149,6 @@ describe("dashboardModel on the demo station", () => {
     expect(d.bridgeId).toBeUndefined();
     expect(d.overseer).toBeUndefined();
     expect(d.rooms.every((r) => !r.bridge)).toBe(true);
-    expect(d.lanes.map((l) => l.traffic)).toEqual([0, 0]);
+    expect(d.lanes.map((l) => l.traffic)).toEqual([0, 0, 0]);
   });
 });

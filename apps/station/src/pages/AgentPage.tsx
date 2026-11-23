@@ -63,6 +63,8 @@ const sourceLabel = (t: EffectiveTool) => {
   switch (t.source.kind) {
     case "role":
       return term("tools.source.role");
+    case "dispatch":
+      return term("tools.source.dispatch");
     case "prop":
       return `${term("grant")}: ${term(`prop.${t.source.prop}`)}`;
     case "connector":

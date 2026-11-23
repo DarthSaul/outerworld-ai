@@ -245,7 +245,10 @@ describe("Station chrome", () => {
     const fake = fakeApi();
     fake.spend.tokens = 1_284_000;
     fake.spend.stationUsd = 12.5;
-    fake.state.station = { ...fake.state.station, budgets: { stationDailyUsd: 50 } };
+    fake.state.station = {
+      ...fake.state.station,
+      budgets: { stationDailyUsd: 50, perTreeUsd: null },
+    };
     renderApp("/", fake);
     const footer = screen.getByRole("contentinfo");
     expect(await within(footer).findByText("1.284M")).toBeInTheDocument();

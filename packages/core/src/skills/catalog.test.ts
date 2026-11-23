@@ -32,8 +32,8 @@ const station: StationConfig = {
   ],
   lanes: [],
   connectors: [],
-  budgets: {},
-  dispatch: { maxDepth: 1, autoReview: true },
+  budgets: { perTreeUsd: null },
+  dispatch: { maxDepth: 1, maxRunsPerTree: 12, autoReview: true },
   skills: { enabled: [], disabled: ["plan"] },
 };
 

@@ -182,7 +182,9 @@
       }
     },
     "budgets": {
-      "default": {},
+      "default": {
+        "perTreeUsd": 15
+      },
       "type": "object",
       "properties": {
         "perRunUsd": {
@@ -196,13 +198,29 @@
         "stationDailyUsd": {
           "type": "number",
           "exclusiveMinimum": 0
+        },
+        "perTreeUsd": {
+          "default": 15,
+          "anyOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
+      "required": [
+        "perTreeUsd"
+      ],
       "additionalProperties": {}
     },
     "dispatch": {
       "default": {
         "maxDepth": 1,
+        "maxRunsPerTree": 12,
         "autoReview": true
       },
       "type": "object",
@@ -211,7 +229,13 @@
           "default": 1,
           "type": "integer",
           "minimum": 0,
-          "maximum": 1
+          "maximum": 3
+        },
+        "maxRunsPerTree": {
+          "default": 12,
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50
         },
         "autoReview": {
           "default": true,
@@ -220,6 +244,7 @@
       },
       "required": [
         "maxDepth",
+        "maxRunsPerTree",
         "autoReview"
       ],
       "additionalProperties": {}

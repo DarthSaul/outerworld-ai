@@ -14,6 +14,7 @@ import {
   type CreateScheduleInput,
   type CrewTemplate,
   DEFAULT_BUDGETS,
+  DEFAULT_MAX_RUNS_PER_TREE,
   DEFAULT_MODEL,
   type Issue,
   type Lane,
@@ -330,7 +331,7 @@ export class CrewService {
         lanes: [],
         connectors: [],
         budgets: { ...DEFAULT_BUDGETS },
-        dispatch: { maxDepth: 1, autoReview: true },
+        dispatch: { maxDepth: 1, maxRunsPerTree: DEFAULT_MAX_RUNS_PER_TREE, autoReview: true },
       };
       const parsed = parseStationConfig(station);
       if (!parsed.ok) throw new ConflictError("station.json would be invalid", parsed.issues);
@@ -473,12 +474,10 @@ export class CrewService {
         if (!station.rooms.some((r) => r.id === end)) throw new NotFoundError(`no room "${end}"`);
       }
       if (input.from === input.to) throw new ConflictError("a hallway needs two different rooms");
-      const linked = station.lanes.find(
-        (l) =>
-          (l.from === input.from && l.to === input.to) ||
-          (l.from === input.to && l.to === input.from),
-      );
-      if (linked) throw new ConflictError(`rooms already linked by hallway "${linked.id}"`);
+      // Hallways are directed (ADR-0024): the reverse of an existing one is a new hallway, and the
+      // only way to let crew dispatch both ways.
+      const linked = station.lanes.find((l) => l.from === input.from && l.to === input.to);
+      if (linked) throw new ConflictError(`a hallway already leads this way: "${linked.id}"`);
       const lane: Lane = {
         id: slugify(
           `${input.from} to ${input.to}`,
@@ -506,13 +505,16 @@ export class CrewService {
     });
   }
 
-  /** Sets each cap given; `null` removes it. Takes effect before the next model call. */
+  /**
+   * Sets each cap given; `null` removes it. The per-tree cap is kept as an explicit `null`, since a
+   * missing one means the default (ADR-0024). Takes effect before the next model call.
+   */
   updateBudgets(input: UpdateBudgetsInput): Promise<Budgets> {
     return this.#serial(async () => {
       const loaded = await this.#loadWithStation();
       const budgets: Record<string, unknown> = { ...loaded.station.budgets };
       for (const [k, v] of Object.entries(input)) {
-        if (v === null) delete budgets[k];
+        if (v === null && k !== "perTreeUsd") delete budgets[k];
         else if (v !== undefined) budgets[k] = v;
       }
       await this.#saveStation(loaded, { ...loaded.station, budgets: budgets as Budgets });

@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { DispatchStore } from "../dispatch/dispatch-store.js";
 import { openDatabase } from "../storage/database.js";
+import { MIGRATIONS } from "../storage/migrations.js";
 import { SessionStore } from "./session-store.js";
 
 const clock = () => {
@@ -219,5 +220,96 @@ describe("SessionStore: runs", () => {
       [a.id, "Chat"],
     ]);
     expect(s.recentRuns(1).map((r) => r.run.id)).toEqual([c.id]);
+  });
+});
+
+describe("SessionStore: dispatch trees (ADR-0024)", () => {
+  const tree = () => {
+    const s = store();
+    const lead = s.createSession("vesper", "Chat");
+    const root = s.createRun({
+      sessionId: lead.id,
+      agentId: "vesper",
+      trigger: "user",
+      model: "m",
+    });
+    const worker = s.createSession("quill", "From Vesper");
+    const child = s.createRun({
+      sessionId: worker.id,
+      agentId: "quill",
+      trigger: "dispatch",
+      model: "m",
+      depth: 1,
+      parentRunId: root.id,
+      rootRunId: root.id,
+    });
+    const grand = s.createRun({
+      sessionId: s.createSession("wren", "From Quill").id,
+      agentId: "wren",
+      trigger: "dispatch",
+      model: "m",
+      depth: 2,
+      parentRunId: child.id,
+      rootRunId: root.id,
+    });
+    const review = s.createRun({
+      sessionId: worker.id,
+      agentId: "quill",
+      trigger: "review",
+      model: "m",
+      depth: 1,
+      parentRunId: root.id,
+      rootRunId: root.id,
+    });
+    return { s, root, child, grand, review };
+  };
+
+  it("makes a run with no parent the root of its own tree", () => {
+    const { root } = tree();
+    expect(root.rootRunId).toBe(root.id);
+    expect(root.parentRunId).toBeUndefined();
+  });
+
+  it("walks a run's lineage up to its root, nearest first", () => {
+    const { s, root, child, grand } = tree();
+    expect(s.lineage(grand.id).map((r) => r.id)).toEqual([grand.id, child.id, root.id]);
+    expect(s.lineage("nope")).toEqual([]);
+  });
+
+  it("lists a tree's runs and a run's descendants", () => {
+    const { s, root, child, grand, review } = tree();
+    expect(s.treeRuns(root.id).map((r) => r.id)).toEqual([root.id, child.id, grand.id, review.id]);
+    expect(s.descendants(root.id).map((r) => r.id)).toEqual([child.id, grand.id, review.id]);
+    expect(s.descendants(child.id).map((r) => r.id)).toEqual([grand.id]);
+    expect(s.descendants(grand.id)).toEqual([]);
+  });
+
+  it("backfills lineage for dispatches made before migration 7", () => {
+    const path = join(mkdtempSync(join(tmpdir(), "ow-lineage-")), "station.db");
+    const before = openDatabase(
+      path,
+      MIGRATIONS.filter((m) => m.version < 7),
+    );
+    const at = "2026-09-29T12:00:00.000Z";
+    const insertSession = before.prepare(
+      "insert into sessions (id, agent_id, title, created_at) values (?, ?, 'x', ?)",
+    );
+    insertSession.run("s1", "vesper", at);
+    insertSession.run("s2", "quill", at);
+    const insertRun = before.prepare(
+      "insert into runs (id, session_id, agent_id, state, trigger, model, created_at, depth) values (?, ?, ?, 'completed', ?, 'm', ?, ?)",
+    );
+    insertRun.run("lead", "s1", "vesper", "user", at, 0);
+    insertRun.run("worker", "s2", "quill", "dispatch", at, 1);
+    before
+      .prepare(
+        "insert into dispatches (id, lead_agent_id, lead_session_id, lead_run_id, worker_agent_id, worker_session_id, worker_run_id, task, status, created_at) values ('d1', 'vesper', 's1', 'lead', 'quill', 's2', 'worker', 't', 'completed', ?)",
+      )
+      .run(at);
+    before.close();
+    const s = new SessionStore(openDatabase(path));
+    expect(s.getRun("lead")).toMatchObject({ rootRunId: "lead" });
+    expect(s.getRun("lead")?.parentRunId).toBeUndefined();
+    expect(s.getRun("worker")).toMatchObject({ parentRunId: "lead", rootRunId: "lead" });
   });
 });

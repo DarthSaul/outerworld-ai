@@ -180,4 +180,20 @@ export const MIGRATIONS: readonly Migration[] = [
       alter table runs add column reasoning text not null default 'default';
     `,
   },
+  {
+    // ADR-0024: nested dispatch. A run's parent is the run it was dispatched from (or, for a
+    // review, the run whose work it reviews); its root is the top of that tree. Before this every
+    // dispatch was one level deep, so the dispatch's lead run is both parent and root.
+    version: 7,
+    name: "run lineage for dispatch trees",
+    sql: `
+      alter table runs add column parent_run_id text references runs (id);
+      alter table runs add column root_run_id text;
+      update runs set parent_run_id = (
+        select lead_run_id from dispatches where dispatches.worker_run_id = runs.id
+      );
+      update runs set root_run_id = coalesce(parent_run_id, id);
+      create index runs_root on runs (root_run_id);
+    `,
+  },
 ];

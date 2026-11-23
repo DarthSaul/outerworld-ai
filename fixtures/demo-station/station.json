@@ -55,6 +55,12 @@
       "id": "research-to-command",
       "from": "research",
       "to": "command"
+    },
+    {
+      "id": "operations-to-research",
+      "from": "operations",
+      "to": "research",
+      "note": "Operations can hand research to Research."
     }
   ],
   "connectors": [
@@ -70,10 +76,12 @@
   "budgets": {
     "perRunUsd": 5,
     "perAgentDailyUsd": 25,
-    "stationDailyUsd": 50
+    "stationDailyUsd": 50,
+    "perTreeUsd": 15
   },
   "dispatch": {
     "maxDepth": 1,
+    "maxRunsPerTree": 12,
     "autoReview": true
   }
 }

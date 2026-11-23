@@ -32,7 +32,7 @@ describe("parseStationConfig", () => {
     expect(r.issues).toEqual([]);
   });
 
-  it("fills defaults for a minimal station: no lanes, connectors, budgets; dispatch depth 1 with auto review", () => {
+  it("fills defaults for a minimal station: no lanes or connectors, the per-tree cap, dispatch depth 1 with a run cap and auto review", () => {
     const r = parseStationConfig({
       schemaVersion: 1,
       name: "Tiny",
@@ -44,8 +44,8 @@ describe("parseStationConfig", () => {
     expect(s.rooms[0]?.props).toEqual([]);
     expect(s.lanes).toEqual([]);
     expect(s.connectors).toEqual([]);
-    expect(s.budgets).toEqual({});
-    expect(s.dispatch).toEqual({ maxDepth: 1, autoReview: true });
+    expect(s.budgets).toEqual({ perTreeUsd: 15 });
+    expect(s.dispatch).toEqual({ maxDepth: 1, maxRunsPerTree: 12, autoReview: true });
   });
 
   it("keeps unknown fields so a newer file round-trips (ADR-0009)", () => {
@@ -167,9 +167,30 @@ describe("parseStationConfig", () => {
     expect(p).toContain("error budgets.stationDailyUsd");
   });
 
-  it("limits dispatch depth to 0 or 1 in v1", () => {
-    expect(paths({ ...valid(), dispatch: { maxDepth: 2 } })).toContain("error dispatch.maxDepth");
-    expect(parseStationConfig({ ...valid(), dispatch: { maxDepth: 0 } }).ok).toBe(true);
+  it("limits dispatch depth to 0 through 3 (ADR-0024)", () => {
+    expect(paths({ ...valid(), dispatch: { maxDepth: 4 } })).toContain("error dispatch.maxDepth");
+    expect(paths({ ...valid(), dispatch: { maxDepth: -1 } })).toContain("error dispatch.maxDepth");
+    expect(paths({ ...valid(), dispatch: { maxDepth: 1.5 } })).toContain("error dispatch.maxDepth");
+    for (const maxDepth of [0, 1, 2, 3]) {
+      expect(parseStationConfig({ ...valid(), dispatch: { maxDepth } }).ok).toBe(true);
+    }
+  });
+
+  it("bounds the run cap per tree between 1 and 50", () => {
+    const at = (maxRunsPerTree: number) =>
+      paths({ ...valid(), dispatch: { maxDepth: 1, maxRunsPerTree } });
+    expect(at(0)).toContain("error dispatch.maxRunsPerTree");
+    expect(at(51)).toContain("error dispatch.maxRunsPerTree");
+    expect(at(1)).toEqual([]);
+    expect(at(50)).toEqual([]);
+  });
+
+  it("defaults a missing per-tree cap to $15 and keeps an explicit null as no cap", () => {
+    const missing = parseStationConfig(valid());
+    expect(missing.ok && missing.value.budgets.perTreeUsd).toBe(15);
+    const none = parseStationConfig({ ...valid(), budgets: { perTreeUsd: null } });
+    expect(none.ok && none.value.budgets.perTreeUsd).toBeNull();
+    expect(paths({ ...valid(), budgets: { perTreeUsd: 0 } })).toContain("error budgets.perTreeUsd");
   });
 
   it("warns on a newer schema version and errors on an older one", () => {

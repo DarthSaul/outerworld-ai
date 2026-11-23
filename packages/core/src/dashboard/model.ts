@@ -38,8 +38,11 @@ export interface DashboardInput {
   readonly activity: Readonly<Record<string, CrewActivityEntry>>;
   /** Recent runs, any order (GET /api/runs). */
   readonly runs: readonly DashboardRun[];
-  /** Dispatches still running: who they went to. */
-  readonly dispatches: readonly { readonly workerAgentId: string }[];
+  /** Dispatches still running: who they went to, and who sent them (absent: the Overseer). */
+  readonly dispatches: readonly {
+    readonly workerAgentId: string;
+    readonly leadAgentId?: string;
+  }[];
   /** Runs in flight now (GET /api/activity `runs`): the TASKS LIVE count. */
   readonly activeRunCount: number;
   /** Memory proposals awaiting a decision, station-wide. */
@@ -189,10 +192,21 @@ export function dashboardModel(input: DashboardInput): Dashboard {
     ];
   });
 
+  // The Overseer's dispatches travel the hallways that touch the Bridge, whichever way they point
+  // (it is exempt from hallway direction); a crew member's travel the one hallway policy let them
+  // use, from its room to the worker's (ADR-0024). A dispatch inside one room uses no hallway.
   const dispatchedTo = new Map<string, number>();
+  const alongLane = new Map<string, number>();
   for (const d of input.dispatches) {
     const room = roomOf.get(d.workerAgentId);
-    if (room) dispatchedTo.set(room, (dispatchedTo.get(room) ?? 0) + 1);
+    if (!room) continue;
+    const lead = d.leadAgentId ? agents.find((a) => a.id === d.leadAgentId) : overseerAgent;
+    if (!lead || lead.config.role === "overseer") {
+      dispatchedTo.set(room, (dispatchedTo.get(room) ?? 0) + 1);
+    } else if (lead.config.roomId !== room) {
+      const key = `${lead.config.roomId}>${room}`;
+      alongLane.set(key, (alongLane.get(key) ?? 0) + 1);
+    }
   }
   const lanes: DashboardLane[] = station.lanes.map((lane, i) => {
     const a = placement.get(lane.from);
@@ -210,7 +224,9 @@ export function dashboardModel(input: DashboardInput): Dashboard {
       ...(lane.note ? { note: lane.note } : {}),
       route,
       ...(tag ? { tag } : {}),
-      traffic: touchesBridge ? (dispatchedTo.get(far) ?? 0) : 0,
+      traffic:
+        (touchesBridge ? (dispatchedTo.get(far) ?? 0) : 0) +
+        (alongLane.get(`${lane.from}>${lane.to}`) ?? 0),
       packetRoom: touchesBridge ? far : lane.to,
     };
   });

@@ -14,8 +14,8 @@ const station: StationConfig = {
   connectors: [
     { id: "notion", name: "Notion", transport: { type: "http", url: "https://a.test/mcp" } },
   ],
-  budgets: {},
-  dispatch: { maxDepth: 1, autoReview: true },
+  budgets: { perTreeUsd: null },
+  dispatch: { maxDepth: 1, maxRunsPerTree: 12, autoReview: true },
 };
 
 const agent = (over: Partial<AgentConfig> = {}): AgentConfig => ({

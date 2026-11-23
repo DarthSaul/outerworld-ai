@@ -49,6 +49,7 @@ export {
   TemplateInput,
   UpdateAgentInput,
   UpdateBudgetsInput,
+  UpdateDispatchInput,
   UpdateRoomInput,
   UpdateScheduleInput,
 } from "./api/crew-api.js";
@@ -119,8 +120,12 @@ export {
   Connector,
   ConnectorTransport,
   DEFAULT_BUDGETS,
+  DEFAULT_MAX_RUNS_PER_TREE,
+  DEFAULT_PER_TREE_USD,
   DispatchPolicy,
   Lane,
+  MAX_DISPATCH_DEPTH,
+  MAX_RUNS_PER_TREE_LIMIT,
   Prop,
   PropKind,
   parseStationConfig,
@@ -239,6 +244,7 @@ export {
   type BudgetLine,
   type BudgetScope,
   checkBudget,
+  effectiveApprovalMode,
   needsConsent,
   type SpentSoFar,
   utcDay,
@@ -269,14 +275,24 @@ export {
   profileSource,
   type ToolHints,
 } from "./policy/connector-tools.js";
-// Dispatch (brief §7)
-export { checkDispatch, type DispatchCheck, dispatchTargets } from "./policy/dispatch.js";
+// Dispatch (brief §7, ADR-0024)
+export {
+  checkDispatch,
+  type DispatchCheck,
+  type DispatchReach,
+  type DispatchTree,
+  type DispatchVia,
+  dispatchReach,
+  dispatchTargets,
+  hasDispatch,
+} from "./policy/dispatch.js";
 // Effective grants (brief §6)
 export {
   BUILTIN_TOOLS,
   type ConnectorToolCatalog,
   connectorToolName,
   type EffectiveTool,
+  type GrantContext,
   resolveGrants,
   SKILL_VIEW_TOOL,
   type ToolClass,
@@ -293,6 +309,8 @@ export {
   type CrewActivityState,
   foldCrewActivity,
 } from "./run/crew-activity.js";
+// Who asked whom, from events (ADR-0024)
+export { type ChainLink, dispatchChain } from "./run/dispatch-chain.js";
 // Runs: lifecycle and prompt assembly (brief §8)
 export {
   type AssembledPrompt,

@@ -40,10 +40,14 @@ const line = (m: ChatMessage, names: (id: string) => string, agent: string): str
 };
 
 /**
- * Overseer dispatch at depth 1 (brief §7). The `dispatch` tool starts a worker's run in a new
- * session and returns at once; when the worker's run ends, a report (summary plus files it wrote)
- * is posted into the lead's session and, with auto review on, the lead reviews it as soon as its
- * session is free. Workers never message each other.
+ * Dispatch (brief §7, ADR-0024). The `dispatch` tool starts a worker's run in a new session and
+ * returns at once. Any agent with dispatch can use it, within its reach and the station's depth,
+ * run and spend limits, so a worker may itself dispatch. A dispatch is done when its worker
+ * session has gone quiet: its run has ended, nothing it dispatched is still running, and it has
+ * reviewed every report it got. Then a report (the session's last reply plus the files it wrote)
+ * is posted into the dispatcher's session, level by level up the tree. The Commander's own
+ * session reviews reports when `autoReview` is on; a dispatched session always does, since its
+ * own report is not finished until it has folded in its workers'.
  */
 export class DispatchService {
   readonly #o: {
@@ -53,8 +57,10 @@ export class DispatchService {
     events: EventStore;
     dispatches: DispatchStore;
   };
-  /** Lead sessions with a report the lead has not yet reviewed. */
+  /** Sessions with a report they have not yet reviewed. */
   readonly #needsReview = new Set<string>();
+  /** One `#step` at a time per session, so a dispatch is reported and reviewed once. */
+  readonly #advancing = new Map<string, Promise<void>>();
 
   constructor(options: {
     home: string;
@@ -66,9 +72,9 @@ export class DispatchService {
     this.#o = options;
     options.runs.registerTool("dispatch", this.dispatchTool());
     options.runs.registerTool("read_session", this.readSessionTool());
-    // A lead that was busy when a report arrived reviews it once its run ends.
+    // Any run ending may finish a dispatch, or free a session that has a report to review.
     options.runs.onSettled((run) => {
-      if (this.#needsReview.has(run.sessionId)) void this.#review(run.sessionId);
+      void this.#advance(run.sessionId);
     });
   }
 
@@ -79,7 +85,10 @@ export class DispatchService {
       inputSchema: {
         type: "object",
         properties: {
-          to: { type: "string", description: "The crew member's id, from your crew roster" },
+          to: {
+            type: "string",
+            description: "The crew member's id, from the crew you can hand work to",
+          },
           task: { type: "string", description: "What to do, with enough context to do it" },
           inputs: { type: "object", description: "Optional structured inputs for the task" },
         },
@@ -132,16 +141,20 @@ export class DispatchService {
     const { to, task, inputs } = parsed.data;
     const loaded = await loadStationDir(this.#o.home);
     if (!loaded.station) throw new Error("the station has no valid station.json");
+    const tree = this.#o.runs.tree(ctx.runId);
     const check = checkDispatch({
       from: ctx.agentId,
       to,
       depth: ctx.depth,
       station: loaded.station,
       crew: loaded.agents,
+      chain: tree.chain,
+      tree,
     });
     if (!check.ok) throw new Error(check.reason);
 
-    const lead = loaded.agents.find((a) => a.id === ctx.agentId)?.config.name ?? ctx.agentId;
+    const leader = loaded.agents.find((a) => a.id === ctx.agentId)?.config;
+    const lead = leader?.name ?? ctx.agentId;
     const worker = this.#o.runs.createSession(to, `From ${lead}: ${task.slice(0, 60)}`);
     const dispatch = this.#o.dispatches.create({
       leadAgentId: ctx.agentId,
@@ -153,18 +166,21 @@ export class DispatchService {
       ...(inputs !== undefined ? { inputs } : {}),
     });
     const message = [
-      `Task from ${lead}, the Overseer:`,
+      `Task from ${lead}${leader?.role === "overseer" ? ", the Overseer" : ""}:`,
       task,
       ...(inputs !== undefined ? ["", "Inputs:", JSON.stringify(inputs, null, 2)] : []),
       "",
-      "When you are done, reply with a short summary of what you did and where any files are. Your reply is sent back to the Overseer.",
+      `When you are done, reply with a short summary of what you did and where any files are. Your reply is sent back to ${lead}.`,
     ].join("\n");
+    const depth = ctx.depth + 1;
     let runId: string;
     try {
       ({ runId } = await this.#o.runs.send(worker.id, message, {
         trigger: "dispatch",
-        depth: ctx.depth + 1,
+        depth,
         dispatchId: dispatch.id,
+        parentRunId: ctx.runId,
+        rootRunId: tree.rootRunId,
       }));
     } catch (error) {
       this.#o.dispatches.finish(
@@ -180,9 +196,15 @@ export class DispatchService {
       agentId: ctx.agentId,
       sessionId: ctx.sessionId,
       runId: ctx.runId,
-      payload: { dispatchId: dispatch.id, to, task },
+      payload: {
+        dispatchId: dispatch.id,
+        to,
+        task,
+        workerSessionId: worker.id,
+        workerRunId: runId,
+        depth,
+      },
     });
-    void this.#o.runs.settled(runId).then((run) => this.#complete(dispatch, run));
     return {
       dispatchId: dispatch.id,
       status: "started",
@@ -192,12 +214,87 @@ export class DispatchService {
     };
   }
 
-  /** Posts the worker's result into the lead's session and asks for a review. */
-  async #complete(dispatch: DispatchRecord, run: RunRecord): Promise<void> {
-    const status = outcome[run.state] ?? "failed";
-    const messages = this.#o.sessions
-      .messages(dispatch.workerSessionId)
-      .filter((m) => m.runId === run.id);
+  /**
+   * On startup, after the runs are marked interrupted: a dispatch still marked running can no
+   * longer finish, so its dispatcher gets an interrupted report instead of waiting forever.
+   */
+  recover(): DispatchRecord[] {
+    const stuck = this.#o.dispatches.running();
+    for (const d of stuck) {
+      this.#report(d, "interrupted", "Interrupted: the daemon stopped while it was working.");
+    }
+    return stuck;
+  }
+
+  /** Re-checks a session once nothing else is checking it (see `#step`). */
+  #advance(sessionId: string): Promise<void> {
+    const prior = this.#advancing.get(sessionId) ?? Promise.resolve();
+    const next = prior.then(() => this.#step(sessionId)).catch(() => undefined);
+    this.#advancing.set(sessionId, next);
+    void next.then(() => {
+      if (this.#advancing.get(sessionId) === next) this.#advancing.delete(sessionId);
+    });
+    return next;
+  }
+
+  /**
+   * A free session reviews a report it has not seen yet. A free dispatched session with nothing of
+   * its own still out and nothing left to review is done, and reports up.
+   */
+  async #step(sessionId: string): Promise<void> {
+    if (this.#o.runs.hasActiveRun(sessionId)) return;
+    const own = this.#o.dispatches.forWorkerSession(sessionId);
+    if (this.#needsReview.has(sessionId)) {
+      this.#needsReview.delete(sessionId);
+      // A review that starts ends in a run that settles, which comes back here.
+      if (await this.#review(sessionId, own)) return;
+    }
+    if (own?.status !== "running") return;
+    if (this.#o.dispatches.forLeadSession(sessionId).some((d) => d.status === "running")) return;
+    await this.#complete(own);
+  }
+
+  /**
+   * Starts a review turn in a session with a new report. It continues the tree of the session's
+   * latest run, at its depth and under its parent, so it is held to the same limits and chain.
+   * Returns whether one started.
+   */
+  async #review(sessionId: string, own: DispatchRecord | undefined): Promise<boolean> {
+    const latest = this.#o.sessions.runs(sessionId)[0];
+    if (!latest) return false;
+    const station = (await loadStationDir(this.#o.home)).station;
+    if (!station) return false;
+    // The Commander's session follows the setting; a dispatched one reviews only while its own
+    // work is going well (not after it was cancelled, stopped by a budget, or failed).
+    if (own ? latest.state !== "completed" : !station.dispatch.autoReview) return false;
+    if (this.#overTreeBudget(latest.id, station.budgets.perTreeUsd)) return false;
+    try {
+      await this.#o.runs.continueSession(sessionId, {
+        trigger: "review",
+        depth: latest.depth,
+        rootRunId: latest.rootRunId,
+        ...(latest.parentRunId ? { parentRunId: latest.parentRunId } : {}),
+      });
+      return true;
+    } catch {
+      // Kill switch on, session archived, or a run started meanwhile: the report stays put.
+      return false;
+    }
+  }
+
+  #overTreeBudget(runId: string, cap: number | null | undefined): boolean {
+    return cap !== null && cap !== undefined && this.#o.runs.tree(runId).spentUsd >= cap;
+  }
+
+  /** The worker's session has gone quiet: report how it went to the dispatcher. */
+  async #complete(dispatch: DispatchRecord): Promise<void> {
+    const last = this.#o.sessions.runs(dispatch.workerSessionId)[0];
+    const station = (await loadStationDir(this.#o.home)).station;
+    const overTree = last ? this.#overTreeBudget(last.id, station?.budgets.perTreeUsd) : false;
+    let status: Exclude<DispatchStatus, "running"> = (last && outcome[last.state]) ?? "failed";
+    // A run the tree's spend cap cancelled was stopped by a budget, not by the Commander.
+    if (status === "cancelled" && overTree) status = "blocked";
+    const messages = this.#o.sessions.messages(dispatch.workerSessionId);
     const lastReply = [...messages]
       .reverse()
       .find((m) => m.message.role === "assistant" && m.message.text)?.message;
@@ -210,11 +307,13 @@ export class DispatchService {
     );
     const why =
       status === "blocked"
-        ? "Stopped by a budget before it could finish."
+        ? overTree
+          ? "Stopped: this request reached its budget."
+          : "Stopped by a budget before it could finish."
         : status === "interrupted"
           ? "Interrupted: the daemon stopped while it was working."
           : status === "failed"
-            ? `Failed: ${run.error ?? "unknown error"}`
+            ? `Failed: ${last?.error ?? "unknown error"}`
             : status === "cancelled"
               ? "Cancelled by the Commander."
               : "";
@@ -225,7 +324,22 @@ export class DispatchService {
     ]
       .filter(Boolean)
       .join("\n\n");
+    if (!this.#report(dispatch, status, text, why)) return;
+    this.#needsReview.add(dispatch.leadSessionId);
+    await this.#advance(dispatch.leadSessionId);
+  }
 
+  /**
+   * Records how a dispatch ended and posts the report into the dispatcher's session. Returns false,
+   * changing nothing, when the dispatch had already ended.
+   */
+  #report(
+    dispatch: DispatchRecord,
+    status: Exclude<DispatchStatus, "running">,
+    text: string,
+    why = text,
+  ): boolean {
+    if (this.#o.dispatches.get(dispatch.id)?.status !== "running") return false;
     this.#o.dispatches.finish(dispatch.id, status, text);
     this.#o.sessions.appendMessage(dispatch.leadSessionId, undefined, {
       role: "report",
@@ -258,22 +372,6 @@ export class DispatchService {
         payload: { dispatchId: dispatch.id, error: why },
       });
     }
-
-    const loaded = await loadStationDir(this.#o.home);
-    if (loaded.station?.dispatch.autoReview) {
-      this.#needsReview.add(dispatch.leadSessionId);
-      await this.#review(dispatch.leadSessionId);
-    }
-  }
-
-  /** Starts the lead's review turn if its session is free; otherwise waits for its run to end. */
-  async #review(sessionId: string): Promise<void> {
-    if (this.#o.runs.hasActiveRun(sessionId)) return;
-    this.#needsReview.delete(sessionId);
-    try {
-      await this.#o.runs.continueSession(sessionId, { trigger: "review", depth: 0 });
-    } catch {
-      // Kill switch on or session archived: the report stays in the session for the Commander.
-    }
+    return true;
   }
 }

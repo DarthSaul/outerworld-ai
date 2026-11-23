@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { AgentDocumentName } from "../api/crew-api.js";
 import type { StationConfig } from "../config/station-config.js";
 import type { CrewMember } from "../config/station-crew.js";
+import { dispatchReach } from "../policy/dispatch.js";
 
 /**
  * Prompt assembly (brief §8): system prompt = documents + role briefing + installed skills
@@ -224,8 +225,21 @@ export function roleBriefing(
     ].join("\n\n");
   }
   const overseer = crew.find((c) => c.config.role === "overseer");
-  return [
+  const intro = [
     `You are a crew member of ${station.name}, in the ${roomName(me?.config.roomId ?? "")} room.`,
     overseer ? `${overseer.config.name} is the Overseer.` : "The station has no Overseer yet.",
   ].join(" ");
+  // A crew member with dispatch is told exactly who policy lets it reach, and how (ADR-0024).
+  const reach = dispatchReach(agentId, station, crew);
+  if (reach.length === 0) return intro;
+  const lines = reach.map((r) => {
+    const who = crew.find((c) => c.id === r.agentId);
+    const how =
+      r.via.kind === "lane" ? `through the hallway to ${roomName(r.roomId)}` : "your room";
+    return `- ${who?.config.name ?? r.agentId} (id: ${r.agentId}), ${how}`;
+  });
+  return [
+    intro,
+    `You can hand part of a task to:\n${lines.join("\n")}\nTheir reports come back to you; fold them into your own reply.`,
+  ].join("\n\n");
 }
