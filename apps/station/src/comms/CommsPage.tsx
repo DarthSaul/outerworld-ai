@@ -1,4 +1,10 @@
-import { type DashboardCrew, lookFor, term, termWith } from "@darthsaul/outerworld-ai-core";
+import {
+  type DashboardCrew,
+  lookFor,
+  overseerFirst,
+  term,
+  termWith,
+} from "@darthsaul/outerworld-ai-core";
 import {
   CREW_STATUS_TONE,
   EmptyState,
@@ -29,6 +35,14 @@ import { ChatWindow } from "./ChatWindow.js";
 const MAX_OPEN = 3;
 
 export type AgentItem = NonNullable<ReturnType<typeof useStationView>["data"]>["agents"][number];
+
+/**
+ * A crew list leads with the Overseer (`overseerFirst`), set apart from the rest by a thin rule
+ * below it, as on the crew screen. The class for a crew list item: the rule under the Overseer.
+ */
+export function overseerRule(agent: AgentItem): string | undefined {
+  return agent.config.role === "overseer" ? "border-line-faint border-b pb-1.5" : undefined;
+}
 
 /** A status lamp in the crew member's status color; it blinks as the map's do. */
 function Lamp({ crew }: { readonly crew: DashboardCrew | undefined }) {
@@ -280,7 +294,7 @@ export function CommsPage() {
   const roomName = (id: string) =>
     station.data?.station?.rooms.find((r) => r.id === id)?.name ?? id;
   const crewOf = (id: string) => dashboard?.crew.find((c) => c.id === id);
-  const agents = station.data?.agents ?? [];
+  const agents = overseerFirst(station.data?.agents ?? []);
   const selected = agents.find((a) => a.id === agentId);
 
   return (
@@ -306,7 +320,7 @@ export function CommsPage() {
               className="m-0 flex max-h-[26dvh] list-none flex-col gap-1.5 overflow-y-auto overscroll-y-contain p-0 pr-1"
             >
               {agents.map((a) => (
-                <li key={a.id}>
+                <li key={a.id} className={overseerRule(a)}>
                   <CrewButton
                     agent={a}
                     crew={crewOf(a.id)}
