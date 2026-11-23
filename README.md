@@ -26,8 +26,10 @@ requests your agents make; see [docs/PRIVACY.md](docs/PRIVACY.md).
 - **COMMS**: chat with any crew member. Sessions are saved and re-openable, and you can hand an
   open conversation to another crew member. A picker above the message box sets the model, the
   key, and the reasoning level for that conversation.
-- **Overseer delegation**: the Overseer dispatches tasks to crew members, workers run
-  concurrently, and results return to the Overseer's session, all visible live.
+- **Delegation**: the Overseer dispatches tasks to crew members, and crew you allow can pass
+  part of a task on to their roommates and along hallways, up to three levels deep. Workers run
+  concurrently, each result returns to whoever asked for it, and every request has a run cap and
+  a spend cap of its own (ADR-0025).
 - **Crew members as documents**: identity, purpose, standing orders, and context as markdown;
   model, approval mode (*Ask first* or *Full power*), and grants as config. Each crew member's
   page has Brief, Schedules, Memory, and Config tabs.

@@ -216,6 +216,21 @@ decisions made, open questions.
   - Found along the way: the SPA offered setup over a station.json that did not load. The
     station view now reports `stationFile` (`present`, `missing`, or `unknown` when the folder
     cannot be checked), and onboarding runs only for `missing`.
+- **D32 Open dispatch (Phase 14, owner 2026-11-22).** ADR-0024 records the design and lifts brief
+  §3's "recursive delegation" non-goal. Settled with the owner: crew never dispatch to the
+  Overseer, and a missing `perTreeUsd` means $15 (`null` is no cap). Choices flagged at
+  Checkpoint 14a:
+  - A dispatch completes when its worker session is quiet, not when its first run ends, so a
+    middle worker's report includes its workers' results.
+  - `autoReview` governs only the Commander's sessions; dispatched sessions always review, unless
+    their own run was cancelled, stopped by a budget, or failed. A review continues its session's
+    latest run's tree (depth, parent, root), so reviews count toward tree spend, not the run cap.
+  - Approval is read from the chain's current configs at each write-class call.
+  - Hallways are directed, so the reverse of one is now its own hallway (`POST /api/lanes` used to
+    refuse it).
+  - Found along the way: dispatches left running by a crash stayed `running` forever; the daemon
+    now reports them interrupted at startup. `run.cancelled {by: "budget"}` was in the schema but
+    never emitted; the tree cap emits it.
 
 ## Phase 0 — Housekeeping and decisions
 
@@ -421,6 +436,38 @@ Source: `docs/design/station-dashboard/`. Dark only; sprites replace the rig; ev
 
 **CHECKPOINT 13**
 
+## Phase 14 — Open dispatch: per-agent dispatch, enforced hallways, nesting (ADR-0024)
+- [x] 14.1 Core schemas: `canDispatch`, `maxDepth` 0–3, `maxRunsPerTree`, `perTreeUsd` (default 15,
+  `null` = no cap), budget scope `tree`, lineage fields on `run.queued` / `dispatch.started`, API
+  inputs (`canDispatch`, `perTreeUsd`, `UpdateDispatchInput`); JSON Schemas regenerated.
+- [x] 14.2 Core policy: `hasDispatch`, `dispatchReach` (room, directed hallway, Overseer exempt,
+  never to the Overseer), `checkDispatch` with every guard (depth, self, reach naming the missing
+  hallway, cycle, run cap, tree spend), `resolveGrants` by depth, `effectiveApprovalMode`,
+  `checkBudget` tree scope, `dispatchChain` from events, role briefing with reach, map traffic on
+  the hallway a crew dispatch used, glossary words for the UI.
+- [x] 14.3 Runtime: migration 7 (run lineage, backfilled), `lineage` / `treeRuns` /
+  `descendants`, `SpendStore.forTree`, `RunService.tree`, depth-aware tools, tree budget with
+  cancel-the-tree, strictest approval, cancel cascade; dispatch completes on worker-session
+  quiescence, results climb level by level, nested reviews always, review inherits lineage;
+  `DispatchService.recover` on startup; reverse hallways allowed.
+- [x] 14.4 Tests: core policy, guards, budgets, chain; runtime roommate, hallway, missing hallway,
+  wrong direction, to the Overseer, three levels, depth limit, cycle, run cap, tree spend,
+  strictest approval, per-run cap inside a tree, cancel cascade, recovery, handover at depth.
+- [x] 14.5 Docs: ADR-0024, D32, brief §3 §4 §5 §7, CLAUDE.md, SCHEMA, ARCHITECTURE, PRIVACY,
+  READMEs, README status.
+
+**CHECKPOINT 14a** — core policy and runtime, before the UI.
+
+- [ ] 14.6 Daemon: `canDispatch` on `PATCH /api/agents/:id`, `perTreeUsd` on `PUT /api/budgets`,
+  `PUT /api/dispatch`.
+- [ ] 14.7 Crew page: dispatch toggle on Config; "Can hand work to" on Brief from `dispatchReach`.
+- [ ] 14.8 Settings: Dispatch section (levels, hand-offs per request, auto review); per-request
+  budget in Budgets; budget notifications name the scope in words.
+- [ ] 14.9 Map highlights a selected crew member's reach; hallway drawing allows the reverse of
+  an existing hallway; consent cards and the dashboard show the chain from `dispatchChain`.
+
+**CHECKPOINT 14b**
+
 ## Follow-ups (not scheduled)
 - ~~Intermittent React #418 hydration mismatch in `browser:verify`~~ gone with `apps/web` (Next.js
   SSR) in Phase 1; the SPA renders only on the client, so there is no hydration step to mismatch.
@@ -462,5 +509,5 @@ Source: `docs/design/station-dashboard/`. Dark only; sprites replace the rig; ev
 
 ## Out of scope (stop and ask if any of these appears)
 Conveyor Lines / Bays / Inbox / Outbox / Logbook; webhooks, folder watchers, channel triggers;
-terminal/shell tools; recursive delegation; helper copies; agents creating/editing agents; desktop
+terminal/shell tools; helper copies; agents creating/editing agents; desktop
 shell; connectors other than Notion; embeddings; session summarization; npm publishing.

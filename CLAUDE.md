@@ -35,12 +35,12 @@ keys, event types, CSS custom properties, and test names.
 | Commander | `user` | the person using it |
 | Room | `room` | a capability-scoped team; props placed in it grant tools to its crew |
 | Crew / crew member | `agent` | an agent; exactly one room |
-| Overseer | `role: "overseer"` | the crew member with dispatch rights (a role, not "the first agent") |
-| Hallway | `lane` | an authorized handoff lane between rooms (rendered in v1, enforced in v2) |
+| Overseer | `role: "overseer"` | the station lead; always has dispatch and reaches every crew member (a role, not "the first agent") |
+| Hallway | `lane` | a directed handoff lane between rooms; crew dispatch follows it (ADR-0024) |
 | Prop | `grant` (kind `prop`) | a capability placed in a room: `web`, `files`, `memory` |
 | Connector | `connector` | an MCP server installed station-wide; each agent is granted it or not |
 | COMMS | `comms` | the chat surface |
-| Session / Run / Dispatch | `session` / `run` / `dispatch` | a conversation / one bounded execution / the Overseer handing a task to crew |
+| Session / Run / Dispatch | `session` / `run` / `dispatch` | a conversation / one bounded execution / an agent with dispatch handing a task to crew |
 | Ask first / Full power | `approvalMode: "ask" \| "full"` | consent for `write`-class tool calls |
 | Stored beliefs / Awaiting your decision | `memory` (`status`) | approved memories / proposals |
 
@@ -161,9 +161,9 @@ is wrong for this project, say so and propose a change to CONSTRAINTS.md.
 - Follow `tasks/todo.md` phase by phase. Stop at each CHECKPOINT with: what was built, how to try
   it (exact commands), tests added, decisions made, open questions.
 - Out of scope for v1 (brief §3): conveyor lines, inbox/outbox, webhooks, watchers, shell tools,
-  recursive delegation, helper copies, agents editing agents, desktop shell, non-Notion
-  connectors, embeddings, summarization, npm publishing. If you find yourself building one, stop
-  and ask.
+  helper copies, agents editing agents, desktop shell, non-Notion connectors, embeddings,
+  summarization, npm publishing. If you find yourself building one, stop and ask. (Nested
+  dispatch up to depth 3 is in scope since ADR-0024.)
 - A decision the brief doesn't cover: make the smallest reasonable choice, record it in an ADR
   (`docs/decisions/`) or the `tasks/todo.md` decisions list, and flag it at the next checkpoint.
 - Small commits, one logical change each, Conventional Commits (`feat(runtime): ...`,

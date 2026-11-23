@@ -106,12 +106,27 @@ Our read/write classification is authoritative, and unknown tools are `write`.
 
 ## Orchestration
 
-- **Dispatch (depth 1, D20):**
-  - The Overseer's `dispatch` starts a worker run in a new session and returns at once.
-  - When the worker ends, a report is posted into the Overseer's session: its last reply, the
-    files it wrote, and why it stopped.
-  - With auto review on, the Overseer reviews it as soon as its session is free.
-  - Workers never get `dispatch`.
+- **Dispatch (D20, ADR-0024):**
+  - `dispatch` starts a worker run in a new session and returns at once. The Overseer always has
+    it; a crew member has it when `canDispatch` is on.
+  - Reach (core `dispatchReach`): the Overseer reaches every crew member; crew reach roommates and
+    the rooms a directed hallway leads to from their room, never the Overseer.
+  - Every run records its parent and its tree's root (`runs.parent_run_id`, `root_run_id`). A run
+    at depth N is offered `dispatch` only while N < `maxDepth` (0–3).
+  - `checkDispatch` refuses, in order: no dispatch, delegation off, depth, self, unknown target,
+    no hallway, a cycle (target already above in the chain), the tree's run cap, the tree's spend.
+  - A dispatch is done when its worker session is quiet (run ended, nothing it dispatched still
+    running, every report reviewed). Then a report goes to the dispatcher's session: the last
+    reply, the files written, and why it stopped. Results climb the tree level by level.
+  - The Commander's session reviews reports when `autoReview` is on; a dispatched session always
+    does, unless its own run was cancelled, stopped by a budget, or failed. A review continues the
+    tree of the session's latest run.
+  - Write-class calls ask for consent if any agent in the chain is *Ask first*.
+  - `budgets.perTreeUsd` is checked before every model call in a tree. When it is reached, the run
+    blocks (`budget.blocked {scope: "tree"}`) and the rest of the tree is cancelled
+    (`run.cancelled {by: "budget"}`).
+  - Cancelling a run cancels what it dispatched. On startup, dispatches left running report
+    `interrupted`.
   - `read_session` lets the Overseer read any session, up to 20k characters.
   - The Commander can steer a running run; the direction is added before its next model call.
 - **Scheduler (D21):**

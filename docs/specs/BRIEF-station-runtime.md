@@ -34,7 +34,7 @@ StarNet (androoAGI/starnet) demonstrated the alternative: a local runtime ("side
 
 ### v1 goals
 1. Chat with any crew member in **COMMS**: streamed responses, sessions saved and re-openable.
-2. **Overseer delegation**: the Overseer dispatches tasks to crew members (depth 1); workers run concurrently in the background; results return to the Overseer's session; everything visible live.
+2. **Delegation**: the Overseer dispatches tasks to crew members, and crew given dispatch hand parts on along their room and hallways, up to three levels deep (ADR-0024); workers run concurrently in the background; each result returns to its dispatcher's session; everything visible live.
 3. **Agents as documents**: identity, purpose, standing orders, context as markdown; model, approval mode, and grants as config. Edits in the UI take effect on the next run.
 4. **Capabilities**: Props (placed objects) grant base tools per Room; connector tools granted per agent; consent gates for side-effectful calls.
 5. **Notion MCP connector**: connected once, station-wide; each agent is either granted the connector or not.
@@ -44,7 +44,7 @@ StarNet (androoAGI/starnet) demonstrated the alternative: a local runtime ("side
 9. **Station view**: the existing map renders Rooms, crew, Props, and live activity from runtime state.
 
 ### v1 non-goals
-Conveyor Lines, Inbox/Outbox/Logbook, webhooks, folder watchers, channel triggers, terminal/shell tools, recursive delegation, temporary helper copies, agents creating or editing other agents, desktop shell (Tauri/Electron), multiple connectors beyond Notion, embeddings-based memory retrieval, npm publishing.
+Conveyor Lines, Inbox/Outbox/Logbook, webhooks, folder watchers, channel triggers, terminal/shell tools, temporary helper copies, agents creating or editing other agents, desktop shell (Tauri/Electron), multiple connectors beyond Notion, embeddings-based memory retrieval, npm publishing.
 
 ## 4. Terminology
 
@@ -65,7 +65,7 @@ We adopt StarNet's vocabulary for now. All on-screen words live in `packages/cor
 | **COMMS** | The chat surface: sessions with individual crew members | `comms` |
 | **Session** | One persistent conversation with one crew member | `session` |
 | **Run** | One bounded agent execution (model loop + tools) inside a session | `run` |
-| **Dispatch** | The Overseer handing a task to a crew member | `dispatch` |
+| **Dispatch** | A crew member with dispatch (always the Overseer) handing a task to another | `dispatch` |
 | **Approval mode** | Per-agent consent setting: *Ask first* or *Full power* | `approvalMode` |
 | **Memory: beliefs / proposals** | Approved memories / memories awaiting the Commander's decision | `memory` (`status`) |
 | **Notifications** | Station-wide feed derived from the event log | `event` |
@@ -107,7 +107,7 @@ flowchart LR
     API[HTTP API + SSE stream<br/>token + Origin check]
     subgraph RT["packages/runtime"]
       RUN[Agent loop<br/>stream · tools · cancel]
-      DISP[Dispatcher<br/>depth-1 policy]
+      DISP[Dispatcher<br/>reach · depth · tree guards]
       POL[Policy<br/>grants · consent · budgets]
       SCHED[Scheduler]
       MEM[Memory service]
@@ -165,11 +165,15 @@ An agent's effective tool set is computed by the runtime from four sources, then
 
 ## 7. Orchestration model (v1)
 
-- **Depth 1.** Only agents holding the dispatch grant (the Overseer) can dispatch. Workers never receive the `dispatch` tool. `maxDispatchDepth: 1` is runtime policy, checked in one place.
-- **Results return to the lead.** A worker's result is a short summary plus references to any workspace artifacts, posted into the Overseer's originating session. Workers never message each other.
+Amended by ADR-0024: dispatch is no longer the Overseer's alone, hallways are enforced, and chains nest.
+
+- **Who dispatches.** The Overseer always; a crew member when its `canDispatch` flag is on. `read_session` stays the Overseer's.
+- **Depth up to 3.** `station.dispatch.maxDepth` (0–3, default 1; 0 turns delegation off) is runtime policy, checked in one place. A run at depth N may dispatch only while N < maxDepth; at the limit the `dispatch` tool is not offered.
+- **Guards.** No cycles (an agent already above in the chain cannot be dispatched to), a cap on dispatched runs per root request (`maxRunsPerTree`), and a spend cap per root request (`budgets.perTreeUsd`). Strictest approval wins: a run asks first if any agent above it does.
+- **Results return level by level.** A worker's result is a short summary plus references to any workspace artifacts, posted into its dispatcher's session once the worker's own dispatches have reported and been reviewed. Workers never message each other.
 - **Non-blocking.** Dispatch returns immediately with a dispatch ID. The Overseer may fan out to several workers and keep talking to the Commander; results arrive as events and are reviewed when they land.
 - **Steer and stop.** The Commander can send a direction to a running worker or cancel it. Queued directions are visible and included in the lead's review.
-- **Reach from the graph.** Allowed dispatch targets are computed from the station graph (v1: Overseer → every crew member). Adding rooms and hallways later adds edges; no rewrite.
+- **Reach from the graph.** Allowed dispatch targets are computed from the station graph: the Overseer reaches every crew member; crew reach their roommates and the rooms a hallway leads to from their room (hallways are directed), never the Overseer.
 
 ```mermaid
 sequenceDiagram
@@ -181,7 +185,7 @@ sequenceDiagram
 
   C->>O: "Update the Outerworld hub with this week's progress"
   O->>R: tool: dispatch({to: PM, task, inputs})
-  R-->>R: policy: depth ok · target reachable · budget ok
+  R-->>R: policy: depth ok · target reachable · no cycle · tree runs and budget ok
   R-->>O: {dispatchId, status: "started"}
   O-->>C: "Handed to the Project Manager — I'll review when it's back."
   R->>PM: start run in S2 (briefing + task)

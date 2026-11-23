@@ -12,7 +12,7 @@ no telemetry, no analytics, and no error reporting.
 |------|----------|-------------------------|-------|
 | Station config: name, rooms, hallways, props, connector metadata, budgets | `$OUTERWORLD_HOME/station.json` (default `~/.outerworld/`) | Never | Human-editable. Connector entries hold names and URLs only, no tokens. |
 | Crew documents and config: `identity.md`, `purpose.md`, `standing-orders.md`, `context.md`, `agent.json` | `$OUTERWORLD_HOME/agents/<id>/` | Never | Edited in the SPA or by hand. |
-| Sessions, messages, runs, tool calls and results, dispatches, memory, schedule history, spend, events | `$OUTERWORLD_HOME/station.db` (SQLite) | Never | Tool results include web pages and Notion, GitHub, or Gmail content your agents fetched. |
+| Sessions, messages, runs (with their dispatch lineage: parent and root run ids), tool calls and results, dispatches, memory, schedule history, spend, events | `$OUTERWORLD_HOME/station.db` (SQLite) | Never | Tool results include web pages and Notion, GitHub, or Gmail content your agents fetched. |
 | Files your agents write | `$OUTERWORLD_HOME/workspaces/<agent-id>/` | Never | The only place Files-prop tools can read or write. |
 | Daemon logs | `$OUTERWORLD_HOME/logs/` | Never | Secrets are redacted before anything is written. |
 | Daemon access token | `$OUTERWORLD_HOME/daemon.token`, file mode 0600 | Never | Generated on first start; lets the SPA talk to the daemon. Given to the page the daemon (or the dev server) serves. |

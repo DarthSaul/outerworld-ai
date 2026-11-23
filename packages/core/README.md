@@ -14,9 +14,14 @@ from the zod source (regenerate with `pnpm build && node scripts/write-schemas.m
 ### Config documents (brief §9)
 | Export | Description |
 |--------|-------------|
-| `parseStationConfig(input)` | `Result<StationConfig>` for `station.json`: rooms with props (`web`, `files`, `memory`), lanes between rooms, connectors (http or stdio transport, no secrets: headers and env are rejected), budgets in USD, dispatch policy (`maxDepth` 0 or 1, `autoReview`). Defaults filled; unknown fields kept. Never throws. |
-| `parseAgentConfig(input)` | `Result<AgentConfig>` for `agents/<id>/agent.json`: name, `roomId`, `role` (`overseer` \| `crew`), `model`, `approvalMode` (`ask` \| `full`), `connectorGrants`, `schedules` (cron with 5 or 6 fields, IANA time zone, prompt, `catchUp`, `enabled`), optional `look` (a character id such as `"nova"`; an unknown one is a warning). |
+| `parseStationConfig(input)` | `Result<StationConfig>` for `station.json`: rooms with props (`web`, `files`, `memory`), lanes between rooms, connectors (http or stdio transport, no secrets: headers and env are rejected), budgets in USD, dispatch policy (`maxDepth` 0–3, `maxRunsPerTree`, `autoReview`), budgets including `perTreeUsd` (missing means 15, `null` no cap). Defaults filled; unknown fields kept. Never throws. |
+| `parseAgentConfig(input)` | `Result<AgentConfig>` for `agents/<id>/agent.json`: name, `roomId`, `role` (`overseer` \| `crew`), `model`, `approvalMode` (`ask` \| `full`), `connectorGrants`, `schedules` (cron with 5 or 6 fields, IANA time zone, prompt, `catchUp`, `enabled`), optional `look` (a character id such as `"nova"`; an unknown one is a warning), optional `canDispatch` (ADR-0024). |
 | `stationCrewIssues(station, crew)` | Cross-file rules: agent ids, known rooms, installed connectors, at most one overseer. |
+| `hasDispatch(agent)`, `dispatchReach(from, station, crew)`, `dispatchTargets(...)` | Dispatch reach (ADR-0024): the Overseer reaches every crew member; crew with `canDispatch` reach roommates and rooms a directed hallway leads to from theirs, never the Overseer. Each target carries `via` (`overseer`, `room`, or `lane` with its id). |
+| `checkDispatch({ from, to, depth, station, crew, chain, tree })` | `{ ok }` or a refusal reason, checked in order: has dispatch, delegation on, depth below `maxDepth`, not self, known target, reach (naming the missing hallway or its direction), no cycle, the tree's run cap, the tree's spend cap. |
+| `resolveGrants(agent, station, catalog, { depth? })` | Effective tools: `dispatch` (when the agent has it and the run is below the depth limit), `read_session` (Overseer), props, connectors. |
+| `checkBudget(budgets, { run, tree?, agentToday, stationToday })`, `effectiveApprovalMode(chain)` | Budget caps narrowest first (run, tree, agent, station; 80% warns). *Ask first* if any agent in a dispatch chain is. |
+| `dispatchChain(events, runId)` | Who asked whom for a run, root first, from `dispatch.started` and `run.queued` alone. |
 | `StationConfig`, `Room`, `Prop`, `PropKind`, `Lane`, `Connector`, `ConnectorTransport`, `Budgets`, `DispatchPolicy`, `AgentConfig`, `AgentRole`, `ApprovalMode`, `AgentSchedule` | zod schemas and inferred types. |
 
 ### Event log (brief §10)
@@ -101,7 +106,7 @@ from the zod source (regenerate with `pnpm build && node scripts/write-schemas.m
 ### Station dashboard (ADR-0013)
 | Export | Description |
 |--------|-------------|
-| `dashboardModel(input)` | The dashboard as one projection of runtime state. Input is the station config, agents, folded crew activity, recent runs, running dispatches, the active run count and pending proposals. Output is placed rooms (crew, grants as placed objects, alert), routed hallways (label, tag point, traffic), the roster, sorted missions, `liveCount` and `alerts`. |
+| `dashboardModel(input)` | The dashboard as one projection of runtime state. Input is the station config, agents, folded crew activity, recent runs, running dispatches (worker, and lead when it is crew, so traffic runs on the hallway it used), the active run count and pending proposals. Output is placed rooms (crew, grants as placed objects, alert), routed hallways (label, tag point, traffic), the roster, sorted missions, `liveCount` and `alerts`. |
 | `placeRooms(roomIds, bridgeId)`, `routeBetween(a, b, others)`, `pointAlong`, `tagPoint`, `routeLength`, `laneLabel`, `sectorFor` | Layout in percent of the map. The Bridge (the Overseer's room) sits in the middle with the other rooms in slots around it. Hallways route orthogonally (straight, L, Z, then a U detour) around other rooms. |
 | `runDisplayStatus`, `crewDisplayStatus`, `sortRuns`, `isLive`, `alertCount`, `initials` | The dashboard's status words, mapped from run states and crew activity. |
 | `overseerFirst(crew)` | The crew in listing order: the Overseer first, everyone else in the order given. |
